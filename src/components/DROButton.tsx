@@ -1,0 +1,51 @@
+import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
+
+interface DROButtonProps {
+  children: ReactNode;
+  onClick?: () => void;
+  className?: string;
+  variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
+  size?: 'sm' | 'md' | 'lg' | 'wide';
+}
+
+const DROButton = ({ 
+  children, 
+  onClick, 
+  className,
+  variant = 'default',
+  size = 'md'
+}: DROButtonProps) => {
+  const variantClasses = {
+    default: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
+    dark: 'bg-gradient-to-b from-[#404040] to-[#2a2a2a] text-[#1a1a1a] border-t-[#505050] border-l-[#505050] border-b-[#1a1a1a] border-r-[#1a1a1a]',
+    yellow: 'bg-gradient-to-b from-[#f0d000] to-[#c0a000] text-[#1a1a1a] border-t-[#ffe040] border-l-[#ffe040] border-b-[#806000] border-r-[#806000]',
+    clear: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
+    enter: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
+  };
+
+  const sizeClasses = {
+    sm: 'w-10 h-8 text-xs',
+    md: 'w-11 h-10 text-sm',
+    lg: 'w-12 h-11 text-base',
+    wide: 'w-16 h-10 text-sm',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "dro-button flex items-center justify-center rounded-sm border-2 font-bold",
+        "shadow-md active:shadow-inner transition-all duration-75",
+        "hover:brightness-110",
+        variantClasses[variant],
+        sizeClasses[size],
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
+export default DROButton;
