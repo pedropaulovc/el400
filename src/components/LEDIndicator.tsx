@@ -20,7 +20,7 @@ const LEDIndicator = ({
   const content = (
     <span 
       className={cn(
-        "text-[8px] font-bold uppercase tracking-tight transition-all",
+        "text-[8px] font-bold tracking-tight transition-all",
         isOn ? "text-red-400" : "text-red-900/60"
       )}
       style={isOn ? {
@@ -37,9 +37,8 @@ const LEDIndicator = ({
         type="button"
         onClick={onClick}
         className={cn(
-          "flex flex-col items-center gap-0.5 p-1 rounded transition-all",
-          "hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400/50",
-          isOn && "ring-1 ring-red-400/30",
+          "flex flex-col items-center gap-0.5 px-1 py-0.5 rounded transition-all",
+          "hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-red-400/50",
           className
         )}
         role="radio"
