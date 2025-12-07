@@ -11,7 +11,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
 
   return (
     <div 
-      className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-4 rounded-sm self-start"
+      className="grid grid-cols-2 gap-x-3 px-4 py-4 rounded-sm h-full"
       style={{
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
         boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2)',
@@ -28,6 +28,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
             isActive={activeAxis === axis}
             aria-label={`Select ${axis} axis`}
             aria-pressed={activeAxis === axis}
+            className="h-full"
           >
             <span className="text-white font-bold text-lg">{axis}</span>
           </DROButton>
@@ -36,6 +37,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
             variant="dark" 
             onClick={() => onAxisZero(axis)}
             aria-label={`Zero ${axis} axis`}
+            className="h-full"
           >
             <span className="text-white font-bold text-sm">{axis}<sub className="text-[8px]">0</sub></span>
           </DROButton>
