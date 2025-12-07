@@ -19,29 +19,29 @@ const NumericKeypad = ({
   onArrow,
 }: NumericKeypadProps) => {
   return (
-    <div className="flex flex-col justify-between h-full gap-1.5">
+    <div className="flex flex-col justify-between h-full">
       {/* Row 1: 7, 8↑, 9 */}
-      <div className="flex gap-1.5 flex-1">
-        <DROButton onClick={() => onNumber('7')} className="h-full">7</DROButton>
-        <DROButton onClick={() => onArrow('up')} className="h-full">
+      <div className="flex gap-1.5">
+        <DROButton onClick={() => onNumber('7')}>7</DROButton>
+        <DROButton onClick={() => onArrow('up')}>
           <div className="flex flex-col items-center leading-none">
             <span className="text-sm font-bold">8</span>
             <ArrowUp className="w-3 h-3 -mt-0.5" />
           </div>
         </DROButton>
-        <DROButton onClick={() => onNumber('9')} className="h-full">9</DROButton>
+        <DROButton onClick={() => onNumber('9')}>9</DROButton>
       </div>
       
       {/* Row 2: ←4, 5, 6→ */}
-      <div className="flex gap-1.5 flex-1">
-        <DROButton onClick={() => onArrow('left')} className="h-full">
+      <div className="flex gap-1.5">
+        <DROButton onClick={() => onArrow('left')}>
           <div className="flex items-center gap-0.5">
             <ArrowLeft className="w-3 h-3" />
             <span className="text-sm font-bold">4</span>
           </div>
         </DROButton>
-        <DROButton onClick={() => onNumber('5')} className="h-full">5</DROButton>
-        <DROButton onClick={() => onArrow('right')} className="h-full">
+        <DROButton onClick={() => onNumber('5')}>5</DROButton>
+        <DROButton onClick={() => onArrow('right')}>
           <div className="flex items-center gap-0.5">
             <span className="text-sm font-bold">6</span>
             <ArrowRight className="w-3 h-3" />
@@ -50,30 +50,30 @@ const NumericKeypad = ({
       </div>
       
       {/* Row 3: 1, 2↓, 3 */}
-      <div className="flex gap-1.5 flex-1">
-        <DROButton onClick={() => onNumber('1')} className="h-full">1</DROButton>
-        <DROButton onClick={() => onArrow('down')} className="h-full">
+      <div className="flex gap-1.5">
+        <DROButton onClick={() => onNumber('1')}>1</DROButton>
+        <DROButton onClick={() => onArrow('down')}>
           <div className="flex flex-col items-center leading-none">
             <ArrowDown className="w-3 h-3 -mb-0.5" />
             <span className="text-sm font-bold">2</span>
           </div>
         </DROButton>
-        <DROButton onClick={() => onNumber('3')} className="h-full">3</DROButton>
+        <DROButton onClick={() => onNumber('3')}>3</DROButton>
       </div>
       
       {/* Row 4: +/-, 0, . */}
-      <div className="flex gap-1.5 flex-1">
-        <DROButton onClick={onSign} className="h-full">
+      <div className="flex gap-1.5">
+        <DROButton onClick={onSign}>
           <span className="text-xs font-bold">+/-</span>
         </DROButton>
-        <DROButton onClick={() => onNumber('0')} className="h-full">0</DROButton>
-        <DROButton onClick={onDecimal} className="h-full">.</DROButton>
+        <DROButton onClick={() => onNumber('0')}>0</DROButton>
+        <DROButton onClick={onDecimal}>.</DROButton>
       </div>
       
       {/* Row 5: C, ent */}
-      <div className="flex gap-1.5 flex-1">
-        <DROButton onClick={onClear} className="h-full">C</DROButton>
-        <DROButton onClick={onEnter} className="h-full w-[5.5rem]">
+      <div className="flex gap-1.5">
+        <DROButton onClick={onClear}>C</DROButton>
+        <DROButton onClick={onEnter} className="w-[5.5rem]">
           <span className="font-bold">ent</span>
         </DROButton>
       </div>
