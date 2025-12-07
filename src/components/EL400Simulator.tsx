@@ -284,51 +284,54 @@ const EL400Simulator = () => {
 
       {/* Bottom section with beveled frame */}
       <div className="mt-5 flex items-end gap-4">
-        {/* Power LED with bezel */}
-        <div 
-          className="flex items-center justify-center w-6 h-6 rounded-full mb-2"
-          style={{
-            background: 'linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%)',
-            boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05)',
-          }}
-        >
+        {/* Function Buttons with beveled frame and LED */}
+        <div className="flex flex-col gap-2">
           <div 
-            className="w-3 h-3 rounded-full"
+            className="p-1 rounded"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ff6666 0%, #cc0000 50%, #990000 100%)',
-              boxShadow: '0 0 8px 2px rgba(255,0,0,0.6), inset 0 -1px 2px rgba(0,0,0,0.3)',
-            }}
-          />
-        </div>
-        
-        {/* Function Buttons with beveled frame */}
-        <div 
-          className="p-1 rounded"
-          style={{
-            background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
-            boxShadow: `
-              inset 3px 3px 6px rgba(0,0,0,0.5),
-              inset -1px -1px 2px rgba(255,255,255,0.05),
-              2px 2px 4px rgba(0,0,0,0.3)
-            `,
-            minWidth: '340px',
-          }}
-        >
-          <div 
-            className="p-2 rounded-sm"
-            style={{
-              background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
+              background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+              boxShadow: `
+                inset 3px 3px 6px rgba(0,0,0,0.5),
+                inset -1px -1px 2px rgba(255,255,255,0.05),
+                2px 2px 4px rgba(0,0,0,0.3)
+              `,
+              minWidth: '340px',
             }}
           >
-            <FunctionButtons 
-              isInch={isInch}
-              isAbs={isAbs}
-              onToggleUnit={handleToggleUnit}
-              onSettings={() => toast('Settings')}
-              onCalibrate={() => toast('Calibration mode')}
-              onCenter={() => toast('Center find mode')}
-              onZeroAll={handleZeroAll}
-            />
+            <div 
+              className="p-2 rounded-sm"
+              style={{
+                background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
+              }}
+            >
+              <FunctionButtons 
+                isInch={isInch}
+                isAbs={isAbs}
+                onToggleUnit={handleToggleUnit}
+                onSettings={() => toast('Settings')}
+                onCalibrate={() => toast('Calibration mode')}
+                onCenter={() => toast('Center find mode')}
+                onZeroAll={handleZeroAll}
+              />
+            </div>
+          </div>
+          {/* Power LED positioned under wrench button */}
+          <div className="flex">
+            <div 
+              className="flex items-center justify-center w-6 h-6 rounded-full ml-4"
+              style={{
+                background: 'linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05)',
+              }}
+            >
+              <div 
+                className="w-3 h-3 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle at 30% 30%, #ff6666 0%, #cc0000 50%, #990000 100%)',
+                  boxShadow: '0 0 8px 2px rgba(255,0,0,0.6), inset 0 -1px 2px rgba(0,0,0,0.3)',
+                }}
+              />
+            </div>
           </div>
         </div>
 
