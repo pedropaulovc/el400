@@ -29,6 +29,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
               isActive={activeAxis === axis}
               aria-label={`Select ${axis} axis`}
               aria-pressed={activeAxis === axis}
+              className="w-14"
             >
               <span className="sr-only">{axis}</span>
             </DROButton>
@@ -39,6 +40,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
               variant="dark" 
               onClick={() => onAxisZero(axis)}
               aria-label={`Zero ${axis} axis`}
+              className="w-8"
             >
               <span className="sr-only">{axis}0</span>
             </DROButton>
