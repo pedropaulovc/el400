@@ -152,21 +152,48 @@ const EL400Simulator = () => {
             </div>
             
             {/* LED Indicators */}
-            <div className="flex gap-4 mt-4 px-2">
-              <button onClick={handleToggleAbs}>
-                <LEDIndicator label="abs" isOn={isAbs} />
-              </button>
-              <button onClick={handleToggleAbs}>
-                <LEDIndicator label="inc" isOn={!isAbs} />
-              </button>
-              <button onClick={handleToggleUnit}>
-                <LEDIndicator label="inch" isOn={isInch} />
-              </button>
-              <button onClick={handleToggleUnit}>
-                <LEDIndicator label="mm" isOn={!isInch} />
-              </button>
-              <LEDIndicator label="Ø" isOn={false} />
-              <LEDIndicator label="r" isOn={false} />
+            <div className="flex gap-2 mt-4 px-2">
+              {/* Mode Toggle Group */}
+              <div role="radiogroup" aria-label="Positioning mode" className="flex gap-1">
+                <LEDIndicator 
+                  label="abs" 
+                  isOn={isAbs} 
+                  onClick={handleToggleAbs}
+                  isInteractive
+                  groupLabel="Absolute mode"
+                />
+                <LEDIndicator 
+                  label="inc" 
+                  isOn={!isAbs}
+                  onClick={handleToggleAbs}
+                  isInteractive
+                  groupLabel="Incremental mode"
+                />
+              </div>
+              
+              {/* Units Toggle Group */}
+              <div role="radiogroup" aria-label="Measurement units" className="flex gap-1 ml-2">
+                <LEDIndicator 
+                  label="inch" 
+                  isOn={isInch}
+                  onClick={handleToggleUnit}
+                  isInteractive
+                  groupLabel="Inches"
+                />
+                <LEDIndicator 
+                  label="mm" 
+                  isOn={!isInch}
+                  onClick={handleToggleUnit}
+                  isInteractive
+                  groupLabel="Millimeters"
+                />
+              </div>
+              
+              {/* Status indicators */}
+              <div className="flex gap-1 ml-2">
+                <LEDIndicator label="Ø" isOn={false} />
+                <LEDIndicator label="r" isOn={false} />
+              </div>
             </div>
           </div>
         </div>
