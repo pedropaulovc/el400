@@ -23,25 +23,27 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
         <>
           <div key={`select-${axis}`} className="flex flex-col items-center gap-1">
             <span className="text-lg font-bold text-black/80">{axis}</span>
-            <DROButton 
-              variant="dark" 
-              onClick={() => onAxisSelect(axis)}
-              isActive={activeAxis === axis}
-              aria-label={`Select ${axis} axis`}
-              aria-pressed={activeAxis === axis}
-            >
-              <span className="sr-only">{axis}</span>
-            </DROButton>
+          <DROButton 
+            variant="dark" 
+            onClick={() => onAxisSelect(axis)}
+            isActive={activeAxis === axis}
+            aria-label={`Select ${axis} axis`}
+            aria-pressed={activeAxis === axis}
+            className="w-[52px]"
+          >
+            <span className="sr-only">{axis}</span>
+          </DROButton>
           </div>
           <div key={`zero-${axis}`} className="flex flex-col items-center gap-1 mt-5">
             <span className="text-lg font-bold text-black/80">{axis}<sub className="text-xs">0</sub></span>
-            <DROButton 
-              variant="dark" 
-              onClick={() => onAxisZero(axis)}
-              aria-label={`Zero ${axis} axis`}
-            >
-              <span className="sr-only">{axis}0</span>
-            </DROButton>
+          <DROButton 
+            variant="dark" 
+            onClick={() => onAxisZero(axis)}
+            aria-label={`Zero ${axis} axis`}
+            className="w-[35px]"
+          >
+            <span className="sr-only">{axis}0</span>
+          </DROButton>
           </div>
         </>
       ))}
