@@ -285,7 +285,7 @@ const EL400Simulator = () => {
       {/* Bottom section with beveled frame */}
       <div className="mt-5 flex items-end gap-4">
         {/* Function Buttons with beveled frame and LED */}
-        <div className="flex flex-col gap-2" style={{ width: '356px' }}>
+        <div className="flex flex-col gap-2" style={{ width: '348px' }}>
           <div 
             className="p-1 rounded w-full"
             style={{
