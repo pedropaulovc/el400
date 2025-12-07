@@ -11,7 +11,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
 
   return (
     <div 
-      className="flex flex-col gap-3 px-4 py-6 rounded-sm"
+      className="flex flex-col gap-3 px-4 py-6 rounded-sm self-start"
       style={{
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
         boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2)',
