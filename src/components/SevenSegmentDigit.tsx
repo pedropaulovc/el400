@@ -69,9 +69,9 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
           fill={segments[5] ? onColor : offColor}
           filter={segments[5] ? "url(#glow)" : undefined}
         />
-        {/* Segment G (middle) */}
+        {/* Segment G (middle) - hexagonal */}
         <polygon
-          points="6,33 38,33 34,39 10,39 6,33"
+          points="4,35 10,31 34,31 40,35 34,39 10,39"
           fill={segments[6] ? onColor : offColor}
           filter={segments[6] ? "url(#glow)" : undefined}
         />
