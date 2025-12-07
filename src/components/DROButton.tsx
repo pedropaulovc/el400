@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import { ReactNode, ButtonHTMLAttributes } from "react";
 
-interface DROButtonProps {
+interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
   onClick?: () => void;
   className?: string;
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
   size?: 'sm' | 'md' | 'lg' | 'wide';
+  isActive?: boolean;
 }
 
 const DROButton = ({ 
@@ -14,7 +15,9 @@ const DROButton = ({
   onClick, 
   className,
   variant = 'default',
-  size = 'md'
+  size = 'md',
+  isActive = false,
+  ...props
 }: DROButtonProps) => {
   const variantClasses = {
     default: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
@@ -33,15 +36,19 @@ const DROButton = ({
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
         "dro-button flex items-center justify-center rounded-sm border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
-        "hover:brightness-110",
+        "hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50",
         variantClasses[variant],
         sizeClasses[size],
+        isActive && "ring-2 ring-white shadow-lg brightness-110",
         className
       )}
+      aria-pressed={isActive}
+      {...props}
     >
       {children}
     </button>
