@@ -18,23 +18,12 @@ const LEDIndicator = ({
   groupLabel 
 }: LEDIndicatorProps) => {
   const content = (
-    <>
-      <div 
-        className={cn(
-          "w-2 h-2 rounded-full transition-all duration-200",
-          isOn 
-            ? "bg-red-500 led-on" 
-            : "bg-red-900"
-        )}
-        aria-hidden="true"
-      />
-      <span className={cn(
-        "text-[8px] font-bold uppercase tracking-tight",
-        isOn ? "text-red-400" : "text-red-800"
-      )}>
-        {label}
-      </span>
-    </>
+    <span className={cn(
+      "text-[8px] font-bold uppercase tracking-tight",
+      isOn ? "text-red-400" : "text-red-800"
+    )}>
+      {label}
+    </span>
   );
 
   if (isInteractive && onClick) {
