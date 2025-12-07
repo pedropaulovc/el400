@@ -73,7 +73,7 @@ const NumericKeypad = ({
       {/* Row 5: C, ent */}
       <div className="flex gap-1.5">
         <DROButton onClick={onClear}>C</DROButton>
-        <DROButton onClick={onEnter} className="w-[5.5rem]">
+        <DROButton onClick={onEnter} className="flex-1">
           <span className="font-bold">ent</span>
         </DROButton>
       </div>
