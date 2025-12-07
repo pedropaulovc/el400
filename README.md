@@ -2,7 +2,8 @@
 
 ## Project info
 
-**Live version**: https://el400.vza.net
+**Live version**: [el400.vza.net](https://el400.vza.net)
+
 **Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a
 
 ## How can I edit this code?
