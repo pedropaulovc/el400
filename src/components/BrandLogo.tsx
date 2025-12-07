@@ -1,6 +1,6 @@
 const BrandLogo = () => {
   return (
-    <div className="absolute top-4 right-6 flex items-center gap-2">
+    <div className="absolute top-2 right-8 flex items-center gap-2 z-10">
       <div 
         className="px-3 py-1 rounded-sm"
         style={{
