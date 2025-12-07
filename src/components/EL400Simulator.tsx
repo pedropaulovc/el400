@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import AxisDisplay from "./AxisDisplay";
 import AxisPanel from "./AxisPanel";
 import NumericKeypad from "./NumericKeypad";
-import FunctionButtons from "./FunctionButtons";
+import FunctionButtons, { SecondaryFunctionButtons } from "./FunctionButtons";
 import LEDIndicator from "./LEDIndicator";
 import { toast } from "sonner";
 
@@ -205,8 +205,8 @@ const EL400Simulator = () => {
           onAxisZero={handleAxisZero}
         />
 
-        {/* Right side - Keypad */}
-        <div className="flex flex-col">
+        {/* Right side - Keypad and Secondary Buttons */}
+        <div className="flex flex-col gap-2">
           <NumericKeypad 
             onNumber={handleNumber}
             onClear={handleClear}
@@ -215,6 +215,24 @@ const EL400Simulator = () => {
             onDecimal={handleDecimal}
             onArrow={handleArrow}
             onHome={handleHome}
+          />
+          <SecondaryFunctionButtons
+            onToolOffset={() => toast('Tool offset')}
+            onBoltCircle={() => toast('Bolt circle pattern')}
+            onLinearPattern={() => toast('Linear pattern')}
+            onHalf={() => {
+              if (activeAxis) {
+                setAxisValues(prev => ({
+                  ...prev,
+                  [activeAxis]: prev[activeAxis] / 2
+                }));
+                toast(`${activeAxis} halved`);
+              } else {
+                toast.error('Select an axis first');
+              }
+            }}
+            onSDM={() => toast('Sub-datum mode')}
+            onFunction={() => toast('Function menu')}
           />
         </div>
       </div>
@@ -235,22 +253,6 @@ const EL400Simulator = () => {
           onCalibrate={() => toast('Calibration mode')}
           onCenter={() => toast('Center find mode')}
           onZeroAll={handleZeroAll}
-          onToolOffset={() => toast('Tool offset')}
-          onBoltCircle={() => toast('Bolt circle pattern')}
-          onLinearPattern={() => toast('Linear pattern')}
-          onHalf={() => {
-            if (activeAxis) {
-              setAxisValues(prev => ({
-                ...prev,
-                [activeAxis]: prev[activeAxis] / 2
-              }));
-              toast(`${activeAxis} halved`);
-            } else {
-              toast.error('Select an axis first');
-            }
-          }}
-          onSDM={() => toast('Sub-datum mode')}
-          onFunction={() => toast('Function menu')}
         />
       </div>
 
