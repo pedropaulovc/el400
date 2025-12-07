@@ -152,7 +152,7 @@ const EL400Simulator = () => {
             </div>
             
             {/* LED Indicators */}
-            <div className="flex gap-2 mt-4 px-2">
+            <div className="flex gap-2 mt-1 px-1">
               {/* Mode Toggle Group */}
               <div role="radiogroup" aria-label="Positioning mode" className="flex gap-1">
                 <LEDIndicator 
