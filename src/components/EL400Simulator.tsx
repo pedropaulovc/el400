@@ -205,8 +205,8 @@ const EL400Simulator = () => {
           onAxisZero={handleAxisZero}
         />
 
-        {/* Right side - Keypad and Secondary Buttons */}
-        <div className="flex flex-col gap-2">
+        {/* Right side - Keypad */}
+        <div className="flex flex-col">
           <NumericKeypad 
             onNumber={handleNumber}
             onClear={handleClear}
@@ -216,6 +216,29 @@ const EL400Simulator = () => {
             onArrow={handleArrow}
             onHome={handleHome}
           />
+        </div>
+      </div>
+
+      {/* Bottom section */}
+      <div className="mt-4 flex items-end gap-4">
+        {/* Power LED */}
+        <div className="flex items-center pb-3">
+          <div className="w-3 h-3 rounded-full bg-red-500 led-on" />
+        </div>
+        
+        {/* Function Buttons */}
+        <FunctionButtons 
+          isInch={isInch}
+          isAbs={isAbs}
+          onToggleUnit={handleToggleUnit}
+          onSettings={() => toast('Settings')}
+          onCalibrate={() => toast('Calibration mode')}
+          onCenter={() => toast('Center find mode')}
+          onZeroAll={handleZeroAll}
+        />
+
+        {/* Secondary Function Buttons - right aligned */}
+        <div className="ml-auto">
           <SecondaryFunctionButtons
             onToolOffset={() => toast('Tool offset')}
             onBoltCircle={() => toast('Bolt circle pattern')}
@@ -235,25 +258,6 @@ const EL400Simulator = () => {
             onFunction={() => toast('Function menu')}
           />
         </div>
-      </div>
-
-      {/* Bottom section */}
-      <div className="mt-4 flex items-start gap-4">
-        {/* Power LED */}
-        <div className="flex items-center pt-3">
-          <div className="w-3 h-3 rounded-full bg-red-500 led-on" />
-        </div>
-        
-        {/* Function Buttons */}
-        <FunctionButtons 
-          isInch={isInch}
-          isAbs={isAbs}
-          onToggleUnit={handleToggleUnit}
-          onSettings={() => toast('Settings')}
-          onCalibrate={() => toast('Calibration mode')}
-          onCenter={() => toast('Center find mode')}
-          onZeroAll={handleZeroAll}
-        />
       </div>
 
       {/* Input Buffer Display */}
