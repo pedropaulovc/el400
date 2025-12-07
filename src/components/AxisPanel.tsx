@@ -22,7 +22,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
       {axes.map((axis) => (
         <>
           <div key={`select-${axis}`} className="flex flex-col items-center gap-1">
-            <span className="text-sm font-bold text-black/80">{axis}</span>
+            <span className="text-lg font-bold text-black/80">{axis}</span>
             <DROButton 
               variant="dark" 
               onClick={() => onAxisSelect(axis)}
@@ -34,7 +34,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
             </DROButton>
           </div>
           <div key={`zero-${axis}`} className="flex flex-col items-center gap-1">
-            <span className="text-sm font-bold text-black/80">{axis}<sub className="text-[9px]">0</sub></span>
+            <span className="text-lg font-bold text-black/80">{axis}<sub className="text-xs">0</sub></span>
             <DROButton 
               variant="dark" 
               onClick={() => onAxisZero(axis)}
