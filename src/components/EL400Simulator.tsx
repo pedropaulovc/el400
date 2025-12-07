@@ -157,10 +157,10 @@ const EL400Simulator = () => {
 
       <div className="flex gap-5 items-stretch">
         {/* Left side - Display Panel with beveled frame */}
-        <div className="flex flex-col">
+        <div className="flex flex-col" style={{ width: '358px' }}>
           {/* Beveled frame around display */}
           <div 
-            className="p-1 rounded h-full"
+            className="p-1 rounded h-full w-full"
             style={{
               background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
               boxShadow: `
@@ -172,11 +172,10 @@ const EL400Simulator = () => {
           >
             {/* Main Display */}
             <div 
-              className="p-4 rounded-sm h-full flex flex-col"
+              className="p-4 rounded-sm h-full flex flex-col w-full"
               style={{
                 background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',
                 boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.9)',
-                minWidth: '340px',
               }}
             >
               <div className="flex flex-col gap-3 flex-1 justify-center">
