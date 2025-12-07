@@ -6,24 +6,35 @@ interface AxisDisplayProps {
 }
 
 const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
-  // Format number to display format: sign + 6 digits with decimal
-  const formatValue = (num: number): string[] => {
+  // Format number to display format: returns array of { char, hasDecimal }
+  const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
-    const formatted = absNum.toFixed(4).padStart(8, ' ');
+    const formatted = absNum.toFixed(4); // e.g., "123.4567"
     
-    // Split into individual characters including the decimal
-    const chars: string[] = [];
+    const result: { char: string; hasDecimal: boolean }[] = [];
     
     // Add sign
-    chars.push(isNegative ? '-' : ' ');
+    result.push({ char: isNegative ? '-' : ' ', hasDecimal: false });
     
-    // Add each character
-    for (const char of formatted) {
-      chars.push(char);
+    // Pad the integer part to ensure consistent width
+    const [intPart, decPart] = formatted.split('.');
+    const paddedInt = intPart.padStart(3, ' ');
+    
+    // Add integer digits (last one gets the decimal point)
+    for (let i = 0; i < paddedInt.length; i++) {
+      result.push({ 
+        char: paddedInt[i], 
+        hasDecimal: i === paddedInt.length - 1 // decimal after last integer digit
+      });
     }
     
-    return chars;
+    // Add decimal digits (no decimal points)
+    for (const char of decPart) {
+      result.push({ char, hasDecimal: false });
+    }
+    
+    return result;
   };
 
   const digits = formatValue(value);
@@ -46,19 +57,7 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
       <div className="flex items-center" aria-hidden="true">
         {digits.map((digit, index) => (
           <div key={index} className="w-10 h-16">
-            {digit === '.' ? (
-              <div className="relative w-full h-full flex items-end justify-center pb-1">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ 
-                    backgroundColor: 'hsl(120, 100%, 50%)',
-                    boxShadow: '0 0 8px 3px hsl(120, 100%, 50%)'
-                  }}
-                />
-              </div>
-            ) : (
-              <SevenSegmentDigit value={digit} />
-            )}
+            <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />
           </div>
         ))}
       </div>
