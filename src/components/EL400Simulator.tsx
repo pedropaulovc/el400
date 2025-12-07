@@ -287,7 +287,7 @@ const EL400Simulator = () => {
         {/* Function Buttons with beveled frame */}
         <div className="flex flex-col items-start gap-2">
           <div 
-            className="p-1 rounded"
+            className="p-1 rounded w-full"
             style={{
               background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
               boxShadow: `
@@ -295,7 +295,7 @@ const EL400Simulator = () => {
                 inset -1px -1px 2px rgba(255,255,255,0.05),
                 2px 2px 4px rgba(0,0,0,0.3)
               `,
-              minWidth: '340px',
+              width: '340px',
             }}
           >
             <div 
