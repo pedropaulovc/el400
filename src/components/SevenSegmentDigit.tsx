@@ -33,46 +33,46 @@ const SevenSegmentDigit = ({ value, className }: SevenSegmentDigitProps) => {
 
   return (
     <div className={cn("relative", className)}>
-      <svg viewBox="0 0 40 60" className="w-full h-full">
-        {/* Segment A (top) */}
+      <svg viewBox="0 0 44 70" className="w-full h-full">
+        {/* Segment A (top) - thicker */}
         <polygon
-          points="6,2 34,2 30,8 10,8"
+          points="4,2 40,2 34,10 10,10"
           fill={segments[0] ? onColor : offColor}
           filter={segments[0] ? "url(#glow)" : undefined}
         />
-        {/* Segment B (top right) */}
+        {/* Segment B (top right) - thicker */}
         <polygon
-          points="35,4 35,28 31,24 31,10"
+          points="41,4 41,33 35,28 35,11"
           fill={segments[1] ? onColor : offColor}
           filter={segments[1] ? "url(#glow)" : undefined}
         />
-        {/* Segment C (bottom right) */}
+        {/* Segment C (bottom right) - thicker */}
         <polygon
-          points="35,32 35,56 31,50 31,36"
+          points="41,37 41,66 35,59 35,42"
           fill={segments[2] ? onColor : offColor}
           filter={segments[2] ? "url(#glow)" : undefined}
         />
-        {/* Segment D (bottom) */}
+        {/* Segment D (bottom) - thicker */}
         <polygon
-          points="6,58 34,58 30,52 10,52"
+          points="4,68 40,68 34,60 10,60"
           fill={segments[3] ? onColor : offColor}
           filter={segments[3] ? "url(#glow)" : undefined}
         />
-        {/* Segment E (bottom left) */}
+        {/* Segment E (bottom left) - thicker */}
         <polygon
-          points="5,32 5,56 9,50 9,36"
+          points="3,37 3,66 9,59 9,42"
           fill={segments[4] ? onColor : offColor}
           filter={segments[4] ? "url(#glow)" : undefined}
         />
-        {/* Segment F (top left) */}
+        {/* Segment F (top left) - thicker */}
         <polygon
-          points="5,4 5,28 9,24 9,10"
+          points="3,4 3,33 9,28 9,11"
           fill={segments[5] ? onColor : offColor}
           filter={segments[5] ? "url(#glow)" : undefined}
         />
-        {/* Segment G (middle) */}
+        {/* Segment G (middle) - thicker */}
         <polygon
-          points="8,29 32,29 30,33 10,33 8,29"
+          points="6,33 38,33 34,39 10,39 6,33"
           fill={segments[6] ? onColor : offColor}
           filter={segments[6] ? "url(#glow)" : undefined}
         />
@@ -92,10 +92,10 @@ const SevenSegmentDigit = ({ value, className }: SevenSegmentDigitProps) => {
       {/* Decimal point */}
       {isDecimal && (
         <div 
-          className="absolute bottom-1 right-0 w-2 h-2 rounded-full"
+          className="absolute bottom-1 right-0 w-3 h-3 rounded-full"
           style={{ 
             backgroundColor: onColor,
-            boxShadow: `0 0 6px 2px ${onColor}`
+            boxShadow: `0 0 8px 3px ${onColor}`
           }}
         />
       )}
