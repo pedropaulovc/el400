@@ -20,7 +20,7 @@ const LEDIndicator = ({
   const content = (
     <span 
       className={cn(
-        "text-[8px] font-bold tracking-tight transition-all",
+        "text-[9px] font-bold tracking-tight transition-all",
         isOn ? "text-red-400" : "text-red-900/60"
       )}
       style={isOn ? {
