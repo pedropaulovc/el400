@@ -11,7 +11,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
 
   return (
     <div 
-      className="grid grid-cols-2 gap-x-3 px-4 py-4 rounded-sm h-full content-between"
+      className="grid grid-cols-2 gap-x-3 px-4 py-3 rounded-sm h-full content-between"
       style={{
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
         boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2)',
@@ -21,24 +21,28 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
     >
       {axes.map((axis) => (
         <>
-          <DROButton 
-            key={`select-${axis}`}
-            variant="dark" 
-            onClick={() => onAxisSelect(axis)}
-            isActive={activeAxis === axis}
-            aria-label={`Select ${axis} axis`}
-            aria-pressed={activeAxis === axis}
-          >
-            <span className="text-white font-bold text-lg">{axis}</span>
-          </DROButton>
-          <DROButton 
-            key={`zero-${axis}`}
-            variant="dark" 
-            onClick={() => onAxisZero(axis)}
-            aria-label={`Zero ${axis} axis`}
-          >
-            <span className="text-white font-bold text-sm">{axis}<sub className="text-[8px]">0</sub></span>
-          </DROButton>
+          <div key={`select-${axis}`} className="flex flex-col items-center gap-0.5">
+            <span className="text-[10px] font-bold text-black/70">{axis}</span>
+            <DROButton 
+              variant="dark" 
+              onClick={() => onAxisSelect(axis)}
+              isActive={activeAxis === axis}
+              aria-label={`Select ${axis} axis`}
+              aria-pressed={activeAxis === axis}
+            >
+              <span className="text-white font-bold text-lg">{axis}</span>
+            </DROButton>
+          </div>
+          <div key={`zero-${axis}`} className="flex flex-col items-center gap-0.5">
+            <span className="text-[10px] font-bold text-black/70">{axis}<sub className="text-[7px]">0</sub></span>
+            <DROButton 
+              variant="dark" 
+              onClick={() => onAxisZero(axis)}
+              aria-label={`Zero ${axis} axis`}
+            >
+              <span className="text-white font-bold text-sm">{axis}<sub className="text-[8px]">0</sub></span>
+            </DROButton>
+          </div>
         </>
       ))}
     </div>
