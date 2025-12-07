@@ -152,9 +152,9 @@ const EL400Simulator = () => {
             </div>
             
             {/* LED Indicators */}
-            <div className="flex gap-2 mt-1 px-1">
+            <div className="flex justify-between mt-1 px-1">
               {/* Mode Toggle Group */}
-              <div role="radiogroup" aria-label="Positioning mode" className="flex gap-1">
+              <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
                 <LEDIndicator 
                   label="abs" 
                   isOn={isAbs} 
@@ -172,7 +172,7 @@ const EL400Simulator = () => {
               </div>
               
               {/* Units Toggle Group */}
-              <div role="radiogroup" aria-label="Measurement units" className="flex gap-1 ml-2">
+              <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
                 <LEDIndicator 
                   label="inch" 
                   isOn={isInch}
@@ -190,7 +190,7 @@ const EL400Simulator = () => {
               </div>
               
               {/* Status indicators */}
-              <div className="flex gap-1 ml-2">
+              <div className="flex gap-4">
                 <LEDIndicator label="Ø" isOn={false} />
                 <LEDIndicator label="r" isOn={false} />
               </div>
