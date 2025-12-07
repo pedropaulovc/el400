@@ -114,159 +114,272 @@ const EL400Simulator = () => {
 
   return (
     <div 
-      className="relative p-6 rounded-lg select-none"
+      className="relative p-8 rounded-lg select-none"
       style={{
-        background: 'linear-gradient(145deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%)',
+        background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
         boxShadow: `
-          0 20px 60px rgba(0,0,0,0.5),
-          inset 0 2px 4px rgba(255,255,255,0.1),
-          inset 0 -2px 4px rgba(0,0,0,0.3)
+          0 25px 80px rgba(0,0,0,0.6),
+          0 8px 32px rgba(0,0,0,0.4),
+          inset 0 1px 0 rgba(255,255,255,0.15),
+          inset 0 -1px 0 rgba(0,0,0,0.4)
         `,
-        minWidth: '720px',
+        minWidth: '780px',
       }}
     >
+      {/* Outer beveled border effect */}
+      <div 
+        className="absolute inset-2 rounded pointer-events-none"
+        style={{
+          boxShadow: `
+            inset 2px 2px 4px rgba(0,0,0,0.4),
+            inset -2px -2px 4px rgba(255,255,255,0.08)
+          `,
+        }}
+      />
+
       {/* Brand Logo */}
-      <div className="absolute top-3 right-4 flex items-center gap-1.5">
-        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-          <div className="w-3 h-2 bg-white/50 rounded-full" />
+      <div className="absolute top-4 right-6 flex items-center gap-2">
+        <div 
+          className="px-3 py-1 rounded-sm"
+          style={{
+            background: 'linear-gradient(180deg, #f8f8f8 0%, #e0e0e0 100%)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+              <div className="w-2.5 h-1.5 bg-white/60 rounded-full" />
+            </div>
+            <span className="text-cyan-600 font-bold text-xs tracking-wide">electronica</span>
+          </div>
         </div>
-        <span className="text-cyan-400 font-bold text-sm tracking-wide">electronica</span>
       </div>
 
-      <div className="flex gap-4">
-        {/* Left side - Display Panel */}
+      <div className="flex gap-5">
+        {/* Left side - Display Panel with beveled frame */}
         <div className="flex flex-col gap-2">
-          {/* Main Display */}
+          {/* Beveled frame around display */}
           <div 
-            className="p-4 rounded-sm"
+            className="p-1 rounded"
             style={{
-              background: 'linear-gradient(180deg, #0a0a0a 0%, #050505 100%)',
-              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.1)',
-              minWidth: '320px',
+              background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+              boxShadow: `
+                inset 3px 3px 6px rgba(0,0,0,0.5),
+                inset -1px -1px 2px rgba(255,255,255,0.05),
+                2px 2px 4px rgba(0,0,0,0.3)
+              `,
             }}
           >
-            <div className="flex flex-col gap-3">
-              <AxisDisplay value={axisValues.X} axis="X" />
-              <AxisDisplay value={axisValues.Y} axis="Y" />
-              <AxisDisplay value={axisValues.Z} axis="Z" />
-            </div>
-            
-            {/* LED Indicators */}
-            <div className="flex justify-between mt-1 px-1">
-              {/* Mode Toggle Group */}
-              <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
-                <LEDIndicator 
-                  label="abs" 
-                  isOn={isAbs} 
-                  onClick={handleToggleAbs}
-                  isInteractive
-                  groupLabel="Absolute mode"
-                />
-                <LEDIndicator 
-                  label="inc" 
-                  isOn={!isAbs}
-                  onClick={handleToggleAbs}
-                  isInteractive
-                  groupLabel="Incremental mode"
-                />
+            {/* Main Display */}
+            <div 
+              className="p-4 rounded-sm"
+              style={{
+                background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',
+                boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.9)',
+                minWidth: '340px',
+              }}
+            >
+              <div className="flex flex-col gap-3">
+                <AxisDisplay value={axisValues.X} axis="X" />
+                <AxisDisplay value={axisValues.Y} axis="Y" />
+                <AxisDisplay value={axisValues.Z} axis="Z" />
               </div>
               
-              {/* Units Toggle Group */}
-              <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
-                <LEDIndicator 
-                  label="inch" 
-                  isOn={isInch}
-                  onClick={handleToggleUnit}
-                  isInteractive
-                  groupLabel="Inches"
-                />
-                <LEDIndicator 
-                  label="mm" 
-                  isOn={!isInch}
-                  onClick={handleToggleUnit}
-                  isInteractive
-                  groupLabel="Millimeters"
-                />
-              </div>
-              
-              {/* Status indicators */}
-              <div className="flex gap-4">
-                <LEDIndicator label="Ø" isOn={false} />
-                <LEDIndicator label="r" isOn={false} />
+              {/* LED Indicators */}
+              <div className="flex justify-between mt-1 px-1">
+                {/* Mode Toggle Group */}
+                <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
+                  <LEDIndicator 
+                    label="abs" 
+                    isOn={isAbs} 
+                    onClick={handleToggleAbs}
+                    isInteractive
+                    groupLabel="Absolute mode"
+                  />
+                  <LEDIndicator 
+                    label="inc" 
+                    isOn={!isAbs}
+                    onClick={handleToggleAbs}
+                    isInteractive
+                    groupLabel="Incremental mode"
+                  />
+                </div>
+                
+                {/* Units Toggle Group */}
+                <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
+                  <LEDIndicator 
+                    label="inch" 
+                    isOn={isInch}
+                    onClick={handleToggleUnit}
+                    isInteractive
+                    groupLabel="Inches"
+                  />
+                  <LEDIndicator 
+                    label="mm" 
+                    isOn={!isInch}
+                    onClick={handleToggleUnit}
+                    isInteractive
+                    groupLabel="Millimeters"
+                  />
+                </div>
+                
+                {/* Status indicators */}
+                <div className="flex gap-4">
+                  <LEDIndicator label="Ø" isOn={false} />
+                  <LEDIndicator label="r" isOn={false} />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Middle - Axis Panel */}
-        <AxisPanel 
-          activeAxis={activeAxis}
-          onAxisSelect={handleAxisSelect}
-          onAxisZero={handleAxisZero}
-        />
-
-        {/* Right side - Keypad */}
-        <div className="flex flex-col">
-          <NumericKeypad 
-            onNumber={handleNumber}
-            onClear={handleClear}
-            onEnter={handleEnter}
-            onSign={handleSign}
-            onDecimal={handleDecimal}
-            onArrow={handleArrow}
+        {/* Middle - Axis Panel with beveled frame */}
+        <div 
+          className="p-1 rounded self-start"
+          style={{
+            background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+            boxShadow: `
+              inset 3px 3px 6px rgba(0,0,0,0.5),
+              inset -1px -1px 2px rgba(255,255,255,0.05),
+              2px 2px 4px rgba(0,0,0,0.3)
+            `,
+          }}
+        >
+          <AxisPanel 
+            activeAxis={activeAxis}
+            onAxisSelect={handleAxisSelect}
+            onAxisZero={handleAxisZero}
           />
+        </div>
+
+        {/* Right side - Keypad with beveled frame */}
+        <div 
+          className="p-1 rounded self-start"
+          style={{
+            background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+            boxShadow: `
+              inset 3px 3px 6px rgba(0,0,0,0.5),
+              inset -1px -1px 2px rgba(255,255,255,0.05),
+              2px 2px 4px rgba(0,0,0,0.3)
+            `,
+          }}
+        >
+          <div 
+            className="p-2 rounded-sm"
+            style={{
+              background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
+            }}
+          >
+            <NumericKeypad 
+              onNumber={handleNumber}
+              onClear={handleClear}
+              onEnter={handleEnter}
+              onSign={handleSign}
+              onDecimal={handleDecimal}
+              onArrow={handleArrow}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Bottom section */}
-      <div className="mt-4 flex items-end gap-4">
-        {/* Power LED */}
-        <div className="flex items-center pb-3">
-          <div className="w-3 h-3 rounded-full bg-red-500 led-on" />
+      {/* Bottom section with beveled frame */}
+      <div className="mt-5 flex items-end gap-4">
+        {/* Power LED with bezel */}
+        <div 
+          className="flex items-center justify-center w-6 h-6 rounded-full mb-2"
+          style={{
+            background: 'linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%)',
+            boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05)',
+          }}
+        >
+          <div 
+            className="w-3 h-3 rounded-full"
+            style={{
+              background: 'radial-gradient(circle at 30% 30%, #ff6666 0%, #cc0000 50%, #990000 100%)',
+              boxShadow: '0 0 8px 2px rgba(255,0,0,0.6), inset 0 -1px 2px rgba(0,0,0,0.3)',
+            }}
+          />
         </div>
         
-        {/* Function Buttons */}
-        <FunctionButtons 
-          isInch={isInch}
-          isAbs={isAbs}
-          onToggleUnit={handleToggleUnit}
-          onSettings={() => toast('Settings')}
-          onCalibrate={() => toast('Calibration mode')}
-          onCenter={() => toast('Center find mode')}
-          onZeroAll={handleZeroAll}
-        />
-
-        {/* Secondary Function Buttons - right aligned */}
-        <div className="ml-auto">
-          <SecondaryFunctionButtons
-            onToolOffset={() => toast('Tool offset')}
-            onBoltCircle={() => toast('Bolt circle pattern')}
-            onLinearPattern={() => toast('Linear pattern')}
-            onHalf={() => {
-              if (activeAxis) {
-                setAxisValues(prev => ({
-                  ...prev,
-                  [activeAxis]: prev[activeAxis] / 2
-                }));
-                toast(`${activeAxis} halved`);
-              } else {
-                toast.error('Select an axis first');
-              }
+        {/* Function Buttons with beveled frame */}
+        <div 
+          className="p-1 rounded"
+          style={{
+            background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+            boxShadow: `
+              inset 3px 3px 6px rgba(0,0,0,0.5),
+              inset -1px -1px 2px rgba(255,255,255,0.05),
+              2px 2px 4px rgba(0,0,0,0.3)
+            `,
+          }}
+        >
+          <div 
+            className="p-2 rounded-sm"
+            style={{
+              background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
             }}
-            onSDM={() => toast('Sub-datum mode')}
-            onFunction={() => toast('Function menu')}
-          />
+          >
+            <FunctionButtons 
+              isInch={isInch}
+              isAbs={isAbs}
+              onToggleUnit={handleToggleUnit}
+              onSettings={() => toast('Settings')}
+              onCalibrate={() => toast('Calibration mode')}
+              onCenter={() => toast('Center find mode')}
+              onZeroAll={handleZeroAll}
+            />
+          </div>
+        </div>
+
+        {/* Secondary Function Buttons with beveled frame - right aligned */}
+        <div 
+          className="ml-auto p-1 rounded"
+          style={{
+            background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+            boxShadow: `
+              inset 3px 3px 6px rgba(0,0,0,0.5),
+              inset -1px -1px 2px rgba(255,255,255,0.05),
+              2px 2px 4px rgba(0,0,0,0.3)
+            `,
+          }}
+        >
+          <div 
+            className="p-2 rounded-sm"
+            style={{
+              background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
+            }}
+          >
+            <SecondaryFunctionButtons
+              onToolOffset={() => toast('Tool offset')}
+              onBoltCircle={() => toast('Bolt circle pattern')}
+              onLinearPattern={() => toast('Linear pattern')}
+              onHalf={() => {
+                if (activeAxis) {
+                  setAxisValues(prev => ({
+                    ...prev,
+                    [activeAxis]: prev[activeAxis] / 2
+                  }));
+                  toast(`${activeAxis} halved`);
+                } else {
+                  toast.error('Select an axis first');
+                }
+              }}
+              onSDM={() => toast('Sub-datum mode')}
+              onFunction={() => toast('Function menu')}
+            />
+          </div>
         </div>
       </div>
 
       {/* Input Buffer Display */}
       {inputBuffer && activeAxis && (
         <div 
-          className="absolute bottom-8 left-20 px-2 py-1 rounded text-sm font-mono"
+          className="absolute bottom-10 left-24 px-2 py-1 rounded text-sm font-mono"
           style={{
             color: 'hsl(120, 100%, 50%)',
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            textShadow: '0 0 8px hsl(120, 100%, 50%)'
+            backgroundColor: 'rgba(0,0,0,0.9)',
+            textShadow: '0 0 8px hsl(120, 100%, 50%)',
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
           }}
         >
           {activeAxis}: {inputBuffer}_
