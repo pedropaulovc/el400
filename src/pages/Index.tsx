@@ -1,13 +1,14 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import EL400Simulator from "@/components/EL400Simulator";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#8a8a70]">
+      <h1 className="sr-only">Electronica EL400 Digital Readout Simulator</h1>
+      <EL400Simulator />
+      <p className="mt-6 text-sm text-[#5a5a50] font-medium">
+        Click axis buttons to select, then use keypad to enter values
+      </p>
+    </main>
   );
 };
 
