@@ -20,7 +20,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
       aria-label="Axis selection and zeroing"
     >
       {axes.map((axis) => (
-        <div key={axis} className="flex items-center gap-3" role="group" aria-label={`${axis} axis controls`}>
+        <div key={axis} className="flex items-center gap-2" role="group" aria-label={`${axis} axis controls`}>
           <DROButton 
             variant="dark" 
             onClick={() => onAxisSelect(axis)}
@@ -30,9 +30,6 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
           >
             <span className="text-white font-bold text-lg">{axis}</span>
           </DROButton>
-          <div className="flex flex-col items-start" aria-hidden="true">
-            <span className="text-[#1a1a1a] font-bold text-sm">{axis}<sub className="text-[10px]">0</sub></span>
-          </div>
           <DROButton 
             variant="dark" 
             onClick={() => onAxisZero(axis)}
