@@ -28,74 +28,74 @@ const SevenSegmentDigit = ({ value, className }: SevenSegmentDigitProps) => {
   const segments = segmentMap[value] || segmentMap[' '];
   const isDecimal = value === '.';
 
-  const onColor = "hsl(120, 100%, 50%)";
-  const offColor = "hsl(120, 100%, 8%)";
+  const onColor = "hsl(120, 100%, 45%)";
+  const offColor = "hsl(120, 100%, 6%)";
 
   return (
     <div className={cn("relative", className)}>
-      <svg viewBox="0 0 40 60" className="w-full h-full">
-        {/* Segment A (top) */}
-        <polygon
-          points="6,2 34,2 30,8 10,8"
-          fill={segments[0] ? onColor : offColor}
-          filter={segments[0] ? "url(#glow)" : undefined}
-        />
-        {/* Segment B (top right) */}
-        <polygon
-          points="35,4 35,28 31,24 31,10"
-          fill={segments[1] ? onColor : offColor}
-          filter={segments[1] ? "url(#glow)" : undefined}
-        />
-        {/* Segment C (bottom right) */}
-        <polygon
-          points="35,32 35,56 31,50 31,36"
-          fill={segments[2] ? onColor : offColor}
-          filter={segments[2] ? "url(#glow)" : undefined}
-        />
-        {/* Segment D (bottom) */}
-        <polygon
-          points="6,58 34,58 30,52 10,52"
-          fill={segments[3] ? onColor : offColor}
-          filter={segments[3] ? "url(#glow)" : undefined}
-        />
-        {/* Segment E (bottom left) */}
-        <polygon
-          points="5,32 5,56 9,50 9,36"
-          fill={segments[4] ? onColor : offColor}
-          filter={segments[4] ? "url(#glow)" : undefined}
-        />
-        {/* Segment F (top left) */}
-        <polygon
-          points="5,4 5,28 9,24 9,10"
-          fill={segments[5] ? onColor : offColor}
-          filter={segments[5] ? "url(#glow)" : undefined}
-        />
-        {/* Segment G (middle) */}
-        <polygon
-          points="8,29 32,29 30,33 10,33 8,29"
-          fill={segments[6] ? onColor : offColor}
-          filter={segments[6] ? "url(#glow)" : undefined}
-        />
-        
-        {/* Glow filter */}
+      <svg viewBox="0 0 36 60" className="w-full h-full">
+        {/* Glow filter - defined first */}
         <defs>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <filter id="segmentGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
         </defs>
+        
+        {/* Segment A (top) */}
+        <polygon
+          points="5,2 31,2 27,7 9,7"
+          fill={segments[0] ? onColor : offColor}
+          style={segments[0] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment B (top right) */}
+        <polygon
+          points="32,3 32,28 28,24 28,9"
+          fill={segments[1] ? onColor : offColor}
+          style={segments[1] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment C (bottom right) */}
+        <polygon
+          points="32,32 32,57 28,51 28,36"
+          fill={segments[2] ? onColor : offColor}
+          style={segments[2] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment D (bottom) */}
+        <polygon
+          points="5,58 31,58 27,53 9,53"
+          fill={segments[3] ? onColor : offColor}
+          style={segments[3] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment E (bottom left) */}
+        <polygon
+          points="4,32 4,57 8,51 8,36"
+          fill={segments[4] ? onColor : offColor}
+          style={segments[4] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment F (top left) */}
+        <polygon
+          points="4,3 4,28 8,24 8,9"
+          fill={segments[5] ? onColor : offColor}
+          style={segments[5] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
+        {/* Segment G (middle) */}
+        <polygon
+          points="6,29 30,29 28,33 8,33"
+          fill={segments[6] ? onColor : offColor}
+          style={segments[6] ? { filter: 'drop-shadow(0 0 3px hsl(120, 100%, 50%))' } : undefined}
+        />
       </svg>
       
       {/* Decimal point */}
       {isDecimal && (
         <div 
-          className="absolute bottom-1 right-0 w-2 h-2 rounded-full"
+          className="absolute bottom-1 right-0 w-2.5 h-2.5 rounded-full"
           style={{ 
             backgroundColor: onColor,
-            boxShadow: `0 0 6px 2px ${onColor}`
+            boxShadow: `0 0 8px 3px ${onColor}`
           }}
         />
       )}
