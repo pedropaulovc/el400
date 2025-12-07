@@ -214,7 +214,6 @@ const EL400Simulator = () => {
             onSign={handleSign}
             onDecimal={handleDecimal}
             onArrow={handleArrow}
-            onHome={handleHome}
           />
         </div>
       </div>
