@@ -6,10 +6,10 @@ interface HousingEdgeProps {
 const HousingEdge = ({ position, children }: HousingEdgeProps) => {
   if (position === 'top') {
     return (
-      <div className="relative w-full h-10 mb-2">
+      <div className="relative w-full h-12">
         {/* Main raised edge with angled cutout */}
         <svg 
-          viewBox="0 0 780 40" 
+          viewBox="0 0 780 48" 
           className="w-full h-full"
           preserveAspectRatio="none"
         >
@@ -24,33 +24,24 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
               <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </linearGradient>
           </defs>
-          {/* Main shape with angled cut on right */}
+          {/* Thin strip on left, thick section on right with diagonal transition */}
           <path 
-            d="M 0,0 L 580,0 L 580,40 L 0,40 Z" 
-            fill="url(#topEdgeGradient)"
-          />
-          {/* Angled section */}
-          <path 
-            d="M 580,0 L 780,0 L 780,40 L 620,40 Z" 
+            d="M 0,0 L 780,0 L 780,48 L 580,48 L 540,12 L 0,12 Z" 
             fill="url(#topEdgeGradient)"
           />
           {/* Top highlight */}
           <path 
-            d="M 0,0 L 580,0 L 580,3 L 0,3 Z" 
+            d="M 0,0 L 780,0 L 780,3 L 0,3 Z" 
             fill="url(#topHighlight)"
           />
+          {/* Bottom edge shadow */}
           <path 
-            d="M 580,0 L 780,0 L 780,3 L 580,3 Z" 
-            fill="url(#topHighlight)"
-          />
-          {/* Bottom shadow line */}
-          <path 
-            d="M 0,38 L 580,38 L 620,40 L 780,40 L 780,38 L 616,38 L 580,36 L 0,36 Z" 
+            d="M 0,10 L 540,10 L 580,46 L 780,46 L 780,48 L 578,48 L 538,12 L 0,12 Z" 
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
-        {/* Logo positioned in the angled section */}
-        <div className="absolute top-1/2 right-4 -translate-y-1/2">
+        {/* Logo positioned in the thick section */}
+        <div className="absolute top-1/2 right-4 -translate-y-1/4">
           {children}
         </div>
       </div>
