@@ -33,7 +33,7 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
 
   return (
     <div 
-      className="flex items-center gap-1 px-3 py-1"
+      className="flex items-center gap-0.5 px-2"
       role="region"
       aria-label={`${axis} axis position`}
     >
@@ -43,16 +43,16 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
       </span>
       
       {/* Visual 7-segment display (hidden from screen readers) */}
-      <div className="flex items-center" aria-hidden="true">
+      <div className="flex items-center gap-0.5" aria-hidden="true">
         {digits.map((digit, index) => (
-          <div key={index} className={digit === '.' ? 'w-3 h-16' : 'w-10 h-16'}>
+          <div key={index} className="w-8 h-12">
             {digit === '.' ? (
-              <div className="relative w-full h-full flex items-end justify-center pb-2">
+              <div className="relative w-full h-full flex items-end justify-center pb-1">
                 <div 
-                  className="w-2.5 h-2.5 rounded-full"
+                  className="w-2 h-2 rounded-full"
                   style={{ 
                     backgroundColor: 'hsl(120, 100%, 50%)',
-                    boxShadow: '0 0 8px 3px hsl(120, 100%, 50%)'
+                    boxShadow: '0 0 6px 2px hsl(120, 100%, 50%)'
                   }}
                 />
               </div>
