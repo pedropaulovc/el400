@@ -20,22 +20,22 @@ const FunctionButtons = ({
 }: FunctionButtonsProps) => {
   return (
     <div className="flex justify-between w-full">
-      <DROButton onClick={onSettings} size="lg">
+      <DROButton onClick={onSettings} size="lg" className="flex-1">
         <Wrench className="w-5 h-5" />
       </DROButton>
-      <DROButton onClick={onCalibrate} size="lg">
+      <DROButton onClick={onCalibrate} size="lg" className="flex-1">
         <RotateCcw className="w-5 h-5" />
       </DROButton>
-      <DROButton onClick={onToggleUnit} size="lg">
+      <DROButton onClick={onToggleUnit} size="lg" className="flex-1">
         <div className="flex flex-col items-center leading-none">
           <span className="text-[9px] font-bold">in</span>
           <span className="text-[9px] font-bold">mm</span>
         </div>
       </DROButton>
-      <DROButton onClick={onCenter} size="lg">
+      <DROButton onClick={onCenter} size="lg" className="flex-1">
         <Crosshair className="w-5 h-5" />
       </DROButton>
-      <DROButton onClick={onZeroAll} size="lg">
+      <DROButton onClick={onZeroAll} size="lg" className="flex-1">
         <span className="flex items-center gap-0.5">
           <ArrowRightToLine className="w-3 h-3" />
           <span className="text-sm font-bold">0</span>
