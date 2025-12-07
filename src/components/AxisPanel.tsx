@@ -11,7 +11,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
 
   return (
     <div 
-      className="flex flex-col gap-3 px-4 py-6 rounded-sm self-start"
+      className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-4 rounded-sm self-start"
       style={{
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
         boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2)',
@@ -20,8 +20,9 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
       aria-label="Axis selection and zeroing"
     >
       {axes.map((axis) => (
-        <div key={axis} className="flex items-center gap-3" role="group" aria-label={`${axis} axis controls`}>
+        <>
           <DROButton 
+            key={`select-${axis}`}
             variant="dark" 
             onClick={() => onAxisSelect(axis)}
             isActive={activeAxis === axis}
@@ -30,17 +31,15 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
           >
             <span className="text-white font-bold text-lg">{axis}</span>
           </DROButton>
-          <div className="flex flex-col items-start" aria-hidden="true">
-            <span className="text-[#1a1a1a] font-bold text-sm">{axis}<sub className="text-[10px]">0</sub></span>
-          </div>
           <DROButton 
+            key={`zero-${axis}`}
             variant="dark" 
             onClick={() => onAxisZero(axis)}
             aria-label={`Zero ${axis} axis`}
           >
             <span className="text-white font-bold text-sm">{axis}<sub className="text-[8px]">0</sub></span>
           </DROButton>
-        </div>
+        </>
       ))}
     </div>
   );
