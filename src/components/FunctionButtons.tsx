@@ -58,7 +58,7 @@ const FunctionButtons = ({
       </div>
 
       {/* Right side function buttons - 2 rows */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 ml-auto">
         {/* Top row */}
         <div className="flex gap-1.5">
           <DROButton onClick={onToolOffset} variant="dark" size="lg">
