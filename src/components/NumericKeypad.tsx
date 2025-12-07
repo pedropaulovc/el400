@@ -1,5 +1,5 @@
 import DROButton from "./DROButton";
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home } from "lucide-react";
 
 interface NumericKeypadProps {
   onNumber: (num: string) => void;
@@ -18,43 +18,42 @@ const NumericKeypad = ({
   onSign,
   onDecimal,
   onArrow,
+  onHome,
 }: NumericKeypadProps) => {
   return (
     <div className="flex flex-col gap-1.5">
-      {/* Row 1: 7, 8↑, 9 */}
+      {/* Top row: 7, up arrow, 9 */}
       <div className="flex gap-1.5">
         <DROButton onClick={() => onNumber('7')}>7</DROButton>
-        <DROButton onClick={() => { onNumber('8'); onArrow('up'); }} className="relative">
-          <span>8</span>
-          <ArrowUp className="w-3 h-3 absolute top-0.5 right-0.5" />
+        <DROButton onClick={() => onArrow('up')}>
+          <ArrowUp className="w-4 h-4" />
         </DROButton>
         <DROButton onClick={() => onNumber('9')}>9</DROButton>
       </div>
       
-      {/* Row 2: ←4, 5, 6→ */}
+      {/* Second row: left arrow, 5, right arrow */}
       <div className="flex gap-1.5">
-        <DROButton onClick={() => { onNumber('4'); onArrow('left'); }} className="relative">
-          <ArrowLeft className="w-3 h-3 absolute top-0.5 left-0.5" />
-          <span>4</span>
+        <DROButton onClick={() => onArrow('left')}>
+          <ArrowLeft className="w-4 h-4" />
         </DROButton>
         <DROButton onClick={() => onNumber('5')}>5</DROButton>
-        <DROButton onClick={() => { onNumber('6'); onArrow('right'); }} className="relative">
-          <span>6</span>
-          <ArrowRight className="w-3 h-3 absolute top-0.5 right-0.5" />
+        <DROButton onClick={() => onArrow('right')}>
+          <ArrowRight className="w-4 h-4" />
         </DROButton>
       </div>
       
-      {/* Row 3: 1, 2↓, 3 */}
+      {/* Third row: 1, down arrow, 3 */}
       <div className="flex gap-1.5">
-        <DROButton onClick={() => onNumber('1')}>1</DROButton>
-        <DROButton onClick={() => { onNumber('2'); onArrow('down'); }} className="relative">
-          <span>2</span>
-          <ArrowDown className="w-3 h-3 absolute bottom-0.5 right-0.5" />
+        <DROButton onClick={onHome}>
+          <Home className="w-4 h-4" />
+        </DROButton>
+        <DROButton onClick={() => onArrow('down')}>
+          <ArrowDown className="w-4 h-4" />
         </DROButton>
         <DROButton onClick={() => onNumber('3')}>3</DROButton>
       </div>
       
-      {/* Row 4: +/-, 0, . */}
+      {/* Fourth row: +/-, 0, . */}
       <div className="flex gap-1.5">
         <DROButton onClick={onSign}>
           <span className="text-xs font-bold">+/-</span>
@@ -63,7 +62,7 @@ const NumericKeypad = ({
         <DROButton onClick={onDecimal}>.</DROButton>
       </div>
       
-      {/* Row 5: C, ent */}
+      {/* Fifth row: C, ent */}
       <div className="flex gap-1.5">
         <DROButton onClick={onClear}>C</DROButton>
         <DROButton onClick={onEnter} className="col-span-2 w-[5.5rem]">
