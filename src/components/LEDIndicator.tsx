@@ -18,10 +18,15 @@ const LEDIndicator = ({
   groupLabel 
 }: LEDIndicatorProps) => {
   const content = (
-    <span className={cn(
-      "text-[8px] font-bold uppercase tracking-tight",
-      isOn ? "text-red-400" : "text-red-800"
-    )}>
+    <span 
+      className={cn(
+        "text-[8px] font-bold uppercase tracking-tight transition-all",
+        isOn ? "text-red-400" : "text-red-900/60"
+      )}
+      style={isOn ? {
+        textShadow: '0 0 8px hsl(0, 100%, 65%), 0 0 16px hsl(0, 100%, 55%), 0 0 24px hsl(0, 100%, 45%)'
+      } : undefined}
+    >
       {label}
     </span>
   );
