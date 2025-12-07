@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import BrandLogo from "./BrandLogo";
+import HousingEdge from "./HousingEdge";
 import DisplayPanel from "./DisplayPanel";
 import AxisPanelSection from "./AxisPanelSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import InputBufferDisplay from "./InputBufferDisplay";
-
 interface AxisValues {
   X: number;
   Y: number;
@@ -123,7 +123,7 @@ const EL400Simulator = () => {
 
   return (
     <div 
-      className="relative p-8 rounded-lg select-none"
+      className="relative rounded-lg select-none overflow-hidden"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
         boxShadow: `
@@ -135,67 +135,65 @@ const EL400Simulator = () => {
         minWidth: '780px',
       }}
     >
-      {/* Outer beveled border effect */}
-      <div 
-        className="absolute inset-2 rounded pointer-events-none"
-        style={{
-          boxShadow: `
-            inset 2px 2px 4px rgba(0,0,0,0.4),
-            inset -2px -2px 4px rgba(255,255,255,0.08)
-          `,
-        }}
-      />
+      {/* Top raised edge with logo */}
+      <HousingEdge position="top">
+        <BrandLogo />
+      </HousingEdge>
 
-      <BrandLogo />
+      {/* Main content area */}
+      <div className="px-8 pb-2">
+        <div className="flex gap-5 items-stretch">
+          <DisplayPanel 
+            axisValues={axisValues}
+            isAbs={isAbs}
+            isInch={isInch}
+            onToggleAbs={handleToggleAbs}
+            onToggleUnit={handleToggleUnit}
+          />
 
-      <div className="flex gap-5 items-stretch">
-        <DisplayPanel 
-          axisValues={axisValues}
-          isAbs={isAbs}
-          isInch={isInch}
-          onToggleAbs={handleToggleAbs}
-          onToggleUnit={handleToggleUnit}
-        />
+          <AxisPanelSection 
+            activeAxis={activeAxis}
+            onAxisSelect={handleAxisSelect}
+            onAxisZero={handleAxisZero}
+          />
 
-        <AxisPanelSection 
-          activeAxis={activeAxis}
-          onAxisSelect={handleAxisSelect}
-          onAxisZero={handleAxisZero}
-        />
+          <KeypadSection 
+            onNumber={handleNumber}
+            onClear={handleClear}
+            onEnter={handleEnter}
+            onSign={handleSign}
+            onDecimal={handleDecimal}
+            onArrow={handleArrow}
+          />
+        </div>
 
-        <KeypadSection 
-          onNumber={handleNumber}
-          onClear={handleClear}
-          onEnter={handleEnter}
-          onSign={handleSign}
-          onDecimal={handleDecimal}
-          onArrow={handleArrow}
-        />
+        {/* Bottom section */}
+        <div className="mt-5 flex items-end gap-5">
+          <PrimaryFunctionSection 
+            isInch={isInch}
+            isAbs={isAbs}
+            onToggleUnit={handleToggleUnit}
+            onSettings={() => toast('Settings')}
+            onCalibrate={() => toast('Calibration mode')}
+            onCenter={() => toast('Center find mode')}
+            onZeroAll={handleZeroAll}
+          />
+
+          <SecondaryFunctionSection
+            onToolOffset={() => toast('Tool offset')}
+            onBoltCircle={() => toast('Bolt circle pattern')}
+            onLinearPattern={() => toast('Linear pattern')}
+            onHalf={handleHalf}
+            onSDM={() => toast('Sub-datum mode')}
+            onFunction={() => toast('Function menu')}
+          />
+        </div>
+
+        <InputBufferDisplay activeAxis={activeAxis} inputBuffer={inputBuffer} />
       </div>
 
-      {/* Bottom section */}
-      <div className="mt-5 flex items-end gap-5">
-        <PrimaryFunctionSection 
-          isInch={isInch}
-          isAbs={isAbs}
-          onToggleUnit={handleToggleUnit}
-          onSettings={() => toast('Settings')}
-          onCalibrate={() => toast('Calibration mode')}
-          onCenter={() => toast('Center find mode')}
-          onZeroAll={handleZeroAll}
-        />
-
-        <SecondaryFunctionSection
-          onToolOffset={() => toast('Tool offset')}
-          onBoltCircle={() => toast('Bolt circle pattern')}
-          onLinearPattern={() => toast('Linear pattern')}
-          onHalf={handleHalf}
-          onSDM={() => toast('Sub-datum mode')}
-          onFunction={() => toast('Function menu')}
-        />
-      </div>
-
-      <InputBufferDisplay activeAxis={activeAxis} inputBuffer={inputBuffer} />
+      {/* Bottom raised edge */}
+      <HousingEdge position="bottom" />
     </div>
   );
 };
