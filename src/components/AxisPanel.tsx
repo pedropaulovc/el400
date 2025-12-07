@@ -40,7 +40,6 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
             variant="dark" 
             onClick={() => onAxisZero(axis)}
             aria-label={`Zero ${axis} axis`}
-            className="w-[35px]"
           >
             <span className="sr-only">{axis}0</span>
           </DROButton>
