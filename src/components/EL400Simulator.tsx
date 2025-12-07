@@ -114,7 +114,7 @@ const EL400Simulator = () => {
 
   return (
     <div 
-      className="relative pt-14 pb-8 px-8 rounded-lg select-none"
+      className="relative p-8 rounded-lg select-none"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
         boxShadow: `
@@ -137,32 +137,20 @@ const EL400Simulator = () => {
         }}
       />
 
-      {/* Raised inner border */}
-      <div 
-        className="absolute inset-4 rounded pointer-events-none"
-        style={{
-          border: '2px solid transparent',
-          borderTopColor: 'rgba(255,255,255,0.12)',
-          borderLeftColor: 'rgba(255,255,255,0.08)',
-          borderBottomColor: 'rgba(0,0,0,0.3)',
-          borderRightColor: 'rgba(0,0,0,0.25)',
-        }}
-      />
-
       {/* Brand Logo */}
-      <div className="absolute top-5 right-8 flex items-center gap-2">
+      <div className="absolute top-4 right-6 flex items-center gap-2">
         <div 
-          className="px-3 py-1.5 rounded-sm"
+          className="px-3 py-1 rounded-sm"
           style={{
             background: 'linear-gradient(180deg, #f8f8f8 0%, #e0e0e0 100%)',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }}
         >
           <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-              <div className="w-3 h-2 bg-white/60 rounded-full" />
+            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+              <div className="w-2.5 h-1.5 bg-white/60 rounded-full" />
             </div>
-            <span className="text-cyan-600 font-bold text-sm tracking-wide">electronica</span>
+            <span className="text-cyan-600 font-bold text-xs tracking-wide">electronica</span>
           </div>
         </div>
       </div>
