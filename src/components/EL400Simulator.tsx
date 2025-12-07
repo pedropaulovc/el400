@@ -299,7 +299,7 @@ const EL400Simulator = () => {
             }}
           >
             <div 
-              className="p-2 rounded-sm"
+              className="p-2 rounded-sm w-full"
               style={{
                 background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
               }}
