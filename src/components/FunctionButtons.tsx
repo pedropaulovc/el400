@@ -19,7 +19,7 @@ const FunctionButtons = ({
   onZeroAll,
 }: FunctionButtonsProps) => {
   return (
-    <div className="flex gap-1.5">
+    <div className="flex justify-between w-full">
       <DROButton onClick={onSettings} size="lg">
         <Wrench className="w-5 h-5" />
       </DROButton>
