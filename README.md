@@ -1,42 +1,94 @@
-# Welcome to your Lovable project
+# EL400 Digital Readout (DRO) Simulator
 
-## Project info
+A faithful web-based simulator for the Electronica EL400 (a.k.a. MagXact MX-100M) digital readout (DRO) system.
+
+![EL400 Simulator](public/el400-screenshot.png)
+
+## Overview
+
+CNC milling machine users sometimes need to operate their machines in fully manual mode, using a [pendant controller](https://github.com/pedropaulovc/whb04b-6) for precise jogging and positioning. However, current G-code sender applications are not optimized for this workflow.
+
+### The Problem with Current G-Code Senders
+
+Popular G-code senders like [CNCjs](https://github.com/cncjs/cncjs) and [Universal Gcode Sender (UGS)](https://github.com/winder/Universal-G-Code-Sender) are designed primarily for mouse and keyboard interaction. Their interfaces are cramped and difficult to use on touch screens:
+
+| CNCjs | Universal Gcode Sender |
+|-------|------------------------|
+| ![CNCjs interface](public/cncjs-screenshot.png) | ![UGS interface](public/ugs-screenshot.png) |
+| *Dense UI with small buttons* | *Complex panels optimized for desktop* |
+
+More importantly, these G-code senders lack essential machinist calculator functions that traditional DRO units provide out of the box:
+
+| Feature | EL400 DRO | CNCjs | UGS |
+|---------|-----------|-------|-----|
+| Half Function (centerline finding) | Yes | No | No |
+| Built-in Calculator | Yes | No | No |
+| Bolt Hole Circle | Yes | No | No |
+| Bolt Hole Arc | Yes | No | No |
+| Linear Hole Patterns | Yes | No | No |
+| Grid Patterns | Yes | No | No |
+| Center of Circle (3-point) | Yes | No | No |
+| Center of Line | Yes | No | No |
+| Arc Contouring | Yes | No | No |
+| Taper Calculations | Yes | No | No |
+| Distance to Go | Yes | Partial | Partial |
+| Sub-Datum Memory | Yes | No | No |
+
+### The Solution
+
+This project recreates the EL400/MX-100M DRO interface as a web application, designed to be integrated with G-code senders. When displayed maximized on a touch screen alongside a pendant controller, it provides ergonomics equivalent to manual milling machines equipped with a traditional DRO unit.
+
+The simulator focuses on:
+- **Touch-friendly interface**: Large buttons and displays optimized for shop floor use
+- **Complete machinist functions**: All the calculator features machinists expect from a DRO
+- **Accessibility**: WCAG compliance, keyboard navigation, screen reader support
+- **Accurate reproduction**: Faithful recreation of the original hardware's behavior
+
+## Project Info
 
 **Live version**: [el400.vza.net](https://el400.vza.net)
 
-**Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a
+**Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a?magic_link=mc_e4db13d4-d169-4962-a5d1-a397906bd2e5
 
-## How can I edit this code?
+## Tech Stack
 
-There are several ways of editing your application.
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js & npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+### Installation
+
+```sh
+# Clone the repository
+git clone <YOUR_GIT_URL>
+
+# Navigate to the project directory
+cd <YOUR_PROJECT_NAME>
+
+# Install dependencies
+npm i
+
+# Start development server
+npm run dev
+```
+
+## How to Edit This Code
 
 **Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
+The [Lovable Project](https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a?magic_link=mc_e4db13d4-d169-4962-a5d1-a397906bd2e5) is public. Click the **Remix** button to create your own copy and start prompting.
 
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Clone this repo and push changes.
 
 **Edit a file directly in GitHub**
 
@@ -52,24 +104,12 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+## DRO Specifications
 
-This project is built with:
+The simulator behavior is based on official manuals:
+- [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf)
+- [MagXact MX-100M Manual](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## License
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+MIT License - see LICENSE file for details
