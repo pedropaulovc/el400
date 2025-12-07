@@ -33,7 +33,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
               <span className="sr-only">{axis}</span>
             </DROButton>
           </div>
-          <div key={`zero-${axis}`} className="flex flex-col items-center gap-1">
+          <div key={`zero-${axis}`} className="flex flex-col items-center gap-1 mt-5">
             <span className="text-lg font-bold text-black/80">{axis}<sub className="text-xs">0</sub></span>
             <DROButton 
               variant="dark" 
