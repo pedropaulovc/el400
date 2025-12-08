@@ -106,7 +106,7 @@ export const RendersAllSegmentsAndDecimal: Story = {
     showDecimal: true,
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+
     const svg = canvasElement.querySelector("svg");
 
     await expect(svg).toBeInTheDocument();
