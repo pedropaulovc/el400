@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import BrandLogo from "./BrandLogo";
 import HousingEdge from "./HousingEdge";
@@ -25,23 +25,6 @@ const EL400Simulator = () => {
   const [isAbs, setIsAbs] = useState(true);
   const [isInch, setIsInch] = useState(true);
   const [inputBuffer, setInputBuffer] = useState('');
-  const [logoPosition, setLogoPosition] = useState<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const keypadRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const updateLogoPosition = () => {
-      if (containerRef.current && keypadRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const keypadRect = keypadRef.current.getBoundingClientRect();
-        const keypadCenter = keypadRect.left + keypadRect.width / 2 - containerRect.left;
-        setLogoPosition(keypadCenter);
-      }
-    };
-    updateLogoPosition();
-    window.addEventListener('resize', updateLogoPosition);
-    return () => window.removeEventListener('resize', updateLogoPosition);
-  }, []);
 
   const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
     setActiveAxis(axis);
@@ -140,7 +123,6 @@ const EL400Simulator = () => {
 
   return (
     <div 
-      ref={containerRef}
       className="relative rounded-2xl select-none overflow-hidden"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
@@ -154,7 +136,7 @@ const EL400Simulator = () => {
       }}
     >
       {/* Top raised edge with logo */}
-      <HousingEdge position="top" logoPosition={logoPosition}>
+      <HousingEdge position="top">
         <BrandLogo />
       </HousingEdge>
 
@@ -175,16 +157,14 @@ const EL400Simulator = () => {
             onAxisZero={handleAxisZero}
           />
 
-          <div ref={keypadRef}>
-            <KeypadSection 
-              onNumber={handleNumber}
-              onClear={handleClear}
-              onEnter={handleEnter}
-              onSign={handleSign}
-              onDecimal={handleDecimal}
-              onArrow={handleArrow}
-            />
-          </div>
+          <KeypadSection 
+            onNumber={handleNumber}
+            onClear={handleClear}
+            onEnter={handleEnter}
+            onSign={handleSign}
+            onDecimal={handleDecimal}
+            onArrow={handleArrow}
+          />
         </div>
 
         {/* Bottom section */}
