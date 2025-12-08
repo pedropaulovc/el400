@@ -19,7 +19,7 @@ const SecondaryFunctionSection = ({
   return <BeveledFrame style={{ width: '280px' }}>
       <div style={{
       background: '#000000'
-    }} className="p-4 rounded-lg h-full">
+    }} className="p-3 rounded-lg h-full">
         <SecondaryFunctionButtons onToolOffset={onToolOffset} onBoltCircle={onBoltCircle} onLinearPattern={onLinearPattern} onHalf={onHalf} onSDM={onSDM} onFunction={onFunction} />
       </div>
     </BeveledFrame>;
