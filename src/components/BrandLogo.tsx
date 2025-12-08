@@ -1,7 +1,7 @@
 const BrandLogo = () => {
   return (
     <div 
-      className="px-9 py-0.5 rounded-sm"
+      className="px-8 py-0 rounded-sm"
       style={{
         background: 'linear-gradient(180deg, #f8f8f8 0%, #e0e0e0 100%)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
