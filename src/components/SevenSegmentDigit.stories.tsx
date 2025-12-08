@@ -100,7 +100,7 @@ export const DisplayNumber: Story = {
   ),
 };
 
-export const SVGRenders: Story = {
+export const RendersAllSegmentsAndDecimal: Story = {
   args: {
     value: "8",
     showDecimal: true,
