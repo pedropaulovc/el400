@@ -32,7 +32,7 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
 
   return (
     <div className={cn("relative", className)}>
-      <svg viewBox="-8 0 68 90" className="w-full h-full" style={{ overflow: 'visible' }}>
+      <svg viewBox="-8 0 68 70" className="w-full h-full" style={{ overflow: 'visible' }}>
         <g transform="skewX(-10)">
           {/* Segment A (top) */}
           <polygon
@@ -42,37 +42,37 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
           />
           {/* Segment B (top right) */}
           <polygon
-            points="41,4 41,43 35,37 35,11"
+            points="41,4 41,33 35,28 35,11"
             fill={segments[1] ? onColor : offColor}
             filter={segments[1] ? "url(#glow)" : undefined}
           />
           {/* Segment C (bottom right) */}
           <polygon
-            points="41,47 41,86 35,79 35,53"
+            points="41,37 41,66 35,59 35,42"
             fill={segments[2] ? onColor : offColor}
             filter={segments[2] ? "url(#glow)" : undefined}
           />
           {/* Segment D (bottom) */}
           <polygon
-            points="4,88 40,88 34,80 10,80"
+            points="4,68 40,68 34,60 10,60"
             fill={segments[3] ? onColor : offColor}
             filter={segments[3] ? "url(#glow)" : undefined}
           />
           {/* Segment E (bottom left) */}
           <polygon
-            points="3,47 3,86 9,79 9,53"
+            points="3,37 3,66 9,59 9,42"
             fill={segments[4] ? onColor : offColor}
             filter={segments[4] ? "url(#glow)" : undefined}
           />
           {/* Segment F (top left) */}
           <polygon
-            points="3,4 3,43 9,37 9,11"
+            points="3,4 3,33 9,28 9,11"
             fill={segments[5] ? onColor : offColor}
             filter={segments[5] ? "url(#glow)" : undefined}
           />
           {/* Segment G (middle) - hexagonal */}
           <polygon
-            points="4,45 10,41 34,41 40,45 34,49 10,49"
+            points="4,35 10,31 34,31 40,35 34,39 10,39"
             fill={segments[6] ? onColor : offColor}
             filter={segments[6] ? "url(#glow)" : undefined}
           />
@@ -80,7 +80,7 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
           {/* Decimal point segment (bottom right of digit) */}
           <circle
             cx="47"
-            cy="85"
+            cy="65"
             r="4"
             fill={showDecimal ? onColor : offColor}
             filter={showDecimal ? "url(#glow)" : undefined}
