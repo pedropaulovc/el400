@@ -31,8 +31,8 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
   const offColor = "hsl(120, 100%, 8%)";
 
   return (
-    <div className={cn("relative", className)} style={{ transform: 'skewX(-8deg)', willChange: 'transform' }}>
-      <svg viewBox="0 0 52 70" className="w-full h-full" style={{ shapeRendering: 'geometricPrecision' }}>
+    <div className={cn("relative", className)}>
+      <svg viewBox="0 0 52 70" className="w-full h-full">
         {/* Segment A (top) */}
         <polygon
           points="4,2 40,2 34,10 10,10"
