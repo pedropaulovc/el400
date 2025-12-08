@@ -100,16 +100,16 @@ const NumericKeypadV2 = ({
         <DROButtonV2 onClick={onDecimal}>.</DROButtonV2>
       </div>
       
-      {/* Row 5: C, ent (ent spans 2 columns) */}
+      {/* Row 5: C, ent */}
       <div 
         className="grid"
         style={{
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: '1fr 2fr',
           gap: '4%',
         }}
       >
         <DROButtonV2 onClick={onClear}>C</DROButtonV2>
-        <DROButtonV2 onClick={onEnter} className="col-span-2">
+        <DROButtonV2 onClick={onEnter}>
           <span className="font-bold">ent</span>
         </DROButtonV2>
       </div>
