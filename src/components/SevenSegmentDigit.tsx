@@ -32,7 +32,7 @@ const SevenSegmentDigit = ({ value, showDecimal = false, className }: SevenSegme
 
   return (
     <div className={cn("relative", className)}>
-      <svg viewBox="-8 0 68 70" className="w-full h-full" style={{ overflow: 'visible' }}>
+      <svg viewBox="-8 7 68 56" className="w-full h-full" style={{ overflow: 'visible' }}>
         <g transform="skewX(-10)">
           {/* Segment A (top) */}
           <polygon
