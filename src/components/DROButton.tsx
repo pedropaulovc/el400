@@ -28,10 +28,10 @@ const DROButton = ({
   };
 
   const sizeClasses = {
-    sm: 'w-10 h-8 text-xs',
-    md: 'w-11 h-10 text-sm',
-    lg: 'w-12 h-11 text-base',
-    wide: 'w-16 h-10 text-sm',
+    sm: 'w-10 h-7 text-xs',
+    md: 'w-11 h-9 text-sm',
+    lg: 'w-12 h-8 text-base',
+    wide: 'w-16 h-9 text-sm',
   };
 
   return (
