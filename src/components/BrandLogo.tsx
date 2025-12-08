@@ -1,10 +1,11 @@
 const BrandLogo = () => {
   return (
     <div 
-      className="px-3 py-1 rounded-sm"
+      className="py-1 rounded-sm flex justify-center"
       style={{
         background: 'linear-gradient(180deg, #f8f8f8 0%, #e0e0e0 100%)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        width: '148px', // Match keypad width (3 buttons + gaps)
       }}
     >
       <div className="flex items-center gap-1.5">
