@@ -6,7 +6,7 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   onClick?: () => void;
   className?: string;
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
-  size?: 'sm' | 'md' | 'lg' | 'wide';
+  size?: 'sm' | 'md' | 'lg' | 'wide' | 'square';
   isActive?: boolean;
 }
 
@@ -28,10 +28,11 @@ const DROButton = ({
   };
 
   const sizeClasses = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
-    wide: 'w-16 h-10 text-sm',
+    sm: 'w-10 h-7 text-xs',
+    md: 'w-11 h-9 text-sm',
+    lg: 'w-14 h-8 text-base',
+    wide: 'w-16 h-9 text-sm',
+    square: 'w-10 h-10 text-sm',
   };
 
   return (
