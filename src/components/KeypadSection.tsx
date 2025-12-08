@@ -20,11 +20,11 @@ const KeypadSection = ({
 }: KeypadSectionProps) => {
   return (
     <BeveledFrame>
-      <div 
-        className="p-2 rounded-sm h-full flex items-center"
-        style={{
-          background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
-        }}
+        <div 
+          className="p-2 rounded-lg h-full flex items-center"
+          style={{
+            background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
+          }}
       >
         <NumericKeypad 
           onNumber={onNumber}

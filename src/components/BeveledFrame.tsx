@@ -9,7 +9,7 @@ interface BeveledFrameProps {
 const BeveledFrame = ({ children, className = "", style }: BeveledFrameProps) => {
   return (
     <div 
-      className={`p-1 rounded ${className}`}
+      className={`p-1 rounded-xl ${className}`}
       style={{
         background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
         boxShadow: `
