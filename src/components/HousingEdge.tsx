@@ -40,8 +40,8 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
-        {/* Logo positioned in the thick section - centered vertically */}
-        <div className="absolute top-1/2 right-6 -translate-y-1/2">
+        {/* Logo positioned in the thick section - centered vertically in the 48px tall area */}
+        <div className="absolute top-0 bottom-0 right-6 flex items-center">
           {children}
         </div>
       </div>
