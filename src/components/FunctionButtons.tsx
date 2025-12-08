@@ -61,9 +61,9 @@ export const SecondaryFunctionButtons = ({
   onFunction: () => void;
 }) => {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 h-full justify-center">
       {/* Top row */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 justify-between">
         <DROButton onClick={onToolOffset} variant="dark" size="lg">
           <Target className="w-4 h-4 text-white" />
         </DROButton>
@@ -81,7 +81,7 @@ export const SecondaryFunctionButtons = ({
       </div>
       
       {/* Bottom row */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 justify-between">
         <DROButton onClick={() => {}} variant="dark" size="lg">
           <Grid3X3 className="w-4 h-4 text-white" />
         </DROButton>
