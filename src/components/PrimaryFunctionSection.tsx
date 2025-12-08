@@ -22,7 +22,7 @@ const PrimaryFunctionSection = ({
   onZeroAll,
 }: PrimaryFunctionSectionProps) => {
   return (
-    <div className="flex flex-col gap-2" style={{ width: '380px' }}>
+    <div className="relative" style={{ width: '380px' }}>
       <BeveledFrame className="w-full">
         <div 
           className="p-4 rounded-lg"
@@ -41,7 +41,9 @@ const PrimaryFunctionSection = ({
           />
         </div>
       </BeveledFrame>
-      <PowerLED />
+      <div className="absolute -bottom-3 left-4">
+        <PowerLED />
+      </div>
     </div>
   );
 };
