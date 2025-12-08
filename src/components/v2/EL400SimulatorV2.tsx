@@ -138,7 +138,7 @@ const EL400SimulatorV2 = () => {
     >
       {/* Main grid layout */}
       <div 
-        className="grid h-full w-full"
+        className="grid h-full w-full [&>*]:border-2 [&>*]:border-pink-500"
         style={{
           gridTemplateRows: '3fr 28fr 12fr 2fr',
           gridTemplateColumns: '1fr',
@@ -151,7 +151,7 @@ const EL400SimulatorV2 = () => {
 
         {/* Main content area */}
         <div 
-          className="grid gap-[2%]"
+          className="grid gap-[2%] [&>*]:border-2 [&>*]:border-pink-500"
           style={{
             gridTemplateColumns: '44fr 14fr 20fr',
             padding: '3% 4%',
@@ -183,7 +183,7 @@ const EL400SimulatorV2 = () => {
 
         {/* Bottom section */}
         <div 
-          className="grid gap-[2%]"
+          className="grid gap-[2%] [&>*]:border-2 [&>*]:border-pink-500"
           style={{
             gridTemplateColumns: '50fr 1fr 28fr',
             padding: '0 4% 2%',
