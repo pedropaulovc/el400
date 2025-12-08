@@ -34,7 +34,7 @@ const DisplayPanel = ({
             minWidth: '340px',
           }}
         >
-          <div className="flex flex-col gap-3 flex-1 justify-center">
+          <div className="flex flex-col gap-3">
             <AxisDisplay value={axisValues.X} axis="X" />
             <AxisDisplay value={axisValues.Y} axis="Y" />
             <AxisDisplay value={axisValues.Z} axis="Z" />
