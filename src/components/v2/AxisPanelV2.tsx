@@ -14,7 +14,7 @@ const AxisPanelV2 = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelV2Props)
       className="grid h-full w-full rounded-sm [&>*]:border-2 [&>*]:border-pink-500"
       style={{
         gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 2fr 2fr 2fr 1fr',
+        gridTemplateRows: '1fr 1fr 1fr',
         columnGap: '6%',
         padding: '5% 8%',
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
@@ -23,12 +23,11 @@ const AxisPanelV2 = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelV2Props)
       role="group"
       aria-label="Axis selection and zeroing"
     >
-      {axes.map((axis, index) => (
+      {axes.map((axis) => (
         <>
           <div 
             key={`select-${axis}`} 
             className="flex flex-col items-center justify-center gap-[5%]"
-            style={{ gridColumn: 1, gridRow: `${index + 1} / ${index + 3}` }}
           >
             <span className="text-[1em] font-bold text-black/80">{axis}</span>
             <DROButtonV2 
@@ -44,7 +43,7 @@ const AxisPanelV2 = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelV2Props)
           <div 
             key={`zero-${axis}`} 
             className="flex flex-col items-center justify-center gap-[5%]"
-            style={{ gridColumn: 2, gridRow: `${index + 2} / ${index + 4}` }}
+            style={{ transform: 'translateY(50%)' }}
           >
             <span className="text-[1em] font-bold text-black/80">{axis}<sub className="text-[0.65em]">0</sub></span>
             <DROButtonV2 
