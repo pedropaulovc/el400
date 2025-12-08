@@ -1,5 +1,15 @@
 import { cn } from "@/lib/utils";
-import { ReactNode, ButtonHTMLAttributes } from "react";
+import { ReactNode, ButtonHTMLAttributes, useRef, useCallback } from "react";
+
+// Shared audio element for button clicks
+let buttonClickAudio: HTMLAudioElement | null = null;
+const getButtonClickAudio = () => {
+  if (!buttonClickAudio) {
+    buttonClickAudio = new Audio('/sounds/button-click.m4a');
+    buttonClickAudio.volume = 0.5;
+  }
+  return buttonClickAudio;
+};
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
@@ -35,10 +45,17 @@ const DROButton = ({
     square: 'w-10 h-10 text-sm',
   };
 
+  const handleClick = useCallback(() => {
+    const audio = getButtonClickAudio();
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    onClick?.();
+  }, [onClick]);
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         "dro-button flex items-center justify-center rounded-lg border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
