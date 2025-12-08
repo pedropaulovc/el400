@@ -27,12 +27,12 @@ const DROButtonV2 = ({
     enter: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
   };
 
-  // Using aspect ratio and percentage-based sizing
-  const sizeStyles: Record<string, React.CSSProperties> = {
-    sm: { aspectRatio: '10/8', width: '100%', maxWidth: '2.5rem', fontSize: '0.75rem' },
-    md: { aspectRatio: '11/10', width: '100%', maxWidth: '2.75rem', fontSize: '0.875rem' },
-    lg: { aspectRatio: '12/11', width: '100%', maxWidth: '3rem', fontSize: '1rem' },
-    wide: { aspectRatio: '16/10', width: '100%', maxWidth: '4rem', fontSize: '0.875rem' },
+  // Using 100% width/height to fill grid cells - no fixed sizes
+  const sizeClasses: Record<string, string> = {
+    sm: 'text-[0.65em]',
+    md: 'text-[0.75em]',
+    lg: 'text-[0.85em]',
+    wide: 'text-[0.75em]',
   };
 
   return (
@@ -40,14 +40,14 @@ const DROButtonV2 = ({
       type="button"
       onClick={onClick}
       className={cn(
-        "dro-button flex items-center justify-center rounded-sm border-2 font-bold",
+        "dro-button w-full h-full flex items-center justify-center rounded-sm border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
         "hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50",
         variantClasses[variant],
+        sizeClasses[size],
         isActive && "ring-2 ring-white shadow-lg brightness-110",
         className
       )}
-      style={sizeStyles[size]}
       aria-pressed={isActive}
       {...props}
     >
