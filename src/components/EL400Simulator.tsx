@@ -168,7 +168,7 @@ const EL400Simulator = () => {
         </div>
 
         {/* Bottom section */}
-        <div className="mt-5 flex items-end gap-5">
+        <div className="mt-5 flex items-end justify-between">
           <PrimaryFunctionSection 
             isInch={isInch}
             isAbs={isAbs}
