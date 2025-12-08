@@ -16,10 +16,10 @@ const SecondaryFunctionSection = ({
   onSDM,
   onFunction
 }: SecondaryFunctionSectionProps) => {
-  return <BeveledFrame className="ml-auto">
+  return <BeveledFrame className="flex-1">
       <div style={{
       background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)'
-    }} className="p-2 rounded-lg bg-primary-foreground">
+    }} className="p-2 rounded-lg bg-primary-foreground h-full">
         <SecondaryFunctionButtons onToolOffset={onToolOffset} onBoltCircle={onBoltCircle} onLinearPattern={onLinearPattern} onHalf={onHalf} onSDM={onSDM} onFunction={onFunction} />
       </div>
     </BeveledFrame>;
