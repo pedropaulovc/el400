@@ -19,9 +19,9 @@ const NumericKeypad = ({
   onArrow,
 }: NumericKeypadProps) => {
   return (
-    <div className="flex flex-col justify-between h-full">
+    <div className="flex flex-col gap-2 h-full">
       {/* Row 1: 7, 8↑, 9 */}
-      <div className="flex gap-1.5">
+        <div className="flex gap-2">
         <DROButton size="square" onClick={() => onNumber('7')}>7</DROButton>
         <DROButton size="square" onClick={() => onArrow('up')}>
           <div className="flex flex-col items-center leading-none">
@@ -33,7 +33,7 @@ const NumericKeypad = ({
       </div>
       
       {/* Row 2: ←4, 5, 6→ */}
-      <div className="flex gap-1.5">
+        <div className="flex gap-2">
         <DROButton size="square" onClick={() => onArrow('left')}>
           <div className="flex items-center gap-0.5">
             <ArrowLeft className="w-3 h-3" />
@@ -50,7 +50,7 @@ const NumericKeypad = ({
       </div>
       
       {/* Row 3: 1, 2↓, 3 */}
-      <div className="flex gap-1.5">
+        <div className="flex gap-2">
         <DROButton size="square" onClick={() => onNumber('1')}>1</DROButton>
         <DROButton size="square" onClick={() => onArrow('down')}>
           <div className="flex flex-col items-center leading-none">
@@ -62,7 +62,7 @@ const NumericKeypad = ({
       </div>
       
       {/* Row 4: +/-, 0, . */}
-      <div className="flex gap-1.5">
+        <div className="flex gap-2">
         <DROButton size="square" onClick={onSign}>
           <span className="text-xs font-bold">+/-</span>
         </DROButton>
@@ -71,7 +71,7 @@ const NumericKeypad = ({
       </div>
       
       {/* Row 5: C, ent */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         <DROButton size="square" onClick={onClear}>C</DROButton>
         <DROButton size="square" onClick={onEnter} className="flex-1">
           <span className="font-bold">ent</span>
