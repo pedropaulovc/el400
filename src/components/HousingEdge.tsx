@@ -6,7 +6,7 @@ interface HousingEdgeProps {
 const HousingEdge = ({ position, children }: HousingEdgeProps) => {
   if (position === 'top') {
     return (
-      <div className="relative w-full h-12">
+      <div className="relative w-full" style={{ height: '48px' }}>
         {/* Main raised edge with angled cutout */}
         <svg 
           viewBox="0 0 780 48" 
@@ -40,9 +40,9 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
-        {/* Logo positioned in the thick section - centered vertically */}
+        {/* Logo positioned and centered in the thick right section (48px height, center at 24px) */}
         <div 
-          className="absolute right-6 flex items-center justify-center"
+          className="absolute right-6"
           style={{ top: '50%', transform: 'translateY(-50%)' }}
         >
           {children}
