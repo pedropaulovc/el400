@@ -11,7 +11,7 @@ const AxisPanelV2 = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelV2Props)
 
   return (
     <div 
-      className="grid h-full w-full rounded-sm"
+      className="grid h-full w-full rounded-sm [&>*]:border-2 [&>*]:border-pink-500"
       style={{
         gridTemplateColumns: '1fr 1fr',
         gridTemplateRows: '1fr 1fr 1fr',
