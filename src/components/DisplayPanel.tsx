@@ -41,7 +41,7 @@ const DisplayPanel = ({
           </div>
           
           {/* LED Indicators */}
-          <div className="flex justify-between mt-1 px-1">
+          <div className="flex justify-between px-1">
             {/* Mode Toggle Group */}
             <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
               <LEDIndicator 
