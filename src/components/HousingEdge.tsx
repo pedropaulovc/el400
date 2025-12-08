@@ -41,7 +41,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
           />
         </svg>
         {/* Logo centered in the thick section (540-780px area) */}
-        <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 'calc(50% + 260px)' }}>
+        <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 'calc(50% + 230px)' }}>
           {children}
         </div>
       </div>
