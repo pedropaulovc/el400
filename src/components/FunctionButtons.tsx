@@ -64,34 +64,34 @@ export const SecondaryFunctionButtons = ({
     <div className="flex flex-col gap-1.5 h-full justify-center">
       {/* Top row */}
       <div className="flex gap-1.5 justify-between">
-        <DROButton onClick={onToolOffset} variant="dark" size="lg">
+        <DROButton onClick={onToolOffset} variant="dark" size="sm">
           <Target className="w-4 h-4 text-white" />
         </DROButton>
-        <DROButton onClick={onBoltCircle} variant="dark" size="lg">
+        <DROButton onClick={onBoltCircle} variant="dark" size="sm">
           <div className="w-4 h-4 border-2 border-white rounded-full flex items-center justify-center">
             <div className="w-1 h-1 bg-white rounded-full" />
           </div>
         </DROButton>
-        <DROButton onClick={onLinearPattern} variant="dark" size="lg">
+        <DROButton onClick={onLinearPattern} variant="dark" size="sm">
           <Ruler className="w-4 h-4 text-white" />
         </DROButton>
-        <DROButton onClick={() => {}} variant="dark" size="lg">
+        <DROButton onClick={() => {}} variant="dark" size="sm">
           <Settings className="w-4 h-4 text-white" />
         </DROButton>
       </div>
       
       {/* Bottom row */}
       <div className="flex gap-1.5 justify-between">
-        <DROButton onClick={() => {}} variant="dark" size="lg">
+        <DROButton onClick={() => {}} variant="dark" size="sm">
           <Grid3X3 className="w-4 h-4 text-white" />
         </DROButton>
-        <DROButton onClick={onHalf} variant="dark" size="lg">
+        <DROButton onClick={onHalf} variant="dark" size="sm">
           <span className="text-sm font-bold text-white">½</span>
         </DROButton>
-        <DROButton onClick={onSDM} variant="dark" size="lg">
+        <DROButton onClick={onSDM} variant="dark" size="sm">
           <span className="text-[7px] font-bold text-white">SDM</span>
         </DROButton>
-        <DROButton onClick={onFunction} variant="dark" size="lg">
+        <DROButton onClick={onFunction} variant="dark" size="sm">
           <span className="text-xs text-white">f<sup>n</sup></span>
         </DROButton>
       </div>
