@@ -27,7 +27,7 @@ const DisplayPanel = ({
     <div className="flex flex-col">
       <BeveledFrame className="h-full">
         <div 
-          className="p-4 rounded-sm h-full flex flex-col"
+          className="p-4 rounded-lg h-full flex flex-col"
           style={{
             background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',
             boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.9)',

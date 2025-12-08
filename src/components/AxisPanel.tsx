@@ -11,7 +11,7 @@ const AxisPanel = ({ activeAxis, onAxisSelect, onAxisZero }: AxisPanelProps) => 
 
   return (
     <div 
-      className="grid grid-cols-2 gap-x-3 px-4 py-3 rounded-sm h-full content-between"
+      className="grid grid-cols-2 gap-x-3 px-4 py-3 rounded-lg h-full content-between"
       style={{
         background: 'linear-gradient(to bottom, #f0d000, #d4b800)',
         boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.2)',

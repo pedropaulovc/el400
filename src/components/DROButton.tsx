@@ -39,7 +39,7 @@ const DROButton = ({
       type="button"
       onClick={onClick}
       className={cn(
-        "dro-button flex items-center justify-center rounded-sm border-2 font-bold",
+        "dro-button flex items-center justify-center rounded-lg border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
         "hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50",
         variantClasses[variant],

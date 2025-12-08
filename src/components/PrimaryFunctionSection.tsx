@@ -25,7 +25,7 @@ const PrimaryFunctionSection = ({
     <div className="flex flex-col gap-2" style={{ width: '380px' }}>
       <BeveledFrame className="w-full">
         <div 
-          className="p-2 rounded-sm"
+          className="p-2 rounded-lg"
           style={{
             background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
           }}
