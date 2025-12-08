@@ -7,7 +7,7 @@ const BrandLogo = () => {
         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
       }}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-center gap-1.5">
         <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
           <div className="w-2.5 h-1.5 bg-white/60 rounded-full" />
         </div>
