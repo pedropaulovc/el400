@@ -54,9 +54,9 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
       </span>
       
       {/* Visual 7-segment display (hidden from screen readers) */}
-      <div className="flex items-center" aria-hidden="true">
+      <div className="flex items-center -space-x-1" aria-hidden="true">
         {digits.map((digit, index) => (
-          <div key={index} className="w-10 h-16">
+          <div key={index} className="w-12 h-20">
             <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />
           </div>
         ))}
