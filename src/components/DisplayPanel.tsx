@@ -31,7 +31,7 @@ const DisplayPanel = ({
           style={{
             background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',
             boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.9)',
-            width: '348px',
+            minWidth: '340px',
           }}
         >
           <div className="flex flex-col gap-3 flex-1 justify-center">
