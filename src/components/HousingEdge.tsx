@@ -1,9 +1,10 @@
 interface HousingEdgeProps {
   position: 'top' | 'bottom';
   children?: React.ReactNode;
+  logoPosition?: number | null;
 }
 
-const HousingEdge = ({ position, children }: HousingEdgeProps) => {
+const HousingEdge = ({ position, children, logoPosition }: HousingEdgeProps) => {
   if (position === 'top') {
     return (
       <div className="relative w-full h-12">
@@ -40,8 +41,11 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
-        {/* Logo centered in the thick section (540-780px area) */}
-        <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 'calc(50% + 210px)' }}>
+        {/* Logo centered above keypad */}
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+          style={{ left: logoPosition ?? 'calc(50% + 210px)' }}
+        >
           {children}
         </div>
       </div>
