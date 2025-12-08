@@ -5,7 +5,7 @@ import { ReactNode, ButtonHTMLAttributes, useRef, useCallback } from "react";
 let buttonClickAudio: HTMLAudioElement | null = null;
 const getButtonClickAudio = () => {
   if (!buttonClickAudio) {
-    buttonClickAudio = new Audio('/sounds/button-click.m4a');
+    buttonClickAudio = new Audio('/sounds/button-click.wav');
     buttonClickAudio.volume = 0.5;
   }
   return buttonClickAudio;
