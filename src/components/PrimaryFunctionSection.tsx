@@ -22,7 +22,7 @@ const PrimaryFunctionSection = ({
   onZeroAll,
 }: PrimaryFunctionSectionProps) => {
   return (
-    <div className="relative" style={{ width: '380px' }}>
+    <div className="relative" style={{ width: '412px' }}>
       <BeveledFrame className="w-full">
         <div 
           className="p-4 rounded-lg"
