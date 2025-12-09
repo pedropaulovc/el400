@@ -1,4 +1,6 @@
 name: Merge main to lovable
+permissions:
+  contents: read
 
 on:
   push:
