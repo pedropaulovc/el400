@@ -93,7 +93,7 @@
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "eslint-plugin-storybook": "^0.11.6",
+    "eslint-plugin-storybook": "^10.1.5",
     "globals": "^15.15.0",
     "http-server": "^14.1.1",
     "jsdom": "^27.3.0",
