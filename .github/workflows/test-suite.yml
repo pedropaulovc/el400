@@ -72,7 +72,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        timeout-minutes: 2
+        timeout-minutes: 1
         run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run E2E tests
