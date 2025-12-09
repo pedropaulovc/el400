@@ -43,7 +43,7 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
   const srValue = value.toFixed(4);
 
   return (
-    <div 
+    <div
       className="flex items-center gap-0.5 px-2"
       role="region"
       aria-label={`${axis} axis position`}

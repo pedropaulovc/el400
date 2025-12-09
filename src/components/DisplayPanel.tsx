@@ -44,15 +44,15 @@ const DisplayPanel = ({
           <div className="flex justify-between mt-1 px-1">
             {/* Mode Toggle Group */}
             <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
-              <LEDIndicator 
-                label="abs" 
-                isOn={isAbs} 
+              <LEDIndicator
+                label="abs"
+                isOn={isAbs}
                 onClick={onToggleAbs}
                 isInteractive
                 groupLabel="Absolute mode"
               />
-              <LEDIndicator 
-                label="inc" 
+              <LEDIndicator
+                label="inc"
                 isOn={!isAbs}
                 onClick={onToggleAbs}
                 isInteractive
@@ -62,15 +62,15 @@ const DisplayPanel = ({
             
             {/* Units Toggle Group */}
             <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
-              <LEDIndicator 
-                label="inch" 
+              <LEDIndicator
+                label="inch"
                 isOn={isInch}
                 onClick={onToggleUnit}
                 isInteractive
                 groupLabel="Inches"
               />
-              <LEDIndicator 
-                label="mm" 
+              <LEDIndicator
+                label="mm"
                 isOn={!isInch}
                 onClick={onToggleUnit}
                 isInteractive
