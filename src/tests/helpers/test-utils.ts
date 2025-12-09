@@ -99,8 +99,7 @@ export function createSpy<T extends (...args: any[]) => any>(): T & { calls: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const spy = ((...args: any[]) => {
     calls.push(args);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as T & { calls: any[][] };
+  }) as T & { calls: any[][] }; // eslint-disable-line @typescript-eslint/no-explicit-any
   spy.calls = calls;
   return spy;
 }
