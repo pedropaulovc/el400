@@ -18,6 +18,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function AllTheProviders({
   children,
   queryClient,
