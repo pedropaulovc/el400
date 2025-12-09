@@ -6,7 +6,7 @@ import AxisPanelSection from "./AxisPanelSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import InputBufferDisplay from "./InputBufferDisplay";
+
 interface AxisValues {
   X: number;
   Y: number;
@@ -177,7 +177,7 @@ const EL400Simulator = () => {
           />
         </div>
 
-        <InputBufferDisplay activeAxis={activeAxis} inputBuffer={inputBuffer} />
+        
       </div>
 
       {/* Bottom raised edge */}
