@@ -26,6 +26,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     /* Take screenshot on failure */
     screenshot: 'only-on-failure',
+    /* Force headless in CI for performance */
+    headless: process.env.CI ? true : undefined,
   },
 
   /* Configure projects for major browsers */
