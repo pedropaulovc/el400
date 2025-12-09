@@ -1,80 +1,74 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --background: 45 10% 52%;
+  --foreground: 0 0% 10%;
 
-@layer base {
-  :root {
-    --background: 45 10% 52%;
-    --foreground: 0 0% 10%;
+  --card: 0 0% 28%;
+  --card-foreground: 0 0% 90%;
 
-    --card: 0 0% 28%;
-    --card-foreground: 0 0% 90%;
+  --popover: 0 0% 28%;
+  --popover-foreground: 0 0% 90%;
 
-    --popover: 0 0% 28%;
-    --popover-foreground: 0 0% 90%;
+  --primary: 48 90% 50%;
+  --primary-foreground: 0 0% 10%;
 
-    --primary: 48 90% 50%;
-    --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 35%;
+  --secondary-foreground: 0 0% 90%;
 
-    --secondary: 0 0% 35%;
-    --secondary-foreground: 0 0% 90%;
+  --muted: 0 0% 40%;
+  --muted-foreground: 0 0% 70%;
 
-    --muted: 0 0% 40%;
-    --muted-foreground: 0 0% 70%;
+  --accent: 120 100% 35%;
+  --accent-foreground: 0 0% 0%;
 
-    --accent: 120 100% 35%;
-    --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+  --border: 0 0% 25%;
+  --input: 0 0% 30%;
+  --ring: 48 90% 50%;
 
-    --border: 0 0% 25%;
-    --input: 0 0% 30%;
-    --ring: 48 90% 50%;
+  --radius: 0.25rem;
 
-    --radius: 0.25rem;
+  /* Custom DRO colors */
+  --dro-housing: 0 0% 28%;
+  --dro-housing-light: 0 0% 32%;
+  --dro-housing-dark: 0 0% 22%;
+  --dro-display-bg: 0 0% 5%;
+  --dro-digit-on: 120 100% 50%;
+  --dro-digit-off: 120 100% 8%;
+  --dro-yellow-panel: 48 90% 50%;
+  --dro-button-bg: 0 0% 40%;
+  --dro-button-light: 0 0% 50%;
+  --dro-button-dark: 0 0% 30%;
+  --dro-led-on: 0 100% 50%;
+  --dro-led-off: 0 100% 15%;
 
-    /* Custom DRO colors */
-    --dro-housing: 0 0% 28%;
-    --dro-housing-light: 0 0% 32%;
-    --dro-housing-dark: 0 0% 22%;
-    --dro-display-bg: 0 0% 5%;
-    --dro-digit-on: 120 100% 50%;
-    --dro-digit-off: 120 100% 8%;
-    --dro-yellow-panel: 48 90% 50%;
-    --dro-button-bg: 0 0% 40%;
-    --dro-button-light: 0 0% 50%;
-    --dro-button-dark: 0 0% 30%;
-    --dro-led-on: 0 100% 50%;
-    --dro-led-off: 0 100% 15%;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 45 10% 52%;
-    --foreground: 0 0% 10%;
-  }
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+.dark {
+  --background: 45 10% 52%;
+  --foreground: 0 0% 10%;
+}
 
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Orbitron', sans-serif;
-  }
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Orbitron', sans-serif;
 }
 
 /* 7-Segment Display Styling */
@@ -99,4 +93,31 @@
 
 .digit-glow {
   text-shadow: 0 0 10px hsl(var(--dro-digit-on)), 0 0 20px hsl(var(--dro-digit-on));
+}
+
+/* Accordion animations for shadcn/ui components */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
 }
