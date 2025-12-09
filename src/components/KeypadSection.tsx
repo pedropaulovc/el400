@@ -7,7 +7,6 @@ interface KeypadSectionProps {
   onEnter: () => void;
   onSign: () => void;
   onDecimal: () => void;
-  onArrow: (direction: 'up' | 'down' | 'left' | 'right') => void;
 }
 
 const KeypadSection = ({
@@ -16,7 +15,6 @@ const KeypadSection = ({
   onEnter,
   onSign,
   onDecimal,
-  onArrow,
 }: KeypadSectionProps) => {
   return (
     <BeveledFrame>
@@ -32,7 +30,6 @@ const KeypadSection = ({
           onEnter={onEnter}
           onSign={onSign}
           onDecimal={onDecimal}
-          onArrow={onArrow}
         />
       </div>
     </BeveledFrame>
