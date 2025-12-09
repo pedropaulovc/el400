@@ -18,13 +18,13 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient;
 }
 
-function AllTheProviders({
-  children,
-  queryClient,
-}: {
-  children: React.ReactNode;
-  queryClient?: QueryClient;
-}) {
+/**
+ * Renders a component with all necessary providers for testing
+ */
+export function renderWithProviders(
+  ui: ReactElement,
+  { initialRoute = '/', queryClient, ...renderOptions }: CustomRenderOptions = {}
+) {
   const defaultQueryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -35,29 +35,22 @@ function AllTheProviders({
 
   const client = queryClient || defaultQueryClient;
 
-  return (
-    <QueryClientProvider client={client}>
-      <BrowserRouter>{children}</BrowserRouter>
-    </QueryClientProvider>
-  );
-}
-
-export function renderWithProviders(
-  ui: ReactElement,
-  { initialRoute = '/', queryClient, ...renderOptions }: CustomRenderOptions = {}
-) {
   if (initialRoute !== '/') {
     window.history.pushState({}, 'Test page', initialRoute);
   }
 
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>
+      <BrowserRouter>{children}</BrowserRouter>
+    </QueryClientProvider>
+  );
+
   return render(ui, {
-    wrapper: ({ children }) => (
-      <AllTheProviders queryClient={queryClient}>{children}</AllTheProviders>
-    ),
+    wrapper: Wrapper,
     ...renderOptions,
   });
 }
 
-// Re-export everything from testing library
-export * from '@testing-library/react';
+// Re-export commonly used testing library utilities
+export { screen, waitFor, within, fireEvent } from '@testing-library/react';
 export { renderWithProviders as render };
