@@ -27,7 +27,7 @@ jobs:
         run: |
           git fetch origin lovable:lovable || git checkout -b lovable
           git checkout lovable
-          git merge origin/main --no-ff -m "Merge main into lovable"
+          git merge origin/main -m "Merge main into lovable"
 
       - name: Push changes
         run: git push origin lovable
