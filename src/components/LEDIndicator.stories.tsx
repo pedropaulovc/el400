@@ -55,6 +55,10 @@ export const InteractiveOn: Story = {
 };
 
 export const AllStates: Story = {
+  args: {
+    label: "OFF",
+    isOn: false,
+  },
   render: () => (
     <div className="flex gap-6">
       <LEDIndicator label="OFF" isOn={false} />

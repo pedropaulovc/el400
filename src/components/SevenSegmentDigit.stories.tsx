@@ -77,6 +77,9 @@ export const Blank: Story = {
 };
 
 export const AllDigits: Story = {
+  args: {
+    value: "0",
+  },
   render: () => (
     <div className="flex gap-1" style={{ background: "#1a1a1a", padding: "20px" }}>
       {["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
@@ -89,6 +92,9 @@ export const AllDigits: Story = {
 };
 
 export const DisplayNumber: Story = {
+  args: {
+    value: "-",
+  },
   render: () => (
     <div className="flex gap-0.5" style={{ background: "#1a1a1a", padding: "20px" }}>
       {["-", "1", "2", "3"].map((digit, index) => (
