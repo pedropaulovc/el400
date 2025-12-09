@@ -43,7 +43,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run E2E tests
         run: npm run test:e2e
@@ -64,7 +64,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Build Storybook
         run: npm run build-storybook --quiet
