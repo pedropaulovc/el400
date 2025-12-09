@@ -73,11 +73,7 @@ jobs:
 
       - name: Install Playwright browsers
         timeout-minutes: 2
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 2
-          max_attempts: 3
-          command: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
         timeout-minutes: 1
@@ -103,11 +99,7 @@ jobs:
 
       - name: Install Playwright browsers
         timeout-minutes: 2
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 2
-          max_attempts: 3
-          command: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Build Storybook
         timeout-minutes: 1
