@@ -13,6 +13,8 @@ interface AxisValues {
   Z: number;
 }
 
+const noop = () => {};
+
 const EL400Simulator = () => {
   const [axisValues, setAxisValues] = useState<AxisValues>({
     X: 27.0302,
@@ -159,19 +161,19 @@ const EL400Simulator = () => {
             isInch={isInch}
             isAbs={isAbs}
             onToggleUnit={handleToggleUnit}
-            onSettings={() => {}}
-            onCalibrate={() => {}}
-            onCenter={() => {}}
+            onSettings={noop}
+            onCalibrate={noop}
+            onCenter={noop}
             onZeroAll={handleZeroAll}
           />
 
           <SecondaryFunctionSection
-            onToolOffset={() => {}}
-            onBoltCircle={() => {}}
-            onLinearPattern={() => {}}
+            onToolOffset={noop}
+            onBoltCircle={noop}
+            onLinearPattern={noop}
             onHalf={handleHalf}
-            onSDM={() => {}}
-            onFunction={() => {}}
+            onSDM={noop}
+            onFunction={noop}
           />
         </div>
 
