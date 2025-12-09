@@ -101,6 +101,10 @@ export const InteractiveDemo: Story = {
  * Useful for design review and visual regression testing.
  */
 export const AllStates: Story = {
+  args: {
+    label: "ALL",
+    isOn: false,
+  },
   render: () => (
     <div className="flex gap-6 flex-col">
       <div className="flex gap-4 items-center">

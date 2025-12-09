@@ -15,10 +15,10 @@ type DROFixtures = {
  *   test('my test', async ({ dro }) => { ... });
  */
 export const test = base.extend<DROFixtures>({
-  dro: async ({ page }, use) => {
+  dro: async ({ page }, provide) => {
     const dro = new DROPage(page);
     await dro.goto();
-    await use(dro);
+    await provide(dro);
   },
 });
 

@@ -6,7 +6,7 @@ import AxisPanelSection from "./AxisPanelSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import InputBufferDisplay from "./InputBufferDisplay";
+
 interface AxisValues {
   X: number;
   Y: number;
@@ -79,14 +79,6 @@ const EL400Simulator = () => {
     setInputBuffer('');
   }, [activeAxis, inputBuffer]);
 
-  const handleArrow = (direction: 'up' | 'down' | 'left' | 'right') => {
-    if (!activeAxis) return;
-    const delta = direction === 'up' || direction === 'right' ? 0.001 : -0.001;
-    setAxisValues(prev => ({
-      ...prev,
-      [activeAxis]: prev[activeAxis] + delta
-    }));
-  };
 
   const handleToggleUnit = () => {
     setIsInch(!isInch);
@@ -151,7 +143,6 @@ const EL400Simulator = () => {
             onEnter={handleEnter}
             onSign={handleSign}
             onDecimal={handleDecimal}
-            onArrow={handleArrow}
           />
         </div>
 
@@ -177,7 +168,7 @@ const EL400Simulator = () => {
           />
         </div>
 
-        <InputBufferDisplay activeAxis={activeAxis} inputBuffer={inputBuffer} />
+        
       </div>
 
       {/* Bottom raised edge */}
