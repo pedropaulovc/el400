@@ -33,7 +33,7 @@ export function mockIntersectionObserver() {
       return [];
     }
     unobserve() {}
-  } as any;
+  } as unknown as typeof IntersectionObserver;
 }
 
 /**
@@ -45,7 +45,7 @@ export function mockResizeObserver() {
     disconnect() {}
     observe() {}
     unobserve() {}
-  } as any;
+  } as unknown as typeof ResizeObserver;
 }
 
 /**
@@ -92,6 +92,7 @@ export function delay(ms: number): Promise<void> {
 /**
  * Create a spy function for testing callbacks
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function createSpy<T extends (...args: any[]) => any>(): T & { calls: any[][] } {
   const calls: any[][] = [];
   const spy = ((...args: any[]) => {
@@ -100,3 +101,4 @@ export function createSpy<T extends (...args: any[]) => any>(): T & { calls: any
   spy.calls = calls;
   return spy;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
