@@ -1,4 +1,4 @@
-name: Storybook Tests
+name: Test Suite
 
 on:
   push:
@@ -24,6 +24,12 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Run E2E tests
+        run: npm run test:e2e
 
       - name: Build Storybook
         run: npm run build-storybook --quiet

@@ -10,22 +10,42 @@ This is a faithful, touch-friendly web-based simulator of the Electronica EL400 
 - **State Management:** React hooks (useState, useCallback) - no external state library
 - **Data Fetching:** @tanstack/react-query
 - **Routing:** react-router-dom
-- **Comprehensive testing**: Unit tests (Vitest), E2E tests (Playwright), component docs (Storybook)
+- **Unit Testing:** Vitest + @testing-library/react + jsdom
+- **E2E Testing:** Playwright with Page Object Model
+- **Component Testing:** Storybook
 
 ## Development Commands
 
 ```bash
+# Development
 npm run dev
 npm run build
 npm run build:dev
-npm preview
+npm run preview
 npm run lint
+
+# Testing
+npm run test
+npm run test:ui
+npm run test:watch
+npm run test:coverage
+npm run test:e2e
+npm run test:e2e:headed
+npm run test:e2e:ui
+npm run test:e2e:debug
+npm run test:all
+
+# Storybook
 npm run storybook
 npm run build-storybook
 npm run test-storybook
-npm run test:ui # TODO Unit tests
-npm run test:e2e` # TODO Playwright
 ```
+
+## Testing Strategy
+
+- **Vitest** (`src/**/*.test.tsx`) - Component behavior, logic, interactions, accessibility. Primary test infrastructure.
+- **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys.
+- **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
 
 ## Architecture
 

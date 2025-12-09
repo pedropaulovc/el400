@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within, expect } from "@storybook/test";
 import LEDIndicator from "./LEDIndicator";
 
 const meta = {
@@ -22,6 +22,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// ============================================================================
+// Visual Documentation Stories
+// ============================================================================
+
+/**
+ * Default LED indicator in OFF state.
+ * Non-interactive, displays with dimmed styling.
+ */
 export const Off: Story = {
   args: {
     label: "ABS",
@@ -29,6 +37,10 @@ export const Off: Story = {
   },
 };
 
+/**
+ * LED indicator in ON state.
+ * Shows bright styling with text shadow glow effect.
+ */
 export const On: Story = {
   args: {
     label: "ABS",
@@ -36,40 +48,38 @@ export const On: Story = {
   },
 };
 
+/**
+ * Interactive LED indicator (acts as a radio button).
+ * Clickable and keyboard-navigable.
+ */
 export const Interactive: Story = {
   args: {
-    label: "INC",
+    label: "MODE",
     isOn: false,
     isInteractive: true,
     onClick: fn(),
   },
 };
 
-export const InteractiveOn: Story = {
+/**
+ * Interactive LED with group label for accessibility.
+ * Shows how to use groupLabel for radio button groups.
+ */
+export const WithGroupLabel: Story = {
   args: {
-    label: "MM",
+    label: "ABS",
     isOn: true,
     isInteractive: true,
     onClick: fn(),
+    groupLabel: "Coordinate Mode",
   },
 };
 
-export const AllStates: Story = {
-  args: {
-    label: "OFF",
-    isOn: false,
-  },
-  render: () => (
-    <div className="flex gap-6">
-      <LEDIndicator label="OFF" isOn={false} />
-      <LEDIndicator label="ON" isOn={true} />
-      <LEDIndicator label="INT" isOn={false} isInteractive onClick={() => {}} />
-      <LEDIndicator label="INT-ON" isOn={true} isInteractive onClick={() => {}} />
-    </div>
-  ),
-};
-
-export const ClickInteraction: Story = {
+/**
+ * Example of interactive behavior with click handling.
+ * Try clicking to see the onClick handler triggered.
+ */
+export const InteractiveDemo: Story = {
   args: {
     label: "TOGGLE",
     isOn: false,
@@ -80,24 +90,29 @@ export const ClickInteraction: Story = {
     const canvas = within(canvasElement);
     const button = canvas.getByRole("radio");
 
-    await expect(button).toBeInTheDocument();
-    await expect(button).toHaveAttribute("aria-checked", "false");
+    // Demonstrate the click interaction
     await userEvent.click(button);
-    await expect(args.onClick).toHaveBeenCalledTimes(1);
+    await expect(args.onClick).toHaveBeenCalled();
   },
 };
 
-export const AccessibilityStatus: Story = {
-  args: {
-    label: "STATUS",
-    isOn: true,
-    isInteractive: false,
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const status = canvas.getByRole("status");
-
-    await expect(status).toBeInTheDocument();
-    await expect(status).toHaveAttribute("aria-label", "STATUS: active");
-  },
+/**
+ * Visual showcase of all LED states side-by-side.
+ * Useful for design review and visual regression testing.
+ */
+export const AllStates: Story = {
+  render: () => (
+    <div className="flex gap-6 flex-col">
+      <div className="flex gap-4 items-center">
+        <span className="text-sm text-gray-400 w-32">Non-Interactive:</span>
+        <LEDIndicator label="OFF" isOn={false} />
+        <LEDIndicator label="ON" isOn={true} />
+      </div>
+      <div className="flex gap-4 items-center">
+        <span className="text-sm text-gray-400 w-32">Interactive:</span>
+        <LEDIndicator label="INT-OFF" isOn={false} isInteractive onClick={() => {}} />
+        <LEDIndicator label="INT-ON" isOn={true} isInteractive onClick={() => {}} />
+      </div>
+    </div>
+  ),
 };
