@@ -64,6 +64,9 @@ export const Active: Story = {
 };
 
 export const AllVariants: Story = {
+  args: {
+    children: "Default",
+  },
   render: () => (
     <div className="flex gap-4 flex-wrap">
       <DROButton variant="default">Default</DROButton>
@@ -76,6 +79,9 @@ export const AllVariants: Story = {
 };
 
 export const AllSizes: Story = {
+  args: {
+    children: "SM",
+  },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap">
       <DROButton size="sm">SM</DROButton>

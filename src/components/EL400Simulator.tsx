@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { toast } from "sonner";
 import BrandLogo from "./BrandLogo";
 import HousingEdge from "./HousingEdge";
 import DisplayPanel from "./DisplayPanel";
@@ -29,17 +28,14 @@ const EL400Simulator = () => {
   const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
     setActiveAxis(axis);
     setInputBuffer('');
-    toast(`Axis ${axis} selected`);
   };
 
   const handleAxisZero = (axis: 'X' | 'Y' | 'Z') => {
     setAxisValues(prev => ({ ...prev, [axis]: 0 }));
-    toast(`Axis ${axis} zeroed`);
   };
 
   const handleNumber = useCallback((num: string) => {
     if (!activeAxis) {
-      toast.error('Select an axis first');
       return;
     }
     setInputBuffer(prev => prev + num);
@@ -47,7 +43,6 @@ const EL400Simulator = () => {
 
   const handleDecimal = useCallback(() => {
     if (!activeAxis) {
-      toast.error('Select an axis first');
       return;
     }
     if (!inputBuffer.includes('.')) {
@@ -57,7 +52,6 @@ const EL400Simulator = () => {
 
   const handleSign = useCallback(() => {
     if (!activeAxis) {
-      toast.error('Select an axis first');
       return;
     }
     setInputBuffer(prev => {
@@ -70,7 +64,6 @@ const EL400Simulator = () => {
 
   const handleClear = useCallback(() => {
     setInputBuffer('');
-    toast('Input cleared');
   }, []);
 
   const handleEnter = useCallback(() => {
@@ -80,7 +73,6 @@ const EL400Simulator = () => {
     const value = parseFloat(inputBuffer);
     if (!isNaN(value)) {
       setAxisValues(prev => ({ ...prev, [activeAxis]: value }));
-      toast(`${activeAxis} set to ${value}`);
     }
     setInputBuffer('');
   }, [activeAxis, inputBuffer]);
@@ -96,17 +88,14 @@ const EL400Simulator = () => {
 
   const handleToggleUnit = () => {
     setIsInch(!isInch);
-    toast(`Units: ${!isInch ? 'Inches' : 'Millimeters'}`);
   };
 
   const handleZeroAll = () => {
     setAxisValues({ X: 0, Y: 0, Z: 0 });
-    toast('All axes zeroed');
   };
 
   const handleToggleAbs = () => {
     setIsAbs(!isAbs);
-    toast(`Mode: ${!isAbs ? 'Absolute' : 'Incremental'}`);
   };
 
   const handleHalf = () => {
@@ -115,9 +104,6 @@ const EL400Simulator = () => {
         ...prev,
         [activeAxis]: prev[activeAxis] / 2
       }));
-      toast(`${activeAxis} halved`);
-    } else {
-      toast.error('Select an axis first');
     }
   };
 
@@ -173,19 +159,19 @@ const EL400Simulator = () => {
             isInch={isInch}
             isAbs={isAbs}
             onToggleUnit={handleToggleUnit}
-            onSettings={() => toast('Settings')}
-            onCalibrate={() => toast('Calibration mode')}
-            onCenter={() => toast('Center find mode')}
+            onSettings={() => {}}
+            onCalibrate={() => {}}
+            onCenter={() => {}}
             onZeroAll={handleZeroAll}
           />
 
           <SecondaryFunctionSection
-            onToolOffset={() => toast('Tool offset')}
-            onBoltCircle={() => toast('Bolt circle pattern')}
-            onLinearPattern={() => toast('Linear pattern')}
+            onToolOffset={() => {}}
+            onBoltCircle={() => {}}
+            onLinearPattern={() => {}}
             onHalf={handleHalf}
-            onSDM={() => toast('Sub-datum mode')}
-            onFunction={() => toast('Function menu')}
+            onSDM={() => {}}
+            onFunction={() => {}}
           />
         </div>
 
