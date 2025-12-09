@@ -17,9 +17,9 @@ const noop = () => {};
 
 const EL400Simulator = () => {
   const [axisValues, setAxisValues] = useState<AxisValues>({
-    X: 27.0302,
-    Y: -8.4244,
-    Z: 82.0990,
+    X: 0,
+    Y: 0,
+    Z: 0,
   });
   
   const [activeAxis, setActiveAxis] = useState<'X' | 'Y' | 'Z' | null>(null);
