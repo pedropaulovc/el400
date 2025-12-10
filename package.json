@@ -73,6 +73,10 @@
     "vaul": "^1.1.2",
     "zod": "^4.1.13"
   },
+  "overrides": {
+    "expect-playwright": "npm:@playwright/test@^1.57.0",
+    "jest-process-manager": "npm:@playwright/test@^1.57.0"
+  },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.57.0",
