@@ -41,12 +41,7 @@ export function renderWithProviders(
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
+      <BrowserRouter>
         {children}
       </BrowserRouter>
     </QueryClientProvider>
