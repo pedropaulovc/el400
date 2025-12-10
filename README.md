@@ -2,8 +2,6 @@
 
 A faithful web-based simulator for the Electronica EL400 (a.k.a. MagXact MX-100M) digital readout (DRO) system.
 
-**Live version**: [el400.vza.net](https://el400.vza.net)
-
 ![EL400 Simulator](public/el400-screenshot.png)
 
 ## Overview
@@ -50,7 +48,7 @@ The simulator focuses on:
 
 **Live version**: [el400.vza.net](https://el400.vza.net)
 
-**Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a
+**Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a?magic_link=mc_e4db13d4-d169-4962-a5d1-a397906bd2e5
 
 ## Tech Stack
 
@@ -86,7 +84,7 @@ npm run dev
 
 **Use Lovable**
 
-The [Lovable Project](https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a) is public. Click the **Remix** button to create your own copy and start prompting.
+The [Lovable Project](https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a?magic_link=mc_e4db13d4-d169-4962-a5d1-a397906bd2e5) is public. Click the **Remix** button to create your own copy and start prompting.
 
 **Use your preferred IDE**
 
