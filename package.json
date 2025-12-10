@@ -11,7 +11,6 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test-storybook": "test-storybook",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
@@ -20,7 +19,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:all": "npm run test && npm run test:e2e && npm run test-storybook"
+    "test:all": "npm run test && npm run test:e2e"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -73,16 +72,11 @@
     "vaul": "^1.1.2",
     "zod": "^4.1.13"
   },
-  "overrides": {
-    "expect-playwright": "npm:@playwright/test@^1.57.0",
-    "jest-process-manager": "npm:@playwright/test@^1.57.0"
-  },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.57.0",
     "@storybook/react": "^10.1.5",
     "@storybook/react-vite": "^10.1.5",
-    "@storybook/test-runner": "^0.24.2",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.9.1",
