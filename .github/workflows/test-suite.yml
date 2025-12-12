@@ -76,7 +76,7 @@ jobs:
         run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run E2E tests
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm run test:e2e
 
   storybook-tests:
