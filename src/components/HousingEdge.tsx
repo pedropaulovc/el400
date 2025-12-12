@@ -6,10 +6,10 @@ interface HousingEdgeProps {
 const HousingEdge = ({ position, children }: HousingEdgeProps) => {
   if (position === 'top') {
     return (
-      <div className="relative w-full h-16">
+      <div className="relative w-full h-12">
         {/* Main raised edge with angled cutout */}
         <svg 
-          viewBox="0 0 780 64" 
+          viewBox="0 0 780 48" 
           className="w-full h-full"
           preserveAspectRatio="none"
         >
@@ -26,7 +26,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
           </defs>
           {/* Thin strip on left (24px), thick section on right with diagonal transition */}
           <path 
-            d="M 0,0 L 780,0 L 780,64 L 580,64 L 540,24 L 0,24 Z" 
+            d="M 0,0 L 780,0 L 780,48 L 480,48 L 440,24 L 0,24 Z" 
             fill="url(#topEdgeGradient)"
           />
           {/* Top highlight */}
@@ -36,7 +36,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
           />
           {/* Bottom edge shadow */}
           <path 
-            d="M 0,22 L 540,22 L 580,62 L 780,62 L 780,64 L 578,64 L 538,24 L 0,24 Z" 
+            d="M 0,22 L 440,22 L 480,46 L 780,46 L 780,48 L 478,48 L 438,24 L 0,24 Z" 
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
