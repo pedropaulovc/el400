@@ -11,7 +11,10 @@ const Icon = ({ name, className = "w-full h-full", alt = "" }: IconProps) => {
       alt={alt}
       className={className}
       draggable={false}
-      style={{ objectFit: 'fill' }}
+      style={{
+        objectFit: 'fill',
+        filter: 'brightness(0) invert(1)'
+      }}
     />
   );
 };

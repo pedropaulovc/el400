@@ -20,7 +20,9 @@ const NumericKeypad = ({
     <div className="flex flex-col justify-between h-full">
       {/* Row 1: 7, 8, 9 */}
       <div className="flex gap-3">
-        <DROButton size="square" onClick={() => onNumber('7')}>7</DROButton>
+        <DROButton size="square" onClick={() => onNumber('7')} className="p-0">
+          <Icon name="number-7" alt="7" />
+        </DROButton>
         <DROButton size="square" onClick={() => onNumber('8')} className="p-0">
           <Icon name="number-8" alt="8" />
         </DROButton>
@@ -34,7 +36,9 @@ const NumericKeypad = ({
         <DROButton size="square" onClick={() => onNumber('4')} className="p-0">
           <Icon name="number-4" alt="4" />
         </DROButton>
-        <DROButton size="square" onClick={() => onNumber('5')}>5</DROButton>
+        <DROButton size="square" onClick={() => onNumber('5')} className="p-0">
+          <Icon name="number-5" alt="5" />
+        </DROButton>
         <DROButton size="square" onClick={() => onNumber('6')} className="p-0">
           <Icon name="number-6" alt="6" />
         </DROButton>
@@ -42,11 +46,15 @@ const NumericKeypad = ({
 
       {/* Row 3: 1, 2, 3 */}
       <div className="flex gap-3">
-        <DROButton size="square" onClick={() => onNumber('1')}>1</DROButton>
+        <DROButton size="square" onClick={() => onNumber('1')} className="p-0">
+          <Icon name="number-1" alt="1" />
+        </DROButton>
         <DROButton size="square" onClick={() => onNumber('2')} className="p-0">
           <Icon name="number-2" alt="2" />
         </DROButton>
-        <DROButton size="square" onClick={() => onNumber('3')}>3</DROButton>
+        <DROButton size="square" onClick={() => onNumber('3')} className="p-0">
+          <Icon name="number-3" alt="3" />
+        </DROButton>
       </div>
 
       {/* Row 4: +/-, 0, . */}
