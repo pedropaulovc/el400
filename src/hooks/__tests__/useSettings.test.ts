@@ -1,17 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSettings } from '../useSettings';
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from '../../types/settings';
 
 describe('useSettings', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
     localStorage.clear();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe('initialization', () => {
@@ -84,50 +78,15 @@ describe('useSettings', () => {
       expect(result.current.settings.precision).toBe(2);
     });
 
-    it('should save settings to localStorage on change', async () => {
+    it('should save settings to localStorage on change', () => {
       const { result } = renderHook(() => useSettings());
 
       act(() => {
         result.current.updateSettings({ beepEnabled: false });
-      });
-
-      // Advance past debounce delay
-      act(() => {
-        vi.advanceTimersByTime(400);
       });
 
       const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || '{}');
       expect(stored.beepEnabled).toBe(false);
-    });
-
-    it('should debounce writes to localStorage', () => {
-      const setItemSpy = vi.spyOn(localStorage, 'setItem');
-      const { result } = renderHook(() => useSettings());
-
-      // Make multiple rapid updates
-      act(() => {
-        result.current.updateSettings({ beepEnabled: false });
-      });
-      act(() => {
-        result.current.updateSettings({ precision: 2 });
-      });
-      act(() => {
-        result.current.updateSettings({ defaultUnit: 'mm' });
-      });
-
-      // Advance past debounce
-      act(() => {
-        vi.advanceTimersByTime(400);
-      });
-
-      // Should have saved with final values
-      const lastCall = setItemSpy.mock.calls[setItemSpy.mock.calls.length - 1];
-      const savedData = JSON.parse(lastCall[1]);
-      expect(savedData.beepEnabled).toBe(false);
-      expect(savedData.precision).toBe(2);
-      expect(savedData.defaultUnit).toBe('mm');
-
-      setItemSpy.mockRestore();
     });
   });
 
@@ -154,13 +113,12 @@ describe('useSettings', () => {
       expect(result.current.settings).toEqual(DEFAULT_SETTINGS);
     });
 
-    it('should immediately save defaults to localStorage on reset', () => {
+    it('should save defaults to localStorage on reset', () => {
       const { result } = renderHook(() => useSettings());
 
-      // Change settings and wait for save
+      // Change settings
       act(() => {
         result.current.updateSettings({ beepEnabled: false });
-        vi.advanceTimersByTime(400);
       });
 
       // Reset
@@ -168,7 +126,6 @@ describe('useSettings', () => {
         result.current.resetSettings();
       });
 
-      // Should be saved immediately (not debounced)
       const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || '{}');
       expect(stored).toEqual(DEFAULT_SETTINGS);
     });
@@ -185,7 +142,6 @@ describe('useSettings', () => {
 
       act(() => {
         result.current.updateSettings({ beepEnabled: false });
-        vi.advanceTimersByTime(400);
       });
 
       // Should not throw, just warn
