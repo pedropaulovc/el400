@@ -36,8 +36,8 @@ const SevenSegmentDigit = ({
       <svg viewBox="-8 0 68 79.8" style={{ overflow: 'visible' }} className="w-full h-full py-[15px]">
         <style>{`
           @media (forced-colors: active) {
-            .segment-on { fill: CanvasText !important; }
-            .segment-off { fill: transparent !important; }
+            .segment-on { fill: CanvasText; }
+            .segment-off { fill: transparent; }
           }
         `}</style>
         <g transform="skewX(-10)">
