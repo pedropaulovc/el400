@@ -8,8 +8,8 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
     return (
       <div className="relative w-full h-12">
         {/* Main raised edge with angled cutout */}
-        <svg 
-          viewBox="0 0 780 48" 
+        <svg
+          viewBox="0 0 780 48"
           className="w-full h-full"
           preserveAspectRatio="none"
         >
