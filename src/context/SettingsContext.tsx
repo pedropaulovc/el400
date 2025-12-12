@@ -30,6 +30,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
  * Hook to access settings from context.
  * Must be used within a SettingsProvider.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSettingsContext(): UseSettingsReturn {
   const context = useContext(SettingsContext);
 
