@@ -303,6 +303,73 @@ test.describe('Forced Colors Mode', () => {
     await context.close();
   });
 
+  test('DRO container and sections have visible borders with 20:1 contrast in forced-colors mode', async ({ browser }) => {
+    const context = await browser.newContext({
+      forcedColors: 'active',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    // Wait for the display to render
+    await page.waitForSelector('svg polygon');
+
+    // Get the main DRO container (outermost div with the simulator)
+    const droContainer = page.locator('.overflow-hidden.rounded-2xl').first();
+    await expect(droContainer).toBeVisible();
+
+    // Check DRO container has visible border with contrast
+    const containerStyles = await droContainer.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        borderWidth: style.borderWidth,
+        borderStyle: style.borderStyle,
+        borderColor: style.borderColor,
+        backgroundColor: style.backgroundColor,
+      };
+    });
+
+    expect(containerStyles.borderStyle, 'DRO container should have a border style').not.toBe('none');
+    expect(containerStyles.borderWidth, 'DRO container should have 2px border').toBe('2px');
+
+    // Check border contrast against background
+    const containerBorderRgb = parseColor(containerStyles.borderColor);
+    const containerBgRgb = parseColor(containerStyles.backgroundColor);
+    const containerContrast = getContrastRatio(containerBorderRgb, containerBgRgb);
+    expect(containerContrast, `DRO container border contrast ${containerContrast.toFixed(2)}:1 should be at least 20:1`).toBeGreaterThanOrEqual(20);
+
+    // Get all section frames (BeveledFrame components)
+    const sections = page.locator('.rounded-xl.p-1');
+    const sectionCount = await sections.count();
+
+    // Should have at least 5 sections: DisplayPanel, AxisPanelSection, KeypadSection, PrimaryFunctionSection, SecondaryFunctionSection
+    expect(sectionCount, 'Should have at least 5 sections').toBeGreaterThanOrEqual(5);
+
+    // Check each section has visible border with contrast
+    for (let i = 0; i < sectionCount; i++) {
+      const section = sections.nth(i);
+      const sectionStyles = await section.evaluate((el) => {
+        const style = window.getComputedStyle(el);
+        return {
+          borderWidth: style.borderWidth,
+          borderStyle: style.borderStyle,
+          borderColor: style.borderColor,
+          backgroundColor: style.backgroundColor,
+        };
+      });
+
+      expect(sectionStyles.borderStyle, `Section ${i} should have a border style`).not.toBe('none');
+      expect(sectionStyles.borderWidth, `Section ${i} should have 2px border`).toBe('2px');
+
+      // Check border contrast against background
+      const sectionBorderRgb = parseColor(sectionStyles.borderColor);
+      const sectionBgRgb = parseColor(sectionStyles.backgroundColor);
+      const sectionContrast = getContrastRatio(sectionBorderRgb, sectionBgRgb);
+      expect(sectionContrast, `Section ${i} border contrast ${sectionContrast.toFixed(2)}:1 should be at least 20:1`).toBeGreaterThanOrEqual(20);
+    }
+
+    await context.close();
+  });
+
   test('LED and active mode indicators have no glow effect in forced-colors mode', async ({ browser }) => {
     const context = await browser.newContext({
       forcedColors: 'active',

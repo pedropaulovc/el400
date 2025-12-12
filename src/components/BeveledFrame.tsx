@@ -17,6 +17,7 @@ const BeveledFrame = ({ children, className = "", style }: BeveledFrameProps) =>
           inset -1px -1px 2px rgba(255,255,255,0.05),
           2px 2px 4px rgba(0,0,0,0.3)
         `,
+        border: '2px solid transparent',
         ...style,
       }}
     >

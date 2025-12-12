@@ -102,10 +102,11 @@ const EL400Simulator = () => {
   };
 
   return (
-    <div 
+    <div
       className="relative rounded-2xl select-none overflow-hidden"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
+        border: '2px solid transparent',
         boxShadow: `
           0 25px 80px rgba(0,0,0,0.6),
           0 8px 32px rgba(0,0,0,0.4),
