@@ -115,13 +115,11 @@ const EL400Simulator = () => {
         minWidth: '780px',
       }}
     >
-      {/* Top raised edge with logo */}
-      <HousingEdge position="top">
-        <BrandLogo />
-      </HousingEdge>
+      {/* Top raised edge */}
+      <HousingEdge position="top" />
 
       {/* Main content area */}
-      <div className="px-8 pb-2 pt-4">
+      <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
           <DisplayPanel 
             axisValues={axisValues}
