@@ -6,16 +6,28 @@ interface IconProps {
 
 const Icon = ({ name, className = "w-full h-full", alt = "" }: IconProps) => {
   return (
-    <img
-      src={`/illustrations/${name}.svg`}
-      alt={alt}
-      className={className}
-      draggable={false}
-      style={{
-        objectFit: 'fill',
-        filter: 'brightness(0) invert(1)'
-      }}
-    />
+    <>
+      <style>{`
+        .icon-white {
+          filter: brightness(0) invert(1);
+        }
+
+        @media (forced-colors: active) {
+          .icon-white {
+            filter: none;
+          }
+        }
+      `}</style>
+      <img
+        src={`/illustrations/${name}.svg`}
+        alt={alt}
+        className={`icon-white ${className}`}
+        draggable={false}
+        style={{
+          objectFit: 'fill'
+        }}
+      />
+    </>
   );
 };
 

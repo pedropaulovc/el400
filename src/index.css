@@ -106,7 +106,7 @@
     background-color: ButtonFace;
     background-image: none;
     color: ButtonText;
-    border-color: ButtonText;
+    border-color: ButtonText !important;
   }
 
   button.dro-button:focus {
