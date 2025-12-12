@@ -10,7 +10,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
         {/* Main raised edge with angled cutout */}
         <svg
           viewBox="0 0 780 48"
-          className="w-full h-full"
+          className="w-full h-full housing-edge-svg"
           preserveAspectRatio="none"
         >
           <defs>

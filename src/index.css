@@ -112,6 +112,15 @@
 
 /* Forced Colors Mode (Windows High Contrast) Support */
 @media (forced-colors: active) {
+  /* Housing edge uses Canvas background with border in forced-colors mode */
+  .housing-edge-svg {
+    border: 2px solid CanvasText;
+  }
+
+  .housing-edge-svg path {
+    fill: Canvas;
+  }
+
   button.dro-button {
     forced-color-adjust: none;
     background-color: ButtonFace;
