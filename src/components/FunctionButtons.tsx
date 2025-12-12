@@ -78,13 +78,13 @@ export const SecondaryFunctionButtons = ({
 
       {/* Bottom row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={onCalculator} variant="dark" size="icon-wide" className="p-0">
+        <DROButton onClick={onCalculator} variant="dark" size="icon" className="p-0">
           <Icon name="calculator" alt="Calculator" />
         </DROButton>
         <DROButton onClick={onHalf} variant="dark" size="icon" className="p-0">
           <Icon name="half-function" alt="Half" />
         </DROButton>
-        <DROButton onClick={onSDM} variant="dark" size="icon-wide" className="p-0">
+        <DROButton onClick={onSDM} variant="dark" size="icon" className="p-0">
           <Icon name="sdm-function" alt="SDM" />
         </DROButton>
         <DROButton onClick={onFunction} variant="dark" size="icon" className="p-0">
