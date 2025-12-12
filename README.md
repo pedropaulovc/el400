@@ -43,7 +43,7 @@ This project recreates the EL400/MX-100M DRO interface as a web application, des
 The simulator focuses on:
 - **Touch-friendly interface**: Large buttons and displays optimized for shop floor use
 - **Complete machinist functions**: All the calculator features machinists expect from a DRO
-- **Accessibility**: WCAG compliance, keyboard navigation, screen reader support
+- **Accessibility**: WCAG compliance, keyboard navigation, screen reader support, forced-colors mode ([details](ACCESSIBILITY.md))
 - **Accurate reproduction**: Faithful recreation of the original hardware's behavior
 
 ## Project Info
