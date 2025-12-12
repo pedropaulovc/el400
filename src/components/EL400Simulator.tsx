@@ -116,7 +116,9 @@ const EL400Simulator = () => {
       }}
     >
       {/* Top raised edge */}
-      <HousingEdge position="top" />
+      <HousingEdge position="top">
+        <BrandLogo />
+      </HousingEdge>
 
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
