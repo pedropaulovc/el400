@@ -103,24 +103,24 @@
 @media (forced-colors: active) {
   button.dro-button {
     forced-color-adjust: none;
-    background-color: ButtonFace !important;
-    background-image: none !important;
-    color: ButtonText !important;
-    border-color: ButtonText !important;
+    background-color: ButtonFace;
+    background-image: none;
+    color: ButtonText;
+    border-color: ButtonText;
   }
 
   button.dro-button:focus {
-    outline: 2px solid Highlight !important;
+    outline: 2px solid Highlight;
   }
 
   .mode-indicator-active {
-    color: CanvasText !important;
+    color: CanvasText;
     text-shadow: none !important;
     forced-color-adjust: none;
   }
 
   .mode-indicator-inactive {
-    color: transparent !important;
+    color: transparent;
     forced-color-adjust: none;
   }
 }
