@@ -1,10 +1,13 @@
 import { test, expect } from '../helpers/fixtures';
 
 /**
- * E2E Tests: Settings Persistence
+ * E2E Tests: US-036 Settings Persistence
+ *
  * Tests that settings are persisted to localStorage and survive page reloads.
+ *
+ * @see project/user-stories/09-integration/US-036-settings-persistence.md
  */
-test.describe('Settings Persistence', () => {
+test.describe('US-036: Settings Persistence', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate first, then clear localStorage (can't access localStorage on about:blank)
     await page.goto('/');
@@ -17,7 +20,7 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test that unit preference persists across page reload.
+   * Unit preference persists across page reload.
    */
   test('should persist unit preference across page reload', async ({ page, dro }) => {
     // Verify starting in inch mode (default)
@@ -40,7 +43,7 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test that default settings are loaded on first visit.
+   * Default settings are loaded on first visit.
    */
   test('should load default settings on first visit', async ({ dro }) => {
     // Default unit should be inch
@@ -51,7 +54,7 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test that settings are stored in localStorage.
+   * Settings are stored in localStorage.
    */
   test('should store settings in localStorage', async ({ page, dro }) => {
     // Toggle unit to mm
@@ -71,7 +74,7 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test that corrupted localStorage falls back to defaults.
+   * Corrupted localStorage falls back to defaults.
    */
   test('should handle corrupted localStorage gracefully', async ({ page, dro }) => {
     // Set corrupted localStorage
@@ -89,7 +92,7 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test settings persistence across multiple toggles.
+   * Settings persistence across multiple toggles.
    */
   test('should persist settings through multiple changes', async ({ page, dro }) => {
     // Start with defaults (inch)
@@ -118,7 +121,8 @@ test.describe('Settings Persistence', () => {
   });
 
   /**
-   * Test that localStorage works in iframe context (important for CNCjs widget).
+   * AC35.6: The DRO works as a CNCjs widget embedded in an iframe.
+   * localStorage must work in same-origin context.
    */
   test('should work in same-origin context', async ({ dro }) => {
     // Verify localStorage is available (page is already navigated by beforeEach/dro fixture)
