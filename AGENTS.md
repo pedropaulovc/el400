@@ -47,6 +47,10 @@ npm run test-storybook
 - **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys.
 - **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
 
+## Project Management
+
+User stories with acceptance tests are preserved in `project/user-stories/*`
+
 ## Architecture
 
 ### Component Structure
@@ -71,6 +75,7 @@ Components include:
 - Keyboard navigation support
 - Focus ring indicators
 - Screen reader support (sr-only class for hidden labels)
+- High contrast support (forced-colors)
 
 ### Component Structure
 *   **Path:** `src/components`
