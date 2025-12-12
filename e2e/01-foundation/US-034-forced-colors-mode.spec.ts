@@ -302,4 +302,37 @@ test.describe('Forced Colors Mode', () => {
 
     await context.close();
   });
+
+  test('LED and active mode indicators have no glow effect in forced-colors mode', async ({ browser }) => {
+    const context = await browser.newContext({
+      forcedColors: 'active',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    // Wait for the display to render
+    await page.waitForSelector('.mode-indicator-active');
+
+    // Find all active mode indicators (LEDs that are on)
+    const activeIndicators = page.locator('.mode-indicator-active');
+    const count = await activeIndicators.count();
+
+    // There should be at least 2 active indicators (ABS and either INCH or MM)
+    expect(count).toBeGreaterThanOrEqual(2);
+
+    // Check each active indicator for text shadow
+    for (let i = 0; i < count; i++) {
+      const indicator = activeIndicators.nth(i);
+
+      const textShadow = await indicator.evaluate((el) => {
+        return window.getComputedStyle(el).textShadow;
+      });
+
+      // In forced-colors mode, text-shadow should be 'none' or not applied
+      // The glow effect (multiple shadow values) should not be present
+      expect(textShadow, `Active LED indicator ${i} should not have glow effect (text-shadow) in forced-colors mode`).toBe('none');
+    }
+
+    await context.close();
+  });
 });

@@ -115,6 +115,7 @@
 
   .mode-indicator-active {
     color: CanvasText !important;
+    text-shadow: none !important;
     forced-color-adjust: none;
   }
 
