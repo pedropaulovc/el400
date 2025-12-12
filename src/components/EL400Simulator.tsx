@@ -121,7 +121,7 @@ const EL400Simulator = () => {
       </HousingEdge>
 
       {/* Main content area */}
-      <div className="px-8 pb-2 pt-4">
+      <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
           <DisplayPanel 
             axisValues={axisValues}
