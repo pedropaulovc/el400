@@ -41,6 +41,7 @@ export const Default: Story = {
 };
 
 export const PrimaryFunctionIcons: Story = {
+  args: { name: "setup", alt: "Setup" },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap bg-gray-800 p-4">
       <div className="flex flex-col items-center gap-2">
@@ -99,6 +100,7 @@ export const PrimaryFunctionIcons: Story = {
 };
 
 export const SecondaryFunctionIcons: Story = {
+  args: { name: "bolt-hole-pcd-function", alt: "Bolt hole" },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap bg-gray-800 p-4">
       <div className="flex flex-col items-center gap-2">
@@ -178,6 +180,7 @@ export const SecondaryFunctionIcons: Story = {
 };
 
 export const KeypadIcons: Story = {
+  args: { name: "number-0", alt: "0" },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap bg-gray-800 p-4">
       <div className="flex flex-col items-center gap-2">
