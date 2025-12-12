@@ -1,5 +1,5 @@
 import DROButton from "./DROButton";
-import { Wrench, RotateCcw, Crosshair, ArrowRightToLine, Grid3X3, Ruler, Target, Settings } from "lucide-react";
+import Icon from "./Icon";
 
 interface FunctionButtonsProps {
   isInch: boolean;
@@ -20,26 +20,20 @@ const FunctionButtons = ({
 }: FunctionButtonsProps) => {
   return (
     <div className="flex justify-between w-full">
-      <DROButton onClick={onSettings} size="lg">
-        <Wrench className="w-5 h-5" />
+      <DROButton onClick={onSettings} size="icon" className="p-0">
+        <Icon name="setup" alt="Settings" />
       </DROButton>
-      <DROButton onClick={onCalibrate} size="lg">
-        <RotateCcw className="w-5 h-5" />
+      <DROButton onClick={onCalibrate} size="icon" className="p-0">
+        <Icon name="reference" alt="Calibrate" />
       </DROButton>
-      <DROButton onClick={onToggleUnit} size="lg">
-        <div className="flex flex-col items-center leading-none">
-          <span className="text-[9px] font-bold">in</span>
-          <span className="text-[9px] font-bold">mm</span>
-        </div>
+      <DROButton onClick={onToggleUnit} size="icon" className="p-0">
+        <Icon name="inch-mm" alt="Toggle units" />
       </DROButton>
-      <DROButton onClick={onCenter} size="lg">
-        <Crosshair className="w-5 h-5" />
+      <DROButton onClick={onCenter} size="icon" className="p-0">
+        <Icon name="reference" alt="Center" />
       </DROButton>
-      <DROButton onClick={onZeroAll} size="lg">
-        <span className="flex items-center gap-0.5">
-          <ArrowRightToLine className="w-3 h-3" />
-          <span className="text-sm font-bold">0</span>
-        </span>
+      <DROButton onClick={onZeroAll} size="icon" className="p-0">
+        <Icon name="preset" alt="Zero all axes" />
       </DROButton>
     </div>
   );
@@ -64,35 +58,33 @@ export const SecondaryFunctionButtons = ({
     <div className="flex flex-col gap-4 h-full justify-center">
       {/* Top row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={onToolOffset} variant="dark" size="lg">
-          <Target className="w-4 h-4 text-white" />
+        <DROButton onClick={onToolOffset} variant="dark" size="icon" className="p-0">
+          <Icon name="tool-offsets" className="invert" alt="Tool offset" />
         </DROButton>
-        <DROButton onClick={onBoltCircle} variant="dark" size="lg">
-          <div className="w-4 h-4 border-2 border-white rounded-full flex items-center justify-center">
-            <div className="w-1 h-1 bg-white rounded-full" />
-          </div>
+        <DROButton onClick={onBoltCircle} variant="dark" size="icon" className="p-0">
+          <Icon name="bolt-hole-pcd-function" className="invert" alt="Bolt circle" />
         </DROButton>
-        <DROButton onClick={onLinearPattern} variant="dark" size="lg">
-          <Ruler className="w-4 h-4 text-white" />
+        <DROButton onClick={onLinearPattern} variant="dark" size="icon" className="p-0">
+          <Icon name="grid-hole-function" className="invert" alt="Linear pattern" />
         </DROButton>
-        <DROButton onClick={() => {}} variant="dark" size="lg">
-          <Settings className="w-4 h-4 text-white" />
+        <DROButton onClick={() => {}} variant="dark" size="icon" className="p-0">
+          <Icon name="calculator" className="invert" alt="Calculator" />
         </DROButton>
       </div>
-      
+
       {/* Bottom row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={() => {}} variant="dark" size="lg">
-          <Grid3X3 className="w-4 h-4 text-white" />
+        <DROButton onClick={() => {}} variant="dark" size="icon" className="p-0">
+          <Icon name="abs-inc-v1" className="invert" alt="Abs/Inc" />
         </DROButton>
-        <DROButton onClick={onHalf} variant="dark" size="lg">
-          <span className="text-sm font-bold text-white">½</span>
+        <DROButton onClick={onHalf} variant="dark" size="icon" className="p-0">
+          <Icon name="half-function" className="invert" alt="Half" />
         </DROButton>
-        <DROButton onClick={onSDM} variant="dark" size="lg">
-          <span className="text-[7px] font-bold text-white">SDM</span>
+        <DROButton onClick={onSDM} variant="dark" size="icon" className="p-0">
+          <Icon name="sdm-function" className="invert" alt="SDM" />
         </DROButton>
-        <DROButton onClick={onFunction} variant="dark" size="lg">
-          <span className="text-xs text-white">f<sup>n</sup></span>
+        <DROButton onClick={onFunction} variant="dark" size="icon" className="p-0">
+          <Icon name="function" className="invert" alt="Function" />
         </DROButton>
       </div>
     </div>
