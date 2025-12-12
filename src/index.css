@@ -98,3 +98,28 @@
 .digit-glow {
   text-shadow: 0 0 10px hsl(var(--dro-digit-on)), 0 0 20px hsl(var(--dro-digit-on));
 }
+
+/* Forced Colors Mode (Windows High Contrast) Support */
+@media (forced-colors: active) {
+  button.dro-button {
+    forced-color-adjust: none;
+    background-color: ButtonFace !important;
+    background-image: none !important;
+    color: ButtonText !important;
+    border-color: ButtonText !important;
+  }
+
+  button.dro-button:focus {
+    outline: 2px solid Highlight !important;
+  }
+
+  .mode-indicator-active {
+    color: CanvasText !important;
+    forced-color-adjust: none;
+  }
+
+  .mode-indicator-inactive {
+    color: transparent !important;
+    forced-color-adjust: none;
+  }
+}
