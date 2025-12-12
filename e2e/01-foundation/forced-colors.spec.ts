@@ -33,8 +33,14 @@ function parseColor(color: string): [number, number, number] {
   if (rgbMatch) {
     return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
   }
-  // Handle transparent/none as black with 0 alpha (effectively invisible)
-  if (color === 'none' || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+  // Handle rgba(r, g, b, a) format
+  const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+  if (rgbaMatch) {
+    // If alpha is 0, it's transparent - return the RGB values anyway for reference
+    return [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3])];
+  }
+  // Handle transparent/none
+  if (color === 'none' || color === 'transparent') {
     return [0, 0, 0];
   }
   throw new Error(`Cannot parse color: ${color}`);
@@ -78,10 +84,9 @@ test.describe('Forced Colors Mode', () => {
     });
 
     const litRgb = parseColor(litFill);
-    // For transparent/none, use background color
-    const offRgb = offFill === 'none' || offFill === 'transparent' || offFill === 'rgba(0, 0, 0, 0)' 
-      ? parseColor(bgColor) 
-      : parseColor(offFill);
+    // For transparent (alpha=0), use background color for contrast calculation
+    const isTransparent = offFill === 'none' || offFill === 'transparent' || offFill.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/);
+    const offRgb = isTransparent ? parseColor(bgColor) : parseColor(offFill);
 
     const contrastRatio = getContrastRatio(litRgb, offRgb);
 
