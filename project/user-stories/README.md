@@ -4,8 +4,8 @@ Comprehensive user stories merged from Claude and Gemini sources, deduplicated a
 
 ## Overview
 
-**Total Stories:** 33
-**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini)
+**Total Stories:** 34
+**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini), plus accessibility requirements
 **Purpose:** Guide implementation of EL400 DRO simulator features
 **Format:** Each story includes acceptance criteria, E2E test scenarios, and TODO markers for discrepancies
 
@@ -129,11 +129,21 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
+### 08. Accessibility (1 story)
+
+| ID | Title | Priority | Source | File |
+|----|-------|----------|--------|------|
+| US-034 | Forced Colors Mode (High Contrast) Support | P0 | Accessibility requirements | [US-034-forced-colors-mode.md](08-accessibility/US-034-forced-colors-mode.md) |
+
+**Summary:** Accessibility features for users with visual impairments and assistive technologies.
+
+---
+
 ## Priority Matrix
 
 | Priority | Description | Count | Stories |
 |----------|-------------|-------|---------|
-| **P0** | Must-have foundation | 2 | US-001, US-002 |
+| **P0** | Must-have foundation | 3 | US-001, US-002, US-034 |
 | **P1** | Essential DRO features | 4 | US-003, US-004, US-005, US-006 |
 | **P2** | Advanced navigation | 6 | US-007, US-008, US-009, US-010, US-011, US-012 |
 | **P3** | Value-added calculations | 3 | US-013, US-014, US-015 |
@@ -144,13 +154,14 @@ This directory contains the merged and deduplicated user stories from:
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (P0) - 2 stories
-**Goal:** Basic DRO display and position tracking
+### Phase 1: Foundation (P0) - 3 stories
+**Goal:** Basic DRO display, position tracking, and accessibility
 
 - [ ] US-001: Power-up display
 - [ ] US-002: Sign convention
+- [ ] US-034: Forced Colors Mode (High Contrast) support
 
-**Deliverable:** DRO powers up and displays axis positions correctly
+**Deliverable:** DRO powers up, displays axis positions correctly, and is fully accessible in high contrast mode
 
 ---
 
