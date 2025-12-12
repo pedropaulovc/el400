@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import BrandLogo from "./BrandLogo";
 import HousingEdge from "./HousingEdge";
 import DisplayPanel from "./DisplayPanel";
 import AxisPanelSection from "./AxisPanelSection";
@@ -116,9 +115,7 @@ const EL400Simulator = () => {
       }}
     >
       {/* Top raised edge */}
-      <HousingEdge position="top">
-        <BrandLogo />
-      </HousingEdge>
+      <HousingEdge position="top" />
 
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
