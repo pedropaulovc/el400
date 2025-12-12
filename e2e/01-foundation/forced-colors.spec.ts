@@ -1,11 +1,51 @@
 import { test, expect } from '@playwright/test';
 
 /**
+ * Calculate relative luminance from RGB values (0-255)
+ * Per WCAG 2.1 formula
+ */
+function getLuminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    const sRGB = c / 255;
+    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+/**
+ * Calculate contrast ratio between two colors
+ * Returns ratio as X:1
+ */
+function getContrastRatio(rgb1: [number, number, number], rgb2: [number, number, number]): number {
+  const l1 = getLuminance(...rgb1);
+  const l2 = getLuminance(...rgb2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Parse CSS color string to RGB tuple
+ */
+function parseColor(color: string): [number, number, number] {
+  // Handle rgb(r, g, b) format
+  const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (rgbMatch) {
+    return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+  }
+  // Handle transparent/none as black with 0 alpha (effectively invisible)
+  if (color === 'none' || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+    return [0, 0, 0];
+  }
+  throw new Error(`Cannot parse color: ${color}`);
+}
+
+/**
  * Forced Colors Mode Accessibility Tests
  * Tests that the 7-segment display is accessible in Windows High Contrast mode
  */
 test.describe('Forced Colors Mode', () => {
-  test('7-segment display shows lit segments as CanvasText and off segments as transparent', async ({ browser }) => {
+  test('lit vs off segments have at least 20:1 contrast ratio', async ({ browser }) => {
     // Create context with forced-colors emulation
     const context = await browser.newContext({
       forcedColors: 'active',
@@ -16,27 +56,36 @@ test.describe('Forced Colors Mode', () => {
     // Wait for the display to render
     await page.waitForSelector('svg polygon');
 
-    // Check that segment-on elements exist and have the correct class
     const litSegments = page.locator('.segment-on');
-    await expect(litSegments.first()).toBeVisible();
-
-    // Check that segment-off elements exist
     const offSegments = page.locator('.segment-off');
+
+    await expect(litSegments.first()).toBeVisible();
     await expect(offSegments.first()).toBeAttached();
 
-    // Verify CSS rules are applied - get computed styles
-    const litSegmentFill = await litSegments.first().evaluate((el) => {
+    // Get computed fill colors
+    const litFill = await litSegments.first().evaluate((el) => {
       return window.getComputedStyle(el).fill;
     });
 
-    const offSegmentFill = await offSegments.first().evaluate((el) => {
+    const offFill = await offSegments.first().evaluate((el) => {
       return window.getComputedStyle(el).fill;
     });
 
-    // In forced-colors mode, CanvasText maps to a system color (usually black or white)
-    // and transparent should be 'none' or 'transparent'
-    // The exact values depend on the system, but they should be different
-    expect(litSegmentFill).not.toBe(offSegmentFill);
+    // Get background color for contrast calculation with transparent
+    const bgColor = await page.evaluate(() => {
+      const display = document.querySelector('.segment-on')?.closest('svg')?.parentElement;
+      return display ? window.getComputedStyle(display).backgroundColor : 'rgb(0, 0, 0)';
+    });
+
+    const litRgb = parseColor(litFill);
+    // For transparent/none, use background color
+    const offRgb = offFill === 'none' || offFill === 'transparent' || offFill === 'rgba(0, 0, 0, 0)' 
+      ? parseColor(bgColor) 
+      : parseColor(offFill);
+
+    const contrastRatio = getContrastRatio(litRgb, offRgb);
+
+    expect(contrastRatio, `Contrast ratio ${contrastRatio.toFixed(2)}:1 should be at least 20:1`).toBeGreaterThanOrEqual(20);
 
     await context.close();
   });
