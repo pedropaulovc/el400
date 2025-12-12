@@ -149,6 +149,7 @@ export function MachineStateProvider({
  * Hook to access the full machine state context.
  * Must be used within a MachineStateProvider.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMachineStateContext(): MachineStateContextValue {
   const context = useContext(MachineStateContext);
 
