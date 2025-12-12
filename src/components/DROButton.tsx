@@ -1,10 +1,51 @@
 import { cn } from "@/lib/utils";
-import { ReactNode, ButtonHTMLAttributes, useRef, useCallback } from "react";
+import { ReactNode, ButtonHTMLAttributes, useCallback, useRef, useEffect } from "react";
 
-// Preload audio element for button clicks
-const buttonClickAudio = new Audio('/sounds/button-click.wav');
-buttonClickAudio.volume = 0.5;
-buttonClickAudio.load();
+// Audio context for reliable playback
+let audioContext: AudioContext | null = null;
+let audioBuffer: AudioBuffer | null = null;
+
+const initAudio = async () => {
+  if (audioContext) return;
+  
+  audioContext = new AudioContext();
+  try {
+    const response = await fetch('/sounds/button-click.wav');
+    const arrayBuffer = await response.arrayBuffer();
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  } catch (e) {
+    console.warn('Failed to load button click sound');
+  }
+};
+
+const playClickSound = () => {
+  if (!audioContext || !audioBuffer) {
+    initAudio();
+    return;
+  }
+  
+  // Resume context if suspended (browser autoplay policy)
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+  
+  const source = audioContext.createBufferSource();
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = 0.5;
+  source.buffer = audioBuffer;
+  source.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  source.start(0);
+};
+
+// Initialize on first user interaction
+if (typeof window !== 'undefined') {
+  const initOnInteraction = () => {
+    initAudio();
+    window.removeEventListener('click', initOnInteraction);
+  };
+  window.addEventListener('click', initOnInteraction);
+}
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
@@ -41,8 +82,7 @@ const DROButton = ({
   };
 
   const handleClick = useCallback(() => {
-    buttonClickAudio.currentTime = 0;
-    buttonClickAudio.play().catch(() => {});
+    playClickSound();
     onClick?.();
   }, [onClick]);
 
