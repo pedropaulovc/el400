@@ -7,9 +7,10 @@ This is a faithful, touch-friendly web-based simulator of the Electronica EL400 
 - **Build Tool:** Vite
 - **Framework:** React 18 with TypeScript
 - **Styling:** Tailwind CSS
-- **State Management:** React hooks (useState, useCallback) - no external state library
+- **State Management:** React Context + hooks (MachineStateContext, SettingsContext)
 - **Data Fetching:** @tanstack/react-query
 - **Routing:** react-router-dom
+- **Real-time:** socket.io-client (CNCjs integration)
 - **Unit Testing:** Vitest + @testing-library/react + jsdom
 - **E2E Testing:** Playwright with Page Object Model
 - **Component Testing:** Storybook
@@ -52,6 +53,15 @@ npm run test-storybook
 User stories with acceptance tests are preserved in `project/user-stories/*`
 
 ## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed data flow and adapter implementation.
+
+### Data Interface
+
+- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MachineAdapter` interface
+- **Contexts** (`src/context/`): `MachineStateContext` (positions), `SettingsContext` (persisted prefs)
+- **Hooks** (`src/hooks/`): `useDROMemory` (ABS/INC switching), `useSettings`, `useMachineState`
+- **URL config**: `?source=cncjs&host=localhost&port=8000` or `?source=mock`
 
 ### Component Structure
 
