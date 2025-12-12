@@ -77,4 +77,5 @@ global.fetch = vi.fn((url) => {
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  localStorage.clear();
 });
