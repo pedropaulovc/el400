@@ -50,6 +50,7 @@ const DisplayPanel = ({
                 onClick={onToggleAbs}
                 isInteractive
                 groupLabel="Absolute mode"
+                data-testid="led-abs"
               />
               <LEDIndicator
                 label="inc"
@@ -57,9 +58,10 @@ const DisplayPanel = ({
                 onClick={onToggleAbs}
                 isInteractive
                 groupLabel="Incremental mode"
+                data-testid="led-inc"
               />
             </div>
-            
+
             {/* Units Toggle Group */}
             <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
               <LEDIndicator
@@ -68,6 +70,7 @@ const DisplayPanel = ({
                 onClick={onToggleUnit}
                 isInteractive
                 groupLabel="Inches"
+                data-testid="led-inch"
               />
               <LEDIndicator
                 label="mm"
@@ -75,6 +78,7 @@ const DisplayPanel = ({
                 onClick={onToggleUnit}
                 isInteractive
                 groupLabel="Millimeters"
+                data-testid="led-mm"
               />
             </div>
             

@@ -29,10 +29,6 @@ export class DROPage {
   readonly z0Button: Locator;
   readonly zeroAllButton: Locator;
 
-  // Mode buttons
-  readonly absIncButton: Locator;
-  readonly inchMmButton: Locator;
-
   // Keypad buttons
   readonly key0: Locator;
   readonly key1: Locator;
@@ -47,22 +43,13 @@ export class DROPage {
   readonly keyDecimal: Locator;
   readonly keyMinus: Locator;
   readonly enterButton: Locator;
+  readonly clearButton: Locator;
 
   // Function buttons
   readonly halfButton: Locator;
-  readonly centerButton: Locator;
   readonly settingsButton: Locator;
-  readonly calibrateButton: Locator;
-  readonly dtgButton: Locator;
-  readonly sdmButton: Locator;
-  readonly boltCircleButton: Locator;
-  readonly linearPatternButton: Locator;
-
-  // Arrow keys
-  readonly upArrow: Locator;
-  readonly downArrow: Locator;
-  readonly leftArrow: Locator;
-  readonly rightArrow: Locator;
+  readonly absIncButton: Locator;
+  readonly centerButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -72,57 +59,44 @@ export class DROPage {
     this.yDisplay = page.getByRole('region', { name: 'Y axis position' });
     this.zDisplay = page.getByRole('region', { name: 'Z axis position' });
 
-    // Initialize LED indicators using semantic queries
-    this.absLED = page.getByRole('radio', { name: /abs.*absolute mode/i });
-    this.incLED = page.getByRole('radio', { name: /inc.*incremental mode/i });
-    this.inchLED = page.getByRole('radio', { name: /inch.*inches/i });
-    this.mmLED = page.getByRole('radio', { name: /mm.*millimeters/i });
+    // Initialize LED indicators using data-testid
+    this.absLED = page.getByTestId('led-abs');
+    this.incLED = page.getByTestId('led-inc');
+    this.inchLED = page.getByTestId('led-inch');
+    this.mmLED = page.getByTestId('led-mm');
 
-    // Initialize axis buttons
-    this.xButton = page.getByRole('button', { name: /^X$/i });
-    this.yButton = page.getByRole('button', { name: /^Y$/i });
-    this.zButton = page.getByRole('button', { name: /^Z$/i });
+    // Initialize axis buttons using data-testid
+    this.xButton = page.getByTestId('axis-select-x');
+    this.yButton = page.getByTestId('axis-select-y');
+    this.zButton = page.getByTestId('axis-select-z');
 
-    // Initialize zero buttons
-    this.x0Button = page.getByRole('button', { name: /X0/i });
-    this.y0Button = page.getByRole('button', { name: /Y0/i });
-    this.z0Button = page.getByRole('button', { name: /Z0/i });
-    this.zeroAllButton = page.getByRole('button', { name: /Zero All/i });
+    // Initialize zero buttons using data-testid
+    this.x0Button = page.getByTestId('axis-zero-x');
+    this.y0Button = page.getByTestId('axis-zero-y');
+    this.z0Button = page.getByTestId('axis-zero-z');
+    this.zeroAllButton = page.getByTestId('btn-zero-all');
 
-    // Initialize mode buttons
-    this.absIncButton = page.getByRole('button', { name: /ABS\/INC/i });
-    this.inchMmButton = page.getByRole('button', { name: /INCH\/mm/i });
+    // Initialize keypad using data-testid
+    this.key0 = page.getByTestId('key-0');
+    this.key1 = page.getByTestId('key-1');
+    this.key2 = page.getByTestId('key-2');
+    this.key3 = page.getByTestId('key-3');
+    this.key4 = page.getByTestId('key-4');
+    this.key5 = page.getByTestId('key-5');
+    this.key6 = page.getByTestId('key-6');
+    this.key7 = page.getByTestId('key-7');
+    this.key8 = page.getByTestId('key-8');
+    this.key9 = page.getByTestId('key-9');
+    this.keyDecimal = page.getByTestId('key-decimal');
+    this.keyMinus = page.getByTestId('key-sign');
+    this.enterButton = page.getByTestId('key-enter');
+    this.clearButton = page.getByTestId('key-clear');
 
-    // Initialize keypad
-    this.key0 = page.getByRole('button', { name: /^0$/i });
-    this.key1 = page.getByRole('button', { name: /^1$/i });
-    this.key2 = page.getByRole('button', { name: /^2$/i });
-    this.key3 = page.getByRole('button', { name: /^3$/i });
-    this.key4 = page.getByRole('button', { name: /^4$/i });
-    this.key5 = page.getByRole('button', { name: /^5$/i });
-    this.key6 = page.getByRole('button', { name: /^6$/i });
-    this.key7 = page.getByRole('button', { name: /^7$/i });
-    this.key8 = page.getByRole('button', { name: /^8$/i });
-    this.key9 = page.getByRole('button', { name: /^9$/i });
-    this.keyDecimal = page.getByRole('button', { name: /\./i });
-    this.keyMinus = page.getByRole('button', { name: /-/i });
-    this.enterButton = page.getByRole('button', { name: /Enter|ENT/i });
-
-    // Initialize function buttons
-    this.halfButton = page.getByRole('button', { name: /Half|1\/2/i });
-    this.centerButton = page.getByRole('button', { name: /Center/i });
-    this.settingsButton = page.getByRole('button', { name: /Settings|Setup/i });
-    this.calibrateButton = page.getByRole('button', { name: /Calibrate|CAL/i });
-    this.dtgButton = page.getByRole('button', { name: /DTG|Distance/i });
-    this.sdmButton = page.getByRole('button', { name: /SDM/i });
-    this.boltCircleButton = page.getByRole('button', { name: /Bolt.*Circle|B\.C\./i });
-    this.linearPatternButton = page.getByRole('button', { name: /Linear.*Pattern|LIN/i });
-
-    // Initialize arrow keys
-    this.upArrow = page.getByRole('button', { name: /Up|↑/i });
-    this.downArrow = page.getByRole('button', { name: /Down|↓/i });
-    this.leftArrow = page.getByRole('button', { name: /Left|←/i });
-    this.rightArrow = page.getByRole('button', { name: /Right|→/i });
+    // Initialize function buttons using data-testid
+    this.halfButton = page.getByTestId('btn-half');
+    this.settingsButton = page.getByTestId('btn-settings');
+    this.absIncButton = page.getByTestId('btn-abs-inc');
+    this.centerButton = page.getByTestId('btn-center');
   }
 
   /**
@@ -159,14 +133,6 @@ export class DROPage {
   }
 
   /**
-   * Press a button by name
-   */
-  async pressKey(keyName: string) {
-    const button = this.page.getByRole('button', { name: new RegExp(keyName, 'i') });
-    await button.click();
-  }
-
-  /**
    * Check if a LED is currently on
    */
   async isLEDOn(led: Locator): Promise<boolean> {
@@ -183,27 +149,6 @@ export class DROPage {
   async waitForAxisValue(axis: 'X' | 'Y' | 'Z', value: number, timeout = 5000) {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     await expect(display).toContainText(value.toString(), { timeout });
-  }
-
-  /**
-   * Simulate encoder movement (for testing position changes)
-   * This is a placeholder - actual implementation depends on how the simulator
-   * allows programmatic position updates
-   */
-  async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', position: number) {
-    // This would need to be implemented based on how the DRO simulator
-    // exposes encoder input for testing purposes
-    // For now, this is a placeholder that could use a test API
-    await this.page.evaluate(
-      ({ axis, position }) => {
-        // @ts-expect-error - Test API
-        if (window.testAPI?.setAxisPosition) {
-          // @ts-expect-error - Test API
-          window.testAPI.setAxisPosition(axis, position);
-        }
-      },
-      { axis, position }
-    );
   }
 
   /**
@@ -226,14 +171,22 @@ export class DROPage {
    * Toggle between ABS and INC modes
    */
   async toggleAbsInc() {
-    await this.absIncButton.click();
+    // Click on the ABS LED to toggle (it's a radio button)
+    await this.absLED.click();
   }
 
   /**
    * Toggle between INCH and mm units
    */
   async toggleInchMm() {
-    await this.inchMmButton.click();
+    // Click on the INCH LED to toggle (it's a radio button)
+    // If currently in INCH, this will switch to mm and vice versa
+    const isInch = await this.isInchUnits();
+    if (isInch) {
+      await this.mmLED.click();
+    } else {
+      await this.inchLED.click();
+    }
   }
 
   /**

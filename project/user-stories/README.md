@@ -4,8 +4,8 @@ Comprehensive user stories merged from Claude and Gemini sources, deduplicated a
 
 ## Overview
 
-**Total Stories:** 34
-**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini), plus accessibility requirements
+**Total Stories:** 36
+**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini), plus accessibility requirements and integration features
 **Purpose:** Guide implementation of EL400 DRO simulator features
 **Format:** Each story includes acceptance criteria, E2E test scenarios, and TODO markers for discrepancies
 
@@ -139,12 +139,23 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
+### 09. Integration (2 stories)
+
+| ID | Title | Priority | Source | File |
+|----|-------|----------|--------|------|
+| US-035 | External Machine Connection | P1 | Data Interface | [US-035-external-machine-connection.md](09-integration/US-035-external-machine-connection.md) |
+| US-036 | Settings Persistence | P1 | Data Interface | [US-036-settings-persistence.md](09-integration/US-036-settings-persistence.md) |
+
+**Summary:** Integration with external CNC systems and persistent configuration.
+
+---
+
 ## Priority Matrix
 
 | Priority | Description | Count | Stories |
 |----------|-------------|-------|---------|
 | **P0** | Must-have foundation | 3 | US-001, US-002, US-034 |
-| **P1** | Essential DRO features | 4 | US-003, US-004, US-005, US-006 |
+| **P1** | Essential DRO features | 6 | US-003, US-004, US-005, US-006, US-035, US-036 |
 | **P2** | Advanced navigation | 6 | US-007, US-008, US-009, US-010, US-011, US-012 |
 | **P3** | Value-added calculations | 3 | US-013, US-014, US-015 |
 | **P4** | Specialized milling/auxiliary | 9 | US-016, US-017, US-018, US-019, US-020, US-029, US-030, US-032 |
@@ -165,15 +176,17 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
-### Phase 2: Core Operations (P1) - 4 stories
-**Goal:** Essential daily-use features
+### Phase 2: Core Operations & Integration (P1) - 6 stories
+**Goal:** Essential daily-use features and CNC system integration
 
-- [ ] US-003: ABS/INC mode
+- [x] US-003: ABS/INC mode
 - [ ] US-004: Inch/mm units
 - [ ] US-005: Zero axes
 - [ ] US-006: Half function
+- [x] US-035: External machine connection (CNCjs integration)
+- [x] US-036: Settings persistence
 
-**Deliverable:** All basic machining workflows supported
+**Deliverable:** All basic machining workflows supported with live position data from CNC controllers
 
 ---
 

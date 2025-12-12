@@ -1,6 +1,7 @@
 name: Test Suite
 permissions:
   contents: read
+  pull-requests: write
 
 on:
   push:
@@ -49,9 +50,13 @@ jobs:
         timeout-minutes: 1
         run: npm ci
 
-      - name: Run unit tests
-        timeout-minutes: 1
-        run: npm run test
+      - name: Run unit tests with coverage
+        timeout-minutes: 2
+        run: npm run test:coverage
+
+      - name: Coverage report
+        if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -76,7 +81,7 @@ jobs:
         run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run E2E tests
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm run test:e2e
 
   storybook-tests:
