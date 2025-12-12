@@ -52,7 +52,7 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   onClick?: () => void;
   className?: string;
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
-  size?: 'sm' | 'md' | 'lg' | 'wide' | 'square';
+  size?: 'sm' | 'md' | 'lg' | 'wide' | 'square' | 'icon';
   isActive?: boolean;
 }
 
@@ -79,6 +79,7 @@ const DROButton = ({
     lg: 'w-14 h-8 text-base',
     wide: 'w-16 h-9 text-sm',
     square: 'w-10 h-10 text-sm',
+    icon: 'w-14 h-9 text-sm',
   };
 
   const handleClick = useCallback(() => {
