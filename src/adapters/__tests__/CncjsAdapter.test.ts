@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CncjsAdapter, normalizeControllerState } from '../CncjsAdapter';
-import { createProbeState } from '../../types/machine';
 
 // Mock socket.io-client
 const mockSocket = {

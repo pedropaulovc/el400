@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useSettings } from '../useSettings';
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from '../../types/settings';
 
@@ -112,9 +112,6 @@ describe('useSettings', () => {
       act(() => {
         result.current.updateSettings({ defaultUnit: 'mm' });
       });
-
-      // Should not have saved yet (only initial state might have been saved)
-      const callsBeforeDebounce = setItemSpy.mock.calls.length;
 
       // Advance past debounce
       act(() => {

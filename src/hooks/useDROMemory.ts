@@ -3,7 +3,7 @@
  * Allows switching between absolute and incremental display modes.
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { MachineState } from '../types/machine';
 
 /**
@@ -91,14 +91,6 @@ export function useDROMemory(machineState: MachineState | null): UseDROMemoryRet
     // Manual mode: use manual values directly
     return manualAbsoluteValues;
   }, [machineState, workOffsets, manualAbsoluteValues]);
-
-  // Update incremental values when machine position changes (track movement)
-  useEffect(() => {
-    if (machineState?.connected) {
-      // In connected mode, incremental tracks relative to last zero
-      // This is handled by the incrementalValues state independently
-    }
-  }, [machineState]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {
