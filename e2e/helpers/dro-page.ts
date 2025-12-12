@@ -48,7 +48,7 @@ export class DROPage {
   // Function buttons
   readonly halfButton: Locator;
   readonly settingsButton: Locator;
-  readonly calibrateButton: Locator;
+  readonly absIncButton: Locator;
   readonly centerButton: Locator;
 
   constructor(page: Page) {
@@ -95,7 +95,7 @@ export class DROPage {
     // Initialize function buttons using data-testid
     this.halfButton = page.getByTestId('btn-half');
     this.settingsButton = page.getByTestId('btn-settings');
-    this.calibrateButton = page.getByTestId('btn-calibrate');
+    this.absIncButton = page.getByTestId('btn-abs-inc');
     this.centerButton = page.getByTestId('btn-center');
   }
 
