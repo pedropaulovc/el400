@@ -29,14 +29,11 @@ export const Default: Story = {
     const canvas = within(canvasElement);
     const img = canvas.getByRole("img");
 
-    // Verify image is rendered
+    // Verify SVG is rendered with correct role
     await expect(img).toBeInTheDocument();
 
-    // Verify SVG source is loaded
-    await expect(img).toHaveAttribute("src", "/illustrations/setup.svg");
-
-    // Verify alt text is present
-    await expect(img).toHaveAttribute("alt", "Setup");
+    // Verify aria-label is present for accessibility
+    await expect(img).toHaveAttribute("aria-label", "Setup");
   },
 };
 
@@ -83,18 +80,11 @@ export const PrimaryFunctionIcons: Story = {
     // Verify all 5 icons are rendered
     await expect(images).toHaveLength(5);
 
-    // Verify each image has src and alt attributes
-    const expectedIcons = [
-      { src: "/illustrations/setup.svg", alt: "Setup" },
-      { src: "/illustrations/abs-inc.svg", alt: "Abs/Inc" },
-      { src: "/illustrations/inch-mm.svg", alt: "Inch/MM" },
-      { src: "/illustrations/reference.svg", alt: "Reference" },
-      { src: "/illustrations/preset.svg", alt: "Preset" },
-    ];
+    // Verify each SVG has aria-label for accessibility
+    const expectedLabels = ["Setup", "Abs/Inc", "Inch/MM", "Reference", "Preset"];
 
-    for (let i = 0; i < expectedIcons.length; i++) {
-      await expect(images[i]).toHaveAttribute("src", expectedIcons[i].src);
-      await expect(images[i]).toHaveAttribute("alt", expectedIcons[i].alt);
+    for (let i = 0; i < expectedLabels.length; i++) {
+      await expect(images[i]).toHaveAttribute("aria-label", expectedLabels[i]);
     }
   },
 };
@@ -160,21 +150,20 @@ export const SecondaryFunctionIcons: Story = {
     // Verify all 8 icons are rendered
     await expect(images).toHaveLength(8);
 
-    // Verify each image has src and alt attributes
-    const expectedIcons = [
-      { src: "/illustrations/bolt-hole-pcd-function.svg", alt: "Bolt hole" },
-      { src: "/illustrations/arc-contouring-function.svg", alt: "Arc contour" },
-      { src: "/illustrations/angle-hole-function.svg", alt: "Angle hole" },
-      { src: "/illustrations/grid-hole-function.svg", alt: "Grid hole" },
-      { src: "/illustrations/calculator.svg", alt: "Calculator" },
-      { src: "/illustrations/half-function.svg", alt: "Half" },
-      { src: "/illustrations/sdm-function.svg", alt: "SDM" },
-      { src: "/illustrations/function.svg", alt: "Function" },
+    // Verify each SVG has aria-label for accessibility
+    const expectedLabels = [
+      "Bolt hole",
+      "Arc contour",
+      "Angle hole",
+      "Grid hole",
+      "Calculator",
+      "Half",
+      "SDM",
+      "Function",
     ];
 
-    for (let i = 0; i < expectedIcons.length; i++) {
-      await expect(images[i]).toHaveAttribute("src", expectedIcons[i].src);
-      await expect(images[i]).toHaveAttribute("alt", expectedIcons[i].alt);
+    for (let i = 0; i < expectedLabels.length; i++) {
+      await expect(images[i]).toHaveAttribute("aria-label", expectedLabels[i]);
     }
   },
 };
@@ -276,27 +265,26 @@ export const KeypadIcons: Story = {
     // Verify all 14 keypad icons are rendered
     await expect(images).toHaveLength(14);
 
-    // Verify each image has src and alt attributes
-    const expectedIcons = [
-      { src: "/illustrations/number-0.svg", alt: "0" },
-      { src: "/illustrations/number-1.svg", alt: "1" },
-      { src: "/illustrations/number-2.svg", alt: "2" },
-      { src: "/illustrations/number-3.svg", alt: "3" },
-      { src: "/illustrations/number-4.svg", alt: "4" },
-      { src: "/illustrations/number-5.svg", alt: "5" },
-      { src: "/illustrations/number-6.svg", alt: "6" },
-      { src: "/illustrations/number-7.svg", alt: "7" },
-      { src: "/illustrations/number-8.svg", alt: "8" },
-      { src: "/illustrations/number-9.svg", alt: "9" },
-      { src: "/illustrations/dot.svg", alt: "Dot" },
-      { src: "/illustrations/toggle-sign.svg", alt: "Toggle sign" },
-      { src: "/illustrations/cancel.svg", alt: "Cancel" },
-      { src: "/illustrations/enter.svg", alt: "Enter" },
+    // Verify each SVG has aria-label for accessibility
+    const expectedLabels = [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "Dot",
+      "Toggle sign",
+      "Cancel",
+      "Enter",
     ];
 
-    for (let i = 0; i < expectedIcons.length; i++) {
-      await expect(images[i]).toHaveAttribute("src", expectedIcons[i].src);
-      await expect(images[i]).toHaveAttribute("alt", expectedIcons[i].alt);
+    for (let i = 0; i < expectedLabels.length; i++) {
+      await expect(images[i]).toHaveAttribute("aria-label", expectedLabels[i]);
     }
   },
 };
