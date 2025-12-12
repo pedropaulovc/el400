@@ -151,16 +151,15 @@ export class CncjsAdapter implements MachineAdapter {
 
   private socket: Socket | null = null;
   private listeners: Set<MachineStateListener> = new Set();
-  private state: MachineState = createDefaultMachineState();
+  private state: MachineState = {
+    ...createDefaultMachineState(),
+    controllerType: 'cncjs',
+  };
   private options: CncjsAdapterOptions;
   private currentControllerType: string = 'grbl';
 
   constructor(options: CncjsAdapterOptions) {
     this.options = options;
-    this.state = {
-      ...this.state,
-      controllerType: 'cncjs',
-    };
   }
 
   async connect(): Promise<void> {

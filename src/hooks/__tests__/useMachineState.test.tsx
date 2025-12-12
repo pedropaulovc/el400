@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 import { useMachineState, useMachineConnected, useMachineConnectionStatus } from '../useMachineState';
 import { MachineStateProvider } from '../../context/MachineStateContext';
@@ -7,15 +7,26 @@ import { MockAdapter } from '../../adapters/MockAdapter';
 
 describe('useMachineState hooks', () => {
   let adapter: MockAdapter;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    adapter = new MockAdapter();
+    // Use a high update interval to prevent interval from firing during tests
+    adapter = new MockAdapter({ updateInterval: 60000 });
+
+    // Suppress React act() warnings for subscription-based state updates
+    // These warnings occur because MockAdapter's subscription callback triggers
+    // setState synchronously during connect(), which is expected behavior
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((msg) => {
+      if (typeof msg === 'string' && msg.includes('not wrapped in act')) {
+        return;
+      }
+      console.warn(msg);
+    });
   });
 
   afterEach(() => {
     adapter.disconnect();
-    vi.useRealTimers();
+    consoleErrorSpy.mockRestore();
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -28,9 +39,8 @@ describe('useMachineState hooks', () => {
     it('should return initial position as zeros', async () => {
       const { result } = renderHook(() => useMachineState(), { wrapper });
 
-      // Let the effect run
-      await act(async () => {
-        vi.advanceTimersByTime(0);
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
       });
 
       expect(result.current.position).toEqual({ x: 0, y: 0, z: 0 });
@@ -39,23 +49,17 @@ describe('useMachineState hooks', () => {
     it('should connect automatically when adapter is provided', async () => {
       const { result } = renderHook(() => useMachineState(), { wrapper });
 
-      // Let the effect run
-      await act(async () => {
-        vi.advanceTimersByTime(0);
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
       });
-
-      expect(result.current.connected).toBe(true);
     });
 
     it('should update when adapter emits new state', async () => {
       const { result } = renderHook(() => useMachineState(), { wrapper });
 
-      // Wait for connection
-      await act(async () => {
-        vi.advanceTimersByTime(100);
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
       });
-
-      expect(result.current.connected).toBe(true);
 
       // Update position
       act(() => {
@@ -66,11 +70,10 @@ describe('useMachineState hooks', () => {
     });
 
     it('should cleanup subscription on unmount', async () => {
-      const { unmount } = renderHook(() => useMachineState(), { wrapper });
+      const { result, unmount } = renderHook(() => useMachineState(), { wrapper });
 
-      // Wait for connection
-      await act(async () => {
-        vi.advanceTimersByTime(100);
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
       });
 
       unmount();
@@ -84,11 +87,9 @@ describe('useMachineState hooks', () => {
     it('should return true when connected via adapter', async () => {
       const { result } = renderHook(() => useMachineConnected(), { wrapper });
 
-      await act(async () => {
-        vi.advanceTimersByTime(0);
+      await waitFor(() => {
+        expect(result.current).toBe(true);
       });
-
-      expect(result.current).toBe(true);
     });
   });
 
@@ -96,11 +97,10 @@ describe('useMachineState hooks', () => {
     it('should return connected status after connection', async () => {
       const { result } = renderHook(() => useMachineConnectionStatus(), { wrapper });
 
-      await act(async () => {
-        vi.advanceTimersByTime(100);
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
       });
 
-      expect(result.current.connected).toBe(true);
       expect(result.current.isConnecting).toBe(false);
       expect(result.current.error).toBe(null);
     });

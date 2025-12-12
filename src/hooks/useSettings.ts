@@ -53,6 +53,7 @@ export interface UseSettingsReturn {
 export function useSettings(): UseSettingsReturn {
   const [settings, setSettings] = useState<DROSettings>(loadSettings);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSettingsRef = useRef<DROSettings | null>(null);
 
   // Save settings to localStorage with debouncing
   useEffect(() => {
@@ -61,9 +62,13 @@ export function useSettings(): UseSettingsReturn {
       clearTimeout(debounceTimeoutRef.current);
     }
 
+    // Track pending settings for beforeunload
+    pendingSettingsRef.current = settings;
+
     // Schedule a new save
     debounceTimeoutRef.current = setTimeout(() => {
       saveSettings(settings);
+      pendingSettingsRef.current = null;
     }, DEBOUNCE_DELAY);
 
     return () => {
@@ -72,6 +77,21 @@ export function useSettings(): UseSettingsReturn {
       }
     };
   }, [settings]);
+
+  // Flush pending settings on page unload to prevent data loss
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (pendingSettingsRef.current !== null) {
+        saveSettings(pendingSettingsRef.current);
+        pendingSettingsRef.current = null;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   const updateSettings = useCallback((partial: Partial<DROSettings>) => {
     setSettings((prev) => ({ ...prev, ...partial }));
