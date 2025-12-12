@@ -8,14 +8,11 @@ describe('SettingsContext', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    // Clear localStorage before each test
-    localStorage.removeItem(SETTINGS_STORAGE_KEY);
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     consoleWarnSpy.mockRestore();
-    localStorage.removeItem(SETTINGS_STORAGE_KEY);
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
