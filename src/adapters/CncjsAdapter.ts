@@ -16,11 +16,28 @@ export interface CncjsAdapterOptions {
 
 type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
 
+/** Raw controller state from CNCjs WebSocket - structure varies by controller type */
+interface CncjsControllerState {
+  status?: {
+    mpos?: number[];
+    wpos?: number[];
+    pn?: string;
+    pos?: { x?: number; y?: number; z?: number };
+    substate?: { probe?: number };
+  };
+  sr?: {
+    posx?: number;
+    posy?: number;
+    posz?: number;
+    prb?: number;
+  };
+}
+
 /**
  * Normalizes GRBL controller state to MachineState.
  * GRBL provides position as [x, y, z] arrays and pin state in 'pn' field.
  */
-function normalizeGrbl(state: any): Partial<MachineState> {
+function normalizeGrbl(state: CncjsControllerState): Partial<MachineState> {
   const mpos = state.status?.mpos || [0, 0, 0];
   const wpos = state.status?.wpos;
   const pn = state.status?.pn || '';
@@ -51,7 +68,7 @@ function normalizeGrbl(state: any): Partial<MachineState> {
  * Normalizes GrblHAL controller state to MachineState.
  * GrblHAL extends GRBL with substate for detailed pin states.
  */
-function normalizeGrblHAL(state: any): Partial<MachineState> {
+function normalizeGrblHAL(state: CncjsControllerState): Partial<MachineState> {
   const base = normalizeGrbl(state);
 
   // GrblHAL may have substate with probe value (0=open, 1=triggered, 2=latched, 3=alarm)
@@ -68,7 +85,7 @@ function normalizeGrblHAL(state: any): Partial<MachineState> {
  * Normalizes TinyG/g2core controller state to MachineState.
  * TinyG uses individual position properties (posx, posy, posz) and prb for probe.
  */
-function normalizeTinyG(state: any): Partial<MachineState> {
+function normalizeTinyG(state: CncjsControllerState): Partial<MachineState> {
   const sr = state.sr || {};
   const prb = sr.prb;
   const pinState = prb ? 'P' : '';
@@ -88,7 +105,7 @@ function normalizeTinyG(state: any): Partial<MachineState> {
  * Smoothie uses pos object with x, y, z properties.
  * Note: Smoothie does NOT expose realtime probe state.
  */
-function normalizeSmoothie(state: any): Partial<MachineState> {
+function normalizeSmoothie(state: CncjsControllerState): Partial<MachineState> {
   const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
 
   return {
@@ -106,7 +123,7 @@ function normalizeSmoothie(state: any): Partial<MachineState> {
  * Marlin uses pos object with x, y, z properties.
  * Note: Marlin does NOT stream probe state continuously.
  */
-function normalizeMarlin(state: any): Partial<MachineState> {
+function normalizeMarlin(state: CncjsControllerState): Partial<MachineState> {
   const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
 
   return {
@@ -124,7 +141,7 @@ function normalizeMarlin(state: any): Partial<MachineState> {
  */
 export function normalizeControllerState(
   controllerType: string,
-  state: any
+  state: CncjsControllerState
 ): Partial<MachineState> {
   const type = controllerType.toLowerCase();
 
@@ -196,7 +213,7 @@ export class CncjsAdapter implements MachineAdapter {
       });
 
       // Controller state updates
-      this.socket.on('controller:state', (type: string, controllerState: any) => {
+      this.socket.on('controller:state', (type: string, controllerState: CncjsControllerState) => {
         this.currentControllerType = type;
         const normalized = normalizeControllerState(type, controllerState);
         this.updateState({
@@ -206,7 +223,7 @@ export class CncjsAdapter implements MachineAdapter {
       });
 
       // Serial port open event indicates connection to controller
-      this.socket.on('serialport:open', (options: any) => {
+      this.socket.on('serialport:open', () => {
         this.updateState({ connected: true });
       });
 
