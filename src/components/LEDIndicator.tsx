@@ -7,15 +7,17 @@ interface LEDIndicatorProps {
   onClick?: () => void;
   isInteractive?: boolean;
   groupLabel?: string;
+  'data-testid'?: string;
 }
 
-const LEDIndicator = ({ 
-  label, 
-  isOn, 
-  className, 
-  onClick, 
+const LEDIndicator = ({
+  label,
+  isOn,
+  className,
+  onClick,
   isInteractive = false,
-  groupLabel 
+  groupLabel,
+  'data-testid': testId
 }: LEDIndicatorProps) => {
   const content = (
     <span
@@ -44,6 +46,7 @@ const LEDIndicator = ({
         role="radio"
         aria-checked={isOn}
         aria-label={`${label}${groupLabel ? ` (${groupLabel})` : ''}`}
+        data-testid={testId}
       >
         {content}
       </button>
@@ -51,10 +54,11 @@ const LEDIndicator = ({
   }
 
   return (
-    <div 
+    <div
       className={cn("flex flex-col items-center gap-0.5", className)}
       role="status"
       aria-label={`${label}: ${isOn ? 'active' : 'inactive'}`}
+      data-testid={testId}
     >
       {content}
     </div>

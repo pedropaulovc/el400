@@ -43,6 +43,7 @@ This project recreates the EL400/MX-100M DRO interface as a web application, des
 The simulator focuses on:
 - **Touch-friendly interface**: Large buttons and displays optimized for shop floor use
 - **Complete machinist functions**: All the calculator features machinists expect from a DRO
+- **CNC integration**: Connect to CNCjs or other G-code senders for live position display
 - **Accessibility**: WCAG compliance, keyboard navigation, screen reader support, forced-colors mode ([details](ACCESSIBILITY.md))
 - **Accurate reproduction**: Faithful recreation of the original hardware's behavior
 
@@ -81,6 +82,17 @@ npm i
 # Start development server
 npm run dev
 ```
+
+## Using with CNCjs
+
+The DRO can display live position data from your CNC machine when used with [CNCjs](https://github.com/cncjs/cncjs):
+
+1. **As an embedded widget**: Add the DRO as a CNCjs widget to your workspace
+2. **As a standalone window**: Open `http://your-cncjs-host:8000/?source=cncjs&host=localhost&port=8000`
+
+Supported controllers: GRBL, GrblHAL, TinyG, Smoothie, Marlin
+
+For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## How to Edit This Code
 

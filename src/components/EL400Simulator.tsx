@@ -6,34 +6,33 @@ import AxisPanelSection from "./AxisPanelSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-
-interface AxisValues {
-  X: number;
-  Y: number;
-  Z: number;
-}
+import { useMachineState } from "../hooks/useMachineState";
+import { useDROMemory, type Axis } from "../hooks/useDROMemory";
+import { useSettingsContext } from "../context/SettingsContext";
 
 const noop = () => {};
 
 const EL400Simulator = () => {
-  const [axisValues, setAxisValues] = useState<AxisValues>({
-    X: 0,
-    Y: 0,
-    Z: 0,
-  });
-  
-  const [activeAxis, setActiveAxis] = useState<'X' | 'Y' | 'Z' | null>(null);
-  const [isAbs, setIsAbs] = useState(true);
-  const [isInch, setIsInch] = useState(true);
+  // Get machine state from context (may be from CNCjs, LinuxCNC, mock, or manual)
+  const machineState = useMachineState();
+
+  // DRO memory manages ABS/INC values and mode switching
+  const droMemory = useDROMemory(machineState.connected ? machineState : null);
+
+  // Settings from context (persisted to localStorage)
+  const { settings, updateSettings } = useSettingsContext();
+
+  // Local UI state
+  const [activeAxis, setActiveAxis] = useState<Axis | null>(null);
   const [inputBuffer, setInputBuffer] = useState('');
 
-  const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
+  const handleAxisSelect = (axis: Axis) => {
     setActiveAxis(axis);
     setInputBuffer('');
   };
 
-  const handleAxisZero = (axis: 'X' | 'Y' | 'Z') => {
-    setAxisValues(prev => ({ ...prev, [axis]: 0 }));
+  const handleAxisZero = (axis: Axis) => {
+    droMemory.zeroAxis(axis);
   };
 
   const handleNumber = useCallback((num: string) => {
@@ -74,30 +73,28 @@ const EL400Simulator = () => {
     }
     const value = parseFloat(inputBuffer);
     if (!isNaN(value)) {
-      setAxisValues(prev => ({ ...prev, [activeAxis]: value }));
+      droMemory.setAxisValue(activeAxis, value);
     }
     setInputBuffer('');
-  }, [activeAxis, inputBuffer]);
+  }, [activeAxis, inputBuffer, droMemory]);
 
 
   const handleToggleUnit = () => {
-    setIsInch(!isInch);
+    updateSettings({ defaultUnit: settings.defaultUnit === 'inch' ? 'mm' : 'inch' });
   };
 
   const handleZeroAll = () => {
-    setAxisValues({ X: 0, Y: 0, Z: 0 });
+    droMemory.zeroAll();
   };
 
   const handleToggleAbs = () => {
-    setIsAbs(!isAbs);
+    droMemory.toggleMode();
   };
 
   const handleHalf = () => {
     if (activeAxis) {
-      setAxisValues(prev => ({
-        ...prev,
-        [activeAxis]: prev[activeAxis] / 2
-      }));
+      const currentValue = droMemory.displayValues[activeAxis];
+      droMemory.setAxisValue(activeAxis, currentValue / 2);
     }
   };
 
@@ -124,10 +121,10 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <DisplayPanel 
-            axisValues={axisValues}
-            isAbs={isAbs}
-            isInch={isInch}
+          <DisplayPanel
+            axisValues={droMemory.displayValues}
+            isAbs={droMemory.mode === 'abs'}
+            isInch={settings.defaultUnit === 'inch'}
             onToggleAbs={handleToggleAbs}
             onToggleUnit={handleToggleUnit}
           />
@@ -149,9 +146,9 @@ const EL400Simulator = () => {
 
         {/* Bottom section */}
         <div className="mt-5 flex items-end justify-between">
-          <PrimaryFunctionSection 
-            isInch={isInch}
-            isAbs={isAbs}
+          <PrimaryFunctionSection
+            isInch={settings.defaultUnit === 'inch'}
+            isAbs={droMemory.mode === 'abs'}
             onToggleUnit={handleToggleUnit}
             onSettings={noop}
             onCalibrate={noop}
