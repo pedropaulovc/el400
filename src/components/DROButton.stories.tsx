@@ -16,7 +16,7 @@ const meta = {
     },
     size: {
       control: "select",
-      options: ["sm", "md", "lg", "wide", "square"],
+      options: ["sm", "md", "lg", "wide", "square", "icon"],
     },
     isActive: {
       control: "boolean",
@@ -89,6 +89,7 @@ export const AllSizes: Story = {
       <DROButton size="lg">LG</DROButton>
       <DROButton size="wide">Wide</DROButton>
       <DROButton size="square">SQ</DROButton>
+      <DROButton size="icon">Icon</DROButton>
     </div>
   ),
 };

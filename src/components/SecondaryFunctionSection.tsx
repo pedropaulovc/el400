@@ -1,17 +1,21 @@
 import { SecondaryFunctionButtons } from "./FunctionButtons";
 import BeveledFrame from "./BeveledFrame";
 interface SecondaryFunctionSectionProps {
-  onToolOffset: () => void;
   onBoltCircle: () => void;
-  onLinearPattern: () => void;
+  onArcContour: () => void;
+  onAngleHole: () => void;
+  onGridHole: () => void;
+  onCalculator: () => void;
   onHalf: () => void;
   onSDM: () => void;
   onFunction: () => void;
 }
 const SecondaryFunctionSection = ({
-  onToolOffset,
   onBoltCircle,
-  onLinearPattern,
+  onArcContour,
+  onAngleHole,
+  onGridHole,
+  onCalculator,
   onHalf,
   onSDM,
   onFunction
@@ -20,7 +24,7 @@ const SecondaryFunctionSection = ({
       <div style={{
       background: '#000000'
     }} className="p-3 rounded-lg h-full">
-        <SecondaryFunctionButtons onToolOffset={onToolOffset} onBoltCircle={onBoltCircle} onLinearPattern={onLinearPattern} onHalf={onHalf} onSDM={onSDM} onFunction={onFunction} />
+        <SecondaryFunctionButtons onBoltCircle={onBoltCircle} onArcContour={onArcContour} onAngleHole={onAngleHole} onGridHole={onGridHole} onCalculator={onCalculator} onHalf={onHalf} onSDM={onSDM} onFunction={onFunction} />
       </div>
     </BeveledFrame>;
 };

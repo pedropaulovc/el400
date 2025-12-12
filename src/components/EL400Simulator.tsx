@@ -159,9 +159,11 @@ const EL400Simulator = () => {
           />
 
           <SecondaryFunctionSection
-            onToolOffset={noop}
             onBoltCircle={noop}
-            onLinearPattern={noop}
+            onArcContour={noop}
+            onAngleHole={noop}
+            onGridHole={noop}
+            onCalculator={noop}
             onHalf={handleHalf}
             onSDM={noop}
             onFunction={noop}

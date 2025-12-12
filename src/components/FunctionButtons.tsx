@@ -24,13 +24,13 @@ const FunctionButtons = ({
         <Icon name="setup" alt="Settings" />
       </DROButton>
       <DROButton onClick={onCalibrate} size="icon" className="p-0">
-        <Icon name="reference" alt="Calibrate" />
+        <Icon name="abs-inc" alt="Abs/Inc" />
       </DROButton>
       <DROButton onClick={onToggleUnit} size="icon" className="p-0">
         <Icon name="inch-mm" alt="Toggle units" />
       </DROButton>
       <DROButton onClick={onCenter} size="icon" className="p-0">
-        <Icon name="reference" alt="Center" />
+        <Icon name="reference" alt="Reference" />
       </DROButton>
       <DROButton onClick={onZeroAll} size="icon" className="p-0">
         <Icon name="preset" alt="Zero all axes" />
@@ -40,16 +40,20 @@ const FunctionButtons = ({
 };
 
 export const SecondaryFunctionButtons = ({
-  onToolOffset,
   onBoltCircle,
-  onLinearPattern,
+  onArcContour,
+  onAngleHole,
+  onGridHole,
+  onCalculator,
   onHalf,
   onSDM,
   onFunction,
 }: {
-  onToolOffset: () => void;
   onBoltCircle: () => void;
-  onLinearPattern: () => void;
+  onArcContour: () => void;
+  onAngleHole: () => void;
+  onGridHole: () => void;
+  onCalculator: () => void;
   onHalf: () => void;
   onSDM: () => void;
   onFunction: () => void;
@@ -58,33 +62,33 @@ export const SecondaryFunctionButtons = ({
     <div className="flex flex-col gap-4 h-full justify-center">
       {/* Top row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={onToolOffset} variant="dark" size="icon" className="p-0">
-          <Icon name="tool-offsets" className="invert" alt="Tool offset" />
-        </DROButton>
         <DROButton onClick={onBoltCircle} variant="dark" size="icon" className="p-0">
-          <Icon name="bolt-hole-pcd-function" className="invert" alt="Bolt circle" />
+          <Icon name="bolt-hole-pcd-function" alt="Bolt hole" />
         </DROButton>
-        <DROButton onClick={onLinearPattern} variant="dark" size="icon" className="p-0">
-          <Icon name="grid-hole-function" className="invert" alt="Linear pattern" />
+        <DROButton onClick={onArcContour} variant="dark" size="icon" className="p-0">
+          <Icon name="arc-contouring-function" alt="Arc contour" />
         </DROButton>
-        <DROButton onClick={() => {}} variant="dark" size="icon" className="p-0">
-          <Icon name="calculator" className="invert" alt="Calculator" />
+        <DROButton onClick={onAngleHole} variant="dark" size="icon" className="p-0">
+          <Icon name="angle-hole-function" alt="Angle hole" />
+        </DROButton>
+        <DROButton onClick={onGridHole} variant="dark" size="icon" className="p-0">
+          <Icon name="grid-hole-function" alt="Grid hole" />
         </DROButton>
       </div>
 
       {/* Bottom row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={() => {}} variant="dark" size="icon" className="p-0">
-          <Icon name="abs-inc-v1" className="invert" alt="Abs/Inc" />
+        <DROButton onClick={onCalculator} variant="dark" size="icon" className="p-0">
+          <Icon name="calculator" alt="Calculator" />
         </DROButton>
         <DROButton onClick={onHalf} variant="dark" size="icon" className="p-0">
-          <Icon name="half-function" className="invert" alt="Half" />
+          <Icon name="half-function" alt="Half" />
         </DROButton>
         <DROButton onClick={onSDM} variant="dark" size="icon" className="p-0">
-          <Icon name="sdm-function" className="invert" alt="SDM" />
+          <Icon name="sdm-function" alt="SDM" />
         </DROButton>
         <DROButton onClick={onFunction} variant="dark" size="icon" className="p-0">
-          <Icon name="function" className="invert" alt="Function" />
+          <Icon name="function" alt="Function" />
         </DROButton>
       </div>
     </div>
