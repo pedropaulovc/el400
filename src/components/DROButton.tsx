@@ -4,11 +4,15 @@ import { ReactNode, ButtonHTMLAttributes, useCallback, useRef, useEffect } from 
 // Audio context for reliable playback
 let audioContext: AudioContext | null = null;
 let audioBuffer: AudioBuffer | null = null;
+let initPromise: Promise<void> | null = null;
 
-const initAudio = async () => {
-  if (audioContext) return;
+const initAudio = async (): Promise<void> => {
+  if (audioBuffer) return;
   
-  audioContext = new AudioContext();
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+  
   try {
     const response = await fetch('/sounds/button-click.wav');
     const arrayBuffer = await response.arrayBuffer();
@@ -18,15 +22,20 @@ const initAudio = async () => {
   }
 };
 
-const playClickSound = () => {
-  if (!audioContext || !audioBuffer) {
-    initAudio();
-    return;
+const playClickSound = async () => {
+  // If not initialized, start initialization and wait for it
+  if (!audioBuffer) {
+    if (!initPromise) {
+      initPromise = initAudio();
+    }
+    await initPromise;
   }
+  
+  if (!audioContext || !audioBuffer) return;
   
   // Resume context if suspended (browser autoplay policy)
   if (audioContext.state === 'suspended') {
-    audioContext.resume();
+    await audioContext.resume();
   }
   
   const source = audioContext.createBufferSource();
@@ -37,15 +46,6 @@ const playClickSound = () => {
   gainNode.connect(audioContext.destination);
   source.start(0);
 };
-
-// Initialize on first user interaction
-if (typeof window !== 'undefined') {
-  const initOnInteraction = () => {
-    initAudio();
-    window.removeEventListener('click', initOnInteraction);
-  };
-  window.addEventListener('click', initOnInteraction);
-}
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
