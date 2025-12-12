@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ReactNode, ButtonHTMLAttributes, useCallback, useRef, useEffect } from "react";
+import { ReactNode, ButtonHTMLAttributes, useCallback } from "react";
 
 // Audio context for reliable playback
 let audioContext: AudioContext | null = null;
