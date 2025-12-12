@@ -43,7 +43,7 @@ const EL400Simulator = () => {
     // Limit input to 7 digits (3 integer + 4 decimal) plus optional sign and decimal point
     const MAX_DIGITS = 8;
     setInputBuffer(prev => {
-      const digitCount = prev.replace(/[-.]/, '').length;
+      const digitCount = prev.replace(/[-.]/g, '').length;
       if (digitCount >= MAX_DIGITS) {
         return prev; // Don't add more digits
       }
