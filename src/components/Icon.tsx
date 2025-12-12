@@ -4,7 +4,7 @@ interface IconProps {
   alt?: string;
 }
 
-const Icon = ({ name, className = "max-w-full max-h-full object-contain", alt = "" }: IconProps) => {
+const Icon = ({ name, className = "w-full h-full", alt = "" }: IconProps) => {
   return (
     <img
       src={`/illustrations/${name}.svg`}
@@ -12,6 +12,7 @@ const Icon = ({ name, className = "max-w-full max-h-full object-contain", alt = 
       className={className}
       draggable={false}
       style={{
+        objectFit: 'fill',
         filter: 'brightness(0) invert(1)'
       }}
     />
