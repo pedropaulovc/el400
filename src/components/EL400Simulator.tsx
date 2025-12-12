@@ -115,10 +115,8 @@ const EL400Simulator = () => {
         minWidth: '780px',
       }}
     >
-      {/* Top raised edge with logo */}
-      <HousingEdge position="top">
-        <BrandLogo />
-      </HousingEdge>
+      {/* Top raised edge */}
+      <HousingEdge position="top" />
 
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
