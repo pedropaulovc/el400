@@ -47,12 +47,14 @@ describe('useSettings', () => {
     });
 
     it('should handle corrupted localStorage data', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       localStorage.setItem(SETTINGS_STORAGE_KEY, 'invalid json');
 
       const { result } = renderHook(() => useSettings());
 
       // Should fall back to defaults
       expect(result.current.settings).toEqual(DEFAULT_SETTINGS);
+      consoleSpy.mockRestore();
     });
   });
 

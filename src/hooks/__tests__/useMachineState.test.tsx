@@ -99,9 +99,9 @@ describe('useMachineState hooks', () => {
 
       await waitFor(() => {
         expect(result.current.connected).toBe(true);
+        expect(result.current.isConnecting).toBe(false);
       });
 
-      expect(result.current.isConnecting).toBe(false);
       expect(result.current.error).toBe(null);
     });
   });
