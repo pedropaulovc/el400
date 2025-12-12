@@ -151,7 +151,7 @@ const EL400Simulator = () => {
             isAbs={droMemory.mode === 'abs'}
             onToggleUnit={handleToggleUnit}
             onSettings={noop}
-            onCalibrate={noop}
+            onToggleAbs={handleToggleAbs}
             onCenter={noop}
             onZeroAll={handleZeroAll}
           />

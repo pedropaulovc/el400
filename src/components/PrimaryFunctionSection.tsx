@@ -7,7 +7,7 @@ interface PrimaryFunctionSectionProps {
   isAbs: boolean;
   onToggleUnit: () => void;
   onSettings: () => void;
-  onCalibrate: () => void;
+  onToggleAbs: () => void;
   onCenter: () => void;
   onZeroAll: () => void;
 }
@@ -17,7 +17,7 @@ const PrimaryFunctionSection = ({
   isAbs,
   onToggleUnit,
   onSettings,
-  onCalibrate,
+  onToggleAbs,
   onCenter,
   onZeroAll,
 }: PrimaryFunctionSectionProps) => {
@@ -35,7 +35,7 @@ const PrimaryFunctionSection = ({
             isAbs={isAbs}
             onToggleUnit={onToggleUnit}
             onSettings={onSettings}
-            onCalibrate={onCalibrate}
+            onToggleAbs={onToggleAbs}
             onCenter={onCenter}
             onZeroAll={onZeroAll}
           />

@@ -6,14 +6,14 @@ interface FunctionButtonsProps {
   isAbs: boolean;
   onToggleUnit: () => void;
   onSettings: () => void;
-  onCalibrate: () => void;
+  onToggleAbs: () => void;
   onCenter: () => void;
   onZeroAll: () => void;
 }
 
 const FunctionButtons = ({
   onSettings,
-  onCalibrate,
+  onToggleAbs,
   onToggleUnit,
   onCenter,
   onZeroAll,
@@ -23,7 +23,7 @@ const FunctionButtons = ({
       <DROButton onClick={onSettings} size="icon" className="p-0" data-testid="btn-settings">
         <Icon name="setup" alt="Settings" />
       </DROButton>
-      <DROButton onClick={onCalibrate} size="icon" className="p-0" data-testid="btn-calibrate">
+      <DROButton onClick={onToggleAbs} size="icon" className="p-0" data-testid="btn-abs-inc">
         <Icon name="abs-inc" alt="Abs/Inc" />
       </DROButton>
       <DROButton onClick={onToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit">
