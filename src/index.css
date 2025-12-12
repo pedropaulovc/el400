@@ -100,18 +100,13 @@
 }
 
 /* Icon styling */
-.icon {
-  fill: white;
-  stroke: white;
-}
-
 .icon path,
 .icon polygon,
 .icon ellipse,
 .icon circle,
 .icon rect {
   fill: white;
-  stroke: white;
+  stroke: none;
 }
 
 /* Forced Colors Mode (Windows High Contrast) Support */
@@ -128,14 +123,18 @@
     outline: 2px solid Highlight;
   }
 
-  .icon,
   .icon path,
   .icon polygon,
   .icon ellipse,
   .icon circle,
   .icon rect {
     fill: ButtonText;
-    stroke: ButtonText;
+    stroke: none;
+  }
+
+  .segment-on,
+  .segment-off {
+    stroke: none;
   }
 
   .mode-indicator-active {
