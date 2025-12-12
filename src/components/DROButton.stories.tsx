@@ -16,7 +16,7 @@ const meta = {
     },
     size: {
       control: "select",
-      options: ["sm", "md", "lg", "wide", "square", "icon"],
+      options: ["icon", "secondary", "axis", "square", "enter"],
     },
     isActive: {
       control: "boolean",
@@ -34,7 +34,7 @@ export const Default: Story = {
   args: {
     children: "1",
     variant: "default",
-    size: "md",
+    size: "square",
   },
 };
 
@@ -42,7 +42,7 @@ export const Yellow: Story = {
   args: {
     children: "CLR",
     variant: "yellow",
-    size: "wide",
+    size: "square",
   },
 };
 
@@ -50,7 +50,7 @@ export const Dark: Story = {
   args: {
     children: "X",
     variant: "dark",
-    size: "lg",
+    size: "axis",
   },
 };
 
@@ -58,7 +58,7 @@ export const Active: Story = {
   args: {
     children: "5",
     variant: "default",
-    size: "md",
+    size: "square",
     isActive: true,
   },
 };
@@ -80,16 +80,15 @@ export const AllVariants: Story = {
 
 export const AllSizes: Story = {
   args: {
-    children: "SM",
+    children: "BTN",
   },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap">
-      <DROButton size="sm">SM</DROButton>
-      <DROButton size="md">MD</DROButton>
-      <DROButton size="lg">LG</DROButton>
-      <DROButton size="wide">Wide</DROButton>
-      <DROButton size="square">SQ</DROButton>
-      <DROButton size="icon">Icon</DROButton>
+      <DROButton size="icon">Primary 2:1</DROButton>
+      <DROButton size="secondary">Secondary 1.75:1</DROButton>
+      <DROButton size="axis">Axis 1.22:1</DROButton>
+      <DROButton size="square">Square 1:1</DROButton>
+      <DROButton size="enter">Enter</DROButton>
     </div>
   ),
 };
@@ -98,7 +97,7 @@ export const ClickInteraction: Story = {
   args: {
     children: "Click Me",
     variant: "yellow",
-    size: "wide",
+    size: "icon",
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -114,7 +113,7 @@ export const KeyboardNavigation: Story = {
   args: {
     children: "Tab + Enter",
     variant: "default",
-    size: "wide",
+    size: "icon",
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
