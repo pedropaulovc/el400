@@ -2,12 +2,48 @@ import { test, expect } from '../helpers/fixtures';
 import { expectAxisValues } from '../helpers/assertions';
 
 /**
- * E2E Tests: ABS/INC Memory
- * Tests the separate ABS and INC value storage and mode switching.
+ * E2E Tests: US-003 Absolute and Incremental Mode
+ *
+ * Tests ABS/INC mode toggle, separate memory for each mode,
+ * and mode-specific operations.
+ *
+ * @see project/user-stories/02-core-operations/US-003-abs-inc-mode.md
  */
-test.describe('ABS/INC Memory', () => {
+test.describe('US-003: ABS/INC Mode', () => {
   /**
-   * Test that the DRO maintains separate ABS and INC values.
+   * AC 3.1: Pressing the ABS/INC key toggles between Absolute and Incremental.
+   * AC 3.2: The abs LED indicator glows when in Absolute mode.
+   * AC 3.3: The Inc LED indicator glows when in Incremental mode.
+   */
+  test('should toggle between ABS and INC modes', async ({ dro }) => {
+    // Start in ABS mode
+    await expect(await dro.isAbsMode()).toBe(true);
+
+    // Toggle to INC
+    await dro.toggleAbsInc();
+    await expect(await dro.isIncMode()).toBe(true);
+    await expect(await dro.isAbsMode()).toBe(false);
+
+    // Toggle back to ABS
+    await dro.toggleAbsInc();
+    await expect(await dro.isAbsMode()).toBe(true);
+    await expect(await dro.isIncMode()).toBe(false);
+  });
+
+  /**
+   * Default mode is ABS on startup.
+   */
+  test('should start in ABS mode by default', async ({ dro }) => {
+    const isAbs = await dro.isAbsMode();
+    const isInc = await dro.isIncMode();
+
+    expect(isAbs).toBe(true);
+    expect(isInc).toBe(false);
+  });
+
+  /**
+   * AC 3.4: INC mode allows setting a temporary datum without affecting ABS datum.
+   * AC 3.5: Switching back to ABS mode restores the position relative to fixed ABS datum.
    */
   test('should maintain separate ABS and INC values', async ({ dro }) => {
     // Verify starting in ABS mode with all zeros
@@ -54,7 +90,7 @@ test.describe('ABS/INC Memory', () => {
   });
 
   /**
-   * Test that switching display modes shows correct values.
+   * Switching display modes shows correct values for each mode.
    */
   test('should switch display when toggling ABS/INC', async ({ dro }) => {
     // Set ABS values
@@ -89,7 +125,7 @@ test.describe('ABS/INC Memory', () => {
   });
 
   /**
-   * Test that zeroing only affects the current mode.
+   * Zeroing only affects the current mode.
    */
   test('should zero only current mode values', async ({ dro }) => {
     // Set X to 100 in ABS mode
@@ -117,7 +153,7 @@ test.describe('ABS/INC Memory', () => {
   });
 
   /**
-   * Test that Zero All only affects the current mode.
+   * Zero All only affects the current mode.
    */
   test('should preserve other mode values when zeroing all', async ({ dro }) => {
     // Set all axes in ABS mode
@@ -165,18 +201,7 @@ test.describe('ABS/INC Memory', () => {
   });
 
   /**
-   * Test default mode is ABS on startup.
-   */
-  test('should start in ABS mode by default', async ({ dro }) => {
-    const isAbs = await dro.isAbsMode();
-    const isInc = await dro.isIncMode();
-
-    expect(isAbs).toBe(true);
-    expect(isInc).toBe(false);
-  });
-
-  /**
-   * Test Half function works in current mode.
+   * Half function works in current mode only.
    */
   test('should halve value in current mode only', async ({ dro }) => {
     // Set X to 100 in ABS mode
