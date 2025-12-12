@@ -99,6 +99,21 @@
   text-shadow: 0 0 10px hsl(var(--dro-digit-on)), 0 0 20px hsl(var(--dro-digit-on));
 }
 
+/* Icon styling */
+.icon {
+  fill: white;
+  stroke: white;
+}
+
+.icon path,
+.icon polygon,
+.icon ellipse,
+.icon circle,
+.icon rect {
+  fill: white;
+  stroke: white;
+}
+
 /* Forced Colors Mode (Windows High Contrast) Support */
 @media (forced-colors: active) {
   button.dro-button {
@@ -111,6 +126,16 @@
 
   button.dro-button:focus {
     outline: 2px solid Highlight;
+  }
+
+  .icon,
+  .icon path,
+  .icon polygon,
+  .icon ellipse,
+  .icon circle,
+  .icon rect {
+    fill: ButtonText;
+    stroke: ButtonText;
   }
 
   .mode-indicator-active {
