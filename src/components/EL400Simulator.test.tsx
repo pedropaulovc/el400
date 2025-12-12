@@ -12,9 +12,9 @@ describe('EL400Simulator input buffer limit', () => {
     const yButton = screen.getByRole('button', { name: /Y/i });
     await user.click(yButton);
 
-    // Try to enter 8 digits: 55555555
+    // Try to enter 9 digits: 555555555
     const digit5 = screen.getByRole('button', { name: /^5$/i });
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
       await user.click(digit5);
     }
 
@@ -22,10 +22,8 @@ describe('EL400Simulator input buffer limit', () => {
     const enterButton = screen.getByRole('button', { name: /ent/i });
     await user.click(enterButton);
 
-    // Value should be limited to 7 digits: 5555555 (not 55555555)
-    // The display will clamp this to 999.9999 visually, but the actual value
-    // stored should be 5555555 (7 digits max from input)
-    expect(screen.getByText(/Y axis: 5555555\.0000/)).toBeInTheDocument();
+    // Value should be limited to 8 digits: 55555555 (not 555555555)
+    expect(screen.getByText(/Y axis: 55555555\.0000/)).toBeInTheDocument();
   });
 
   it('allows decimal point without counting toward digit limit', async () => {
@@ -61,9 +59,9 @@ describe('EL400Simulator input buffer limit', () => {
     const zButton = screen.getByRole('button', { name: /Z/i });
     await user.click(zButton);
 
-    // Enter 7 digits then toggle sign
+    // Enter 8 digits then toggle sign
     const digit9 = screen.getByRole('button', { name: /^9$/i });
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       await user.click(digit9);
     }
 
@@ -74,6 +72,6 @@ describe('EL400Simulator input buffer limit', () => {
     await user.click(screen.getByRole('button', { name: /ent/i }));
 
     // Value should be negative (sign doesn't count toward limit)
-    expect(screen.getByText(/Z axis: -9999999\.0000/)).toBeInTheDocument();
+    expect(screen.getByText(/Z axis: -99999999\.0000/)).toBeInTheDocument();
   });
 });
