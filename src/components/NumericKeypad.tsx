@@ -75,7 +75,7 @@ const NumericKeypad = ({
         <DROButton size="square" onClick={onClear} className="p-0">
           <Icon name="cancel" alt="Cancel" />
         </DROButton>
-        <DROButton size="square" onClick={onEnter} className="flex-1 p-0">
+        <DROButton size="enter" onClick={onEnter} className="p-0">
           <Icon name="enter" alt="Enter" />
         </DROButton>
       </div>

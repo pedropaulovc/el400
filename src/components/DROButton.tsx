@@ -52,16 +52,16 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   onClick?: () => void;
   className?: string;
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
-  size?: 'sm' | 'md' | 'lg' | 'wide' | 'square' | 'icon';
+  size?: 'icon' | 'secondary' | 'axis' | 'square' | 'enter';
   isActive?: boolean;
 }
 
-const DROButton = ({ 
-  children, 
-  onClick, 
+const DROButton = ({
+  children,
+  onClick,
   className,
   variant = 'default',
-  size = 'md',
+  size = 'square',
   isActive = false,
   ...props
 }: DROButtonProps) => {
@@ -74,12 +74,11 @@ const DROButton = ({
   };
 
   const sizeClasses = {
-    sm: 'w-10 h-7 text-xs',
-    md: 'w-11 h-9 text-sm',
-    lg: 'w-14 h-8 text-base',
-    wide: 'w-16 h-9 text-sm',
-    square: 'w-10 h-10 text-sm',
-    icon: 'w-14 h-9 text-sm',
+    icon: 'w-16 h-8 text-sm',           // Primary buttons: 2:1 ratio
+    secondary: 'w-14 h-8 text-sm',      // Secondary buttons: 1.75:1 ratio
+    axis: 'w-[52px] h-[43px] text-sm',  // Axis buttons: 1.22:1 ratio
+    square: 'w-10 h-10 text-sm',        // Keypad & axis zero: 1:1 ratio
+    enter: 'w-[92px] h-10 text-sm',     // Enter key: width of 2 keypad buttons + gap
   };
 
   const handleClick = useCallback(() => {

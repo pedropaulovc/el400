@@ -62,32 +62,32 @@ export const SecondaryFunctionButtons = ({
     <div className="flex flex-col gap-4 h-full justify-center">
       {/* Top row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={onBoltCircle} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onBoltCircle} variant="dark" size="secondary" className="p-0">
           <Icon name="bolt-hole-pcd-function" alt="Bolt hole" />
         </DROButton>
-        <DROButton onClick={onArcContour} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onArcContour} variant="dark" size="secondary" className="p-0">
           <Icon name="arc-contouring-function" alt="Arc contour" />
         </DROButton>
-        <DROButton onClick={onAngleHole} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onAngleHole} variant="dark" size="secondary" className="p-0">
           <Icon name="angle-hole-function" alt="Angle hole" />
         </DROButton>
-        <DROButton onClick={onGridHole} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onGridHole} variant="dark" size="secondary" className="p-0">
           <Icon name="grid-hole-function" alt="Grid hole" />
         </DROButton>
       </div>
 
       {/* Bottom row */}
       <div className="flex gap-4 justify-between">
-        <DROButton onClick={onCalculator} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onCalculator} variant="dark" size="secondary" className="p-0">
           <Icon name="calculator" alt="Calculator" />
         </DROButton>
-        <DROButton onClick={onHalf} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onHalf} variant="dark" size="secondary" className="p-0">
           <Icon name="half-function" alt="Half" />
         </DROButton>
-        <DROButton onClick={onSDM} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onSDM} variant="dark" size="secondary" className="p-0">
           <Icon name="sdm-function" alt="SDM" />
         </DROButton>
-        <DROButton onClick={onFunction} variant="dark" size="icon" className="p-0">
+        <DROButton onClick={onFunction} variant="dark" size="secondary" className="p-0">
           <Icon name="function" alt="Function" />
         </DROButton>
       </div>
