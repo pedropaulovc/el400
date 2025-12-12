@@ -26,7 +26,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
           </defs>
           {/* Thin strip on left (24px), thick section on right with diagonal transition */}
           <path 
-            d="M 0,0 L 780,0 L 780,48 L 480,48 L 440,24 L 0,24 Z" 
+            d="M 0,0 L 780,0 L 780,48 L 560,48 L 520,24 L 0,24 Z" 
             fill="url(#topEdgeGradient)"
           />
           {/* Top highlight */}
@@ -36,7 +36,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
           />
           {/* Bottom edge shadow */}
           <path 
-            d="M 0,22 L 440,22 L 480,46 L 780,46 L 780,48 L 478,48 L 438,24 L 0,24 Z" 
+            d="M 0,22 L 520,22 L 560,46 L 780,46 L 780,48 L 558,48 L 518,24 L 0,24 Z" 
             fill="rgba(0,0,0,0.3)"
           />
         </svg>
