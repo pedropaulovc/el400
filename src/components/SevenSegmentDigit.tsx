@@ -30,28 +30,76 @@ const SevenSegmentDigit = ({
   const segments = segmentMap[value] || segmentMap[' '];
   const onColor = "hsl(120, 100%, 50%)";
   const offColor = "hsl(120, 100%, 8%)";
-  return <div className={cn("relative", className)}>
-      <svg viewBox="-8 0 68 79.8" style={{
-      overflow: 'visible'
-    }} className="w-full h-full py-[15px]">
+  
+  return (
+    <div className={cn("relative", className)}>
+      <svg viewBox="-8 0 68 79.8" style={{ overflow: 'visible' }} className="w-full h-full py-[15px]">
+        <style>{`
+          @media (forced-colors: active) {
+            .segment-on { fill: CanvasText !important; }
+            .segment-off { fill: transparent !important; }
+          }
+        `}</style>
         <g transform="skewX(-10)">
           {/* Segment A (top) */}
-          <polygon points="4,2.28 40,2.28 34,11.4 10,11.4" fill={segments[0] ? onColor : offColor} filter={segments[0] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[0] ? "segment-on" : "segment-off"}
+            points="4,2.28 40,2.28 34,11.4 10,11.4" 
+            fill={segments[0] ? onColor : offColor} 
+            filter={segments[0] ? "url(#glow)" : undefined} 
+          />
           {/* Segment B (top right) */}
-          <polygon points="41,4.56 41,37.62 35,31.92 35,12.54" fill={segments[1] ? onColor : offColor} filter={segments[1] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[1] ? "segment-on" : "segment-off"}
+            points="41,4.56 41,37.62 35,31.92 35,12.54" 
+            fill={segments[1] ? onColor : offColor} 
+            filter={segments[1] ? "url(#glow)" : undefined} 
+          />
           {/* Segment C (bottom right) */}
-          <polygon points="41,42.18 41,75.24 35,67.26 35,47.88" fill={segments[2] ? onColor : offColor} filter={segments[2] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[2] ? "segment-on" : "segment-off"}
+            points="41,42.18 41,75.24 35,67.26 35,47.88" 
+            fill={segments[2] ? onColor : offColor} 
+            filter={segments[2] ? "url(#glow)" : undefined} 
+          />
           {/* Segment D (bottom) */}
-          <polygon points="4,77.52 40,77.52 34,68.4 10,68.4" fill={segments[3] ? onColor : offColor} filter={segments[3] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[3] ? "segment-on" : "segment-off"}
+            points="4,77.52 40,77.52 34,68.4 10,68.4" 
+            fill={segments[3] ? onColor : offColor} 
+            filter={segments[3] ? "url(#glow)" : undefined} 
+          />
           {/* Segment E (bottom left) */}
-          <polygon points="3,42.18 3,75.24 9,67.26 9,47.88" fill={segments[4] ? onColor : offColor} filter={segments[4] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[4] ? "segment-on" : "segment-off"}
+            points="3,42.18 3,75.24 9,67.26 9,47.88" 
+            fill={segments[4] ? onColor : offColor} 
+            filter={segments[4] ? "url(#glow)" : undefined} 
+          />
           {/* Segment F (top left) */}
-          <polygon points="3,4.56 3,37.62 9,31.92 9,12.54" fill={segments[5] ? onColor : offColor} filter={segments[5] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[5] ? "segment-on" : "segment-off"}
+            points="3,4.56 3,37.62 9,31.92 9,12.54" 
+            fill={segments[5] ? onColor : offColor} 
+            filter={segments[5] ? "url(#glow)" : undefined} 
+          />
           {/* Segment G (middle) - hexagonal */}
-          <polygon points="4,39.9 10,35.34 34,35.34 40,39.9 34,44.46 10,44.46" fill={segments[6] ? onColor : offColor} filter={segments[6] ? "url(#glow)" : undefined} />
+          <polygon 
+            className={segments[6] ? "segment-on" : "segment-off"}
+            points="4,39.9 10,35.34 34,35.34 40,39.9 34,44.46 10,44.46" 
+            fill={segments[6] ? onColor : offColor} 
+            filter={segments[6] ? "url(#glow)" : undefined} 
+          />
           
           {/* Decimal point segment (bottom right of digit) */}
-          <circle cx="47" cy="74.1" r="4" fill={showDecimal ? onColor : offColor} filter={showDecimal ? "url(#glow)" : undefined} />
+          <circle 
+            className={showDecimal ? "segment-on" : "segment-off"}
+            cx="47" 
+            cy="74.1" 
+            r="4" 
+            fill={showDecimal ? onColor : offColor} 
+            filter={showDecimal ? "url(#glow)" : undefined} 
+          />
         </g>
         
         {/* Glow filter */}
@@ -65,6 +113,7 @@ const SevenSegmentDigit = ({
           </filter>
         </defs>
       </svg>
-    </div>;
+    </div>
+  );
 };
 export default SevenSegmentDigit;
