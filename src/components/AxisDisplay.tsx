@@ -7,19 +7,21 @@ interface AxisDisplayProps {
 
 const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
   // Format number to display format: returns array of { char, hasDecimal }
+  // Display is fixed at 8 digits: sign + 3 integer + 4 decimal
   const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
-    const absNum = Math.abs(num);
-    const formatted = absNum.toFixed(4); // e.g., "123.4567"
+    // Clamp to displayable range: -999.9999 to 999.9999
+    const clampedNum = Math.max(-999.9999, Math.min(999.9999, Math.abs(num)));
+    const formatted = clampedNum.toFixed(4); // e.g., "123.4567"
     
     const result: { char: string; hasDecimal: boolean }[] = [];
     
     // Add sign
     result.push({ char: isNegative ? '-' : ' ', hasDecimal: false });
     
-    // Pad the integer part to ensure consistent width
+    // Pad the integer part to ensure consistent width (always 3 digits)
     const [intPart, decPart] = formatted.split('.');
-    const paddedInt = intPart.padStart(3, ' ');
+    const paddedInt = intPart.padStart(3, ' ').slice(-3); // Ensure max 3 integer digits
     
     // Add integer digits (last one gets the decimal point)
     for (let i = 0; i < paddedInt.length; i++) {
@@ -29,8 +31,8 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
       });
     }
     
-    // Add decimal digits (no decimal points)
-    for (const char of decPart) {
+    // Add decimal digits (always 4 digits)
+    for (const char of decPart.slice(0, 4)) {
       result.push({ char, hasDecimal: false });
     }
     
