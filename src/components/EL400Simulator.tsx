@@ -36,7 +36,8 @@ const EL400Simulator = () => {
   };
 
   const handleAxisZero = (axis: Axis) => {
-    // In center menu mode, X0 button (6►) navigates to next option
+    // In center menu mode, only X0 button (6►) navigates to next option
+    // This matches the physical DRO behavior where 6► is the right arrow
     if (fnButtonMode.mode === 'center-menu' && axis === 'X') {
       fnButtonMode.navigateNext();
       return;

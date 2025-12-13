@@ -208,8 +208,10 @@ function calculateCenter(type: 'line' | 'circle', points: Point[]): Point | null
 
 /**
  * Threshold for detecting collinear points in circle calculation
- * Set to 0.01mm (10 microns) to match realistic DRO precision (typical scales: 5 microns)
- * Points are considered collinear if the determinant is smaller than this value
+ * Set to 0.01mm (10 microns) to account for realistic DRO measurement precision (~5 microns).
+ * This prevents calculation errors when measured points are nearly collinear due to
+ * physical measurement limitations. The determinant in the circumcenter formula becomes
+ * unreliable when points are effectively collinear within measurement precision.
  */
 const COLLINEAR_THRESHOLD = 0.01;
 
