@@ -5,9 +5,9 @@ import { expect, Locator } from '@playwright/test';
  */
 
 /**
- * Assert that a display shows a specific value (with tolerance for floating point)
+ * Assert that a display shows a specific numeric value (with tolerance for floating point)
  */
-export async function expectDisplayValue(
+export async function expectPureNumberValue(
   display: Locator,
   expectedValue: number,
   tolerance = 0.0001
@@ -76,7 +76,7 @@ export async function expectAxisValues(
   expected: { x: number; y: number; z: number },
   tolerance = 0.0001
 ) {
-  await expectDisplayValue(xDisplay, expected.x, tolerance);
-  await expectDisplayValue(yDisplay, expected.y, tolerance);
-  await expectDisplayValue(zDisplay, expected.z, tolerance);
+  await expectPureNumberValue(xDisplay, expected.x, tolerance);
+  await expectPureNumberValue(yDisplay, expected.y, tolerance);
+  await expectPureNumberValue(zDisplay, expected.z, tolerance);
 }
