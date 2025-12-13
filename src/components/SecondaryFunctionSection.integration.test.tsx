@@ -7,7 +7,7 @@ import {
   enterValue,
 } from '../tests/helpers/integration-test-utils';
 
-describe('SecondaryFunctionButtons Integration', () => {
+describe('SecondaryFunctionSection Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
