@@ -13,7 +13,20 @@ export async function expectDisplayValue(
   tolerance = 0.0001
 ) {
   const text = await display.textContent();
-  const actualValue = parseFloat(text?.replace(/[^\d.-]/g, '') || '0');
+  const cleanedText = text?.replace(/[^\d.-]/g, '') || '0';
+  
+  // Validate that there's at most 1 decimal point
+  const dotCount = (cleanedText.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    throw new Error(`Invalid numeric value with multiple decimal points: ${text}`);
+  }
+  
+  const actualValue = parseFloat(cleanedText);
+  
+  if (isNaN(actualValue)) {
+    throw new Error(`Could not parse numeric value from: ${text}`);
+  }
+  
   const diff = Math.abs(actualValue - expectedValue);
 
   expect(diff, `Expected ${expectedValue}, got ${actualValue}`).toBeLessThanOrEqual(tolerance);
