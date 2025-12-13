@@ -154,7 +154,7 @@ describe('integration-test-utils', () => {
       expect(getAxisDisplayPureNumberValue('Y')).toBe(789.012);
     });
 
-    it('extracts number from content with trailing text after number', () => {
+    it('throws error when content has trailing text after number', () => {
       injectMockAxisDisplay('x', '123.456mm');
       expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but no numeric match found');
     });
@@ -229,7 +229,7 @@ describe('integration-test-utils', () => {
 
     it('getAxisDisplayPureNumberValue accepts valid numbers with one decimal point', () => {
       injectMockAxisDisplay('x', '123.45');
-      expect(() => getAxisDisplayPureNumberValue('X')).not.toThrow();
+
       expect(getAxisDisplayPureNumberValue('X')).toBe(123.45);
     });
 
