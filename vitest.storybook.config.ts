@@ -2,11 +2,9 @@ import path from 'path';
 import { defineConfig } from 'vitest/config';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
-import svgr from 'vite-plugin-svgr';
 
 // https://storybook.js.org/docs/writing-tests/vitest-plugin
 export default defineConfig({
-  plugins: [svgr()],
   test: {
     projects: [
       {
