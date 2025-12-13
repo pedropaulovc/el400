@@ -23,8 +23,8 @@ interface AxisDisplayProps {
 
 const AxisDisplay = ({ value, axis, text }: AxisDisplayProps) => {
   const formatText = (str: string): { char: string; hasDecimal: boolean }[] => {
-    // Format text to fit the display (9 characters total)
-    const padded = str.padEnd(9, ' ').substring(0, 9);
+    // Format text to fit the display (9 characters total) - right justified
+    const padded = str.padStart(9, ' ').substring(0, 9);
     return padded.split('').map(char => ({ char, hasDecimal: false }));
   };
 
@@ -61,6 +61,7 @@ const AxisDisplay = ({ value, axis, text }: AxisDisplayProps) => {
       className="flex items-center gap-0.5 px-2"
       aria-hidden="true"
       data-testid={`axis-display-${axis.toLowerCase()}`}
+      data-message={text || undefined}
     >
       <div className="flex items-center -space-x-1">
         {digits.map((digit, index) => (
@@ -120,19 +121,6 @@ const AxisDisplaySection = ({
               </tr>
             </tbody>
           </table>
-
-          {/* Message display for accessibility and testing */}
-          {message && (
-            <div 
-              className="sr-only"
-              data-testid="display-message"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {message}
-            </div>
-          )}
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
             <AxisDisplay value={axisValues.X} axis="X" text={message} />

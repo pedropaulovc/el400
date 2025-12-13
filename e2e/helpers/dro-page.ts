@@ -60,7 +60,8 @@ export class DROPage {
     this.xDisplay = page.getByTestId('axis-value-x');
     this.yDisplay = page.getByTestId('axis-value-y');
     this.zDisplay = page.getByTestId('axis-value-z');
-    this.messageDisplay = page.getByTestId('display-message');
+    // Message display now uses the X axis visual display's data-message attribute
+    this.messageDisplay = page.getByTestId('axis-display-x');
 
     // Initialize LED indicators using data-testid
     this.absLED = page.getByTestId('led-abs');
