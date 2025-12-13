@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import AxisDisplaySection from './AxisDisplaySection';
 
@@ -7,8 +7,6 @@ describe('AxisDisplaySection', () => {
     axisValues: { X: 0, Y: 0, Z: 0 },
     isAbs: true,
     isInch: true,
-    onToggleAbs: vi.fn(),
-    onToggleUnit: vi.fn(),
   };
 
   describe('Accessibility', () => {
@@ -28,7 +26,7 @@ describe('AxisDisplaySection', () => {
       expect(table).toHaveClass('sr-only');
     });
 
-    it('has text in LED indicator buttons', () => {
+    it('has text in LED indicators', () => {
       render(<AxisDisplaySection {...defaultProps} />);
 
       expect(screen.getByTestId('led-abs')).toHaveTextContent('abs');
