@@ -23,8 +23,8 @@ describe('PrimaryFunctionSection Integration', () => {
     it('starts in ABS mode', () => {
       renderSimulator();
 
-      expect(screen.getByTestId('led-abs')).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByTestId('led-inc')).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByTestId('led-abs').querySelector('input')).toBeChecked();
+      expect(screen.getByTestId('led-inc').querySelector('input')).not.toBeChecked();
     });
 
     it('toggles to INC mode when ABS/INC button is clicked', async () => {
@@ -33,8 +33,8 @@ describe('PrimaryFunctionSection Integration', () => {
 
       await user.click(screen.getByTestId('btn-abs-inc'));
 
-      expect(screen.getByTestId('led-abs')).toHaveAttribute('aria-checked', 'false');
-      expect(screen.getByTestId('led-inc')).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByTestId('led-abs').querySelector('input')).not.toBeChecked();
+      expect(screen.getByTestId('led-inc').querySelector('input')).toBeChecked();
     });
 
     it('toggles back to ABS mode when clicked again', async () => {
@@ -44,8 +44,8 @@ describe('PrimaryFunctionSection Integration', () => {
       await user.click(screen.getByTestId('btn-abs-inc'));
       await user.click(screen.getByTestId('btn-abs-inc'));
 
-      expect(screen.getByTestId('led-abs')).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByTestId('led-inc')).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByTestId('led-abs').querySelector('input')).toBeChecked();
+      expect(screen.getByTestId('led-inc').querySelector('input')).not.toBeChecked();
     });
 
     it('maintains separate values for ABS and INC modes', async () => {
@@ -68,19 +68,6 @@ describe('PrimaryFunctionSection Integration', () => {
 
       await user.click(screen.getByTestId('btn-abs-inc'));
       expect(getAxisDisplayValue('X')).toBeCloseTo(50, 4);
-    });
-
-    it('can toggle mode by clicking the LED indicators', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
-
-      await user.click(screen.getByTestId('led-inc'));
-      expect(screen.getByTestId('led-abs')).toHaveAttribute('aria-checked', 'false');
-      expect(screen.getByTestId('led-inc')).toHaveAttribute('aria-checked', 'true');
-
-      await user.click(screen.getByTestId('led-abs'));
-      expect(screen.getByTestId('led-abs')).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByTestId('led-inc')).toHaveAttribute('aria-checked', 'false');
     });
 
     it('zeros the correct mode values when zeroing in different modes', async () => {

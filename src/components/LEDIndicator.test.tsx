@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
-import userEvent from '@testing-library/user-event';
 import LEDIndicator from './LEDIndicator';
 
 describe('LEDIndicator', () => {
@@ -45,132 +44,52 @@ describe('LEDIndicator', () => {
     });
   });
 
-  describe('Non-interactive Mode', () => {
-    it('renders as a div with status role by default', () => {
+  describe('Radio Input', () => {
+    it('renders as a disabled radio input', () => {
       render(<LEDIndicator label="ABS" isOn={true} />);
-      const container = screen.getByRole('status');
+      const radio = screen.getByRole('radio');
 
-      expect(container).toBeInTheDocument();
-      expect(container.tagName).toBe('DIV');
+      expect(radio).toBeInTheDocument();
+      expect(radio.tagName).toBe('INPUT');
+      expect(radio).toBeDisabled();
     });
 
-    it('includes aria-label describing the state', () => {
+    it('is checked when on', () => {
       render(<LEDIndicator label="ABS" isOn={true} />);
 
-      expect(screen.getByLabelText('ABS: active')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).toBeChecked();
     });
 
-    it('shows inactive state in aria-label when off', () => {
+    it('is not checked when off', () => {
       render(<LEDIndicator label="INC" isOn={false} />);
 
-      expect(screen.getByLabelText('INC: inactive')).toBeInTheDocument();
-    });
-  });
-
-  describe('Interactive Mode', () => {
-    it('renders as a button when isInteractive is true', () => {
-      const onClick = vi.fn();
-      render(<LEDIndicator label="ABS" isOn={true} isInteractive onClick={onClick} />);
-
-      const button = screen.getByRole('radio');
-      expect(button).toBeInTheDocument();
-      expect(button.tagName).toBe('BUTTON');
+      expect(screen.getByRole('radio')).not.toBeChecked();
     });
 
-    it('calls onClick when clicked in interactive mode', async () => {
-      const user = userEvent.setup();
-      const onClick = vi.fn();
+    it('provides clear state via checked attribute', () => {
+      const { rerender } = render(<LEDIndicator label="MODE" isOn={true} />);
+      expect(screen.getByRole('radio')).toBeChecked();
 
-      render(<LEDIndicator label="ABS" isOn={false} isInteractive onClick={onClick} />);
-
-      const button = screen.getByRole('radio');
-      await user.click(button);
-
-      expect(onClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('sets aria-checked to match isOn state', () => {
-      render(<LEDIndicator label="ABS" isOn={true} isInteractive onClick={vi.fn()} />);
-
-      const button = screen.getByRole('radio');
-      expect(button).toHaveAttribute('aria-checked', 'true');
-    });
-
-    it('includes group label in aria-label when provided', () => {
-      render(
-        <LEDIndicator
-          label="ABS"
-          isOn={true}
-          isInteractive
-          onClick={vi.fn()}
-          groupLabel="Mode"
-        />
-      );
-
-      expect(screen.getByLabelText('ABS (Mode)')).toBeInTheDocument();
-    });
-
-    it('applies hover styles in interactive mode', () => {
-      render(<LEDIndicator label="ABS" isOn={false} isInteractive onClick={vi.fn()} />);
-
-      const button = screen.getByRole('radio');
-      expect(button).toHaveClass('hover:bg-white/10');
-    });
-
-    it('supports keyboard navigation in interactive mode', async () => {
-      const user = userEvent.setup();
-      const onClick = vi.fn();
-
-      render(<LEDIndicator label="ABS" isOn={false} isInteractive onClick={onClick} />);
-
-      const button = screen.getByRole('radio');
-      button.focus();
-
-      await user.keyboard('{Enter}');
-      expect(onClick).toHaveBeenCalledTimes(1);
-
-      await user.keyboard(' ');
-      expect(onClick).toHaveBeenCalledTimes(2);
+      rerender(<LEDIndicator label="MODE" isOn={false} />);
+      expect(screen.getByRole('radio')).not.toBeChecked();
     });
   });
 
   describe('Custom Styling', () => {
-    it('applies custom className', () => {
-      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" />);
+    it('applies custom className to label', () => {
+      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" data-testid="led" />);
 
-      const container = screen.getByRole('status');
+      const container = screen.getByTestId('led');
       expect(container).toHaveClass('custom-class');
     });
 
     it('merges custom className with default classes', () => {
-      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" />);
+      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" data-testid="led" />);
 
-      const container = screen.getByRole('status');
+      const container = screen.getByTestId('led');
       expect(container).toHaveClass('custom-class');
       expect(container).toHaveClass('flex');
       expect(container).toHaveClass('flex-col');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('has proper ARIA roles for non-interactive mode', () => {
-      render(<LEDIndicator label="ABS" isOn={true} />);
-
-      expect(screen.getByRole('status')).toBeInTheDocument();
-    });
-
-    it('has proper ARIA roles for interactive mode', () => {
-      render(<LEDIndicator label="ABS" isOn={true} isInteractive onClick={vi.fn()} />);
-
-      expect(screen.getByRole('radio')).toBeInTheDocument();
-    });
-
-    it('provides clear state information to screen readers', () => {
-      const { rerender } = render(<LEDIndicator label="MODE" isOn={true} />);
-      expect(screen.getByLabelText('MODE: active')).toBeInTheDocument();
-
-      rerender(<LEDIndicator label="MODE" isOn={false} />);
-      expect(screen.getByLabelText('MODE: inactive')).toBeInTheDocument();
     });
   });
 
@@ -178,7 +97,7 @@ describe('LEDIndicator', () => {
     it('handles empty label gracefully', () => {
       render(<LEDIndicator label="" isOn={false} />);
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).toBeInTheDocument();
     });
 
     it('handles very long labels', () => {
@@ -186,12 +105,6 @@ describe('LEDIndicator', () => {
       render(<LEDIndicator label={longLabel} isOn={false} />);
 
       expect(screen.getByText(longLabel)).toBeInTheDocument();
-    });
-
-    it('does not crash when onClick is undefined in non-interactive mode', () => {
-      expect(() => {
-        render(<LEDIndicator label="ABS" isOn={false} />);
-      }).not.toThrow();
     });
   });
 });
