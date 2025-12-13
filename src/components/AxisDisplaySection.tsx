@@ -121,7 +121,8 @@ const AxisDisplaySection = ({
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">
             {/* Mode indicators */}
-            <fieldset role="radiogroup" aria-label="Positioning mode" className="flex gap-4 border-0 p-0 m-0">
+            <fieldset className="flex gap-4 border-0 p-0 m-0">
+              <legend className="sr-only">Positioning mode</legend>
               <LEDIndicator
                 label="abs"
                 name="positioning-mode"
@@ -137,7 +138,8 @@ const AxisDisplaySection = ({
             </fieldset>
 
             {/* Units indicators */}
-            <fieldset role="radiogroup" aria-label="Measurement units" className="flex gap-4 border-0 p-0 m-0">
+            <fieldset className="flex gap-4 border-0 p-0 m-0">
+              <legend className="sr-only">Measurement units</legend>
               <LEDIndicator
                 label="inch"
                 name="measurement-units"
@@ -153,7 +155,8 @@ const AxisDisplaySection = ({
             </fieldset>
 
             {/* Status indicators */}
-            <fieldset role="radiogroup" aria-label="Status" className="flex gap-4 border-0 p-0 m-0">
+            <fieldset className="flex gap-4 border-0 p-0 m-0">
+              <legend className="sr-only">Status</legend>
               <LEDIndicator label="Ø" name="status" isOn={false} />
               <LEDIndicator label="r" name="status" isOn={false} />
             </fieldset>
