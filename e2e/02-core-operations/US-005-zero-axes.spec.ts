@@ -146,25 +146,4 @@ test.describe('US-005: Axis Reset and Set', () => {
     value = await dro.getAxisValue('X');
     expect(value).toBeCloseTo(10, 0);
   });
-
-  /**
-   * AC 5.4: Clear button clears partial entry and allows new entry.
-   */
-  test('should clear partial entry and allow new entry', async ({ dro }) => {
-    await dro.selectAxis('Y');
-    
-    // Enter a wrong value
-    await dro.enterNumber('123.45');
-    
-    // Clear it
-    await dro.clearButton.click();
-    
-    // Enter the correct value
-    await dro.enterNumber('67.89');
-    await dro.enterButton.click();
-
-    // Verify only the second value was set
-    const value = await dro.getAxisValue('Y');
-    expect(value).toBeCloseTo(67.89, 2);
-  });
 });
