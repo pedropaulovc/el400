@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
-import DisplayPanel from "./DisplayPanel";
+import AxisDisplaySection from "./AxisDisplaySection";
 import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
@@ -121,7 +121,7 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <DisplayPanel
+          <AxisDisplaySection
             axisValues={droMemory.displayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
