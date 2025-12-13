@@ -17,6 +17,7 @@ export class DROPage {
   readonly incLED: Locator;
   readonly inchLED: Locator;
   readonly mmLED: Locator;
+  readonly fnLED: Locator;
 
   // Axis buttons
   readonly xButton: Locator;
@@ -51,6 +52,7 @@ export class DROPage {
   readonly absIncButton: Locator;
   readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
+  readonly functionButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -65,6 +67,7 @@ export class DROPage {
     this.incLED = page.getByTestId('led-inc');
     this.inchLED = page.getByTestId('led-inch');
     this.mmLED = page.getByTestId('led-mm');
+    this.fnLED = page.getByTestId('led-fn');
 
     // Initialize axis buttons using data-testid
     this.xButton = page.getByTestId('axis-select-x');
@@ -99,6 +102,7 @@ export class DROPage {
     this.absIncButton = page.getByTestId('btn-abs-inc');
     this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
     this.centerButton = page.getByTestId('btn-center');
+    this.functionButton = page.getByTestId('btn-function');
   }
 
   /**
@@ -209,5 +213,21 @@ export class DROPage {
    */
   async isMmUnits(): Promise<boolean> {
     return await this.isLEDOn(this.mmLED);
+  }
+
+  /**
+   * Check if Fn LED is on (function mode active)
+   */
+  async isFnActive(): Promise<boolean> {
+    return await this.isLEDOn(this.fnLED);
+  }
+
+  /**
+   * Get the text content of an axis display (for function mode text)
+   */
+  async getAxisText(axis: 'X' | 'Y' | 'Z'): Promise<string> {
+    const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
+    const text = await display.textContent();
+    return text?.trim() || '';
   }
 }

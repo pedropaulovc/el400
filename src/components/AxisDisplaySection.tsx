@@ -12,14 +12,17 @@ interface AxisDisplaySectionProps {
   axisValues: AxisValues;
   isAbs: boolean;
   isInch: boolean;
+  textDisplay?: { x: string; y: string; z: string } | null;
+  isFnActive?: boolean;
 }
 
 interface AxisDisplayProps {
   value: number;
   axis: 'X' | 'Y' | 'Z';
+  textOverride?: string;
 }
 
-const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
+const AxisDisplay = ({ value, axis, textOverride }: AxisDisplayProps) => {
   const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
@@ -46,7 +49,13 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     return result;
   };
 
-  const digits = formatValue(value);
+  const formatText = (text: string): { char: string; hasDecimal: boolean }[] => {
+    // Pad text to 8 characters (same as numeric display)
+    const padded = text.padEnd(8, ' ');
+    return padded.split('').map(char => ({ char, hasDecimal: false }));
+  };
+
+  const digits = textOverride ? formatText(textOverride) : formatValue(value);
 
   return (
     <div
@@ -69,6 +78,8 @@ const AxisDisplaySection = ({
   axisValues,
   isAbs,
   isInch,
+  textDisplay = null,
+  isFnActive = false,
 }: AxisDisplaySectionProps) => {
   return (
     <div className="flex flex-col">
@@ -94,28 +105,28 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {axisValues.X.toFixed(4)}
+                  {textDisplay?.x || axisValues.X.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {axisValues.Y.toFixed(4)}
+                  {textDisplay?.y || axisValues.Y.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {axisValues.Z.toFixed(4)}
+                  {textDisplay?.z || axisValues.Z.toFixed(4)}
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={axisValues.X} axis="X" />
-            <AxisDisplay value={axisValues.Y} axis="Y" />
-            <AxisDisplay value={axisValues.Z} axis="Z" />
+            <AxisDisplay value={axisValues.X} axis="X" textOverride={textDisplay?.x} />
+            <AxisDisplay value={axisValues.Y} axis="Y" textOverride={textDisplay?.y} />
+            <AxisDisplay value={axisValues.Z} axis="Z" textOverride={textDisplay?.z} />
           </div>
 
           {/* LED Indicators */}
@@ -157,6 +168,12 @@ const AxisDisplaySection = ({
             {/* Status indicators */}
             <fieldset className="flex gap-4 border-0 p-0 m-0">
               <legend className="sr-only">Status</legend>
+              <LEDIndicator 
+                label="Fn" 
+                name="status" 
+                isOn={isFnActive} 
+                data-testid="led-fn"
+              />
               <LEDIndicator label="Ø" name="status" isOn={false} />
               <LEDIndicator label="r" name="status" isOn={false} />
             </fieldset>

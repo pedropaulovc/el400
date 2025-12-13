@@ -9,6 +9,7 @@ import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useMachineState } from "../hooks/useMachineState";
 import { useDROMemory, type Axis } from "../hooks/useDROMemory";
 import { useSettingsContext } from "../context/SettingsContext";
+import { useFunctionMode } from "../hooks/useFunctionMode";
 
 const noop = () => {};
 
@@ -18,6 +19,9 @@ const EL400Simulator = () => {
 
   // DRO memory manages ABS/INC values and mode switching
   const droMemory = useDROMemory(machineState.connected ? machineState : null);
+
+  // Function mode for center finding and other advanced features
+  const functionMode = useFunctionMode();
 
   // Settings from context (persisted to localStorage)
   const { settings, updateSettings } = useSettingsContext();
@@ -32,7 +36,24 @@ const EL400Simulator = () => {
   };
 
   const handleAxisZero = (axis: Axis) => {
-    droMemory.zeroAxis(axis);
+    // In function menu modes, first zero button press navigates to next option
+    if (functionMode.mode === 'function-menu' || functionMode.mode === 'center-menu') {
+      functionMode.navigateNext();
+      return;
+    }
+    
+    // In center finding mode, zero buttons store points
+    if (functionMode.mode === 'center-line' || functionMode.mode === 'center-circle') {
+      const point = {
+        x: droMemory.displayValues.X,
+        y: droMemory.displayValues.Y,
+        z: droMemory.displayValues.Z,
+      };
+      functionMode.storePoint(point);
+    } else {
+      // Normal mode: zero the axis
+      droMemory.zeroAxis(axis);
+    }
   };
 
   const handleNumber = useCallback((num: string) => {
@@ -68,6 +89,13 @@ const EL400Simulator = () => {
   }, []);
 
   const handleEnter = useCallback(() => {
+    // In function mode, ENT confirms selection
+    if (functionMode.isFnActive) {
+      functionMode.confirmSelection();
+      return;
+    }
+
+    // Normal entry mode
     if (!activeAxis || !inputBuffer) {
       return;
     }
@@ -76,7 +104,7 @@ const EL400Simulator = () => {
       droMemory.setAxisValue(activeAxis, value);
     }
     setInputBuffer('');
-  }, [activeAxis, inputBuffer, droMemory]);
+  }, [activeAxis, inputBuffer, droMemory, functionMode]);
 
 
   const handleToggleUnit = () => {
@@ -97,6 +125,35 @@ const EL400Simulator = () => {
       droMemory.setAxisValue(activeAxis, currentValue / 2);
     }
   };
+
+  const handleFunction = () => {
+    if (functionMode.isFnActive) {
+      functionMode.exitFunctionMode();
+    } else {
+      functionMode.enterFunctionMenu();
+    }
+  };
+
+  // Calculate display values (numeric or text)
+  const textDisplay = functionMode.getDisplayText();
+  
+  // If in center finding mode with all points stored, show distance-to-go
+  let displayValues = droMemory.displayValues;
+  if (functionMode.centerFinding?.centerPoint && 
+      functionMode.centerFinding.points.length === functionMode.centerFinding.expectedPoints) {
+    const distanceToGo = functionMode.calculateDistanceToGo({
+      x: droMemory.displayValues.X,
+      y: droMemory.displayValues.Y,
+      z: droMemory.displayValues.Z,
+    });
+    if (distanceToGo) {
+      displayValues = {
+        X: distanceToGo.x,
+        Y: distanceToGo.y,
+        Z: distanceToGo.z,
+      };
+    }
+  }
 
   return (
     <div
@@ -122,9 +179,11 @@ const EL400Simulator = () => {
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
           <AxisDisplaySection
-            axisValues={droMemory.displayValues}
+            axisValues={displayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
+            textDisplay={textDisplay}
+            isFnActive={functionMode.isFnActive}
           />
 
           <AxisSelectionSection 
@@ -162,7 +221,7 @@ const EL400Simulator = () => {
             onCalculator={noop}
             onHalf={handleHalf}
             onSDM={noop}
-            onFunction={noop}
+            onFunction={handleFunction}
           />
         </div>
 
