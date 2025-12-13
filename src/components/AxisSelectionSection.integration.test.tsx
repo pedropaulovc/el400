@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  getAxisDisplayValue,
+  getAxisDisplayPureNumberValue,
   enterValue,
 } from '../tests/helpers/integration-test-utils';
 
@@ -26,10 +26,10 @@ describe('AxisPanel Integration', () => {
 
       await user.click(screen.getByTestId('axis-select-x'));
       await enterValue(user, '12.5');
-      expect(getAxisDisplayValue('X')).toBeCloseTo(12.5, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(12.5, 4);
 
       await user.click(screen.getByTestId('axis-zero-x'));
-      expect(getAxisDisplayValue('X')).toBeCloseTo(0, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
     });
 
     it('zeros the Y axis when zero button is clicked', async () => {
@@ -38,10 +38,10 @@ describe('AxisPanel Integration', () => {
 
       await user.click(screen.getByTestId('axis-select-y'));
       await enterValue(user, '25.75');
-      expect(getAxisDisplayValue('Y')).toBeCloseTo(25.75, 4);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(25.75, 4);
 
       await user.click(screen.getByTestId('axis-zero-y'));
-      expect(getAxisDisplayValue('Y')).toBeCloseTo(0, 4);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 4);
     });
 
     it('zeros the Z axis when zero button is clicked', async () => {
@@ -50,10 +50,10 @@ describe('AxisPanel Integration', () => {
 
       await user.click(screen.getByTestId('axis-select-z'));
       await enterValue(user, '5.123');
-      expect(getAxisDisplayValue('Z')).toBeCloseTo(5.123, 4);
+      expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(5.123, 4);
 
       await user.click(screen.getByTestId('axis-zero-z'));
-      expect(getAxisDisplayValue('Z')).toBeCloseTo(0, 4);
+      expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(0, 4);
     });
 
     it('only zeros the specified axis, leaving others unchanged', async () => {
@@ -71,9 +71,9 @@ describe('AxisPanel Integration', () => {
 
       await user.click(screen.getByTestId('axis-zero-y'));
 
-      expect(getAxisDisplayValue('X')).toBeCloseTo(10, 4);
-      expect(getAxisDisplayValue('Y')).toBeCloseTo(0, 4);
-      expect(getAxisDisplayValue('Z')).toBeCloseTo(30, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 4);
+      expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 4);
     });
   });
 
@@ -85,7 +85,7 @@ describe('AxisPanel Integration', () => {
       // Set X to a known value
       await user.click(screen.getByTestId('axis-select-x'));
       await enterValue(user, '50');
-      expect(getAxisDisplayValue('X')).toBeCloseTo(50, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
 
       // Try to enter a new value but clear it
       await user.click(screen.getByTestId('axis-select-x'));
@@ -100,7 +100,7 @@ describe('AxisPanel Integration', () => {
       await user.click(screen.getByTestId('key-enter'));
 
       // Value should remain 50
-      expect(getAxisDisplayValue('X')).toBeCloseTo(50, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
     });
 
     it('clears partial entry and allows new entry', async () => {
@@ -121,7 +121,7 @@ describe('AxisPanel Integration', () => {
       await enterValue(user, '45.6');
 
       // Verify only the second value was set
-      expect(getAxisDisplayValue('Y')).toBeCloseTo(45.6, 4);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(45.6, 4);
     });
   });
 });
