@@ -54,10 +54,10 @@ export class DROPage {
   constructor(page: Page) {
     this.page = page;
 
-    // Initialize display elements using semantic queries
-    this.xDisplay = page.getByRole('region', { name: 'X axis position' });
-    this.yDisplay = page.getByRole('region', { name: 'Y axis position' });
-    this.zDisplay = page.getByRole('region', { name: 'Z axis position' });
+    // Initialize display elements using testids (values are in sr-only table)
+    this.xDisplay = page.getByTestId('axis-value-x');
+    this.yDisplay = page.getByTestId('axis-value-y');
+    this.zDisplay = page.getByTestId('axis-value-z');
 
     // Initialize LED indicators using data-testid
     this.absLED = page.getByTestId('led-abs');
