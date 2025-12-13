@@ -32,32 +32,32 @@ const SecondaryFunctionSection = ({
           {/* Top row */}
           <div className="flex gap-4 justify-between">
             <DROButton onClick={onBoltCircle} variant="dark" size="secondary" className="p-0" data-testid="btn-bolt-circle">
-              <Icon name="bolt-hole-pcd-function" alt="Bolt hole" /><span className="sr-only">Bolt hole</span>
+              <Icon name="bolt-hole-pcd-function" /><span className="sr-only">Bolt hole</span>
             </DROButton>
             <DROButton onClick={onArcContour} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour">
-              <Icon name="arc-contouring-function" alt="Arc contour" /><span className="sr-only">Arc contour</span>
+              <Icon name="arc-contouring-function" /><span className="sr-only">Arc contour</span>
             </DROButton>
             <DROButton onClick={onAngleHole} variant="dark" size="secondary" className="p-0" data-testid="btn-angle-hole">
-              <Icon name="angle-hole-function" alt="Angle hole" /><span className="sr-only">Angle hole</span>
+              <Icon name="angle-hole-function" /><span className="sr-only">Angle hole</span>
             </DROButton>
             <DROButton onClick={onGridHole} variant="dark" size="secondary" className="p-0" data-testid="btn-grid-hole">
-              <Icon name="grid-hole-function" alt="Grid hole" /><span className="sr-only">Grid hole</span>
+              <Icon name="grid-hole-function" /><span className="sr-only">Grid hole</span>
             </DROButton>
           </div>
 
           {/* Bottom row */}
           <div className="flex gap-4 justify-between">
             <DROButton onClick={onCalculator} variant="dark" size="secondary" className="p-0" data-testid="btn-calculator">
-              <Icon name="calculator" alt="Calculator" /><span className="sr-only">Calculator</span>
+              <Icon name="calculator" /><span className="sr-only">Calculator</span>
             </DROButton>
             <DROButton onClick={onHalf} variant="dark" size="secondary" className="p-0" data-testid="btn-half">
-              <Icon name="half-function" alt="Half" /><span className="sr-only">Half</span>
+              <Icon name="half-function" /><span className="sr-only">Half</span>
             </DROButton>
             <DROButton onClick={onSDM} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm">
-              <Icon name="sdm-function" alt="SDM" /><span className="sr-only">SDM</span>
+              <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
             <DROButton onClick={onFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function">
-              <Icon name="function" alt="Function" /><span className="sr-only">Function</span>
+              <Icon name="function" /><span className="sr-only">Function</span>
             </DROButton>
           </div>
         </div>
