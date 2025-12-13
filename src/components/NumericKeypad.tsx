@@ -25,7 +25,7 @@ const NumericKeypad = ({
           <Icon name="number-7" /><span className="sr-only">7</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('8')} className="p-0" data-testid="key-8">
-          <Icon name="number-8" /><span className="sr-only">8</span>
+          <Icon name="number-8" /><span className="sr-only">8 (Up)</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('9')} className="p-0" data-testid="key-9">
           <Icon name="number-9" /><span className="sr-only">9</span>
@@ -35,13 +35,13 @@ const NumericKeypad = ({
       {/* Row 2: 4, 5, 6 */}
       <div className="flex gap-3">
         <DROButton size="square" onClick={() => onNumber('4')} className="p-0" data-testid="key-4">
-          <Icon name="number-4" /><span className="sr-only">4</span>
+          <Icon name="number-4" /><span className="sr-only">4 (Left)</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('5')} className="p-0" data-testid="key-5">
           <Icon name="number-5" /><span className="sr-only">5</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('6')} className="p-0" data-testid="key-6">
-          <Icon name="number-6" /><span className="sr-only">6</span>
+          <Icon name="number-6" /><span className="sr-only">6 (Right)</span>
         </DROButton>
       </div>
 
@@ -51,7 +51,7 @@ const NumericKeypad = ({
           <Icon name="number-1" /><span className="sr-only">1</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('2')} className="p-0" data-testid="key-2">
-          <Icon name="number-2" /><span className="sr-only">2</span>
+          <Icon name="number-2" /><span className="sr-only">2 (Down)</span>
         </DROButton>
         <DROButton size="square" onClick={() => onNumber('3')} className="p-0" data-testid="key-3">
           <Icon name="number-3" /><span className="sr-only">3</span>
