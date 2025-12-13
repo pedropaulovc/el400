@@ -39,7 +39,10 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const textContent = valueElement.textContent || '';
   
   // Check if the content is purely numeric (matches /^[-\d.]+$/)
-  if (/^[-\d.]+$/.test(textContent.trim())) {
+  // Allow [-\d.] characters only if there is at most 1 '.' in the string
+  const trimmedContent = textContent.trim();
+  const dotCount = (trimmedContent.match(/\./g) || []).length;
+  if (/^[-\d.]+$/.test(trimmedContent) && dotCount <= 1) {
     throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${textContent}`);
   }
   
@@ -59,6 +62,12 @@ export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
   
   if (!match) {
     throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
+  }
+  
+  // Only parseFloat if there's at most 1 '.' in the matched string
+  const dotCount = (match[0].match(/\./g) || []).length;
+  if (dotCount > 1) {
+    throw new Error(`Expected numeric value for axis ${axis}, but found multiple decimal points in: ${match[0]}`);
   }
   
   const parsedValue = parseFloat(match[0]);
