@@ -115,7 +115,21 @@ export class DROPage {
   async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
-    return parseFloat(text?.replace(/[^\d.-]/g, '') || '0');
+    const cleanedText = text?.replace(/[^\d.-]/g, '') || '0';
+    
+    // Validate that there's at most 1 decimal point
+    const dotCount = (cleanedText.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      throw new Error(`Invalid numeric value with multiple decimal points in axis ${axis}: ${text}`);
+    }
+    
+    const value = parseFloat(cleanedText);
+    
+    if (isNaN(value)) {
+      throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
+    }
+    
+    return value;
   }
 
   /**
