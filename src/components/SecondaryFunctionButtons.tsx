@@ -1,54 +1,7 @@
 import DROButton from "./DROButton";
 import Icon from "./Icon";
 
-interface FunctionButtonsProps {
-  isInch: boolean;
-  isAbs: boolean;
-  onToggleUnit: () => void;
-  onSettings: () => void;
-  onToggleAbs: () => void;
-  onCenter: () => void;
-  onZeroAll: () => void;
-}
-
-const FunctionButtons = ({
-  onSettings,
-  onToggleAbs,
-  onToggleUnit,
-  onCenter,
-  onZeroAll,
-}: FunctionButtonsProps) => {
-  return (
-    <div className="flex justify-between w-full">
-      <DROButton onClick={onSettings} size="icon" className="p-0" data-testid="btn-settings">
-        <Icon name="setup" alt="Settings" />
-      </DROButton>
-      <DROButton onClick={onToggleAbs} size="icon" className="p-0" data-testid="btn-abs-inc">
-        <Icon name="abs-inc" alt="Abs/Inc" />
-      </DROButton>
-      <DROButton onClick={onToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit">
-        <Icon name="inch-mm" alt="Toggle units" />
-      </DROButton>
-      <DROButton onClick={onCenter} size="icon" className="p-0" data-testid="btn-center">
-        <Icon name="reference" alt="Reference" />
-      </DROButton>
-      <DROButton onClick={onZeroAll} size="icon" className="p-0" data-testid="btn-zero-all">
-        <Icon name="preset" alt="Zero all axes" />
-      </DROButton>
-    </div>
-  );
-};
-
-export const SecondaryFunctionButtons = ({
-  onBoltCircle,
-  onArcContour,
-  onAngleHole,
-  onGridHole,
-  onCalculator,
-  onHalf,
-  onSDM,
-  onFunction,
-}: {
+interface SecondaryFunctionButtonsProps {
   onBoltCircle: () => void;
   onArcContour: () => void;
   onAngleHole: () => void;
@@ -57,7 +10,18 @@ export const SecondaryFunctionButtons = ({
   onHalf: () => void;
   onSDM: () => void;
   onFunction: () => void;
-}) => {
+}
+
+const SecondaryFunctionButtons = ({
+  onBoltCircle,
+  onArcContour,
+  onAngleHole,
+  onGridHole,
+  onCalculator,
+  onHalf,
+  onSDM,
+  onFunction,
+}: SecondaryFunctionButtonsProps) => {
   return (
     <div className="flex flex-col gap-4 h-full justify-center">
       {/* Top row */}
@@ -95,4 +59,4 @@ export const SecondaryFunctionButtons = ({
   );
 };
 
-export default FunctionButtons;
+export default SecondaryFunctionButtons;
