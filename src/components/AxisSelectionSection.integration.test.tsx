@@ -76,4 +76,52 @@ describe('AxisPanel Integration', () => {
       expect(getAxisDisplayValue('Z')).toBeCloseTo(30, 4);
     });
   });
+
+  describe('Clear Button', () => {
+    it('cancels numeric entry when clear button is pressed', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      // Set X to a known value
+      await user.click(screen.getByTestId('axis-select-x'));
+      await enterValue(user, '50');
+      expect(getAxisDisplayValue('X')).toBeCloseTo(50, 4);
+
+      // Try to enter a new value but clear it
+      await user.click(screen.getByTestId('axis-select-x'));
+      await user.click(screen.getByTestId('key-9'));
+      await user.click(screen.getByTestId('key-9'));
+      await user.click(screen.getByTestId('key-9'));
+      
+      // Clear the entry
+      await user.click(screen.getByTestId('key-clear'));
+      
+      // Press enter (should do nothing since buffer is empty)
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Value should remain 50
+      expect(getAxisDisplayValue('X')).toBeCloseTo(50, 4);
+    });
+
+    it('clears partial entry and allows new entry', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      
+      // Enter a wrong value
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-2'));
+      await user.click(screen.getByTestId('key-3'));
+      
+      // Clear it
+      await user.click(screen.getByTestId('key-clear'));
+      
+      // Enter the correct value
+      await enterValue(user, '45.6');
+
+      // Verify only the second value was set
+      expect(getAxisDisplayValue('Y')).toBeCloseTo(45.6, 4);
+    });
+  });
 });
