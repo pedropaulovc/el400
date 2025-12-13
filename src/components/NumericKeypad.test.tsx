@@ -50,5 +50,23 @@ describe('NumericKeypad', () => {
       expect(screen.getByTestId('key-clear').querySelector('.sr-only')).toHaveTextContent('Clear');
       expect(screen.getByTestId('key-enter').querySelector('.sr-only')).toHaveTextContent('Enter');
     });
+
+    it('has buttons in natural numeric order for tab navigation', () => {
+      render(<NumericKeypad {...defaultProps} />);
+
+      const buttons = screen.getAllByRole('button');
+      const expectedOrder = [
+        'key-1', 'key-2', 'key-3',
+        'key-4', 'key-5', 'key-6',
+        'key-7', 'key-8', 'key-9',
+        'key-0', 'key-sign', 'key-decimal',
+        'key-clear', 'key-enter'
+      ];
+
+      expect(buttons).toHaveLength(expectedOrder.length);
+      buttons.forEach((button, index) => {
+        expect(button).toHaveAttribute('data-testid', expectedOrder[index]);
+      });
+    });
   });
 });
