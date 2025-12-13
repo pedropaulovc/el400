@@ -89,12 +89,13 @@ const EL400Simulator = () => {
   }, []);
 
   const handleEnter = useCallback(() => {
-    // In function mode, ENT confirms selection
-    if (functionMode.isFnActive) {
+    // In function menu modes (not data collection), ENT confirms selection
+    if (functionMode.mode === 'function-menu' || functionMode.mode === 'center-menu') {
       functionMode.confirmSelection();
       return;
     }
 
+    // In center finding mode during data collection, ENT works normally to enter values
     // Normal entry mode
     if (!activeAxis || !inputBuffer) {
       return;
