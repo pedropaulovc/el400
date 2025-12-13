@@ -41,10 +41,6 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   
   const trimmedContent = textContent.trim();
   
-  if (!trimmedContent) {
-    throw new Error(`Expected text value for axis ${axis}, but got empty content`);
-  }
-  
   if (VALID_NUMBER_PATTERN.test(trimmedContent)) {
     throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${trimmedContent}`);
   }
