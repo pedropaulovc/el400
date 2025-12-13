@@ -1,4 +1,4 @@
-import FunctionButtons from "./FunctionButtons";
+import PrimaryFunctionButtons from "./PrimaryFunctionButtons";
 import BeveledFrame from "./BeveledFrame";
 import PowerLED from "./PowerLED";
 
@@ -30,7 +30,7 @@ const PrimaryFunctionSection = ({
             background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
           }}
         >
-          <FunctionButtons 
+          <PrimaryFunctionButtons
             isInch={isInch}
             isAbs={isAbs}
             onToggleUnit={onToggleUnit}

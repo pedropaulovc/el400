@@ -1,4 +1,4 @@
-import { SecondaryFunctionButtons } from "./FunctionButtons";
+import SecondaryFunctionButtons from "./SecondaryFunctionButtons";
 import BeveledFrame from "./BeveledFrame";
 interface SecondaryFunctionSectionProps {
   onBoltCircle: () => void;
