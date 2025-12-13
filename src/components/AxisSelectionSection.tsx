@@ -33,11 +33,10 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
                 size="axis"
                 onClick={() => onAxisSelect(axis)}
                 isActive={activeAxis === axis}
-                aria-label={`Select ${axis} axis`}
                 aria-pressed={activeAxis === axis}
                 data-testid={`axis-select-${axis.toLowerCase()}`}
               >
-                <span className="sr-only">{axis}</span>
+                <span className="sr-only">Select {axis} axis</span>
               </DROButton>
             </div>
             <div className="flex flex-col items-center gap-1 mt-5">
@@ -46,10 +45,9 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
                 variant="dark"
                 size="square"
                 onClick={() => onAxisZero(axis)}
-                aria-label={`Zero ${axis} axis`}
                 data-testid={`axis-zero-${axis.toLowerCase()}`}
               >
-                <span className="sr-only">{axis}0</span>
+                <span className="sr-only">Zero {axis} axis</span>
               </DROButton>
             </div>
           </Fragment>
