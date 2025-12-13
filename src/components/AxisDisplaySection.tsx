@@ -23,7 +23,7 @@ interface AxisDisplayProps {
 
 const AxisDisplay = ({ value, axis, text }: AxisDisplayProps) => {
   const formatText = (str: string): { char: string; hasDecimal: boolean }[] => {
-    // Format text to fit the display (8 digits plus sign)
+    // Format text to fit the display (9 characters total)
     const padded = str.padEnd(9, ' ').substring(0, 9);
     return padded.split('').map(char => ({ char, hasDecimal: false }));
   };

@@ -26,19 +26,15 @@ const SevenSegmentDigit = ({
     '9': [true, true, true, true, false, true, true],
     '-': [false, false, false, false, false, false, true],
     ' ': [false, false, false, false, false, false, false],
-    // Letters for displaying messages
+    // Letters for displaying messages (uppercase)
     'S': [true, false, true, true, false, true, true],  // Same as 5
     'E': [true, false, false, true, true, true, true],
     'L': [false, false, false, true, true, true, false],
     'C': [true, false, false, true, true, true, false],
-    'T': [false, false, false, true, true, true, true],
-    's': [true, false, true, true, false, true, true],  // lowercase same as uppercase
-    'e': [true, false, false, true, true, true, true],
-    'l': [false, false, false, true, true, true, false],
-    'c': [true, false, false, true, true, true, false],
-    't': [false, false, false, true, true, true, true]
+    'T': [false, false, false, true, true, true, true]
   };
-  const segments = segmentMap[value] || segmentMap[' '];
+  // Handle case-insensitive lookup
+  const segments = segmentMap[value] || segmentMap[value.toUpperCase()] || segmentMap[' '];
   const onColor = "hsl(120, 100%, 50%)";
   const offColor = "hsl(120, 100%, 8%)";
   
