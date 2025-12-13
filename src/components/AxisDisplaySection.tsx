@@ -119,7 +119,9 @@ const AxisDisplaySection = ({
             <div 
               className="text-center text-red-400 font-mono text-lg mb-2"
               data-testid="display-message"
+              role="status"
               aria-live="polite"
+              aria-atomic="true"
             >
               {message}
             </div>
