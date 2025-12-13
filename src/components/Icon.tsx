@@ -1,7 +1,6 @@
 interface IconProps {
   name: string;
   className?: string;
-  alt?: string;
 }
 
 const AbsInc = (props: React.SVGProps<SVGSVGElement>) => (
@@ -246,7 +245,7 @@ const icons: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> 
   "vectoring-function": VectoringFunction,
 };
 
-const Icon = ({ name, className = "w-full h-full", alt = "" }: IconProps) => {
+const Icon = ({ name, className = "w-full h-full" }: IconProps) => {
   const SvgIcon = icons[name];
 
   if (!SvgIcon) {
@@ -257,8 +256,7 @@ const Icon = ({ name, className = "w-full h-full", alt = "" }: IconProps) => {
   return (
     <SvgIcon
       className={`icon ${className}`}
-      role="img"
-      aria-label={alt}
+      aria-hidden="true"
     />
   );
 };
