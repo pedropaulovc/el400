@@ -11,6 +11,7 @@ export class DROPage {
   readonly xDisplay: Locator;
   readonly yDisplay: Locator;
   readonly zDisplay: Locator;
+  readonly messageDisplay: Locator;
 
   // LED indicators
   readonly absLED: Locator;
@@ -59,6 +60,7 @@ export class DROPage {
     this.xDisplay = page.getByTestId('axis-value-x');
     this.yDisplay = page.getByTestId('axis-value-y');
     this.zDisplay = page.getByTestId('axis-value-z');
+    this.messageDisplay = page.getByTestId('display-message');
 
     // Initialize LED indicators using data-testid
     this.absLED = page.getByTestId('led-abs');

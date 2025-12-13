@@ -25,8 +25,17 @@ const EL400Simulator = () => {
   // Local UI state
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null);
   const [inputBuffer, setInputBuffer] = useState('');
+  const [halfSelectionMode, setHalfSelectionMode] = useState(false);
 
   const handleAxisSelect = (axis: Axis) => {
+    // Check if we're in half selection mode
+    if (halfSelectionMode) {
+      const currentValue = droMemory.displayValues[axis];
+      droMemory.setAxisValue(axis, currentValue / 2);
+      setHalfSelectionMode(false);
+      return;
+    }
+    
     setActiveAxis(axis);
     setInputBuffer('');
   };
@@ -92,10 +101,7 @@ const EL400Simulator = () => {
   };
 
   const handleHalf = () => {
-    if (activeAxis) {
-      const currentValue = droMemory.displayValues[activeAxis];
-      droMemory.setAxisValue(activeAxis, currentValue / 2);
-    }
+    setHalfSelectionMode(true);
   };
 
   return (
@@ -125,6 +131,7 @@ const EL400Simulator = () => {
             axisValues={droMemory.displayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
+            message={halfSelectionMode ? 'SELECT' : ''}
           />
 
           <AxisSelectionSection 

@@ -12,6 +12,7 @@ interface AxisDisplaySectionProps {
   axisValues: AxisValues;
   isAbs: boolean;
   isInch: boolean;
+  message?: string;
 }
 
 interface AxisDisplayProps {
@@ -69,6 +70,7 @@ const AxisDisplaySection = ({
   axisValues,
   isAbs,
   isInch,
+  message = '',
 }: AxisDisplaySectionProps) => {
   return (
     <div className="flex flex-col">
@@ -111,6 +113,17 @@ const AxisDisplaySection = ({
               </tr>
             </tbody>
           </table>
+
+          {/* Message Display */}
+          {message && (
+            <div 
+              className="text-center text-red-400 font-mono text-lg mb-2"
+              data-testid="display-message"
+              aria-live="polite"
+            >
+              {message}
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
             <AxisDisplay value={axisValues.X} axis="X" />

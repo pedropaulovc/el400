@@ -211,6 +211,7 @@ test.describe('US-003: ABS/INC Mode', () => {
 
     // Apply Half function
     await dro.halfButton.click();
+    await dro.xButton.click();
 
     // Verify X is halved to 50
     expect(await dro.getAxisValue('X')).toBeCloseTo(50, 0);
@@ -223,6 +224,7 @@ test.describe('US-003: ABS/INC Mode', () => {
 
     // Apply Half in INC mode
     await dro.halfButton.click();
+    await dro.xButton.click();
 
     // INC X should be 20
     expect(await dro.getAxisValue('X')).toBeCloseTo(20, 0);
