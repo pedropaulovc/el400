@@ -120,4 +120,51 @@ test.describe('US-005: Axis Reset and Set', () => {
     const value = await dro.getAxisValue('Y');
     expect(value).toBeCloseTo(0.5, 1);
   });
+
+  /**
+   * AC 5.4: The C key can cancel an incorrect numeric entry before ent is pressed.
+   */
+  test('should cancel numeric entry with C key', async ({ dro }) => {
+    // Set X to a known value first
+    await dro.selectAxis('X');
+    await dro.enterNumber('10');
+    await dro.enterButton.click();
+
+    // Verify initial value
+    let value = await dro.getAxisValue('X');
+    expect(value).toBeCloseTo(10, 0);
+
+    // Now try to enter 999 but cancel it
+    await dro.selectAxis('X');
+    await dro.enterNumber('999');
+    await dro.clearButton.click();  // Cancel the entry
+
+    // Press enter on empty buffer (should do nothing)
+    await dro.enterButton.click();
+
+    // Value should remain 10, not change to 999
+    value = await dro.getAxisValue('X');
+    expect(value).toBeCloseTo(10, 0);
+  });
+
+  /**
+   * AC 5.4: Clear button clears partial entry and allows new entry.
+   */
+  test('should clear partial entry and allow new entry', async ({ dro }) => {
+    await dro.selectAxis('Y');
+    
+    // Enter a wrong value
+    await dro.enterNumber('123.45');
+    
+    // Clear it
+    await dro.clearButton.click();
+    
+    // Enter the correct value
+    await dro.enterNumber('67.89');
+    await dro.enterButton.click();
+
+    // Verify only the second value was set
+    const value = await dro.getAxisValue('Y');
+    expect(value).toBeCloseTo(67.89, 2);
+  });
 });
