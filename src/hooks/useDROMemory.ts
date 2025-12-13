@@ -1,6 +1,9 @@
 /**
  * Hook for managing DRO memory with separate ABS and INC value storage.
  * Allows switching between absolute and incremental display modes.
+ * 
+ * Note: This hook is unit-agnostic. All values are stored in millimeters (mm).
+ * Unit conversion (inch/mm) is handled at the UI layer before values reach this hook.
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -47,7 +50,7 @@ export interface UseDROMemoryReturn {
   zeroAxis: (axis: Axis) => void;
   /** Zero all axes in current mode */
   zeroAll: () => void;
-  /** Set a specific axis value in current mode */
+  /** Set a specific axis value in current mode (value should be in mm) */
   setAxisValue: (axis: Axis, value: number) => void;
 }
 

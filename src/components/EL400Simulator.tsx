@@ -75,6 +75,8 @@ const EL400Simulator = () => {
     const value = parseFloat(inputBuffer);
     if (!isNaN(value)) {
       // Convert from display unit to internal storage (mm)
+      // The DRO memory layer is unit-agnostic and stores all values in mm.
+      // Conversion happens at this UI layer before values are stored.
       const valueInMm = convertFromDisplay(value, settings.defaultUnit);
       droMemory.setAxisValue(activeAxis, valueInMm);
     }
