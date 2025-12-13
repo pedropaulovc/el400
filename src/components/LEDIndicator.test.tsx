@@ -46,24 +46,25 @@ describe('LEDIndicator', () => {
   });
 
   describe('Non-interactive Mode', () => {
-    it('renders as a div with status role by default', () => {
+    it('renders as a disabled radio input by default', () => {
       render(<LEDIndicator label="ABS" isOn={true} />);
-      const container = screen.getByRole('status');
+      const radio = screen.getByRole('radio');
 
-      expect(container).toBeInTheDocument();
-      expect(container.tagName).toBe('DIV');
+      expect(radio).toBeInTheDocument();
+      expect(radio.tagName).toBe('INPUT');
+      expect(radio).toBeDisabled();
     });
 
-    it('includes aria-label describing the state', () => {
+    it('is checked when on', () => {
       render(<LEDIndicator label="ABS" isOn={true} />);
 
-      expect(screen.getByLabelText('ABS: active')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).toBeChecked();
     });
 
-    it('shows inactive state in aria-label when off', () => {
+    it('is not checked when off', () => {
       render(<LEDIndicator label="INC" isOn={false} />);
 
-      expect(screen.getByLabelText('INC: inactive')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).not.toBeChecked();
     });
   });
 
@@ -135,17 +136,17 @@ describe('LEDIndicator', () => {
   });
 
   describe('Custom Styling', () => {
-    it('applies custom className', () => {
-      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" />);
+    it('applies custom className to label', () => {
+      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" data-testid="led" />);
 
-      const container = screen.getByRole('status');
+      const container = screen.getByTestId('led');
       expect(container).toHaveClass('custom-class');
     });
 
     it('merges custom className with default classes', () => {
-      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" />);
+      render(<LEDIndicator label="ABS" isOn={false} className="custom-class" data-testid="led" />);
 
-      const container = screen.getByRole('status');
+      const container = screen.getByTestId('led');
       expect(container).toHaveClass('custom-class');
       expect(container).toHaveClass('flex');
       expect(container).toHaveClass('flex-col');
@@ -153,24 +154,28 @@ describe('LEDIndicator', () => {
   });
 
   describe('Accessibility', () => {
-    it('has proper ARIA roles for non-interactive mode', () => {
+    it('renders as disabled radio input in non-interactive mode', () => {
       render(<LEDIndicator label="ABS" isOn={true} />);
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      const radio = screen.getByRole('radio');
+      expect(radio).toBeInTheDocument();
+      expect(radio).toBeDisabled();
     });
 
-    it('has proper ARIA roles for interactive mode', () => {
+    it('renders as enabled button in interactive mode', () => {
       render(<LEDIndicator label="ABS" isOn={true} isInteractive onClick={vi.fn()} />);
 
-      expect(screen.getByRole('radio')).toBeInTheDocument();
+      const button = screen.getByRole('radio');
+      expect(button).toBeInTheDocument();
+      expect(button).not.toBeDisabled();
     });
 
-    it('provides clear state information to screen readers', () => {
+    it('provides clear state via checked attribute', () => {
       const { rerender } = render(<LEDIndicator label="MODE" isOn={true} />);
-      expect(screen.getByLabelText('MODE: active')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).toBeChecked();
 
       rerender(<LEDIndicator label="MODE" isOn={false} />);
-      expect(screen.getByLabelText('MODE: inactive')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).not.toBeChecked();
     });
   });
 
@@ -178,7 +183,7 @@ describe('LEDIndicator', () => {
     it('handles empty label gracefully', () => {
       render(<LEDIndicator label="" isOn={false} />);
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByRole('radio')).toBeInTheDocument();
     });
 
     it('handles very long labels', () => {

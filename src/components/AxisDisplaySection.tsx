@@ -12,8 +12,6 @@ interface AxisDisplaySectionProps {
   axisValues: AxisValues;
   isAbs: boolean;
   isInch: boolean;
-  onToggleAbs: () => void;
-  onToggleUnit: () => void;
 }
 
 interface AxisDisplayProps {
@@ -71,8 +69,6 @@ const AxisDisplaySection = ({
   axisValues,
   isAbs,
   isInch,
-  onToggleAbs,
-  onToggleUnit,
 }: AxisDisplaySectionProps) => {
   return (
     <div className="flex flex-col">
@@ -124,50 +120,42 @@ const AxisDisplaySection = ({
 
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">
-            {/* Mode Toggle Group */}
+            {/* Mode indicators */}
             <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
               <LEDIndicator
                 label="abs"
+                name="positioning-mode"
                 isOn={isAbs}
-                onClick={onToggleAbs}
-                isInteractive
-                groupLabel="Absolute mode"
                 data-testid="led-abs"
               />
               <LEDIndicator
                 label="inc"
+                name="positioning-mode"
                 isOn={!isAbs}
-                onClick={onToggleAbs}
-                isInteractive
-                groupLabel="Incremental mode"
                 data-testid="led-inc"
               />
             </div>
 
-            {/* Units Toggle Group */}
+            {/* Units indicators */}
             <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
               <LEDIndicator
                 label="inch"
+                name="measurement-units"
                 isOn={isInch}
-                onClick={onToggleUnit}
-                isInteractive
-                groupLabel="Inches"
                 data-testid="led-inch"
               />
               <LEDIndicator
                 label="mm"
+                name="measurement-units"
                 isOn={!isInch}
-                onClick={onToggleUnit}
-                isInteractive
-                groupLabel="Millimeters"
                 data-testid="led-mm"
               />
             </div>
 
             {/* Status indicators */}
-            <div className="flex gap-4">
-              <LEDIndicator label="Ø" isOn={false} />
-              <LEDIndicator label="r" isOn={false} />
+            <div role="radiogroup" aria-label="Status" className="flex gap-4">
+              <LEDIndicator label="Ø" name="status" isOn={false} />
+              <LEDIndicator label="r" name="status" isOn={false} />
             </div>
           </div>
         </div>

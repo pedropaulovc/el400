@@ -125,8 +125,6 @@ const EL400Simulator = () => {
             axisValues={droMemory.displayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
-            onToggleAbs={handleToggleAbs}
-            onToggleUnit={handleToggleUnit}
           />
 
           <AxisSelectionSection 
