@@ -118,11 +118,20 @@ export class DROPage {
 
   /**
    * Get the current value displayed for an axis
+   * Returns the numeric value, or the text content if non-numeric (e.g., "SELECT")
    */
   async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number | string> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
-    return parseFloat(text?.replace(/[^\d.-]/g, '') || '0');
+    const cleanText = text?.replace(/[^\d.-]/g, '') || '0';
+    const numValue = parseFloat(cleanText);
+    
+    // Return original text if it appears to be a message (contains letters)
+    if (text && /[a-zA-Z]/.test(text)) {
+      return text.trim();
+    }
+    
+    return numValue;
   }
 
   /**
