@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import userEvent from '@testing-library/user-event';
-import AxisPanel from './AxisPanel';
+import AxisSelectionSection from './AxisSelectionSection';
 
-describe('AxisPanel', () => {
+describe('AxisSelectionSection', () => {
   const mockAxisSelect = vi.fn();
   const mockAxisZero = vi.fn();
 
@@ -15,7 +15,7 @@ describe('AxisPanel', () => {
   describe('Rendering', () => {
     it('renders all three axes (X, Y, Z)', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -29,7 +29,7 @@ describe('AxisPanel', () => {
 
     it('renders zero buttons for all axes', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -43,7 +43,7 @@ describe('AxisPanel', () => {
 
     it('renders axis labels with subscript zero for zero buttons', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -64,7 +64,7 @@ describe('AxisPanel', () => {
       const consoleSpy = vi.spyOn(console, 'error');
 
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -80,7 +80,7 @@ describe('AxisPanel', () => {
     it('calls onAxisSelect when X axis button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -95,7 +95,7 @@ describe('AxisPanel', () => {
     it('calls onAxisSelect when Y axis button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -110,7 +110,7 @@ describe('AxisPanel', () => {
     it('calls onAxisSelect when Z axis button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -127,7 +127,7 @@ describe('AxisPanel', () => {
     it('calls onAxisZero when X zero button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -142,7 +142,7 @@ describe('AxisPanel', () => {
     it('calls onAxisZero when Y zero button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -157,7 +157,7 @@ describe('AxisPanel', () => {
     it('calls onAxisZero when Z zero button is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -173,7 +173,7 @@ describe('AxisPanel', () => {
   describe('Active State', () => {
     it('shows X axis as active when activeAxis is X', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="X"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -186,7 +186,7 @@ describe('AxisPanel', () => {
 
     it('shows Y axis as active when activeAxis is Y', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="Y"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -199,7 +199,7 @@ describe('AxisPanel', () => {
 
     it('shows Z axis as active when activeAxis is Z', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="Z"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -212,7 +212,7 @@ describe('AxisPanel', () => {
 
     it('shows no axis as active when activeAxis is null', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -230,7 +230,7 @@ describe('AxisPanel', () => {
 
     it('updates active state when activeAxis changes', () => {
       const { rerender } = render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="X"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -240,7 +240,7 @@ describe('AxisPanel', () => {
       expect(screen.getByLabelText('Select X axis')).toHaveAttribute('aria-pressed', 'true');
 
       rerender(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="Y"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -255,7 +255,7 @@ describe('AxisPanel', () => {
   describe('Accessibility', () => {
     it('has proper group role and label', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -268,7 +268,7 @@ describe('AxisPanel', () => {
 
     it('provides aria-labels for all buttons', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -286,7 +286,7 @@ describe('AxisPanel', () => {
 
     it('uses aria-pressed for axis selection buttons', () => {
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis="X"
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -300,7 +300,7 @@ describe('AxisPanel', () => {
     it('supports keyboard navigation', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -325,7 +325,7 @@ describe('AxisPanel', () => {
     it('can select different axes in sequence', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -347,7 +347,7 @@ describe('AxisPanel', () => {
     it('can zero different axes in sequence', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}
@@ -367,7 +367,7 @@ describe('AxisPanel', () => {
     it('can select and zero the same axis', async () => {
       const user = userEvent.setup();
       render(
-        <AxisPanel
+        <AxisSelectionSection
           activeAxis={null}
           onAxisSelect={mockAxisSelect}
           onAxisZero={mockAxisZero}

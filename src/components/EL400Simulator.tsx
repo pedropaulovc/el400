@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import DisplayPanel from "./DisplayPanel";
-import AxisPanelSection from "./AxisPanelSection";
+import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
@@ -129,7 +129,7 @@ const EL400Simulator = () => {
             onToggleUnit={handleToggleUnit}
           />
 
-          <AxisPanelSection 
+          <AxisSelectionSection 
             activeAxis={activeAxis}
             onAxisSelect={handleAxisSelect}
             onAxisZero={handleAxisZero}
