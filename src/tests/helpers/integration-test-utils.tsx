@@ -31,12 +31,43 @@ export function renderSimulator() {
 }
 
 /**
- * Gets the displayed value for an axis from the screen reader text
+ * Gets the displayed text value for an axis from the screen reader text
+ * Throws an error if the content is purely numeric
  */
-export function getAxisDisplayValue(axis: 'X' | 'Y' | 'Z'): number {
+export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
-  const match = valueElement.textContent?.match(/[-\d.]+$/);
-  return match ? parseFloat(match[0]) : NaN;
+  const textContent = valueElement.textContent || '';
+  
+  // Check if the content is purely numeric (matches /^[-\d.]+$/)
+  if (/^[-\d.]+$/.test(textContent.trim())) {
+    throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${textContent}`);
+  }
+  
+  return textContent;
+}
+
+/**
+ * Gets the displayed numeric value for an axis from the screen reader text
+ * Throws an error if the content cannot be parsed as a number
+ */
+export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
+  const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
+  const textContent = valueElement.textContent || '';
+  
+  // Extract numeric value using regex /[-\d.]+$/
+  const match = textContent.match(/[-\d.]+$/);
+  
+  if (!match) {
+    throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
+  }
+  
+  const parsedValue = parseFloat(match[0]);
+  
+  if (isNaN(parsedValue)) {
+    throw new Error(`Expected numeric value for axis ${axis}, but parsing resulted in NaN from: ${match[0]}`);
+  }
+  
+  return parsedValue;
 }
 
 /**
