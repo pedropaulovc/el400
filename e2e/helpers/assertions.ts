@@ -5,6 +5,27 @@ import { expect, Locator } from '@playwright/test';
  */
 
 /**
+ * Assert that a display shows a text value (not a pure numeric value)
+ * Throws an error if the content is purely numeric with at most 1 decimal point
+ */
+export async function expectPureTextValue(
+  display: Locator,
+  expectedValue: string
+) {
+  const text = await display.textContent();
+  const trimmedText = text?.trim() || '';
+  
+  // Check if the content is purely numeric (matches /^[-\d.]+$/)
+  // Allow [-\d.] characters only if there is at most 1 '.' in the string
+  const dotCount = (trimmedText.match(/\./g) || []).length;
+  if (/^[-\d.]+$/.test(trimmedText) && dotCount <= 1) {
+    throw new Error(`Expected text value, but got numeric value: ${text}`);
+  }
+  
+  expect(trimmedText).toBe(expectedValue);
+}
+
+/**
  * Assert that a display shows a specific numeric value (with tolerance for floating point)
  */
 export async function expectPureNumberValue(
