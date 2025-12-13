@@ -40,6 +40,11 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const textContent = valueElement.textContent || '';
   
   const trimmedContent = textContent.trim();
+  
+  if (!trimmedContent) {
+    throw new Error(`Expected text value for axis ${axis}, but got empty content`);
+  }
+  
   if (VALID_NUMBER_PATTERN.test(trimmedContent)) {
     throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${trimmedContent}`);
   }
@@ -55,7 +60,8 @@ export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
   
-  const match = textContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
+  const trimmedContent = textContent.trim();
+  const match = trimmedContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
   
   if (!match) {
     throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
