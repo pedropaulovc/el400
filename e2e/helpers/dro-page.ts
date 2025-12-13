@@ -49,6 +49,7 @@ export class DROPage {
   readonly halfButton: Locator;
   readonly settingsButton: Locator;
   readonly absIncButton: Locator;
+  readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
 
   constructor(page: Page) {
@@ -96,6 +97,7 @@ export class DROPage {
     this.halfButton = page.getByTestId('btn-half');
     this.settingsButton = page.getByTestId('btn-settings');
     this.absIncButton = page.getByTestId('btn-abs-inc');
+    this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
     this.centerButton = page.getByTestId('btn-center');
   }
 
@@ -171,22 +173,14 @@ export class DROPage {
    * Toggle between ABS and INC modes
    */
   async toggleAbsInc() {
-    // Click on the ABS LED to toggle (it's a radio button)
-    await this.absLED.click();
+    await this.absIncButton.click();
   }
 
   /**
    * Toggle between INCH and mm units
    */
   async toggleInchMm() {
-    // Click on the INCH LED to toggle (it's a radio button)
-    // If currently in INCH, this will switch to mm and vice versa
-    const isInch = await this.isInchUnits();
-    if (isInch) {
-      await this.mmLED.click();
-    } else {
-      await this.inchLED.click();
-    }
+    await this.toggleUnitButton.click();
   }
 
   /**
