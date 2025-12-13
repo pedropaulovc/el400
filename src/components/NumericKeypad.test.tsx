@@ -23,9 +23,22 @@ describe('NumericKeypad', () => {
     it('has sr-only text for number buttons', () => {
       render(<NumericKeypad {...defaultProps} />);
 
+      const expectedLabels: Record<number, string> = {
+        0: '0',
+        1: '1',
+        2: '2 (Down)',
+        3: '3',
+        4: '4 (Left)',
+        5: '5',
+        6: '6 (Right)',
+        7: '7',
+        8: '8 (Up)',
+        9: '9',
+      };
+
       for (let i = 0; i <= 9; i++) {
         const button = screen.getByTestId(`key-${i}`);
-        expect(button.querySelector('.sr-only')).toHaveTextContent(i.toString());
+        expect(button.querySelector('.sr-only')).toHaveTextContent(expectedLabels[i]);
       }
     });
 
