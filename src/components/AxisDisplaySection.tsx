@@ -18,9 +18,16 @@ interface AxisDisplaySectionProps {
 interface AxisDisplayProps {
   value: number;
   axis: 'X' | 'Y' | 'Z';
+  text?: string;  // Optional text to display instead of value
 }
 
-const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
+const AxisDisplay = ({ value, axis, text }: AxisDisplayProps) => {
+  const formatText = (str: string): { char: string; hasDecimal: boolean }[] => {
+    // Format text to fit the display (8 digits plus sign)
+    const padded = str.padEnd(9, ' ').substring(0, 9);
+    return padded.split('').map(char => ({ char, hasDecimal: false }));
+  };
+
   const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
@@ -47,7 +54,7 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     return result;
   };
 
-  const digits = formatValue(value);
+  const digits = text ? formatText(text) : formatValue(value);
 
   return (
     <div
@@ -114,10 +121,10 @@ const AxisDisplaySection = ({
             </tbody>
           </table>
 
-          {/* Message Display */}
+          {/* Message display for accessibility and testing */}
           {message && (
             <div 
-              className="text-center text-red-400 font-mono text-lg mb-2"
+              className="sr-only"
               data-testid="display-message"
               role="status"
               aria-live="polite"
@@ -128,9 +135,9 @@ const AxisDisplaySection = ({
           )}
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={axisValues.X} axis="X" />
-            <AxisDisplay value={axisValues.Y} axis="Y" />
-            <AxisDisplay value={axisValues.Z} axis="Z" />
+            <AxisDisplay value={axisValues.X} axis="X" text={message} />
+            <AxisDisplay value={axisValues.Y} axis="Y" text={message} />
+            <AxisDisplay value={axisValues.Z} axis="Z" text={message} />
           </div>
 
           {/* LED Indicators */}

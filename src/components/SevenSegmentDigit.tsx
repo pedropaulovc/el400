@@ -25,7 +25,18 @@ const SevenSegmentDigit = ({
     '8': [true, true, true, true, true, true, true],
     '9': [true, true, true, true, false, true, true],
     '-': [false, false, false, false, false, false, true],
-    ' ': [false, false, false, false, false, false, false]
+    ' ': [false, false, false, false, false, false, false],
+    // Letters for displaying messages
+    'S': [true, false, true, true, false, true, true],  // Same as 5
+    'E': [true, false, false, true, true, true, true],
+    'L': [false, false, false, true, true, true, false],
+    'C': [true, false, false, true, true, true, false],
+    'T': [false, false, false, true, true, true, true],
+    's': [true, false, true, true, false, true, true],  // lowercase same as uppercase
+    'e': [true, false, false, true, true, true, true],
+    'l': [false, false, false, true, true, true, false],
+    'c': [true, false, false, true, true, true, false],
+    't': [false, false, false, true, true, true, true]
   };
   const segments = segmentMap[value] || segmentMap[' '];
   const onColor = "hsl(120, 100%, 50%)";
