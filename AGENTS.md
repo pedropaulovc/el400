@@ -72,8 +72,8 @@ The application follows a hierarchical component structure with the main simulat
 **Major Component Sections:**
 - `src/pages/Index.tsx` - Renders the `EL400Simulator` with styling wrapper
 - `EL400Simulator.tsx` - Root component
-- `DisplayPanel` - Seven-segment displays for X/Y/Z axes plus mode indicators
-- `AxisPanelSection` - Axis selection buttons (X, Y, Z) and zero buttons
+- `AxisDisplaySection` - Seven-segment displays for X/Y/Z axes plus mode indicators
+- `AxisSelectionSection` - Axis selection buttons (X, Y, Z) and zero buttons
 - `KeypadSection` - Numeric keypad with navigation arrows
 - `PrimaryFunctionSection` - Primary DRO functions (settings, calibrate, center, zero all)
 - `SecondaryFunctionSection` - Advanced functions (tool offset, bolt circle, linear pattern, half, SDM)
@@ -93,4 +93,4 @@ Components include:
 *   **Path:** `src/components`
 *   **Pattern:** Functional components using React Hooks (`useState`, `useCallback`).
 *   **Styling:** Utility-first CSS using Tailwind classes directly in JSX.
-*   **Isolation:** Complex UI elements like the DRO display (`EL400Simulator.tsx`) are composed of smaller sub-components (e.g., `DisplayPanel`, `KeypadSection`).
+*   **Isolation:** Complex UI elements like the DRO display (`EL400Simulator.tsx`) are composed of smaller sub-components (e.g., `AxisDisplaySection`, `KeypadSection`).

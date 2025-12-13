@@ -123,6 +123,7 @@ const droMemory = useDROMemory(machineState);
   incremental: AxisValues;    // INC values
   mode: 'abs' | 'inc';
   toggleMode: () => void;
+  setMode: (mode: DROMode) => void;
   zeroAxis: (axis: Axis) => void;
   zeroAll: () => void;
   setAxisValue: (axis: Axis, value: number) => void;
@@ -173,6 +174,7 @@ interface MachineStateContextValue {
   adapter: MachineAdapter | null;
   isConnecting: boolean;
   error: Error | null;
+  setAdapter: (adapter: MachineAdapter | null) => void;
 }
 ```
 
@@ -232,9 +234,9 @@ src/hooks/__tests__/useSettings.test.ts
 ### E2E Tests
 
 ```
-e2e/02-data-interface/data-interface.spec.ts
-e2e/02-data-interface/abs-inc-memory.spec.ts
-e2e/02-data-interface/settings-persistence.spec.ts
+e2e/02-core-operations/US-003-abs-inc-mode.spec.ts
+e2e/09-integration/US-035-external-machine-connection.spec.ts
+e2e/09-integration/US-036-settings-persistence.spec.ts
 ```
 
 ### Storybook Stories
