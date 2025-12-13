@@ -36,13 +36,6 @@ const EL400Simulator = () => {
   };
 
   const handleAxisZero = (axis: Axis) => {
-    // In center menu mode, only X0 button (6►) navigates to next option
-    // This matches the physical DRO behavior where 6► is the right arrow
-    if (fnButtonMode.mode === 'center-menu' && axis === 'X') {
-      fnButtonMode.navigateNext();
-      return;
-    }
-    
     // In center finding mode, zero buttons store points
     if (fnButtonMode.mode === 'center-line' || fnButtonMode.mode === 'center-circle') {
       const point = {
@@ -58,11 +51,17 @@ const EL400Simulator = () => {
   };
 
   const handleNumber = useCallback((num: string) => {
+    // In center menu mode, number 6 (right arrow) navigates to next option
+    if (fnButtonMode.mode === 'center-menu' && num === '6') {
+      fnButtonMode.navigateNext();
+      return;
+    }
+    
     if (!activeAxis) {
       return;
     }
     setInputBuffer(prev => prev + num);
-  }, [activeAxis]);
+  }, [activeAxis, fnButtonMode]);
 
   const handleDecimal = useCallback(() => {
     if (!activeAxis) {

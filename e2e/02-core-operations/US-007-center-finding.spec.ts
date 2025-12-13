@@ -72,8 +72,8 @@ test.describe('US-007: Center Finding', () => {
     // Enter center menu
     await dro.functionButton.click();
 
-    // Navigate to CirCLE (press X0 button which is "6►")
-    await dro.x0Button.click();
+    // Navigate to CirCLE (press keypad 6 which is "Right")
+    await dro.key6.click();
     
     // Should now show CirCLE
     const xText = await dro.getAxisText('X');
