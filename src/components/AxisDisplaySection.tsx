@@ -76,6 +76,7 @@ const AxisDisplaySection = ({
 }: AxisDisplaySectionProps) => {
   return (
     <div className="flex flex-col">
+      <h2 className="sr-only">Axis display</h2>
       <BeveledFrame className="h-full">
         <div
           className="p-4 rounded-lg h-full flex flex-col"
