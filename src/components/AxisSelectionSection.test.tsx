@@ -22,9 +22,9 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      expect(screen.getByLabelText('Select X axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Select Y axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Select Z axis')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select X axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select Y axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select Z axis' })).toBeInTheDocument();
     });
 
     it('renders zero buttons for all axes', () => {
@@ -36,9 +36,9 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      expect(screen.getByLabelText('Zero X axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Zero Y axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Zero Z axis')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero X axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero Y axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero Z axis' })).toBeInTheDocument();
     });
 
     it('renders axis labels with subscript zero for zero buttons', () => {
@@ -87,7 +87,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Select X axis'));
+      await user.click(screen.getByRole('button', { name: 'Select X axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('X');
       expect(mockAxisSelect).toHaveBeenCalledTimes(1);
     });
@@ -102,7 +102,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Select Y axis'));
+      await user.click(screen.getByRole('button', { name: 'Select Y axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('Y');
       expect(mockAxisSelect).toHaveBeenCalledTimes(1);
     });
@@ -117,7 +117,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Select Z axis'));
+      await user.click(screen.getByRole('button', { name: 'Select Z axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('Z');
       expect(mockAxisSelect).toHaveBeenCalledTimes(1);
     });
@@ -134,7 +134,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Zero X axis'));
+      await user.click(screen.getByRole('button', { name: 'Zero X axis' }));
       expect(mockAxisZero).toHaveBeenCalledWith('X');
       expect(mockAxisZero).toHaveBeenCalledTimes(1);
     });
@@ -149,7 +149,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Zero Y axis'));
+      await user.click(screen.getByRole('button', { name: 'Zero Y axis' }));
       expect(mockAxisZero).toHaveBeenCalledWith('Y');
       expect(mockAxisZero).toHaveBeenCalledTimes(1);
     });
@@ -164,7 +164,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Zero Z axis'));
+      await user.click(screen.getByRole('button', { name: 'Zero Z axis' }));
       expect(mockAxisZero).toHaveBeenCalledWith('Z');
       expect(mockAxisZero).toHaveBeenCalledTimes(1);
     });
@@ -180,7 +180,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const xButton = screen.getByLabelText('Select X axis');
+      const xButton = screen.getByRole('button', { name: 'Select X axis' });
       expect(xButton).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -193,7 +193,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const yButton = screen.getByLabelText('Select Y axis');
+      const yButton = screen.getByRole('button', { name: 'Select Y axis' });
       expect(yButton).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -206,7 +206,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const zButton = screen.getByLabelText('Select Z axis');
+      const zButton = screen.getByRole('button', { name: 'Select Z axis' });
       expect(zButton).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -219,9 +219,9 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const xButton = screen.getByLabelText('Select X axis');
-      const yButton = screen.getByLabelText('Select Y axis');
-      const zButton = screen.getByLabelText('Select Z axis');
+      const xButton = screen.getByRole('button', { name: 'Select X axis' });
+      const yButton = screen.getByRole('button', { name: 'Select Y axis' });
+      const zButton = screen.getByRole('button', { name: 'Select Z axis' });
 
       expect(xButton).toHaveAttribute('aria-pressed', 'false');
       expect(yButton).toHaveAttribute('aria-pressed', 'false');
@@ -237,7 +237,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      expect(screen.getByLabelText('Select X axis')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Select X axis' })).toHaveAttribute('aria-pressed', 'true');
 
       rerender(
         <AxisSelectionSection
@@ -247,8 +247,8 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      expect(screen.getByLabelText('Select X axis')).toHaveAttribute('aria-pressed', 'false');
-      expect(screen.getByLabelText('Select Y axis')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Select X axis' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('button', { name: 'Select Y axis' })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 
@@ -280,9 +280,9 @@ describe('AxisSelectionSection', () => {
       const yButton = screen.getByTestId('axis-select-y');
       const zButton = screen.getByTestId('axis-select-z');
 
-      expect(xButton.querySelector('.sr-only')).toHaveTextContent('X');
-      expect(yButton.querySelector('.sr-only')).toHaveTextContent('Y');
-      expect(zButton.querySelector('.sr-only')).toHaveTextContent('Z');
+      expect(xButton.querySelector('.sr-only')).toHaveTextContent('Select X axis');
+      expect(yButton.querySelector('.sr-only')).toHaveTextContent('Select Y axis');
+      expect(zButton.querySelector('.sr-only')).toHaveTextContent('Select Z axis');
     });
 
     it('has sr-only text in zero buttons', () => {
@@ -298,9 +298,9 @@ describe('AxisSelectionSection', () => {
       const yZero = screen.getByTestId('axis-zero-y');
       const zZero = screen.getByTestId('axis-zero-z');
 
-      expect(xZero.querySelector('.sr-only')).toHaveTextContent('X0');
-      expect(yZero.querySelector('.sr-only')).toHaveTextContent('Y0');
-      expect(zZero.querySelector('.sr-only')).toHaveTextContent('Z0');
+      expect(xZero.querySelector('.sr-only')).toHaveTextContent('Zero X axis');
+      expect(yZero.querySelector('.sr-only')).toHaveTextContent('Zero Y axis');
+      expect(zZero.querySelector('.sr-only')).toHaveTextContent('Zero Z axis');
     });
 
     it('has proper group role and label', () => {
@@ -326,12 +326,12 @@ describe('AxisSelectionSection', () => {
       );
 
       // Check all aria-labels are present
-      expect(screen.getByLabelText('Select X axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Select Y axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Select Z axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Zero X axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Zero Y axis')).toBeInTheDocument();
-      expect(screen.getByLabelText('Zero Z axis')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select X axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select Y axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select Z axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero X axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero Y axis' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Zero Z axis' })).toBeInTheDocument();
     });
 
     it('uses aria-pressed for axis selection buttons', () => {
@@ -343,7 +343,7 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const xButton = screen.getByLabelText('Select X axis');
+      const xButton = screen.getByRole('button', { name: 'Select X axis' });
       expect(xButton).toHaveAttribute('aria-pressed');
     });
 
@@ -357,13 +357,13 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      const xButton = screen.getByLabelText('Select X axis');
+      const xButton = screen.getByRole('button', { name: 'Select X axis' });
       xButton.focus();
 
       await user.keyboard('{Enter}');
       expect(mockAxisSelect).toHaveBeenCalledWith('X');
 
-      const xZeroButton = screen.getByLabelText('Zero X axis');
+      const xZeroButton = screen.getByRole('button', { name: 'Zero X axis' });
       xZeroButton.focus();
 
       await user.keyboard('{Enter}');
@@ -382,13 +382,13 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Select X axis'));
+      await user.click(screen.getByRole('button', { name: 'Select X axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('X');
 
-      await user.click(screen.getByLabelText('Select Y axis'));
+      await user.click(screen.getByRole('button', { name: 'Select Y axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('Y');
 
-      await user.click(screen.getByLabelText('Select Z axis'));
+      await user.click(screen.getByRole('button', { name: 'Select Z axis' }));
       expect(mockAxisSelect).toHaveBeenCalledWith('Z');
 
       expect(mockAxisSelect).toHaveBeenCalledTimes(3);
@@ -404,9 +404,9 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Zero X axis'));
-      await user.click(screen.getByLabelText('Zero Y axis'));
-      await user.click(screen.getByLabelText('Zero Z axis'));
+      await user.click(screen.getByRole('button', { name: 'Zero X axis' }));
+      await user.click(screen.getByRole('button', { name: 'Zero Y axis' }));
+      await user.click(screen.getByRole('button', { name: 'Zero Z axis' }));
 
       expect(mockAxisZero).toHaveBeenCalledTimes(3);
       expect(mockAxisZero).toHaveBeenCalledWith('X');
@@ -424,8 +424,8 @@ describe('AxisSelectionSection', () => {
         />
       );
 
-      await user.click(screen.getByLabelText('Select X axis'));
-      await user.click(screen.getByLabelText('Zero X axis'));
+      await user.click(screen.getByRole('button', { name: 'Select X axis' }));
+      await user.click(screen.getByRole('button', { name: 'Zero X axis' }));
 
       expect(mockAxisSelect).toHaveBeenCalledWith('X');
       expect(mockAxisZero).toHaveBeenCalledWith('X');
