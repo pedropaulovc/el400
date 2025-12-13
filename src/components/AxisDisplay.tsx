@@ -47,9 +47,15 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
       className="flex items-center gap-0.5 px-2"
       role="region"
       aria-label={`${axis} axis position`}
+      data-testid={`axis-display-${axis.toLowerCase()}`}
     >
       {/* Screen reader accessible value */}
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
+      <span
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid={`axis-value-${axis.toLowerCase()}`}
+      >
         {axis} axis: {srValue}
       </span>
       
