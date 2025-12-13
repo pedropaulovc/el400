@@ -1,4 +1,5 @@
 import { expect, Locator } from '@playwright/test';
+import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
 
 /**
  * Custom assertions for EL400 DRO E2E tests
@@ -15,10 +16,7 @@ export async function expectPureTextValue(
   const text = await display.textContent();
   const trimmedText = text?.trim() || '';
   
-  // Check if the content is purely numeric (matches /^[-\d.]+$/)
-  // Allow [-\d.] characters only if there is at most 1 '.' in the string
-  const dotCount = (trimmedText.match(/\./g) || []).length;
-  if (/^[-\d.]+$/.test(trimmedText) && dotCount <= 1) {
+  if (VALID_NUMBER_PATTERN.test(trimmedText)) {
     throw new Error(`Expected text value, but got numeric value: ${text}`);
   }
   
@@ -34,12 +32,10 @@ export async function expectPureNumberValue(
   tolerance = 0.0001
 ) {
   const text = await display.textContent();
-  const cleanedText = text?.replace(/[^\d.-]/g, '') || '0';
+  const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
   
-  // Validate that there's at most 1 decimal point
-  const dotCount = (cleanedText.match(/\./g) || []).length;
-  if (dotCount > 1) {
-    throw new Error(`Invalid numeric value with multiple decimal points: ${text}`);
+  if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
+    throw new Error(`Invalid numeric value: ${text}`);
   }
   
   const actualValue = parseFloat(cleanedText);
