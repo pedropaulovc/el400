@@ -103,19 +103,34 @@ const AxisDisplaySection = ({
             <tbody>
               <tr>
                 <th scope="row">X</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
+                <td 
+                  aria-live="polite" 
+                  aria-atomic="true" 
+                  data-testid="axis-value-x"
+                  data-internal-value-x={axisValues.X.toFixed(4)}
+                >
                   {displayValues.X.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
+                <td 
+                  aria-live="polite" 
+                  aria-atomic="true" 
+                  data-testid="axis-value-y"
+                  data-internal-value-y={axisValues.Y.toFixed(4)}
+                >
                   {displayValues.Y.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
+                <td 
+                  aria-live="polite" 
+                  aria-atomic="true" 
+                  data-testid="axis-value-z"
+                  data-internal-value-z={axisValues.Z.toFixed(4)}
+                >
                   {displayValues.Z.toFixed(4)}
                 </td>
               </tr>

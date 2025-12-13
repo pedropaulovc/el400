@@ -40,6 +40,17 @@ export function getAxisDisplayValue(axis: 'X' | 'Y' | 'Z'): number {
 }
 
 /**
+ * Gets the internal memory value for an axis.
+ * This reads from a data attribute that can be set by test components
+ * to expose internal memory state for testing purposes.
+ */
+export function getInternalMemoryValue(axis: 'X' | 'Y' | 'Z'): number {
+  const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
+  const internalValue = valueElement.getAttribute(`data-internal-value-${axis.toLowerCase()}`);
+  return internalValue ? parseFloat(internalValue) : NaN;
+}
+
+/**
  * Enters a numeric value via the keypad for the currently selected axis
  * Supports digits 0-9, decimal point '.', and negative sign '-'
  */

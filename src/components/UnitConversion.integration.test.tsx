@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayValue,
+  getInternalMemoryValue,
   enterValue,
 } from '../tests/helpers/integration-test-utils';
 
@@ -140,6 +141,9 @@ describe('Unit Conversion Integration', () => {
   /**
    * Test that memory stores typed values correctly in mm regardless of display unit.
    * This verifies the conversion happens at the UI layer before storage.
+   * 
+   * This test directly asserts the internal memory values stored in mm,
+   * not just the display values, to ensure proper unit conversion at the UI layer.
    */
   it('should store typed values in mm internally regardless of display unit', async () => {
     const user = userEvent.setup();
@@ -154,13 +158,19 @@ describe('Unit Conversion Integration', () => {
     
     // Display shows 2.0000 in inch mode
     expect(getAxisDisplayValue('X')).toBeCloseTo(2.0000, 4);
+    
+    // DIRECT ASSERTION: Internal memory should store 50.8 mm (2 * 25.4)
+    expect(getInternalMemoryValue('X')).toBeCloseTo(50.8000, 4);
 
-    // Toggle to mm mode
+    // Toggle to mm mode (display will change but internal storage should remain the same)
     await user.click(screen.getByTestId('btn-toggle-unit'));
     expect(screen.getByTestId('led-mm').querySelector('input')).toBeChecked();
 
-    // Display should show 50.8 mm (proving 2 inches was stored as 50.8 mm internally)
+    // Display should show 50.8 mm
     expect(getAxisDisplayValue('X')).toBeCloseTo(50.8000, 4);
+    
+    // DIRECT ASSERTION: Internal memory should still be 50.8 mm (unchanged)
+    expect(getInternalMemoryValue('X')).toBeCloseTo(50.8000, 4);
 
     // Now type 254 mm on Y axis while in mm mode
     await user.click(screen.getByTestId('axis-select-y'));
@@ -168,15 +178,24 @@ describe('Unit Conversion Integration', () => {
     
     // Display shows 254.0000 in mm mode
     expect(getAxisDisplayValue('Y')).toBeCloseTo(254.0000, 4);
+    
+    // DIRECT ASSERTION: Internal memory should store 254 mm (no conversion needed)
+    expect(getInternalMemoryValue('Y')).toBeCloseTo(254.0000, 4);
 
     // Toggle back to inch mode
     await user.click(screen.getByTestId('btn-toggle-unit'));
     expect(screen.getByTestId('led-inch').querySelector('input')).toBeChecked();
 
-    // X should still show 2.0000 inches (verifying stored value persisted)
+    // X should still show 2.0000 inches
     expect(getAxisDisplayValue('X')).toBeCloseTo(2.0000, 4);
+    
+    // DIRECT ASSERTION: Internal memory for X should still be 50.8 mm (unchanged)
+    expect(getInternalMemoryValue('X')).toBeCloseTo(50.8000, 4);
 
-    // Y should show 10.0000 inches (proving 254 mm was stored as 254 mm internally)
+    // Y should show 10.0000 inches (254 / 25.4)
     expect(getAxisDisplayValue('Y')).toBeCloseTo(10.0000, 4);
+    
+    // DIRECT ASSERTION: Internal memory for Y should still be 254 mm (unchanged)
+    expect(getInternalMemoryValue('Y')).toBeCloseTo(254.0000, 4);
   });
 });
