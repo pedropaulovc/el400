@@ -30,7 +30,7 @@ const SevenSegmentDigit = ({
     'A': [true, true, true, false, true, true, true],
     'C': [true, false, false, true, true, true, false],
     'E': [true, false, false, true, true, true, true],
-    'i': [false, false, false, false, false, false, false], // lowercase i shown as blank for now
+    'i': [false, false, true, false, false, false, false], // lowercase i as small vertical line (segment c)
     'L': [false, false, false, true, true, true, false],
     'n': [false, false, true, false, true, false, true],
     'r': [false, false, false, false, true, false, true],

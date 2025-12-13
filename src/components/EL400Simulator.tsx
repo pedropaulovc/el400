@@ -139,9 +139,12 @@ const EL400Simulator = () => {
   const textDisplay = functionMode.getDisplayText();
   
   // If in center finding mode with all points stored, show distance-to-go
+  const shouldShowDistanceToGo = 
+    functionMode.centerFinding?.centerPoint && 
+    functionMode.centerFinding.points.length === functionMode.centerFinding.expectedPoints;
+
   let displayValues = droMemory.displayValues;
-  if (functionMode.centerFinding?.centerPoint && 
-      functionMode.centerFinding.points.length === functionMode.centerFinding.expectedPoints) {
+  if (shouldShowDistanceToGo) {
     const distanceToGo = functionMode.calculateDistanceToGo({
       x: droMemory.displayValues.X,
       y: droMemory.displayValues.Y,

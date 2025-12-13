@@ -230,6 +230,12 @@ function calculateCenter(type: 'line' | 'circle', points: Point[]): Point | null
 }
 
 /**
+ * Threshold for detecting collinear points in circle calculation
+ * Points are considered collinear if the determinant is smaller than this value
+ */
+const COLLINEAR_THRESHOLD = 1e-10;
+
+/**
  * Calculate center of circle from 3 points using the circumcenter formula
  * This uses 2D calculation on X-Y plane, preserving Z from the first point
  */
@@ -241,7 +247,7 @@ function calculateCircleCenter(p1: Point, p2: Point, p3: Point): Point {
   // Calculate the determinant
   const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
 
-  if (Math.abs(d) < 1e-10) {
+  if (Math.abs(d) < COLLINEAR_THRESHOLD) {
     // Points are collinear, return midpoint of first two points
     return {
       x: (p1.x + p2.x) / 2,
