@@ -253,6 +253,56 @@ describe('AxisSelectionSection', () => {
   });
 
   describe('Accessibility', () => {
+    it('has sr-only heading', () => {
+      render(
+        <AxisSelectionSection
+          activeAxis={null}
+          onAxisSelect={mockAxisSelect}
+          onAxisZero={mockAxisZero}
+        />
+      );
+
+      const heading = screen.getByRole('heading', { name: 'Axis selection' });
+      expect(heading).toBeInTheDocument();
+      expect(heading).toHaveClass('sr-only');
+    });
+
+    it('has sr-only text in axis selection buttons', () => {
+      render(
+        <AxisSelectionSection
+          activeAxis={null}
+          onAxisSelect={mockAxisSelect}
+          onAxisZero={mockAxisZero}
+        />
+      );
+
+      const xButton = screen.getByTestId('axis-select-x');
+      const yButton = screen.getByTestId('axis-select-y');
+      const zButton = screen.getByTestId('axis-select-z');
+
+      expect(xButton.querySelector('.sr-only')).toHaveTextContent('X');
+      expect(yButton.querySelector('.sr-only')).toHaveTextContent('Y');
+      expect(zButton.querySelector('.sr-only')).toHaveTextContent('Z');
+    });
+
+    it('has sr-only text in zero buttons', () => {
+      render(
+        <AxisSelectionSection
+          activeAxis={null}
+          onAxisSelect={mockAxisSelect}
+          onAxisZero={mockAxisZero}
+        />
+      );
+
+      const xZero = screen.getByTestId('axis-zero-x');
+      const yZero = screen.getByTestId('axis-zero-y');
+      const zZero = screen.getByTestId('axis-zero-z');
+
+      expect(xZero.querySelector('.sr-only')).toHaveTextContent('X0');
+      expect(yZero.querySelector('.sr-only')).toHaveTextContent('Y0');
+      expect(zZero.querySelector('.sr-only')).toHaveTextContent('Z0');
+    });
+
     it('has proper group role and label', () => {
       render(
         <AxisSelectionSection

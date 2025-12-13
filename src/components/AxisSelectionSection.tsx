@@ -12,7 +12,9 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
   const axes: ('X' | 'Y' | 'Z')[] = ['X', 'Y', 'Z'];
 
   return (
-    <BeveledFrame>
+    <>
+      <h2 className="sr-only">Axis selection</h2>
+      <BeveledFrame>
       <div
         className="grid grid-cols-2 gap-x-3 px-4 py-3 rounded-lg h-full content-between"
         style={{
@@ -54,6 +56,7 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
         ))}
       </div>
     </BeveledFrame>
+    </>
   );
 };
 
