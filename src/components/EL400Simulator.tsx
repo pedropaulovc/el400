@@ -9,7 +9,7 @@ import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useMachineState } from "../hooks/useMachineState";
 import { useDROMemory, type Axis } from "../hooks/useDROMemory";
 import { useSettingsContext } from "../context/SettingsContext";
-import { useFunctionMode } from "../hooks/useFunctionMode";
+import { useFnButtonMode } from "../hooks/useFnButtonMode";
 
 const noop = () => {};
 
@@ -20,8 +20,8 @@ const EL400Simulator = () => {
   // DRO memory manages ABS/INC values and mode switching
   const droMemory = useDROMemory(machineState.connected ? machineState : null);
 
-  // Function mode for center finding and other advanced features
-  const functionMode = useFunctionMode();
+  // Fn button mode for center finding and other advanced features
+  const fnButtonMode = useFnButtonMode();
 
   // Settings from context (persisted to localStorage)
   const { settings, updateSettings } = useSettingsContext();
@@ -37,19 +37,19 @@ const EL400Simulator = () => {
 
   const handleAxisZero = (axis: Axis) => {
     // In function menu modes, first zero button press navigates to next option
-    if (functionMode.mode === 'function-menu' || functionMode.mode === 'center-menu') {
-      functionMode.navigateNext();
+    if (fnButtonMode.mode === 'function-menu' || fnButtonMode.mode === 'center-menu') {
+      fnButtonMode.navigateNext();
       return;
     }
     
     // In center finding mode, zero buttons store points
-    if (functionMode.mode === 'center-line' || functionMode.mode === 'center-circle') {
+    if (fnButtonMode.mode === 'center-line' || fnButtonMode.mode === 'center-circle') {
       const point = {
         x: droMemory.displayValues.X,
         y: droMemory.displayValues.Y,
         z: droMemory.displayValues.Z,
       };
-      functionMode.storePoint(point);
+      fnButtonMode.storePoint(point);
     } else {
       // Normal mode: zero the axis
       droMemory.zeroAxis(axis);
@@ -85,13 +85,20 @@ const EL400Simulator = () => {
   }, [activeAxis]);
 
   const handleClear = useCallback(() => {
+    // In function mode, Clear key exits the function mode
+    if (fnButtonMode.isFnActive) {
+      fnButtonMode.exitFunctionMode();
+      return;
+    }
+    
+    // Normal mode: clear input buffer
     setInputBuffer('');
-  }, []);
+  }, [fnButtonMode]);
 
   const handleEnter = useCallback(() => {
     // In function menu modes (not data collection), ENT confirms selection
-    if (functionMode.mode === 'function-menu' || functionMode.mode === 'center-menu') {
-      functionMode.confirmSelection();
+    if (fnButtonMode.mode === 'function-menu' || fnButtonMode.mode === 'center-menu') {
+      fnButtonMode.confirmSelection();
       return;
     }
 
@@ -105,7 +112,7 @@ const EL400Simulator = () => {
       droMemory.setAxisValue(activeAxis, value);
     }
     setInputBuffer('');
-  }, [activeAxis, inputBuffer, droMemory, functionMode]);
+  }, [activeAxis, inputBuffer, droMemory, fnButtonMode]);
 
 
   const handleToggleUnit = () => {
@@ -128,35 +135,45 @@ const EL400Simulator = () => {
   };
 
   const handleFunction = () => {
-    if (functionMode.isFnActive) {
-      functionMode.exitFunctionMode();
+    if (fnButtonMode.isFnActive) {
+      fnButtonMode.exitFunctionMode();
     } else {
-      functionMode.enterFunctionMenu();
+      fnButtonMode.enterFunctionMenu();
     }
   };
 
   // Calculate display values (numeric or text)
-  const textDisplay = functionMode.getDisplayText();
+  const textDisplay = fnButtonMode.getDisplayText();
   
   // If in center finding mode with all points stored, show distance-to-go
   const shouldShowDistanceToGo = 
-    functionMode.centerFinding?.centerPoint && 
-    functionMode.centerFinding.points.length === functionMode.centerFinding.expectedPoints;
+    fnButtonMode.centerFinding?.centerPoint && 
+    fnButtonMode.centerFinding.points.length === fnButtonMode.centerFinding.expectedPoints;
 
-  let displayValues = droMemory.displayValues;
-  if (shouldShowDistanceToGo) {
-    const distanceToGo = functionMode.calculateDistanceToGo({
+  let displayValues: { X: number | string; Y: number | string; Z: number | string };
+  
+  if (textDisplay) {
+    // Show text display (menu mode)
+    displayValues = {
+      X: textDisplay.x,
+      Y: textDisplay.y,
+      Z: textDisplay.z,
+    };
+  } else if (shouldShowDistanceToGo) {
+    // Show distance-to-go
+    const distanceToGo = fnButtonMode.calculateDistanceToGo({
       x: droMemory.displayValues.X,
       y: droMemory.displayValues.Y,
       z: droMemory.displayValues.Z,
     });
-    if (distanceToGo) {
-      displayValues = {
-        X: distanceToGo.x,
-        Y: distanceToGo.y,
-        Z: distanceToGo.z,
-      };
-    }
+    displayValues = distanceToGo ? {
+      X: distanceToGo.x,
+      Y: distanceToGo.y,
+      Z: distanceToGo.z,
+    } : droMemory.displayValues;
+  } else {
+    // Show normal numeric values
+    displayValues = droMemory.displayValues;
   }
 
   return (
@@ -186,8 +203,7 @@ const EL400Simulator = () => {
             axisValues={displayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
-            textDisplay={textDisplay}
-            isFnActive={functionMode.isFnActive}
+            isFnActive={fnButtonMode.isFnActive}
           />
 
           <AxisSelectionSection 

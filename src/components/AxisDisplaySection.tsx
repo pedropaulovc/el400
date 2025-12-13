@@ -3,26 +3,24 @@ import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 
 interface AxisValues {
-  X: number;
-  Y: number;
-  Z: number;
+  X: number | string;
+  Y: number | string;
+  Z: number | string;
 }
 
 interface AxisDisplaySectionProps {
   axisValues: AxisValues;
   isAbs: boolean;
   isInch: boolean;
-  textDisplay?: { x: string; y: string; z: string } | null;
   isFnActive?: boolean;
 }
 
 interface AxisDisplayProps {
-  value: number;
+  value: number | string;
   axis: 'X' | 'Y' | 'Z';
-  textOverride?: string;
 }
 
-const AxisDisplay = ({ value, axis, textOverride }: AxisDisplayProps) => {
+const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
   const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
@@ -50,12 +48,12 @@ const AxisDisplay = ({ value, axis, textOverride }: AxisDisplayProps) => {
   };
 
   const formatText = (text: string): { char: string; hasDecimal: boolean }[] => {
-    // Pad text to 8 characters (same as numeric display)
-    const padded = text.padEnd(8, ' ');
+    // Pad text to 8 characters (same as numeric display), right-justified
+    const padded = text.padStart(8, ' ');
     return padded.split('').map(char => ({ char, hasDecimal: false }));
   };
 
-  const digits = textOverride ? formatText(textOverride) : formatValue(value);
+  const digits = typeof value === 'string' ? formatText(value) : formatValue(value);
 
   return (
     <div
@@ -78,7 +76,6 @@ const AxisDisplaySection = ({
   axisValues,
   isAbs,
   isInch,
-  textDisplay = null,
   isFnActive = false,
 }: AxisDisplaySectionProps) => {
   return (
@@ -105,28 +102,28 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {textDisplay?.x || axisValues.X.toFixed(4)}
+                  {typeof axisValues.X === 'string' ? axisValues.X : axisValues.X.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {textDisplay?.y || axisValues.Y.toFixed(4)}
+                  {typeof axisValues.Y === 'string' ? axisValues.Y : axisValues.Y.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {textDisplay?.z || axisValues.Z.toFixed(4)}
+                  {typeof axisValues.Z === 'string' ? axisValues.Z : axisValues.Z.toFixed(4)}
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={axisValues.X} axis="X" textOverride={textDisplay?.x} />
-            <AxisDisplay value={axisValues.Y} axis="Y" textOverride={textDisplay?.y} />
-            <AxisDisplay value={axisValues.Z} axis="Z" textOverride={textDisplay?.z} />
+            <AxisDisplay value={axisValues.X} axis="X" />
+            <AxisDisplay value={axisValues.Y} axis="Y" />
+            <AxisDisplay value={axisValues.Z} axis="Z" />
           </div>
 
           {/* LED Indicators */}
@@ -169,12 +166,11 @@ const AxisDisplaySection = ({
             <fieldset className="flex gap-4 border-0 p-0 m-0">
               <legend className="sr-only">Status</legend>
               <LEDIndicator 
-                label="Fn" 
+                label="fn" 
                 name="status" 
                 isOn={isFnActive} 
                 data-testid="led-fn"
               />
-              <LEDIndicator label="Ø" name="status" isOn={false} />
               <LEDIndicator label="r" name="status" isOn={false} />
             </fieldset>
           </div>

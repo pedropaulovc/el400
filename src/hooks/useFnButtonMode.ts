@@ -1,5 +1,5 @@
 /**
- * Hook for managing DRO function modes (Center Finding, Calculator, etc.)
+ * Hook for managing DRO Fn button modes (Center Finding, Calculator, etc.)
  */
 
 import { useState, useCallback } from 'react';
@@ -73,9 +73,9 @@ export interface UseFunctionModeReturn extends FunctionModeState {
 }
 
 /**
- * Hook for managing function modes
+ * Hook for managing Fn button modes
  */
-export function useFunctionMode(): UseFunctionModeReturn {
+export function useFnButtonMode(): UseFunctionModeReturn {
   const [mode, setMode] = useState<FunctionMode>('none');
   const [menuSelection, setMenuSelection] = useState<FunctionMenuOption | CenterMenuOption | null>(null);
   const [centerFinding, setCenterFinding] = useState<CenterFindingState | null>(null);

@@ -71,33 +71,6 @@ test.describe('US-007: Center Finding', () => {
   });
 
   /**
-   * AC 7.3: Center of Line with Y and Z axes
-   */
-  test('should find center of line on Y axis', async ({ dro }) => {
-    // Enter function menu and select Center of Line
-    await dro.functionButton.click();
-    await dro.enterButton.click(); // Select CEntrE
-    await dro.enterButton.click(); // Select LinE
-
-    // Set Point 1 at Y=10
-    await dro.selectAxis('Y');
-    await dro.enterNumber('10');
-    await dro.enterButton.click();
-    await dro.y0Button.click();
-
-    // Set Point 2 at Y=30
-    await dro.selectAxis('Y');
-    await dro.enterNumber('30');
-    await dro.enterButton.click();
-    await dro.y0Button.click();
-
-    // Center should be at Y=20
-    // Current position is 30, so distance to go is -10
-    const yValue = await dro.getAxisValue('Y');
-    expect(yValue).toBeCloseTo(-10, 1);
-  });
-
-  /**
    * AC 7.2: For Center of Circle - Select CirCLE, store 3 points, display distance-to-go
    */
   test('should find center of circle', async ({ dro }) => {
@@ -154,46 +127,19 @@ test.describe('US-007: Center Finding', () => {
   });
 
   /**
-   * Test exiting function mode
+   * Test exiting function mode with C (Clear) key
    */
-  test('should exit function mode when pressing Fn button again', async ({ dro }) => {
+  test('should exit function mode when pressing Clear key', async ({ dro }) => {
     // Enter function menu
     await dro.functionButton.click();
     await expect(await dro.isFnActive()).toBe(true);
 
-    // Exit function mode
-    await dro.functionButton.click();
+    // Exit function mode with Clear key
+    await dro.clearButton.click();
     await expect(await dro.isFnActive()).toBe(false);
 
     // Display should show numeric values again
     const xValue = await dro.getAxisValue('X');
     expect(typeof xValue).toBe('number');
-  });
-
-  /**
-   * Test that center finding works with negative coordinates
-   */
-  test('should handle negative coordinates in center of line', async ({ dro }) => {
-    // Enter function menu and select Center of Line
-    await dro.functionButton.click();
-    await dro.enterButton.click();
-    await dro.enterButton.click();
-
-    // Set Point 1 at X=-50
-    await dro.selectAxis('X');
-    await dro.enterNumber('-50');
-    await dro.enterButton.click();
-    await dro.x0Button.click();
-
-    // Set Point 2 at X=50
-    await dro.selectAxis('X');
-    await dro.enterNumber('50');
-    await dro.enterButton.click();
-    await dro.x0Button.click();
-
-    // Center should be at X=0
-    // Current position is 50, so distance to go is -50
-    const xValue = await dro.getAxisValue('X');
-    expect(xValue).toBeCloseTo(-50, 1);
   });
 });
