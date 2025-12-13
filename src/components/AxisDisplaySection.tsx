@@ -49,25 +49,14 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
   };
 
   const digits = formatValue(value);
-  const srValue = value.toFixed(4);
 
   return (
     <div
       className="flex items-center gap-0.5 px-2"
-      role="region"
-      aria-label={`${axis} axis position`}
+      aria-hidden="true"
       data-testid={`axis-display-${axis.toLowerCase()}`}
     >
-      <span
-        className="sr-only"
-        aria-live="polite"
-        aria-atomic="true"
-        data-testid={`axis-value-${axis.toLowerCase()}`}
-      >
-        {axis} axis: {srValue}
-      </span>
-
-      <div className="flex items-center -space-x-1" aria-hidden="true">
+      <div className="flex items-center -space-x-1">
         {digits.map((digit, index) => (
           <div key={index} className="w-12 h-20">
             <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />
@@ -96,6 +85,36 @@ const AxisDisplaySection = ({
             minWidth: '340px',
           }}
         >
+          {/* Screen reader accessible table for axis values */}
+          <table className="sr-only" aria-label="Axis positions">
+            <thead>
+              <tr>
+                <th>Axis</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">X</th>
+                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
+                  {axisValues.X.toFixed(4)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Y</th>
+                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
+                  {axisValues.Y.toFixed(4)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Z</th>
+                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
+                  {axisValues.Z.toFixed(4)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
           <div className="flex flex-col gap-3 flex-1 justify-center">
             <AxisDisplay value={axisValues.X} axis="X" />
             <AxisDisplay value={axisValues.Y} axis="Y" />
