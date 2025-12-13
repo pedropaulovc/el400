@@ -36,8 +36,8 @@ const EL400Simulator = () => {
   };
 
   const handleAxisZero = (axis: Axis) => {
-    // In function menu modes, first zero button press navigates to next option
-    if (fnButtonMode.mode === 'function-menu' || fnButtonMode.mode === 'center-menu') {
+    // In center menu mode, X0 button (6►) navigates to next option
+    if (fnButtonMode.mode === 'center-menu' && axis === 'X') {
       fnButtonMode.navigateNext();
       return;
     }
@@ -96,8 +96,8 @@ const EL400Simulator = () => {
   }, [fnButtonMode]);
 
   const handleEnter = useCallback(() => {
-    // In function menu modes (not data collection), ENT confirms selection
-    if (fnButtonMode.mode === 'function-menu' || fnButtonMode.mode === 'center-menu') {
+    // In center menu mode, ENT confirms selection
+    if (fnButtonMode.mode === 'center-menu') {
       fnButtonMode.confirmSelection();
       return;
     }
@@ -138,7 +138,7 @@ const EL400Simulator = () => {
     if (fnButtonMode.isFnActive) {
       fnButtonMode.exitFunctionMode();
     } else {
-      fnButtonMode.enterFunctionMenu();
+      fnButtonMode.enterCenterMenu();
     }
   };
 

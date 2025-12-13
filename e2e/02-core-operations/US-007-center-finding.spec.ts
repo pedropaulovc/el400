@@ -10,36 +10,31 @@ import { test, expect } from '../helpers/fixtures';
  */
 test.describe('US-007: Center Finding', () => {
   /**
-   * AC 7.1: Press f^n key to access function menu, display shows "CEntrE", press ent↵.
-   * AC 7.4: The Fn LED glows while in this function.
+   * AC 7.1: Press f^n key to access center menu, display shows "LinE", press ent↵.
+   * AC 7.4: The fn LED glows while in this function.
    */
-  test('should enter function menu and show CEntrE', async ({ dro }) => {
+  test('should enter center menu and show LinE by default', async ({ dro }) => {
     // Press function key
     await dro.functionButton.click();
 
-    // Fn LED should be on
+    // fn LED should be on
     await expect(await dro.isFnActive()).toBe(true);
 
-    // X display should show "CEntrE"
+    // X display should show "LinE" by default
     const xText = await dro.getAxisText('X');
-    expect(xText).toContain('CEntrE');
+    expect(xText).toContain('LinE');
   });
 
   /**
    * AC 7.3: For Center of Line - Select LinE, move to points, store, display distance-to-go
    */
   test('should find center of line', async ({ dro }) => {
-    // Enter function menu
+    // Enter center menu
     await dro.functionButton.click();
     await expect(await dro.isFnActive()).toBe(true);
 
-    // Select CEntrE
-    let xText = await dro.getAxisText('X');
-    expect(xText).toContain('CEntrE');
-    await dro.enterButton.click();
-
     // Should show LinE by default
-    xText = await dro.getAxisText('X');
+    let xText = await dro.getAxisText('X');
     expect(xText).toContain('LinE');
 
     // Confirm LinE selection
@@ -74,11 +69,10 @@ test.describe('US-007: Center Finding', () => {
    * AC 7.2: For Center of Circle - Select CirCLE, store 3 points, display distance-to-go
    */
   test('should find center of circle', async ({ dro }) => {
-    // Enter function menu
+    // Enter center menu
     await dro.functionButton.click();
-    await dro.enterButton.click(); // Select CEntrE
 
-    // Navigate to CirCLE (press a zero button to navigate)
+    // Navigate to CirCLE (press X0 button which is "6►")
     await dro.x0Button.click();
     
     // Should now show CirCLE

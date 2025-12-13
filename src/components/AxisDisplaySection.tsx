@@ -78,6 +78,11 @@ const AxisDisplaySection = ({
   isInch,
   isFnActive = false,
 }: AxisDisplaySectionProps) => {
+  // Helper to format axis value for screen reader
+  const formatAxisValueForScreenReader = (value: number | string): string => {
+    return typeof value === 'string' ? value : value.toFixed(4);
+  };
+
   return (
     <div className="flex flex-col">
       <h2 className="sr-only">Axis display</h2>
@@ -102,19 +107,19 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {typeof axisValues.X === 'string' ? axisValues.X : axisValues.X.toFixed(4)}
+                  {formatAxisValueForScreenReader(axisValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {typeof axisValues.Y === 'string' ? axisValues.Y : axisValues.Y.toFixed(4)}
+                  {formatAxisValueForScreenReader(axisValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {typeof axisValues.Z === 'string' ? axisValues.Z : axisValues.Z.toFixed(4)}
+                  {formatAxisValueForScreenReader(axisValues.Z)}
                 </td>
               </tr>
             </tbody>

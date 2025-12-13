@@ -17,12 +17,7 @@ export interface Point {
 /**
  * Function modes available in the DRO
  */
-export type FunctionMode = 'none' | 'function-menu' | 'center-menu' | 'center-line' | 'center-circle';
-
-/**
- * Submenu option for function menu navigation
- */
-export type FunctionMenuOption = 'centre' | 'calculator' | 'bolt-hole' | 'other';
+export type FunctionMode = 'none' | 'center-menu' | 'center-line' | 'center-circle';
 
 /**
  * Submenu option for center finding
@@ -46,7 +41,7 @@ export interface FunctionModeState {
   /** Current function mode */
   mode: FunctionMode;
   /** Selected menu option */
-  menuSelection: FunctionMenuOption | CenterMenuOption | null;
+  menuSelection: CenterMenuOption | null;
   /** Center finding state (if in center mode) */
   centerFinding: CenterFindingState | null;
   /** Whether function mode is active (for LED) */
@@ -54,10 +49,10 @@ export interface FunctionModeState {
 }
 
 export interface UseFunctionModeReturn extends FunctionModeState {
-  /** Enter function menu */
-  enterFunctionMenu: () => void;
+  /** Enter center menu directly */
+  enterCenterMenu: () => void;
   /** Select a menu option */
-  selectMenuOption: (option: FunctionMenuOption | CenterMenuOption) => void;
+  selectMenuOption: (option: CenterMenuOption) => void;
   /** Confirm current selection (ENT key) */
   confirmSelection: () => void;
   /** Navigate menu (Right arrow) */
@@ -77,28 +72,22 @@ export interface UseFunctionModeReturn extends FunctionModeState {
  */
 export function useFnButtonMode(): UseFunctionModeReturn {
   const [mode, setMode] = useState<FunctionMode>('none');
-  const [menuSelection, setMenuSelection] = useState<FunctionMenuOption | CenterMenuOption | null>(null);
+  const [menuSelection, setMenuSelection] = useState<CenterMenuOption | null>(null);
   const [centerFinding, setCenterFinding] = useState<CenterFindingState | null>(null);
 
   const isFnActive = mode !== 'none';
 
-  const enterFunctionMenu = useCallback(() => {
-    setMode('function-menu');
-    setMenuSelection('centre');
+  const enterCenterMenu = useCallback(() => {
+    setMode('center-menu');
+    setMenuSelection('line');
   }, []);
 
-  const selectMenuOption = useCallback((option: FunctionMenuOption | CenterMenuOption) => {
+  const selectMenuOption = useCallback((option: CenterMenuOption) => {
     setMenuSelection(option);
   }, []);
 
   const confirmSelection = useCallback(() => {
-    if (mode === 'function-menu') {
-      if (menuSelection === 'centre') {
-        setMode('center-menu');
-        setMenuSelection('line');
-      }
-      // Other function menu options can be added here
-    } else if (mode === 'center-menu') {
+    if (mode === 'center-menu') {
       if (menuSelection === 'line') {
         setMode('center-line');
         setCenterFinding({
@@ -120,13 +109,7 @@ export function useFnButtonMode(): UseFunctionModeReturn {
   }, [mode, menuSelection]);
 
   const navigateNext = useCallback(() => {
-    if (mode === 'function-menu') {
-      // For now, just cycle through available options
-      const options: FunctionMenuOption[] = ['centre'];
-      const currentIndex = options.indexOf(menuSelection as FunctionMenuOption);
-      const nextIndex = (currentIndex + 1) % options.length;
-      setMenuSelection(options[nextIndex]);
-    } else if (mode === 'center-menu') {
+    if (mode === 'center-menu') {
       // Toggle between line and circle
       setMenuSelection(menuSelection === 'line' ? 'circle' : 'line');
     }
@@ -171,12 +154,6 @@ export function useFnButtonMode(): UseFunctionModeReturn {
 
   const getDisplayText = useCallback((): { x: string; y: string; z: string } | null => {
     switch (mode) {
-      case 'function-menu':
-        if (menuSelection === 'centre') {
-          return { x: 'CEntrE', y: '', z: '' };
-        }
-        return null;
-      
       case 'center-menu':
         if (menuSelection === 'line') {
           return { x: 'LinE', y: '', z: '' };
@@ -200,7 +177,7 @@ export function useFnButtonMode(): UseFunctionModeReturn {
     menuSelection,
     centerFinding,
     isFnActive,
-    enterFunctionMenu,
+    enterCenterMenu,
     selectMenuOption,
     confirmSelection,
     navigateNext,
@@ -231,9 +208,10 @@ function calculateCenter(type: 'line' | 'circle', points: Point[]): Point | null
 
 /**
  * Threshold for detecting collinear points in circle calculation
+ * Set to 0.01mm (10 microns) to match realistic DRO precision (typical scales: 5 microns)
  * Points are considered collinear if the determinant is smaller than this value
  */
-const COLLINEAR_THRESHOLD = 1e-10;
+const COLLINEAR_THRESHOLD = 0.01;
 
 /**
  * Calculate center of circle from 3 points using the circumcenter formula

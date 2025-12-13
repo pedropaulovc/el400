@@ -24,13 +24,10 @@ describe('Center Finding Integration', () => {
       const user = userEvent.setup();
       renderSimulator();
 
-      // Enter function menu
+      // Enter center menu
       await user.click(screen.getByTestId('btn-function'));
       
-      // Select CEntrE
-      await user.click(screen.getByTestId('key-enter'));
-      
-      // Select LinE (already selected by default)
+      // LinE is selected by default, confirm selection
       await user.click(screen.getByTestId('key-enter'));
 
       // Set Point 1 at Y=10
@@ -56,9 +53,8 @@ describe('Center Finding Integration', () => {
       const user = userEvent.setup();
       renderSimulator();
 
-      // Enter function menu and select Center of Line
+      // Enter center menu and select Center of Line
       await user.click(screen.getByTestId('btn-function'));
-      await user.click(screen.getByTestId('key-enter'));
       await user.click(screen.getByTestId('key-enter'));
 
       // Set Point 1 at X=-50
