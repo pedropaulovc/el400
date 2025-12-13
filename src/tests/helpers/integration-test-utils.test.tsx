@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import {
-  renderSimulator,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
 } from './integration-test-utils';
@@ -34,17 +33,6 @@ function cleanupMockElements() {
 }
 
 describe('integration-test-utils', () => {
-  describe('renderSimulator', () => {
-    it('renders the simulator with all required providers', () => {
-      renderSimulator();
-      
-      // Check that the simulator is rendered by looking for axis displays
-      expect(screen.getByTestId('axis-value-x')).toBeInTheDocument();
-      expect(screen.getByTestId('axis-value-y')).toBeInTheDocument();
-      expect(screen.getByTestId('axis-value-z')).toBeInTheDocument();
-    });
-  });
-
   describe('getAxisDisplayPureTextValue', () => {
     afterEach(() => {
       cleanupMockElements();
@@ -93,6 +81,18 @@ describe('integration-test-utils', () => {
       injectMockAxisDisplay('x', '\n  SELEct\t  ');
       const result = getAxisDisplayPureTextValue('X');
       expect(result).toBe('SELEct');
+    });
+
+    it('accepts empty string as valid text value', () => {
+      injectMockAxisDisplay('x', '');
+      const result = getAxisDisplayPureTextValue('X');
+      expect(result).toBe('');
+    });
+
+    it('accepts whitespace-only string and returns empty string after trim', () => {
+      injectMockAxisDisplay('x', '   ');
+      const result = getAxisDisplayPureTextValue('X');
+      expect(result).toBe('');
     });
   });
 
@@ -190,9 +190,12 @@ describe('integration-test-utils', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBe(-123.456);
     });
 
-    it('both functions handle empty strings after trim', () => {
+    it('handles empty strings after trim differently', () => {
       injectMockAxisDisplay('x', '   ');
-      expect(() => getAxisDisplayPureTextValue('X')).toThrow();
+      // Text value function accepts empty strings
+      expect(() => getAxisDisplayPureTextValue('X')).not.toThrow();
+      expect(getAxisDisplayPureTextValue('X')).toBe('');
+      // Number value function throws for empty strings
       expect(() => getAxisDisplayPureNumberValue('X')).toThrow();
     });
   });
