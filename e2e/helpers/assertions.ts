@@ -1,19 +1,49 @@
 import { expect, Locator } from '@playwright/test';
+import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
 
 /**
  * Custom assertions for EL400 DRO E2E tests
  */
 
 /**
- * Assert that a display shows a specific value (with tolerance for floating point)
+ * Assert that a display shows a text value (not a pure numeric value)
+ * Throws an error if the content is purely numeric with at most 1 decimal point
  */
-export async function expectDisplayValue(
+export async function expectPureTextValue(
+  display: Locator,
+  expectedValue: string
+) {
+  const text = await display.textContent();
+  const trimmedText = text?.trim() || '';
+  
+  if (VALID_NUMBER_PATTERN.test(trimmedText)) {
+    throw new Error(`Expected text value, but got numeric value: ${text}`);
+  }
+  
+  expect(trimmedText).toBe(expectedValue);
+}
+
+/**
+ * Assert that a display shows a specific numeric value (with tolerance for floating point)
+ */
+export async function expectPureNumberValue(
   display: Locator,
   expectedValue: number,
   tolerance = 0.0001
 ) {
   const text = await display.textContent();
-  const actualValue = parseFloat(text?.replace(/[^\d.-]/g, '') || '0');
+  const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
+  
+  if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
+    throw new Error(`Invalid numeric value: ${text}`);
+  }
+  
+  const actualValue = parseFloat(cleanedText);
+  
+  if (isNaN(actualValue)) {
+    throw new Error(`Could not parse numeric value from: ${text}`);
+  }
+  
   const diff = Math.abs(actualValue - expectedValue);
 
   expect(diff, `Expected ${expectedValue}, got ${actualValue}`).toBeLessThanOrEqual(tolerance);
@@ -63,7 +93,7 @@ export async function expectAxisValues(
   expected: { x: number; y: number; z: number },
   tolerance = 0.0001
 ) {
-  await expectDisplayValue(xDisplay, expected.x, tolerance);
-  await expectDisplayValue(yDisplay, expected.y, tolerance);
-  await expectDisplayValue(zDisplay, expected.z, tolerance);
+  await expectPureNumberValue(xDisplay, expected.x, tolerance);
+  await expectPureNumberValue(yDisplay, expected.y, tolerance);
+  await expectPureNumberValue(zDisplay, expected.z, tolerance);
 }

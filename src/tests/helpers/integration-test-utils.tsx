@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
 import { SettingsProvider } from '../../context/SettingsContext';
 import { MachineStateProvider } from '../../context/MachineStateContext';
+import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 
 /**
  * Renders the EL400Simulator with all required providers
@@ -31,12 +32,42 @@ export function renderSimulator() {
 }
 
 /**
- * Gets the displayed value for an axis from the screen reader text
+ * Gets the displayed text value for an axis from the screen reader text
+ * Throws an error if the content is purely numeric
  */
-export function getAxisDisplayValue(axis: 'X' | 'Y' | 'Z'): number {
+export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
-  const match = valueElement.textContent?.match(/[-\d.]+$/);
-  return match ? parseFloat(match[0]) : NaN;
+  const textContent = valueElement.textContent || '';
+  
+  const trimmedContent = textContent.trim();
+  if (VALID_NUMBER_PATTERN.test(trimmedContent)) {
+    throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${trimmedContent}`);
+  }
+  
+  return trimmedContent;
+}
+
+/**
+ * Gets the displayed numeric value for an axis from the screen reader text
+ * Throws an error if the content cannot be parsed as a number
+ */
+export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
+  const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
+  const textContent = valueElement.textContent || '';
+  
+  const match = textContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
+  
+  if (!match) {
+    throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
+  }
+  
+  const parsedValue = parseFloat(match[0]);
+  
+  if (isNaN(parsedValue)) {
+    throw new Error(`Expected numeric value for axis ${axis}, but parsing resulted in NaN from: ${match[0]}`);
+  }
+  
+  return parsedValue;
 }
 
 /**

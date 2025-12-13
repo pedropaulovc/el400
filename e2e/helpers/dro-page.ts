@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
 
 /**
  * Page Object Model for the EL400 DRO Simulator
@@ -115,7 +116,19 @@ export class DROPage {
   async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
-    return parseFloat(text?.replace(/[^\d.-]/g, '') || '0');
+    const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
+    
+    if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
+      throw new Error(`Invalid numeric value in axis ${axis}: ${text}`);
+    }
+    
+    const value = parseFloat(cleanedText);
+    
+    if (isNaN(value)) {
+      throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
+    }
+    
+    return value;
   }
 
   /**
