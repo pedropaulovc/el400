@@ -61,7 +61,7 @@ const AxisDisplay = ({ value, axis, text }: AxisDisplayProps) => {
       className="flex items-center gap-0.5 px-2"
       aria-hidden="true"
       data-testid={`axis-display-${axis.toLowerCase()}`}
-      data-message={text || undefined}
+      {...(text && { 'data-message': text })}
     >
       <div className="flex items-center -space-x-1">
         {digits.map((digit, index) => (
