@@ -136,4 +136,47 @@ describe('Unit Conversion Integration', () => {
     expect(getAxisDisplayValue('Y')).toBeCloseTo(50.8000, 4);
     expect(getAxisDisplayValue('Z')).toBeCloseTo(76.2000, 4);
   });
+
+  /**
+   * Test that memory stores typed values correctly in mm regardless of display unit.
+   * This verifies the conversion happens at the UI layer before storage.
+   */
+  it('should store typed values in mm internally regardless of display unit', async () => {
+    const user = userEvent.setup();
+    renderSimulator();
+
+    // Start in inch mode (default)
+    expect(screen.getByTestId('led-inch').querySelector('input')).toBeChecked();
+
+    // Type 2 inches on X axis
+    await user.click(screen.getByTestId('axis-select-x'));
+    await enterValue(user, '2');
+    
+    // Display shows 2.0000 in inch mode
+    expect(getAxisDisplayValue('X')).toBeCloseTo(2.0000, 4);
+
+    // Toggle to mm mode
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    expect(screen.getByTestId('led-mm').querySelector('input')).toBeChecked();
+
+    // Display should show 50.8 mm (proving 2 inches was stored as 50.8 mm internally)
+    expect(getAxisDisplayValue('X')).toBeCloseTo(50.8000, 4);
+
+    // Now type 254 mm on Y axis while in mm mode
+    await user.click(screen.getByTestId('axis-select-y'));
+    await enterValue(user, '254');
+    
+    // Display shows 254.0000 in mm mode
+    expect(getAxisDisplayValue('Y')).toBeCloseTo(254.0000, 4);
+
+    // Toggle back to inch mode
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    expect(screen.getByTestId('led-inch').querySelector('input')).toBeChecked();
+
+    // X should still show 2.0000 inches (verifying stored value persisted)
+    expect(getAxisDisplayValue('X')).toBeCloseTo(2.0000, 4);
+
+    // Y should show 10.0000 inches (proving 254 mm was stored as 254 mm internally)
+    expect(getAxisDisplayValue('Y')).toBeCloseTo(10.0000, 4);
+  });
 });
