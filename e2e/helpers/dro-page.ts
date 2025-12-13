@@ -11,7 +11,6 @@ export class DROPage {
   readonly xDisplay: Locator;
   readonly yDisplay: Locator;
   readonly zDisplay: Locator;
-  readonly messageDisplay: Locator;
 
   // LED indicators
   readonly absLED: Locator;
@@ -60,8 +59,6 @@ export class DROPage {
     this.xDisplay = page.getByTestId('axis-value-x');
     this.yDisplay = page.getByTestId('axis-value-y');
     this.zDisplay = page.getByTestId('axis-value-z');
-    // Message display now uses the X axis visual display's data-message attribute
-    this.messageDisplay = page.getByTestId('axis-display-x');
 
     // Initialize LED indicators using data-testid
     this.absLED = page.getByTestId('led-abs');
@@ -113,9 +110,16 @@ export class DROPage {
   }
 
   /**
+   * Get the X axis visual display element (for checking message display)
+   */
+  getXAxisDisplay() {
+    return this.page.getByTestId('axis-display-x');
+  }
+
+  /**
    * Get the current value displayed for an axis
    */
-  async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
+  async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number | string> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
     return parseFloat(text?.replace(/[^\d.-]/g, '') || '0');

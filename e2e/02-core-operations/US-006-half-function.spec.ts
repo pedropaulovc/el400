@@ -15,7 +15,7 @@ test.describe('US-006: Half Function', () => {
    */
   test('should show SELECT message when half button is pressed', async ({ dro }) => {
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
   });
 
   /**
@@ -32,14 +32,14 @@ test.describe('US-006: Half Function', () => {
 
     // Press Half and select X
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
     await dro.xButton.click();
 
     // Verify X is halved to 50
     expect(await dro.getAxisValue('X')).toBeCloseTo(50, 0);
 
     // Verify SELECT message is gone
-    await expect(dro.messageDisplay).not.toHaveAttribute('data-message');
+    await expect(dro.getXAxisDisplay()).not.toHaveAttribute('data-message');
   });
 
   /**
@@ -56,7 +56,7 @@ test.describe('US-006: Half Function', () => {
 
     // Press Half and select Y
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
     await dro.yButton.click();
 
     // Verify Y is halved to 100
@@ -77,7 +77,7 @@ test.describe('US-006: Half Function', () => {
 
     // Press Half and select Z
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
     await dro.zButton.click();
 
     // Verify Z is halved to 25
@@ -140,7 +140,7 @@ test.describe('US-006: Half Function', () => {
 
     // Apply Half function
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
     await dro.xButton.click();
 
     // Verify X is halved to 40
@@ -244,11 +244,11 @@ test.describe('US-006: Half Function', () => {
   test('should cancel selection mode when half button pressed again', async ({ dro }) => {
     // Press Half to enter selection mode
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
 
     // Press Half again to cancel
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).not.toHaveAttribute('data-message');
+    await expect(dro.getXAxisDisplay()).not.toHaveAttribute('data-message');
   });
 
   /**
@@ -257,10 +257,10 @@ test.describe('US-006: Half Function', () => {
   test('should exit selection mode when clear button pressed', async ({ dro }) => {
     // Press Half to enter selection mode
     await dro.halfButton.click();
-    await expect(dro.messageDisplay).toHaveAttribute('data-message', 'SELECT');
+    await expect(dro.getXAxisDisplay()).toHaveAttribute('data-message', 'SELECT');
 
     // Press Clear to cancel
     await dro.clearButton.click();
-    await expect(dro.messageDisplay).not.toHaveAttribute('data-message');
+    await expect(dro.getXAxisDisplay()).not.toHaveAttribute('data-message');
   });
 });
