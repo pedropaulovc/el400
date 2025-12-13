@@ -9,10 +9,10 @@
 **So that** I can establish a datum point for my machining operations
 
 ## Acceptance Criteria
-- [ ] **AC 5.1:** Pressing an Axis Quick Zero key (e.g., `X₀`, `Y₀`, `Z₀`) immediately resets the corresponding axis display to `0.000`.
-- [ ] **AC 5.2:** Warning: Resetting in ABS mode permanently redefines the datum.
-- [ ] **AC 5.3:** To set an axis to a specific value: Press the Axis key (e.g., `X`), enter the numeric value using the keypad, and press `ent↵`.
-- [ ] **AC 5.4:** The `C` key can cancel an incorrect numeric entry before `ent↵` is pressed.
+- [x] **AC 5.1:** Pressing an Axis Quick Zero key (e.g., `X₀`, `Y₀`, `Z₀`) immediately resets the corresponding axis display to `0.000`.
+- [x] **AC 5.2:** Warning: Resetting in ABS mode permanently redefines the datum.
+- [x] **AC 5.3:** To set an axis to a specific value: Press the Axis key (e.g., `X`), enter the numeric value using the keypad, and press `ent↵`.
+- [x] **AC 5.4:** The `C` key can cancel an incorrect numeric entry before `ent↵` is pressed.
 
 ## E2E Test Scenarios
 ```typescript
