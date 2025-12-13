@@ -41,7 +41,7 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const trimmedContent = textContent.trim();
   const dotCount = (trimmedContent.match(/\./g) || []).length;
   if (/^[-\d.]+$/.test(trimmedContent) && dotCount <= 1) {
-    throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${textContent}`);
+    throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${trimmedContent}`);
   }
   
   return trimmedContent;
