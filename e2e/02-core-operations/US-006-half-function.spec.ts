@@ -237,4 +237,30 @@ test.describe('US-006: Half Function', () => {
     // X should still be 0
     expect(await dro.getAxisValue('X')).toBeCloseTo(0, 0);
   });
+
+  /**
+   * Test that pressing half button again cancels selection mode.
+   */
+  test('should cancel selection mode when half button pressed again', async ({ dro }) => {
+    // Press Half to enter selection mode
+    await dro.halfButton.click();
+    await expect(dro.messageDisplay).toHaveText('SELECT');
+
+    // Press Half again to cancel
+    await dro.halfButton.click();
+    await expect(dro.messageDisplay).not.toBeVisible();
+  });
+
+  /**
+   * Test that clear button exits selection mode.
+   */
+  test('should exit selection mode when clear button pressed', async ({ dro }) => {
+    // Press Half to enter selection mode
+    await dro.halfButton.click();
+    await expect(dro.messageDisplay).toHaveText('SELECT');
+
+    // Press Clear to cancel
+    await dro.clearButton.click();
+    await expect(dro.messageDisplay).not.toBeVisible();
+  });
 });

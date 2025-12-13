@@ -74,6 +74,7 @@ const EL400Simulator = () => {
 
   const handleClear = useCallback(() => {
     setInputBuffer('');
+    setHalfSelectionMode(false);
   }, []);
 
   const handleEnter = useCallback(() => {
@@ -101,7 +102,8 @@ const EL400Simulator = () => {
   };
 
   const handleHalf = () => {
-    setHalfSelectionMode(true);
+    // Toggle half selection mode - pressing again cancels it
+    setHalfSelectionMode(prev => !prev);
   };
 
   return (
