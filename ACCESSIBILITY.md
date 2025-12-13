@@ -14,17 +14,21 @@ This project targets **WCAG 2.1 Level AAA** compliance where applicable, with pa
 
 ### Screen Reader Support
 
-- All interactive elements have descriptive `aria-label` attributes
-- Axis displays use `aria-live="polite"` regions to announce position changes
-- Mode indicators use `role="radio"` and `aria-checked` for state communication
+- All interactive elements have descriptive text via `sr-only` class (preferred over `aria-label`)
+- Axis displays use `aria-live="polite"` regions in an accessible table to announce position changes
+- Mode indicators use native `<fieldset>` with `<legend>` for semantic grouping
+- LED indicators are non-interactive disabled radio buttons showing current state
 - Buttons use `aria-pressed` to indicate active/selected states
-- Hidden text via `sr-only` class provides context without visual clutter
+- Section headings use `sr-only` class (e.g., "Numeric keypad", "Primary functions")
+- Decorative icons use `aria-hidden="true"` to avoid screen reader noise
 
 ### Keyboard Navigation
 
 - All buttons and controls are focusable and operable via keyboard
 - Focus rings provide clear visual indication of the current focus
 - Enter and Space keys activate buttons consistently
+- **Keypad follows natural numeric tab order**: 1→2→3→4→5→6→7→8→9→0→±→.→C→Enter
+- Arrow keys on keypad have directional hints (e.g., "8 (Up)", "4 (Left)")
 
 ### Touch Support
 
@@ -87,12 +91,13 @@ The simulator fully supports Windows Forced Colors mode (High Contrast), ensurin
 
 | Component | ARIA Support | Keyboard | Forced Colors |
 |-----------|--------------|----------|---------------|
-| Seven-Segment Display | `aria-live`, `aria-label` | N/A (display only) | 20:1 contrast |
-| Axis Buttons | `aria-pressed`, `aria-label` | Enter/Space | Visible borders |
-| Zero Buttons | `aria-label` | Enter/Space | Visible borders |
-| LED Indicators | `role="radio"`, `aria-checked` | Enter/Space | System colors |
-| Function Buttons | `aria-label` | Enter/Space | Visible borders |
-| Mode Indicators | `role="radiogroup"` | Tab navigation | System highlight |
+| Seven-Segment Display | `aria-live` in accessible table | N/A (display only) | 20:1 contrast |
+| Axis Buttons | `aria-pressed`, sr-only text | Enter/Space | Visible borders |
+| Zero Buttons | sr-only text | Enter/Space | Visible borders |
+| Numeric Keypad | sr-only heading + button text | Tab (1-9,0 order), Enter/Space | Visible borders |
+| LED Indicators | Disabled radio in `<fieldset>` | N/A (display only) | System colors |
+| Function Buttons | sr-only text | Enter/Space | Visible borders |
+| Icons | `aria-hidden="true"` | N/A (decorative) | System colors |
 
 ## References
 
