@@ -1,6 +1,7 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
+import { convertForDisplay } from "../lib/unitConversion";
 
 interface AxisValues {
   X: number;
@@ -70,6 +71,15 @@ const AxisDisplaySection = ({
   isAbs,
   isInch,
 }: AxisDisplaySectionProps) => {
+  // Convert values for display based on selected unit
+  // Internal values are stored in mm, convert to inch if needed
+  const displayUnit = isInch ? 'inch' : 'mm';
+  const displayValues = {
+    X: convertForDisplay(axisValues.X, displayUnit),
+    Y: convertForDisplay(axisValues.Y, displayUnit),
+    Z: convertForDisplay(axisValues.Z, displayUnit),
+  };
+
   return (
     <div className="flex flex-col">
       <h2 className="sr-only">Axis display</h2>
@@ -94,28 +104,28 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {axisValues.X.toFixed(4)}
+                  {displayValues.X.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {axisValues.Y.toFixed(4)}
+                  {displayValues.Y.toFixed(4)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {axisValues.Z.toFixed(4)}
+                  {displayValues.Z.toFixed(4)}
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={axisValues.X} axis="X" />
-            <AxisDisplay value={axisValues.Y} axis="Y" />
-            <AxisDisplay value={axisValues.Z} axis="Z" />
+            <AxisDisplay value={displayValues.X} axis="X" />
+            <AxisDisplay value={displayValues.Y} axis="Y" />
+            <AxisDisplay value={displayValues.Z} axis="Z" />
           </div>
 
           {/* LED Indicators */}

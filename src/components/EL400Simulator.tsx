@@ -9,6 +9,7 @@ import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useMachineState } from "../hooks/useMachineState";
 import { useDROMemory, type Axis } from "../hooks/useDROMemory";
 import { useSettingsContext } from "../context/SettingsContext";
+import { convertFromDisplay } from "../lib/unitConversion";
 
 const noop = () => {};
 
@@ -73,10 +74,12 @@ const EL400Simulator = () => {
     }
     const value = parseFloat(inputBuffer);
     if (!isNaN(value)) {
-      droMemory.setAxisValue(activeAxis, value);
+      // Convert from display unit to internal storage (mm)
+      const valueInMm = convertFromDisplay(value, settings.defaultUnit);
+      droMemory.setAxisValue(activeAxis, valueInMm);
     }
     setInputBuffer('');
-  }, [activeAxis, inputBuffer, droMemory]);
+  }, [activeAxis, inputBuffer, droMemory, settings.defaultUnit]);
 
 
   const handleToggleUnit = () => {
