@@ -121,7 +121,7 @@ const AxisDisplaySection = ({
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">
             {/* Mode indicators */}
-            <div role="radiogroup" aria-label="Positioning mode" className="flex gap-4">
+            <fieldset role="radiogroup" aria-label="Positioning mode" className="flex gap-4 border-0 p-0 m-0">
               <LEDIndicator
                 label="abs"
                 name="positioning-mode"
@@ -134,10 +134,10 @@ const AxisDisplaySection = ({
                 isOn={!isAbs}
                 data-testid="led-inc"
               />
-            </div>
+            </fieldset>
 
             {/* Units indicators */}
-            <div role="radiogroup" aria-label="Measurement units" className="flex gap-4">
+            <fieldset role="radiogroup" aria-label="Measurement units" className="flex gap-4 border-0 p-0 m-0">
               <LEDIndicator
                 label="inch"
                 name="measurement-units"
@@ -150,13 +150,13 @@ const AxisDisplaySection = ({
                 isOn={!isInch}
                 data-testid="led-mm"
               />
-            </div>
+            </fieldset>
 
             {/* Status indicators */}
-            <div role="radiogroup" aria-label="Status" className="flex gap-4">
+            <fieldset role="radiogroup" aria-label="Status" className="flex gap-4 border-0 p-0 m-0">
               <LEDIndicator label="Ø" name="status" isOn={false} />
               <LEDIndicator label="r" name="status" isOn={false} />
-            </div>
+            </fieldset>
           </div>
         </div>
       </BeveledFrame>
