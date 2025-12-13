@@ -45,7 +45,7 @@ npm run test-storybook
 ## Testing Strategy
 
 - **Vitest** (`src/**/*.test.tsx`) - Component behavior, logic, interactions, accessibility. Primary test infrastructure.
-- **Integration** (`*.integration.test.tsx`) - Use helpers from `src/tests/helpers/simulator-test-utils.tsx`. Use `data-testid`, not roles/labels.
+- **Integration** (`*.integration.test.tsx`) - Use helpers from `src/tests/helpers/integration-test-utils.tsx`. Use `data-testid`, not roles/labels.
 - **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys.
 - **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
 - **Coverage:** Min 70% enforced. Run `npm run test:coverage`.

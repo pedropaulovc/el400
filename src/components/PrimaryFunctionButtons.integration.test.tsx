@@ -5,7 +5,7 @@ import {
   renderSimulator,
   getAxisDisplayValue,
   enterValue,
-} from '../tests/helpers/simulator-test-utils';
+} from '../tests/helpers/integration-test-utils';
 
 describe('PrimaryFunctionButtons Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
