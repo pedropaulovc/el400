@@ -283,8 +283,5 @@ export class DROPage {
       
       adapter.setPosition(newPosition.x, newPosition.y, newPosition.z);
     }, { axis, value });
-
-    // Wait briefly for the state to propagate through React updates
-    await this.page.waitForTimeout(100);
   }
 }
