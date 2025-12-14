@@ -1,5 +1,12 @@
 name: Auto Approve Workflows
 
+# This workflow uses pull_request_target to have write access to approve workflows.
+# Security measures include:
+# - Strict filtering by PR author (copilot-swe-agent)
+# - SHA format validation before any git operations
+# - Exact username matching for contributors (no wildcards)
+# - No untrusted code execution
+
 permissions:
   actions: write
   pull-requests: read
@@ -75,8 +82,9 @@ jobs:
         run: |
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           
-          # Get workflow runs for this PR that are waiting for approval
+          # Get workflow runs for this PR that are waiting for approval (with pagination)
           RUNS=$(gh api \
+            --paginate \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "/repos/${{ github.repository }}/actions/runs?event=pull_request&status=action_required" \
