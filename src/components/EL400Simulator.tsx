@@ -2,7 +2,7 @@ import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import AxisDisplaySection from "./AxisDisplaySection";
 import AxisSelectionSection from "./AxisSelectionSection";
-import NumericKeypadSection from "./NumericKeypadSection";
+import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory, type Axis } from "../hooks/useVolatileMemory";
@@ -80,7 +80,7 @@ const EL400Simulator = () => {
             onAxisZero={vm.zeroAxis}
           />
 
-          <NumericKeypadSection onClear={handleClear} />
+          <KeypadSection onClear={handleClear} />
         </div>
 
         {/* Bottom section */}

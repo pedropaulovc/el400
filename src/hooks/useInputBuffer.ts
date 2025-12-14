@@ -21,7 +21,7 @@ export interface UseInputBufferReturn {
 
 /**
  * Hook for managing numeric input buffer.
- * Used by NumericKeypadSection to accumulate digit input before committing a value.
+ * Used by KeypadSection to accumulate digit input before committing a value.
  */
 export function useInputBuffer(): UseInputBufferReturn {
   const [buffer, setBuffer] = useState('');

@@ -77,11 +77,11 @@ const NumericKeypad = ({
   );
 };
 
-interface NumericKeypadSectionProps {
+interface KeypadSectionProps {
   onClear: () => void; // For power-on dismiss
 }
 
-const NumericKeypadSection = ({ onClear }: NumericKeypadSectionProps) => {
+const KeypadSection = ({ onClear }: KeypadSectionProps) => {
   const vm = useVolatileMemory();
   const inputBuffer = useInputBuffer();
 
@@ -142,4 +142,4 @@ const NumericKeypadSection = ({ onClear }: NumericKeypadSectionProps) => {
   );
 };
 
-export default NumericKeypadSection;
+export default KeypadSection;

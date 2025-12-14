@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
-import NumericKeypadSection from './NumericKeypadSection';
+import KeypadSection from './KeypadSection';
 import { VolatileMemoryProvider } from '../context/VolatileMemoryContext';
 import { NonVolatileMemoryProvider } from '../context/NonVolatileMemoryContext';
 
@@ -14,10 +14,10 @@ const renderWithProviders = (ui: React.ReactElement) => {
   );
 };
 
-describe('NumericKeypadSection', () => {
+describe('KeypadSection', () => {
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
+      renderWithProviders(<KeypadSection onClear={vi.fn()} />);
 
       const heading = screen.getByRole('heading', { name: 'Numeric keypad' });
       expect(heading).toBeInTheDocument();
@@ -25,7 +25,7 @@ describe('NumericKeypadSection', () => {
     });
 
     it('has sr-only text for number buttons', () => {
-      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
+      renderWithProviders(<KeypadSection onClear={vi.fn()} />);
 
       const expectedLabels: Record<number, string> = {
         0: '0',
@@ -47,7 +47,7 @@ describe('NumericKeypadSection', () => {
     });
 
     it('has sr-only text for function buttons', () => {
-      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
+      renderWithProviders(<KeypadSection onClear={vi.fn()} />);
 
       expect(screen.getByTestId('key-sign').querySelector('.sr-only')).toHaveTextContent('Toggle sign');
       expect(screen.getByTestId('key-decimal').querySelector('.sr-only')).toHaveTextContent('.');
@@ -56,7 +56,7 @@ describe('NumericKeypadSection', () => {
     });
 
     it('has buttons in natural numeric order for tab navigation', () => {
-      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
+      renderWithProviders(<KeypadSection onClear={vi.fn()} />);
 
       const buttons = screen.getAllByRole('button');
       const expectedOrder = [
