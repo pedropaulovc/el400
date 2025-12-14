@@ -2,7 +2,7 @@ import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import AxisDisplaySection from "./AxisDisplaySection";
 import AxisSelectionSection from "./AxisSelectionSection";
-import KeypadSection from "./KeypadSection";
+import NumericKeypadSection from "./NumericKeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory, type Axis } from "../hooks/useVolatileMemory";
@@ -25,10 +25,6 @@ const EL400Simulator = () => {
   const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
 
   // Handlers
-  const handleAxisSelect = (axis: Axis) => {
-    vm.selectAxis(axis);
-  };
-
   const handleToggleUnit = () => {
     updateMemory({ defaultUnit: memory.defaultUnit === 'inch' ? 'mm' : 'inch' });
   };
@@ -80,11 +76,11 @@ const EL400Simulator = () => {
 
           <AxisSelectionSection
             activeAxis={vm.activeAxis}
-            onAxisSelect={handleAxisSelect}
+            onAxisSelect={vm.selectAxis}
             onAxisZero={vm.zeroAxis}
           />
 
-          <KeypadSection onClear={handleClear} />
+          <NumericKeypadSection onClear={handleClear} />
         </div>
 
         {/* Bottom section */}

@@ -1,19 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
-import NumericKeypad from './NumericKeypad';
+import NumericKeypadSection from './NumericKeypadSection';
+import { VolatileMemoryProvider } from '../context/VolatileMemoryContext';
+import { NonVolatileMemoryProvider } from '../context/NonVolatileMemoryContext';
 
-describe('NumericKeypad', () => {
-  const defaultProps = {
-    onNumber: vi.fn(),
-    onClear: vi.fn(),
-    onEnter: vi.fn(),
-    onSign: vi.fn(),
-    onDecimal: vi.fn(),
-  };
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <NonVolatileMemoryProvider>
+      <VolatileMemoryProvider>
+        {ui}
+      </VolatileMemoryProvider>
+    </NonVolatileMemoryProvider>
+  );
+};
 
+describe('NumericKeypadSection', () => {
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      render(<NumericKeypad {...defaultProps} />);
+      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
 
       const heading = screen.getByRole('heading', { name: 'Numeric keypad' });
       expect(heading).toBeInTheDocument();
@@ -21,7 +25,7 @@ describe('NumericKeypad', () => {
     });
 
     it('has sr-only text for number buttons', () => {
-      render(<NumericKeypad {...defaultProps} />);
+      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
 
       const expectedLabels: Record<number, string> = {
         0: '0',
@@ -43,7 +47,7 @@ describe('NumericKeypad', () => {
     });
 
     it('has sr-only text for function buttons', () => {
-      render(<NumericKeypad {...defaultProps} />);
+      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
 
       expect(screen.getByTestId('key-sign').querySelector('.sr-only')).toHaveTextContent('Toggle sign');
       expect(screen.getByTestId('key-decimal').querySelector('.sr-only')).toHaveTextContent('.');
@@ -52,7 +56,7 @@ describe('NumericKeypad', () => {
     });
 
     it('has buttons in natural numeric order for tab navigation', () => {
-      render(<NumericKeypad {...defaultProps} />);
+      renderWithProviders(<NumericKeypadSection onClear={vi.fn()} />);
 
       const buttons = screen.getAllByRole('button');
       const expectedOrder = [
