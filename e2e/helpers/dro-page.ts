@@ -237,7 +237,16 @@ export class DROPage {
   async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
     // Use page.evaluate to call the exposed adapter's setPosition method
     await this.page.evaluate(({ axis, value }) => {
-      const adapter = (window as any).__el400Adapter;
+      interface MockAdapterWindow extends Window {
+        __el400Adapter?: {
+          setPosition: (x: number, y: number, z: number) => void;
+          getState: () => {
+            position: { x: number; y: number; z: number };
+          };
+        };
+      }
+      
+      const adapter = (window as unknown as MockAdapterWindow).__el400Adapter;
       if (!adapter) {
         throw new Error('No adapter available. Ensure page is loaded with ?source=mock');
       }

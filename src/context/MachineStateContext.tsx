@@ -142,11 +142,11 @@ export function MachineStateProvider({
   // Expose adapter to window object for E2E tests
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).__el400Adapter = adapter;
+      (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter = adapter;
     }
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as any).__el400Adapter;
+        delete (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter;
       }
     };
   }, [adapter]);
