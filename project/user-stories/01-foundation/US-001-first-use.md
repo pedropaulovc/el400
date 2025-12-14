@@ -1,7 +1,7 @@
 # US-001: First Use and Power-Up Display
 
 **Manual Reference:** Section 5.4 Power Up
-**Priority:** High
+**Priority:** Low
 
 ## User Story
 **As a** machine operator
@@ -9,8 +9,8 @@
 **So that** I can verify the system is starting up correctly
 
 ## Acceptance Criteria
-- [ ] **AC 1.1:** When the DRO is powered ON, it displays the model number (e.g., `EL404-S`) momentarily.
-- [ ] **AC 1.2:** Following the model number, it displays the software version (e.g., `vEr 1.0.0`).
+- [ ] **AC 1.1:** When the DRO is powered ON, it displays the model number (e.g., `EL400`) momentarily on X axis.
+- [ ] **AC 1.2:** It displays the software version (e.g., `vEr 1.0.0`) on the Y axis.
 - [ ] **AC 1.3:** The power-up message can be bypassed by pressing the `C` key.
 - [ ] **AC 1.4:** After the startup sequence, the DRO enters the normal counting display.
 
@@ -20,22 +20,28 @@ describe('US-001: First Use and Power-Up', () => {
   test('Power up sequence displays model and version', async () => {
     // Simulate Power ON
     await dro.powerOn();
-    await expect(dro.display).toHaveText('EL404-S');
-    await dro.wait(1000); // Wait for potential delay
-    await expect(dro.display).toHaveText('vEr 1.0.0');
+    await expect(dro.display.xAxis).toHaveText('EL400');
+    await expect(dro.display.yAxis).toHaveText('vEr 1.0.0');
     await dro.wait(1000);
     // Should enter normal counting mode
-    await expect(dro.display.xAxis).toMatch(/[\d\.-]+/);
+    await expect(dro.display.xAxis).toHaveNumber(0.0000)
+    await expect(dro.display.yAxis).toHaveNumber(0.0000)
+    await expect(dro.display.zAxis).toHaveNumber(0.0000)
   });
 
   test('Bypass power up message', async () => {
     await dro.powerOn();
     await dro.pressKey('C');
     // Expect immediate transition to counting screen (e.g., 0.000)
-    await expect(dro.display.xAxis).toBeVisible();
+    await expect(dro.display.xAxis).toHaveNumber(0.0000)
+    await expect(dro.display.yAxis).toHaveNumber(0.0000)
+    await expect(dro.display.zAxis).toHaveNumber(0.0000)
   });
 });
 ```
+
+## Non Functional Requirements
+- [ ] **NF 1.1** E2E tests bypass the power up sequency by default and can assume that the DRO is in counting mode immediately.
 
 ## Related Stories
 - US-002: Sign Convention and Axis Direction
