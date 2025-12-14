@@ -16,7 +16,12 @@ const meta = {
   argTypes: {
     value: {
       control: "select",
-      options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", " "],
+      options: [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        "-", " ",
+        "A", "b", "C", "c", "d", "E", "F", "G", "h", "I", "i", "J", "L", "l",
+        "n", "m", "P", "r", "S", "t", "U", "v", "X", "Y"
+      ],
     },
     showDecimal: {
       control: "boolean",
@@ -121,4 +126,63 @@ export const RendersAllSegmentsAndDecimal: Story = {
     const circle = canvasElement.querySelector("circle");
     await expect(circle).toBeInTheDocument();
   },
+};
+
+// Letter examples
+export const LetterA: Story = {
+  args: {
+    value: "A",
+    showDecimal: false,
+  },
+};
+
+export const Letterb: Story = {
+  args: {
+    value: "b",
+    showDecimal: false,
+  },
+};
+
+export const LetterE: Story = {
+  args: {
+    value: "E",
+    showDecimal: false,
+  },
+};
+
+export const LetterP: Story = {
+  args: {
+    value: "P",
+    showDecimal: false,
+  },
+};
+
+export const AllLetters: Story = {
+  args: {
+    value: "A",
+  },
+  render: () => (
+    <div className="flex flex-wrap gap-1" style={{ background: "#1a1a1a", padding: "20px", maxWidth: "600px" }}>
+      {["A", "b", "C", "c", "d", "E", "F", "G", "h", "I", "i", "J", "L", "l", "n", "m", "P", "r", "S", "t", "U", "v", "X", "Y"].map((char) => (
+        <div key={char} style={{ width: "40px", height: "60px" }}>
+          <SevenSegmentDigit value={char} />
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const SampleWord: Story = {
+  args: {
+    value: "h",
+  },
+  render: () => (
+    <div className="flex gap-0.5" style={{ background: "#1a1a1a", padding: "20px" }}>
+      {["h", "E", "L", "L"].map((char, index) => (
+        <div key={index} style={{ width: "40px", height: "60px" }}>
+          <SevenSegmentDigit value={char} />
+        </div>
+      ))}
+    </div>
+  ),
 };
