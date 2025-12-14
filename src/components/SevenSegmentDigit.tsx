@@ -13,7 +13,7 @@ const SevenSegmentDigit = ({
 }: SevenSegmentDigitProps) => {
   // Segment definitions: which segments are on for each character
   const segmentMap: Record<string, boolean[]> = {
-    // [a, b, c, d, e, f, g] — standard 7-segment naming
+    // [a, b, c, d, e, f, g] - standard 7-segment naming
 
     // Digits
     '0': [true,  true,  true,  true,  true,  true,  false],
@@ -47,7 +47,7 @@ const SevenSegmentDigit = ({
     'L': [false, false, false, true,  true,  true,  false],
     'l': [false, false, false, true,  true,  true,  false],
 
-    // m = n with top segment (a) lit
+    // m = n with top segment (a) lit (used to distinguish between m and n on 7-segment displays)
     'n': [false, false, true,  false, true,  false, true ],
     'm': [true,  false, true,  false, true,  false, true ],
 
@@ -63,7 +63,16 @@ const SevenSegmentDigit = ({
   
   // Throw exception for unsupported characters (case-sensitive)
   if (!(value in segmentMap)) {
-    throw new Error(`Unsupported character: "${value}". Supported characters are: ${Object.keys(segmentMap).join(', ')}`);
+    const supportedChars = Object.keys(segmentMap);
+    const digits = supportedChars.filter(c => /\d/.test(c));
+    const symbols = supportedChars.filter(c => /[-\s]/.test(c));
+    const letters = supportedChars.filter(c => /[A-Za-z]/.test(c));
+    
+    throw new Error(
+      `Unsupported character: "${value}". ` +
+      `Supported: digits (${digits.join('')}), symbols (${symbols.map(s => s === ' ' ? 'space' : s).join(', ')}), ` +
+      `letters (${letters.join(', ')})`
+    );
   }
   
   const segments = segmentMap[value];
