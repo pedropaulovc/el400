@@ -2,10 +2,12 @@ import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 
+type AxisDisplayValue = number | string;
+
 interface AxisValues {
-  X: number;
-  Y: number;
-  Z: number;
+  X: AxisDisplayValue;
+  Y: AxisDisplayValue;
+  Z: AxisDisplayValue;
 }
 
 interface AxisDisplaySectionProps {
@@ -15,12 +17,14 @@ interface AxisDisplaySectionProps {
 }
 
 interface AxisDisplayProps {
-  value: number;
+  value: AxisDisplayValue;
   axis: 'X' | 'Y' | 'Z';
 }
 
+const DISPLAY_WIDTH = 8;
+
 const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
-  const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
+  const formatNumberValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
     const formatted = absNum.toFixed(4);
@@ -46,7 +50,26 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     return result;
   };
 
-  const digits = formatValue(value);
+  const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] => {
+    const raw: { char: string; hasDecimal: boolean }[] = [];
+
+    for (const char of text) {
+      if (char === '.') {
+        if (raw.length > 0) {
+          raw[raw.length - 1].hasDecimal = true;
+        }
+        continue;
+      }
+      raw.push({ char, hasDecimal: false });
+    }
+
+    const truncated = raw.slice(-DISPLAY_WIDTH);
+    const padded = Array.from({ length: DISPLAY_WIDTH - truncated.length }, () => ({ char: ' ', hasDecimal: false }));
+
+    return [...padded, ...truncated];
+  };
+
+  const digits = typeof value === 'number' ? formatNumberValue(value) : formatTextValue(value);
 
   return (
     <div
@@ -70,6 +93,9 @@ const AxisDisplaySection = ({
   isAbs,
   isInch,
 }: AxisDisplaySectionProps) => {
+  const formatForScreenReader = (value: AxisDisplayValue) =>
+    typeof value === 'number' ? value.toFixed(4) : value;
+
   return (
     <div className="flex flex-col">
       <h2 className="sr-only">Axis display</h2>
@@ -94,19 +120,19 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {axisValues.X.toFixed(4)}
+                  {formatForScreenReader(axisValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {axisValues.Y.toFixed(4)}
+                  {formatForScreenReader(axisValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {axisValues.Z.toFixed(4)}
+                  {formatForScreenReader(axisValues.Z)}
                 </td>
               </tr>
             </tbody>
