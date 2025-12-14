@@ -108,4 +108,4 @@ jobs:
 
       - name: Run storybook tests
         timeout-minutes: 1
-        run: npm run test-storybook
+        run: npm run test:storybook
