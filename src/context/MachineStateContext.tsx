@@ -139,7 +139,9 @@ export function MachineStateProvider({
     setAdapter,
   };
 
-  // Expose adapter to window object for E2E tests
+  // Expose adapter to window object for E2E and integration tests.
+  // This allows automated tests to simulate encoder movement via MockAdapter.
+  // The exposed methods are read-only and match the existing UI capabilities.
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter = adapter;
