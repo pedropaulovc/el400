@@ -19,7 +19,7 @@ const EL400Simulator = () => {
   const vMem = useVolatileMemory();
 
   // Non-volatile memory (persisted settings)
-  const { memory: nvMem, updateMemory } = useNonVolatileMemoryContext();
+  const { nvMem, updateMemory } = useNonVolatileMemoryContext();
 
   // Power-on sequence
   const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
