@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
+import "./SevenSegmentDigit.css";
+
 interface SevenSegmentDigitProps {
   value: string;
   showDecimal?: boolean;
   className?: string;
 }
 
-// SVG-based 7-segment display for authentic look
+// CSS-based 7-segment display for authentic look
 const SevenSegmentDigit = ({
   value,
   showDecimal = false,
@@ -60,108 +62,37 @@ const SevenSegmentDigit = ({
     'X': [false, true,  true,  false, true,  true,  true ],
     'Y': [false, true,  true,  true,  false, true,  true ],
   };
-  
+
   // Throw exception for unsupported characters (case-sensitive)
   if (!(value in segmentMap)) {
     const supportedChars = Object.keys(segmentMap);
     const digits = supportedChars.filter(c => /\d/.test(c));
     const symbols = supportedChars.filter(c => /[-\s]/.test(c));
     const letters = supportedChars.filter(c => /[A-Za-z]/.test(c));
-    
+
     throw new Error(
       `Unsupported character: "${value}". ` +
       `Supported: digits (${digits.join('')}), symbols (${symbols.map(s => s === ' ' ? 'space' : s).join(', ')}), ` +
       `letters (${letters.join(', ')})`
     );
   }
-  
+
   const segments = segmentMap[value];
-  const onColor = "hsl(120, 100%, 50%)";
-  const offColor = "hsl(120, 100%, 8%)";
-  
+  const segmentNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const;
+
   return (
-    <div className={cn("relative", className)}>
-      <svg viewBox="-8 0 68 79.8" style={{ overflow: 'visible' }} className="w-full h-full py-[15px]">
-        <style>{`
-          @media (forced-colors: active) {
-            .segment-on { fill: CanvasText; }
-            .segment-off { fill: transparent; }
-          }
-        `}</style>
-        <g transform="skewX(-10)">
-          {/* Segment A (top) */}
-          <polygon 
-            className={segments[0] ? "segment-on" : "segment-off"}
-            points="4,2.28 40,2.28 34,11.4 10,11.4" 
-            fill={segments[0] ? onColor : offColor} 
-            filter={segments[0] ? "url(#glow)" : undefined} 
+    <div className={cn("relative py-[15px]", className)} aria-hidden="true">
+      <div className="seven-segment-digit">
+        {segmentNames.map((name, i) => (
+          <span
+            key={name}
+            className={cn(`seg-${name}`, segments[i] ? "seg-on" : "seg-off")}
           />
-          {/* Segment B (top right) */}
-          <polygon 
-            className={segments[1] ? "segment-on" : "segment-off"}
-            points="41,4.56 41,37.62 35,31.92 35,12.54" 
-            fill={segments[1] ? onColor : offColor} 
-            filter={segments[1] ? "url(#glow)" : undefined} 
-          />
-          {/* Segment C (bottom right) */}
-          <polygon 
-            className={segments[2] ? "segment-on" : "segment-off"}
-            points="41,42.18 41,75.24 35,67.26 35,47.88" 
-            fill={segments[2] ? onColor : offColor} 
-            filter={segments[2] ? "url(#glow)" : undefined} 
-          />
-          {/* Segment D (bottom) */}
-          <polygon 
-            className={segments[3] ? "segment-on" : "segment-off"}
-            points="4,77.52 40,77.52 34,68.4 10,68.4" 
-            fill={segments[3] ? onColor : offColor} 
-            filter={segments[3] ? "url(#glow)" : undefined} 
-          />
-          {/* Segment E (bottom left) */}
-          <polygon 
-            className={segments[4] ? "segment-on" : "segment-off"}
-            points="3,42.18 3,75.24 9,67.26 9,47.88" 
-            fill={segments[4] ? onColor : offColor} 
-            filter={segments[4] ? "url(#glow)" : undefined} 
-          />
-          {/* Segment F (top left) */}
-          <polygon 
-            className={segments[5] ? "segment-on" : "segment-off"}
-            points="3,4.56 3,37.62 9,31.92 9,12.54" 
-            fill={segments[5] ? onColor : offColor} 
-            filter={segments[5] ? "url(#glow)" : undefined} 
-          />
-          {/* Segment G (middle) - hexagonal */}
-          <polygon 
-            className={segments[6] ? "segment-on" : "segment-off"}
-            points="4,39.9 10,35.34 34,35.34 40,39.9 34,44.46 10,44.46" 
-            fill={segments[6] ? onColor : offColor} 
-            filter={segments[6] ? "url(#glow)" : undefined} 
-          />
-          
-          {/* Decimal point segment (bottom right of digit) */}
-          <circle 
-            className={showDecimal ? "segment-on" : "segment-off"}
-            cx="47" 
-            cy="74.1" 
-            r="4" 
-            fill={showDecimal ? onColor : offColor} 
-            filter={showDecimal ? "url(#glow)" : undefined} 
-          />
-        </g>
-        
-        {/* Glow filter */}
-        <defs>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-      </svg>
+        ))}
+        <span className={cn("seg-dp", showDecimal ? "seg-on" : "seg-off")} />
+      </div>
     </div>
   );
 };
+
 export default SevenSegmentDigit;
