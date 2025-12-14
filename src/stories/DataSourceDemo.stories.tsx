@@ -12,7 +12,7 @@ import type { Axis } from "../types/volatileMemory";
  */
 function VolatileMemoryDemo() {
   const vMem = useVolatileMemory();
-  const { nvMem, updateMemory } = useNonVolatileMemoryContext();
+  const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
 
   const handleZeroAxis = (axis: Axis) => {
     vMem.zeroAxis(axis);
@@ -62,7 +62,7 @@ function VolatileMemoryDemo() {
         </button>
         <button
           onClick={() =>
-            updateMemory({
+            updateNvMem({
               defaultUnit: nvMem.defaultUnit === "inch" ? "mm" : "inch",
             })
           }
