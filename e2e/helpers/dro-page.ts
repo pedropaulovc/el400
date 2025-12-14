@@ -106,7 +106,8 @@ export class DROPage {
    * Navigate to the DRO simulator
    */
   // powerOn: 'skip' (default for fast tests), 'force' (show startup), 'auto' (no query param)
-  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto' }) {
+  // source: 'mock' (for encoder simulation), undefined (manual mode - default)
+  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto'; source?: 'mock' }) {
     const powerOn = options?.powerOn ?? 'skip';
     const params = new URLSearchParams();
 
@@ -114,6 +115,11 @@ export class DROPage {
       params.set('powerOn', 'force');
     } else if (powerOn === 'skip') {
       params.set('powerOn', 'skip');
+    }
+
+    // Add source parameter if specified (e.g., for MockAdapter support)
+    if (options?.source) {
+      params.set('source', options.source);
     }
 
     const query = params.toString();
@@ -235,5 +241,47 @@ export class DROPage {
    */
   async isMmUnits(): Promise<boolean> {
     return await this.isLEDOn(this.mmLED);
+  }
+
+  /**
+   * Simulate encoder movement for an axis.
+   * This uses the MockAdapter's setPosition method to simulate physical encoder movement.
+   * 
+   * @param axis - The axis to move ('X', 'Y', or 'Z')
+   * @param value - The new position value to simulate
+   * 
+   * Note: This only works when the DRO is connected to a MockAdapter.
+   * For E2E tests that need encoder simulation, ensure the page is loaded with ?source=mock
+   */
+  async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    // Use page.evaluate to call the exposed adapter's setPosition method
+    await this.page.evaluate(({ axis, value }) => {
+      interface MockAdapterWindow extends Window {
+        __el400Adapter?: {
+          setPosition: (x: number, y: number, z: number) => void;
+          getState: () => {
+            position: { x: number; y: number; z: number };
+          };
+        };
+      }
+      
+      const adapter = (window as unknown as MockAdapterWindow).__el400Adapter;
+      if (!adapter) {
+        throw new Error('No adapter available. Ensure page is loaded with ?source=mock');
+      }
+      if (typeof adapter.setPosition !== 'function') {
+        throw new Error('Adapter does not support setPosition. Only MockAdapter is supported.');
+      }
+      
+      // Get current state and update only the specified axis
+      const currentState = adapter.getState();
+      const newPosition = {
+        x: axis === 'X' ? value : currentState.position.x,
+        y: axis === 'Y' ? value : currentState.position.y,
+        z: axis === 'Z' ? value : currentState.position.z,
+      };
+      
+      adapter.setPosition(newPosition.x, newPosition.y, newPosition.z);
+    }, { axis, value });
   }
 }

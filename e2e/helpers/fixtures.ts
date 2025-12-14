@@ -11,10 +11,20 @@ type DROFixtures = {
 };
 
 /**
- * Extend base test with DRO page fixture
+ * Extend base test with DRO page fixture.
+ * The DRO loads in manual mode by default, but supports MockAdapter
+ * for tests that need encoder simulation via simulateEncoderMove().
+ * 
  * Usage:
  *   import { test, expect } from '../helpers/fixtures';
+ *   // Manual mode (default):
  *   test('my test', async ({ dro }) => { ... });
+ *   
+ *   // With MockAdapter for encoder simulation:
+ *   test('encoder test', async ({ dro }) => { 
+ *     await dro.goto({ source: 'mock' });
+ *     await dro.simulateEncoderMove('X', 10);
+ *   });
  */
 export const test = base.extend<DROFixtures>({
   dro: async ({ page }, provide) => {

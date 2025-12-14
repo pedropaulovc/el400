@@ -20,7 +20,9 @@ const queryClient = new QueryClient();
 function createAdapter(config: DataSourceConfig): MachineAdapter | null {
   switch (config.type) {
     case 'mock':
-      return new MockAdapter({ simulateMovement: true });
+      // Don't simulate automatic movement for E2E tests
+      // Tests can use setPosition() to explicitly control position
+      return new MockAdapter({ simulateMovement: false });
     case 'cncjs':
       return new CncjsAdapter({ host: config.host, port: config.port });
     case 'linuxcnc':
