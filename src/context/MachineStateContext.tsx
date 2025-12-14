@@ -138,6 +138,18 @@ export function MachineStateProvider({
     setAdapter,
   };
 
+  // Expose adapter to window object for E2E tests
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__el400Adapter = adapter;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).__el400Adapter;
+      }
+    };
+  }, [adapter]);
+
   return (
     <MachineStateContext.Provider value={contextValue}>
       {children}

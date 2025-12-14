@@ -223,4 +223,40 @@ export class DROPage {
   async isMmUnits(): Promise<boolean> {
     return await this.isLEDOn(this.mmLED);
   }
+
+  /**
+   * Simulate encoder movement for an axis.
+   * This uses the MockAdapter's setPosition method to simulate physical encoder movement.
+   * 
+   * @param axis - The axis to move ('X', 'Y', or 'Z')
+   * @param value - The new position value to simulate
+   * 
+   * Note: This only works when the DRO is connected to a MockAdapter.
+   * For E2E tests that need encoder simulation, ensure the page is loaded with ?source=mock
+   */
+  async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    // Use page.evaluate to call the exposed adapter's setPosition method
+    await this.page.evaluate(({ axis, value }) => {
+      const adapter = (window as any).__el400Adapter;
+      if (!adapter) {
+        throw new Error('No adapter available. Ensure page is loaded with ?source=mock');
+      }
+      if (typeof adapter.setPosition !== 'function') {
+        throw new Error('Adapter does not support setPosition. Only MockAdapter is supported.');
+      }
+      
+      // Get current state and update only the specified axis
+      const currentState = adapter.getState();
+      const newPosition = {
+        x: axis === 'X' ? value : currentState.position.x,
+        y: axis === 'Y' ? value : currentState.position.y,
+        z: axis === 'Z' ? value : currentState.position.z,
+      };
+      
+      adapter.setPosition(newPosition.x, newPosition.y, newPosition.z);
+    }, { axis, value });
+
+    // Wait a bit for the state to propagate
+    await this.page.waitForTimeout(100);
+  }
 }
