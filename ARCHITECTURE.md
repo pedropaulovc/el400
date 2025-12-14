@@ -23,7 +23,7 @@ Technical documentation for developers working on the EL400 DRO simulator.
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
-│                    MachineAdapter (Interface)                   │
+│                   MachineConnection (Interface)                  │
 │  - connect(): Promise<void>                                     │
 │  - disconnect(): void                                           │
 │  - subscribe(callback): unsubscribe                             │
@@ -79,7 +79,7 @@ interface AxisValues {
 }
 
 type Axis = 'X' | 'Y' | 'Z';
-type DROMode = 'abs' | 'inc';
+type DatumMode = 'abs' | 'inc';
 type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
 
 interface VolatileMemory {
@@ -94,14 +94,14 @@ interface VolatileMemory {
   displayValues: AxisValues;
   absolute: AxisValues;
   incremental: AxisValues;
-  mode: DROMode;
+  mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
 }
 
 interface VolatileMemoryActions {
   toggleMode: () => void;
-  setMode: (mode: DROMode) => void;
+  setMode: (mode: DatumMode) => void;
   zeroAxis: (axis: Axis) => void;
   zeroAll: () => void;
   setAxisValue: (axis: Axis, value: number) => void;
@@ -122,12 +122,12 @@ interface NonVolatileMemory {
 
 ## Adapters
 
-### MachineAdapter Interface (`src/adapters/MachineAdapter.ts`)
+### MachineConnection Interface (`src/adapters/MachineConnection.ts`)
 
 All adapters implement this interface:
 
 ```typescript
-interface MachineAdapter {
+interface MachineConnection {
   connect(): Promise<void>;
   disconnect(): void;
   subscribe(listener: MachineStateListener): () => void;
@@ -242,10 +242,10 @@ Provides machine state and DRO memory to the component tree:
 
 ```typescript
 interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
-  adapter: MachineAdapter | null;
+  adapter: MachineConnection | null;
   isConnecting: boolean;
   error: Error | null;
-  setAdapter: (adapter: MachineAdapter | null) => void;
+  setAdapter: (adapter: MachineConnection | null) => void;
 }
 ```
 

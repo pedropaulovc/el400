@@ -8,7 +8,7 @@ import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
 import { MockAdapter } from "./adapters/MockAdapter";
 import { CncjsAdapter } from "./adapters/CncjsAdapter";
-import type { MachineAdapter } from "./adapters/MachineAdapter";
+import type { MachineConnection } from "./adapters/MachineConnection";
 import type { DataSourceConfig } from "./types/volatileMemory";
 
 const queryClient = new QueryClient();
@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
  * Creates an adapter based on URL config.
  * This is used inside the BrowserRouter context.
  */
-function createAdapter(config: DataSourceConfig): MachineAdapter | null {
+function createAdapter(config: DataSourceConfig): MachineConnection | null {
   switch (config.type) {
     case 'mock':
       // Don't simulate automatic movement for E2E tests

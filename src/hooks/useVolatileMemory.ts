@@ -9,10 +9,10 @@ import type {
   VolatileMemoryActions,
   AxisValues,
   Axis,
-  DROMode,
+  DatumMode,
 } from '../types/volatileMemory';
 
-export type { VolatileMemory, VolatileMemoryActions, AxisValues, Axis, DROMode };
+export type { VolatileMemory, VolatileMemoryActions, AxisValues, Axis, DatumMode };
 
 /**
  * Hook for accessing unified volatile memory.

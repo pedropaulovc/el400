@@ -46,7 +46,7 @@ export interface AxisValues {
 }
 
 export type Axis = 'X' | 'Y' | 'Z';
-export type DROMode = 'abs' | 'inc';
+export type DatumMode = 'abs' | 'inc';
 
 /**
  * Machine state from adapter (internal use)
@@ -96,7 +96,7 @@ export interface VolatileMemory {
   displayValues: AxisValues;
   absolute: AxisValues;
   incremental: AxisValues;
-  mode: DROMode;
+  mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
 }
@@ -106,7 +106,7 @@ export interface VolatileMemory {
  */
 export interface VolatileMemoryActions {
   toggleMode: () => void;
-  setMode: (mode: DROMode) => void;
+  setMode: (mode: DatumMode) => void;
   zeroAxis: (axis: Axis) => void;
   zeroAll: () => void;
   setAxisValue: (axis: Axis, value: number) => void;

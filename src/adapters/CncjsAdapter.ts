@@ -4,7 +4,8 @@
  */
 
 import { io, Socket } from 'socket.io-client';
-import type { MachineAdapter, MachineStateListener } from './MachineAdapter';
+import type { MachineConnection } from './MachineConnection';
+import type { MachineStateListener } from '../types/volatileMemory';
 import type { MachineState, MachinePosition } from '../types/volatileMemory';
 import { createProbeState, createDefaultMachineState } from '../types/volatileMemory';
 
@@ -163,7 +164,7 @@ export function normalizeControllerState(
   }
 }
 
-export class CncjsAdapter implements MachineAdapter {
+export class CncjsAdapter implements MachineConnection {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;

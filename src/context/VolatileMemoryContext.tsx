@@ -12,7 +12,7 @@ import {
   useMemo,
   type ReactNode,
 } from 'react';
-import type { MachineAdapter } from '../adapters/MachineAdapter';
+import type { MachineConnection } from '../adapters/MachineConnection';
 import type {
   MachineState,
   DataSourceConfig,
@@ -20,7 +20,7 @@ import type {
   VolatileMemoryActions,
   AxisValues,
   Axis,
-  DROMode,
+  DatumMode,
 } from '../types/volatileMemory';
 import { createDefaultMachineState, ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { MockAdapter } from '../adapters/MockAdapter';
@@ -29,13 +29,13 @@ import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
 
 export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
   /** Currently active adapter (or null if none) */
-  adapter: MachineAdapter | null;
+  adapter: MachineConnection | null;
   /** Whether the adapter is currently connecting */
   isConnecting: boolean;
   /** Error from last connection attempt */
   error: Error | null;
   /** Set or replace the active adapter */
-  setAdapter: (adapter: MachineAdapter | null) => void;
+  setAdapter: (adapter: MachineConnection | null) => void;
 }
 
 const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(null);
@@ -43,7 +43,7 @@ const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(n
 export interface VolatileMemoryProviderProps {
   children: ReactNode;
   /** Optional initial adapter */
-  initialAdapter?: MachineAdapter | null;
+  initialAdapter?: MachineConnection | null;
   /** Optional initial config to auto-create adapter */
   config?: DataSourceConfig;
 }
@@ -52,7 +52,7 @@ export interface VolatileMemoryProviderProps {
  * Creates an adapter based on the config type.
  * Returns null for 'manual' mode.
  */
-function createAdapterFromConfig(config: DataSourceConfig): MachineAdapter | null {
+function createAdapterFromConfig(config: DataSourceConfig): MachineConnection | null {
   switch (config.type) {
     case 'mock':
       // Don't simulate automatic movement - tests can use setPosition() explicitly
@@ -86,7 +86,7 @@ export function VolatileMemoryProvider({
   const { memory: nvMemory } = useNonVolatileMemoryContext();
 
   // Adapter state
-  const [adapter, setAdapterState] = useState<MachineAdapter | null>(
+  const [adapter, setAdapterState] = useState<MachineConnection | null>(
     initialAdapter ?? (config ? createAdapterFromConfig(config) : null)
   );
   const [machineState, setMachineState] = useState<MachineState>(
@@ -96,7 +96,7 @@ export function VolatileMemoryProvider({
   const [error, setError] = useState<Error | null>(null);
 
   // DRO memory state
-  const [mode, setModeState] = useState<DROMode>('abs');
+  const [mode, setModeState] = useState<DatumMode>('abs');
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null);
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
@@ -146,7 +146,7 @@ export function VolatileMemoryProvider({
     };
   }, [adapter]);
 
-  const setAdapter = useCallback((newAdapter: MachineAdapter | null) => {
+  const setAdapter = useCallback((newAdapter: MachineConnection | null) => {
     setAdapterState(newAdapter);
     setError(null);
   }, []);
@@ -175,7 +175,7 @@ export function VolatileMemoryProvider({
     setModeState((prev) => (prev === 'abs' ? 'inc' : 'abs'));
   }, []);
 
-  const setMode = useCallback((newMode: DROMode) => {
+  const setMode = useCallback((newMode: DatumMode) => {
     setModeState(newMode);
   }, []);
 
@@ -295,11 +295,11 @@ export function VolatileMemoryProvider({
   // Expose adapter to window object for E2E and integration tests.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter = adapter;
+      (window as unknown as { __el400Adapter?: MachineConnection | null }).__el400Adapter = adapter;
     }
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter;
+        delete (window as unknown as { __el400Adapter?: MachineConnection | null }).__el400Adapter;
       }
     };
   }, [adapter]);

@@ -3,7 +3,7 @@
  * Simulates machine position updates without real hardware.
  */
 
-import type { MachineAdapter } from './MachineAdapter';
+import type { MachineConnection } from './MachineConnection';
 import type { ControllerType, MachineState, MachineStateListener } from '../types/volatileMemory';
 import { createDefaultMachineState, createProbeState } from '../types/volatileMemory';
 
@@ -18,7 +18,7 @@ export interface MockAdapterOptions {
   movementSpeed?: number;
 }
 
-export class MockAdapter implements MachineAdapter {
+export class MockAdapter implements MachineConnection {
   readonly controllerType: ControllerType = 'mock';
 
   private state: MachineState;
