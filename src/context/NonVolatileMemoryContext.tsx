@@ -38,7 +38,7 @@ export function useNonVolatileMemoryContext(): UseNonVolatileMemoryReturn {
     // Return a fallback with defaults if not in provider (for standalone use)
     return {
       nvMem: DEFAULT_NON_VOLATILE_MEMORY,
-      updateMemory: () => {
+      updateNvMem: () => {
         console.warn('useNonVolatileMemoryContext: No NonVolatileMemoryProvider found, changes will not persist');
       },
       resetMemory: () => {

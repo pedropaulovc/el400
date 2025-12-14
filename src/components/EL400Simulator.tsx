@@ -19,14 +19,14 @@ const EL400Simulator = () => {
   const vMem = useVolatileMemory();
 
   // Non-volatile memory (persisted settings)
-  const { nvMem, updateMemory } = useNonVolatileMemoryContext();
+  const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
 
   // Power-on sequence
   const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
 
   // Handlers
   const handleToggleUnit = () => {
-    updateMemory({ defaultUnit: nvMem.defaultUnit === 'inch' ? 'mm' : 'inch' });
+    updateNvMem({ defaultUnit: nvMem.defaultUnit === 'inch' ? 'mm' : 'inch' });
   };
 
   const handleHalf = () => {

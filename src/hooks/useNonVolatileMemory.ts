@@ -39,7 +39,7 @@ export interface UseNonVolatileMemoryReturn {
   /** Current non-volatile memory state */
   nvMem: NonVolatileMemory;
   /** Update one or more memory fields */
-  updateMemory: (partial: Partial<NonVolatileMemory>) => void;
+  updateNvMem: (partial: Partial<NonVolatileMemory>) => void;
   /** Reset all memory to defaults */
   resetMemory: () => void;
 }
@@ -55,7 +55,7 @@ export function useNonVolatileMemory(): UseNonVolatileMemoryReturn {
     saveMemory(nvMem);
   }, [nvMem]);
 
-  const updateMemory = useCallback((partial: Partial<NonVolatileMemory>) => {
+  const updateNvMem = useCallback((partial: Partial<NonVolatileMemory>) => {
     setNvMem((prev) => ({ ...prev, ...partial }));
   }, []);
 
@@ -65,7 +65,7 @@ export function useNonVolatileMemory(): UseNonVolatileMemoryReturn {
 
   return {
     nvMem,
-    updateMemory,
+    updateNvMem,
     resetMemory,
   };
 }
