@@ -9,7 +9,7 @@ import { MockAdapter } from "../adapters/MockAdapter";
  * Used in stories to visualize the data contract.
  */
 function MachineStateDisplay() {
-  const vm = useVolatileMemoryContext();
+  const vMem = useVolatileMemoryContext();
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-lg font-mono text-sm space-y-4 min-w-[400px]">
@@ -20,22 +20,22 @@ function MachineStateDisplay() {
           <h3 className="text-gray-400 text-xs uppercase mb-2">Connection</h3>
           <div className="flex items-center gap-2">
             <span
-              className={`w-3 h-3 rounded-full ${vm.connected ? "bg-green-500" : "bg-red-500"}`}
+              className={`w-3 h-3 rounded-full ${vMem.connected ? "bg-green-500" : "bg-red-500"}`}
             />
-            <span>{vm.connected ? "Connected" : "Disconnected"}</span>
+            <span>{vMem.connected ? "Connected" : "Disconnected"}</span>
           </div>
-          <div className="text-gray-500 mt-1">Type: {vm.controllerType}</div>
+          <div className="text-gray-500 mt-1">Type: {vMem.controllerType}</div>
         </div>
 
         <div>
           <h3 className="text-gray-400 text-xs uppercase mb-2">Probe</h3>
           <div className="flex items-center gap-2">
             <span
-              className={`w-3 h-3 rounded-full ${vm.probe.triggered ? "bg-yellow-500" : "bg-gray-600"}`}
+              className={`w-3 h-3 rounded-full ${vMem.probe.triggered ? "bg-yellow-500" : "bg-gray-600"}`}
             />
-            <span>{vm.probe.triggered ? "Triggered" : "Open"}</span>
+            <span>{vMem.probe.triggered ? "Triggered" : "Open"}</span>
           </div>
-          <div className="text-gray-500 mt-1">Pin: {vm.probe.pinState || "(none)"}</div>
+          <div className="text-gray-500 mt-1">Pin: {vMem.probe.pinState || "(none)"}</div>
         </div>
       </div>
 
@@ -44,34 +44,34 @@ function MachineStateDisplay() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <span className="text-red-400">X:</span>{" "}
-            <span className="text-white">{vm.machinePosition.x.toFixed(4)}</span>
+            <span className="text-white">{vMem.machinePosition.x.toFixed(4)}</span>
           </div>
           <div>
             <span className="text-green-400">Y:</span>{" "}
-            <span className="text-white">{vm.machinePosition.y.toFixed(4)}</span>
+            <span className="text-white">{vMem.machinePosition.y.toFixed(4)}</span>
           </div>
           <div>
             <span className="text-blue-400">Z:</span>{" "}
-            <span className="text-white">{vm.machinePosition.z.toFixed(4)}</span>
+            <span className="text-white">{vMem.machinePosition.z.toFixed(4)}</span>
           </div>
         </div>
       </div>
 
-      {vm.workPosition && (
+      {vMem.workPosition && (
         <div>
           <h3 className="text-gray-400 text-xs uppercase mb-2">Position (Work)</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <span className="text-red-400">X:</span>{" "}
-              <span className="text-white">{vm.workPosition.x.toFixed(4)}</span>
+              <span className="text-white">{vMem.workPosition.x.toFixed(4)}</span>
             </div>
             <div>
               <span className="text-green-400">Y:</span>{" "}
-              <span className="text-white">{vm.workPosition.y.toFixed(4)}</span>
+              <span className="text-white">{vMem.workPosition.y.toFixed(4)}</span>
             </div>
             <div>
               <span className="text-blue-400">Z:</span>{" "}
-              <span className="text-white">{vm.workPosition.z.toFixed(4)}</span>
+              <span className="text-white">{vMem.workPosition.z.toFixed(4)}</span>
             </div>
           </div>
         </div>

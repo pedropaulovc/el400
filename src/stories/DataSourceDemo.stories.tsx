@@ -11,11 +11,11 @@ import type { Axis } from "../types/volatileMemory";
  * Shows ABS/INC switching and value management.
  */
 function VolatileMemoryDemo() {
-  const vm = useVolatileMemory();
-  const { memory, updateMemory } = useNonVolatileMemoryContext();
+  const vMem = useVolatileMemory();
+  const { memory: nvMem, updateMemory } = useNonVolatileMemoryContext();
 
   const handleZeroAxis = (axis: Axis) => {
-    vm.zeroAxis(axis);
+    vMem.zeroAxis(axis);
   };
 
   return (
@@ -26,24 +26,24 @@ function VolatileMemoryDemo() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span
-            className={`w-3 h-3 rounded-full ${vm.connected ? "bg-green-500" : "bg-gray-600"}`}
+            className={`w-3 h-3 rounded-full ${vMem.connected ? "bg-green-500" : "bg-gray-600"}`}
           />
           <span className="text-gray-400">
-            {vm.connected ? "Mock Connected" : "Manual Mode"}
+            {vMem.connected ? "Mock Connected" : "Manual Mode"}
           </span>
         </div>
         <span className="text-gray-600">|</span>
         <span className="text-gray-400">
-          Unit: {memory.defaultUnit.toUpperCase()}
+          Unit: {nvMem.defaultUnit.toUpperCase()}
         </span>
       </div>
 
       {/* Mode Toggle */}
       <div className="flex gap-4">
         <button
-          onClick={() => vm.setMode("abs")}
+          onClick={() => vMem.setMode("abs")}
           className={`px-4 py-2 rounded ${
-            vm.mode === "abs"
+            vMem.mode === "abs"
               ? "bg-green-600 text-white"
               : "bg-gray-700 text-gray-400"
           }`}
@@ -51,9 +51,9 @@ function VolatileMemoryDemo() {
           ABS
         </button>
         <button
-          onClick={() => vm.setMode("inc")}
+          onClick={() => vMem.setMode("inc")}
           className={`px-4 py-2 rounded ${
-            vm.mode === "inc"
+            vMem.mode === "inc"
               ? "bg-green-600 text-white"
               : "bg-gray-700 text-gray-400"
           }`}
@@ -63,7 +63,7 @@ function VolatileMemoryDemo() {
         <button
           onClick={() =>
             updateMemory({
-              defaultUnit: memory.defaultUnit === "inch" ? "mm" : "inch",
+              defaultUnit: nvMem.defaultUnit === "inch" ? "mm" : "inch",
             })
           }
           className="px-4 py-2 rounded bg-blue-600 text-white ml-auto"
@@ -88,7 +88,7 @@ function VolatileMemoryDemo() {
               {axis}:
             </span>
             <span className="flex-1 text-xl">
-              {vm.displayValues[axis].toFixed(memory.precision)}
+              {vMem.displayValues[axis].toFixed(nvMem.precision)}
             </span>
             <button
               onClick={() => handleZeroAxis(axis)}
@@ -102,10 +102,10 @@ function VolatileMemoryDemo() {
 
       {/* Zero All Button */}
       <button
-        onClick={() => vm.zeroAll()}
+        onClick={() => vMem.zeroAll()}
         className="w-full px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
       >
-        Zero All ({vm.mode.toUpperCase()})
+        Zero All ({vMem.mode.toUpperCase()})
       </button>
 
       {/* Memory State Debug */}
@@ -115,21 +115,21 @@ function VolatileMemoryDemo() {
           <div>
             <span className="text-gray-500">Absolute:</span>
             <div className="mt-1">
-              X: {vm.absolute.X.toFixed(4)}
+              X: {vMem.absolute.X.toFixed(4)}
               <br />
-              Y: {vm.absolute.Y.toFixed(4)}
+              Y: {vMem.absolute.Y.toFixed(4)}
               <br />
-              Z: {vm.absolute.Z.toFixed(4)}
+              Z: {vMem.absolute.Z.toFixed(4)}
             </div>
           </div>
           <div>
             <span className="text-gray-500">Incremental:</span>
             <div className="mt-1">
-              X: {vm.incremental.X.toFixed(4)}
+              X: {vMem.incremental.X.toFixed(4)}
               <br />
-              Y: {vm.incremental.Y.toFixed(4)}
+              Y: {vMem.incremental.Y.toFixed(4)}
               <br />
-              Z: {vm.incremental.Z.toFixed(4)}
+              Z: {vMem.incremental.Z.toFixed(4)}
             </div>
           </div>
         </div>
