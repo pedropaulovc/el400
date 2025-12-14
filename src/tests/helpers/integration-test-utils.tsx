@@ -6,8 +6,8 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
-import { SettingsProvider } from '../../context/SettingsContext';
-import { MachineStateProvider } from '../../context/MachineStateContext';
+import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
+import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 
 /**
@@ -36,11 +36,11 @@ export function renderSimulator(options?: { powerOnMode?: 'force' | 'skip' | 'au
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <MachineStateProvider>
-          <SettingsProvider>
+        <NonVolatileMemoryProvider>
+          <VolatileMemoryProvider>
             <EL400Simulator />
-          </SettingsProvider>
-        </MachineStateProvider>
+          </VolatileMemoryProvider>
+        </NonVolatileMemoryProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
