@@ -2,6 +2,7 @@ import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
+import { fromMmToAnyUnit } from "../utils/unitConversion";
 
 type AxisDisplayValue = number | string;
 
@@ -96,6 +97,18 @@ const AxisDisplaySection = ({
   isAbs,
   isInch,
 }: AxisDisplaySectionProps) => {
+  // Convert values from mm (internal storage) to display unit (only for numeric values)
+  const unit = isInch ? 'inch' : 'mm';
+  const convertValue = (value: AxisDisplayValue): AxisDisplayValue => {
+    return typeof value === 'number' ? fromMmToAnyUnit(value, unit) : value;
+  };
+  
+  const displayValues = {
+    X: convertValue(axisValues.X),
+    Y: convertValue(axisValues.Y),
+    Z: convertValue(axisValues.Z),
+  };
+
   const formatForScreenReader = (value: AxisDisplayValue) =>
     typeof value === 'number' ? value.toFixed(4) : value;
 
@@ -123,28 +136,28 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {formatForScreenReader(axisValues.X)}
+                  {formatForScreenReader(displayValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {formatForScreenReader(axisValues.Y)}
+                  {formatForScreenReader(displayValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {formatForScreenReader(axisValues.Z)}
+                  {formatForScreenReader(displayValues.Z)}
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={axisValues.X} axis="X" />
-            <AxisDisplay value={axisValues.Y} axis="Y" />
-            <AxisDisplay value={axisValues.Z} axis="Z" />
+            <AxisDisplay value={displayValues.X} axis="X" />
+            <AxisDisplay value={displayValues.Y} axis="Y" />
+            <AxisDisplay value={displayValues.Z} axis="Z" />
           </div>
 
           {/* LED Indicators */}
