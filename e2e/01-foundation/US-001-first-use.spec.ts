@@ -15,6 +15,7 @@ test.describe('US-001: First Use and Power-Up Display', () => {
 
     await expectPureTextValue(dro.xDisplay, 'EL400');
     await expectPureTextValue(dro.yDisplay, 'vEr 1.0.0');
+    await expectPureTextValue(dro.zDisplay, '');
 
     await dro.page.waitForTimeout(1000);
 
