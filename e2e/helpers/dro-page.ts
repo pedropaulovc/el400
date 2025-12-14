@@ -105,8 +105,21 @@ export class DROPage {
   /**
    * Navigate to the DRO simulator
    */
-  async goto() {
-    await this.page.goto('/');
+  // powerOn: 'skip' (default for fast tests), 'force' (show startup), 'auto' (no query param)
+  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto' }) {
+    const powerOn = options?.powerOn ?? 'skip';
+    const params = new URLSearchParams();
+
+    if (powerOn === 'force') {
+      params.set('powerOn', 'force');
+    } else if (powerOn === 'skip') {
+      params.set('powerOn', 'skip');
+    }
+
+    const query = params.toString();
+    const url = query ? `/?${query}` : '/';
+
+    await this.page.goto(url);
     await this.page.waitForLoadState('networkidle');
   }
 
