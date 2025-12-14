@@ -7,32 +7,22 @@ import { MockCncjsServer } from './mock-cncjs-server';
  */
 type DROFixtures = {
   dro: DROPage;
-  droWithMock: DROPage;
   mockCncjs: MockCncjsServer;
 };
 
 /**
- * Extend base test with DRO page fixture
+ * Extend base test with DRO page fixture.
+ * The DRO is loaded with MockAdapter enabled (?source=mock) to support
+ * encoder simulation via simulateEncoderMove().
+ * 
  * Usage:
  *   import { test, expect } from '../helpers/fixtures';
- *   test('my test', async ({ dro }) => { ... });
+ *   test('my test', async ({ dro }) => { 
+ *     await dro.simulateEncoderMove('X', 10);
+ *   });
  */
 export const test = base.extend<DROFixtures>({
   dro: async ({ page }, provide) => {
-    const dro = new DROPage(page);
-    await dro.goto();
-    await provide(dro);
-  },
-
-  /**
-   * DRO page fixture with MockAdapter enabled.
-   * Use this fixture when tests need to call simulateEncoderMove.
-   * Usage:
-   *   test('my test', async ({ droWithMock }) => {
-   *     await droWithMock.simulateEncoderMove('X', 10);
-   *   });
-   */
-  droWithMock: async ({ page }, provide) => {
     const dro = new DROPage(page);
     await page.goto('/?source=mock');
     await page.waitForLoadState('networkidle');

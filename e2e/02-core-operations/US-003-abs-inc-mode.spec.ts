@@ -236,24 +236,24 @@ test.describe('US-003: ABS/INC Mode', () => {
    * Test from user story: INC mode allows independent zeroing using encoder simulation.
    * This test uses simulateEncoderMove instead of manual keypad entry.
    */
-  test('should allow INC zeroing with encoder movement', async ({ droWithMock }) => {
+  test('should allow INC zeroing with encoder movement', async ({ dro }) => {
     // In ABS mode, move encoder to position 10
-    await droWithMock.simulateEncoderMove('X', 10);
-    await expect(await droWithMock.getAxisValue('X')).toBeCloseTo(10, 1);
+    await dro.simulateEncoderMove('X', 10);
+    await expect(await dro.getAxisValue('X')).toBeCloseTo(10, 1);
 
     // Switch to INC
-    await droWithMock.toggleAbsInc();
-    await expect(await droWithMock.isIncMode()).toBe(true);
+    await dro.toggleAbsInc();
+    await expect(await dro.isIncMode()).toBe(true);
     
     // Zero X in INC mode
-    await droWithMock.zeroAxis('X');
-    await expect(await droWithMock.getAxisValue('X')).toBeCloseTo(0, 1);
+    await dro.zeroAxis('X');
+    await expect(await dro.getAxisValue('X')).toBeCloseTo(0, 1);
 
     // Switch back to ABS
-    await droWithMock.toggleAbsInc();
-    await expect(await droWithMock.isAbsMode()).toBe(true);
+    await dro.toggleAbsInc();
+    await expect(await dro.isAbsMode()).toBe(true);
     
     // ABS value should still be 10 (preserved)
-    await expect(await droWithMock.getAxisValue('X')).toBeCloseTo(10, 1);
+    await expect(await dro.getAxisValue('X')).toBeCloseTo(10, 1);
   });
 });
