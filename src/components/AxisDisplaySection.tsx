@@ -66,7 +66,7 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     const truncated = raw.slice(-DISPLAY_WIDTH);
     const padded = Array.from({ length: DISPLAY_WIDTH - truncated.length }, () => ({ char: ' ', hasDecimal: false }));
 
-    return [...padded, ...truncated];
+    return padded.concat(truncated);
   };
 
   const digits = typeof value === 'number' ? formatNumberValue(value) : formatTextValue(value);

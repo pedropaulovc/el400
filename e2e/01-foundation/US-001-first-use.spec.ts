@@ -46,7 +46,7 @@ test.describe('US-001: First Use and Power-Up Display', () => {
   });
 
   /**
-   * AC 1.3: Power-up message can be bypassed with the C key
+   * Power-up message can be bypassed with the C key (AC 1.3)
    */
   test('Bypass power-up message with clear key', async ({ dro }) => {
     await dro.goto({ bypassPowerOn: false });
