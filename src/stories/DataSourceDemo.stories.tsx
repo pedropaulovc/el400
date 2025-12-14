@@ -7,10 +7,10 @@ import { MockAdapter } from "../adapters/MockAdapter";
 import type { Axis } from "../types/volatileMemory";
 
 /**
- * Interactive DRO memory demo component.
+ * Interactive volatile memory demo component.
  * Shows ABS/INC switching and value management.
  */
-function DROMemoryDemo() {
+function VolatileMemoryDemo() {
   const vm = useVolatileMemory();
   const { memory, updateMemory } = useNonVolatileMemoryContext();
 
@@ -20,7 +20,7 @@ function DROMemoryDemo() {
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-lg font-mono text-sm space-y-6 min-w-[500px]">
-      <h2 className="text-lg font-bold text-green-400">DRO Memory Demo</h2>
+      <h2 className="text-lg font-bold text-green-400">Volatile Memory Demo</h2>
 
       {/* Connection Status */}
       <div className="flex items-center gap-4">
@@ -159,7 +159,7 @@ function StoryWrapper({
 
 const meta = {
   title: "Data Interface/DataSourceDemo",
-  component: DROMemoryDemo,
+  component: VolatileMemoryDemo,
   parameters: {
     layout: "centered",
     backgrounds: { default: "dark" },
@@ -172,7 +172,7 @@ const meta = {
       </StoryWrapper>
     ),
   ],
-} satisfies Meta<typeof DROMemoryDemo>;
+} satisfies Meta<typeof VolatileMemoryDemo>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
