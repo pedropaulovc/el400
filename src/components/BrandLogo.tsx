@@ -1,5 +1,3 @@
-import React from 'react';
-
 const BrandLogo = () => {
   return (
     <div className="w-[180px] h-[28px] bg-[#e8e8e3] flex items-center px-2 shadow-sm border border-[#d0d0d0]">
