@@ -237,6 +237,9 @@ test.describe('US-003: ABS/INC Mode', () => {
    * This test uses simulateEncoderMove instead of manual keypad entry.
    */
   test('should allow INC zeroing with encoder movement', async ({ dro }) => {
+    // Load with MockAdapter to enable encoder simulation
+    await dro.goto({ source: 'mock' });
+    
     // In ABS mode, move encoder to position 10
     await dro.simulateEncoderMove('X', 10);
     await expect(await dro.getAxisValue('X')).toBeCloseTo(10, 1);
