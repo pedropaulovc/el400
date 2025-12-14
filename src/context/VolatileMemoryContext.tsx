@@ -83,7 +83,7 @@ export function VolatileMemoryProvider({
   config,
 }: VolatileMemoryProviderProps) {
   // Non-volatile memory for unit conversion
-  const { memory: nvMemory } = useNonVolatileMemoryContext();
+  const { nvMem: nvMemory } = useNonVolatileMemoryContext();
 
   // Adapter state
   const [adapter, setAdapterState] = useState<MachineConnection | null>(

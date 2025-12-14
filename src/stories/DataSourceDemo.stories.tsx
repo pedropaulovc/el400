@@ -12,7 +12,7 @@ import type { Axis } from "../types/volatileMemory";
  */
 function VolatileMemoryDemo() {
   const vMem = useVolatileMemory();
-  const { memory: nvMem, updateMemory } = useNonVolatileMemoryContext();
+  const { nvMem, updateMemory } = useNonVolatileMemoryContext();
 
   const handleZeroAxis = (axis: Axis) => {
     vMem.zeroAxis(axis);

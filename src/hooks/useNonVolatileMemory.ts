@@ -37,7 +37,7 @@ function saveMemory(memory: NonVolatileMemory): void {
 
 export interface UseNonVolatileMemoryReturn {
   /** Current non-volatile memory state */
-  memory: NonVolatileMemory;
+  nvMem: NonVolatileMemory;
   /** Update one or more memory fields */
   updateMemory: (partial: Partial<NonVolatileMemory>) => void;
   /** Reset all memory to defaults */
@@ -48,23 +48,23 @@ export interface UseNonVolatileMemoryReturn {
  * Hook for managing non-volatile memory with localStorage persistence.
  */
 export function useNonVolatileMemory(): UseNonVolatileMemoryReturn {
-  const [memory, setMemory] = useState<NonVolatileMemory>(loadMemory);
+  const [nvMem, setNvMem] = useState<NonVolatileMemory>(loadMemory);
 
   // Save memory to localStorage whenever it changes
   useEffect(() => {
-    saveMemory(memory);
-  }, [memory]);
+    saveMemory(nvMem);
+  }, [nvMem]);
 
   const updateMemory = useCallback((partial: Partial<NonVolatileMemory>) => {
-    setMemory((prev) => ({ ...prev, ...partial }));
+    setNvMem((prev) => ({ ...prev, ...partial }));
   }, []);
 
   const resetMemory = useCallback(() => {
-    setMemory(DEFAULT_NON_VOLATILE_MEMORY);
+    setNvMem(DEFAULT_NON_VOLATILE_MEMORY);
   }, []);
 
   return {
-    memory,
+    nvMem,
     updateMemory,
     resetMemory,
   };
