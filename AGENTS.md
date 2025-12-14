@@ -60,9 +60,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed data flow and adapter implem
 
 ### Data Interface
 
-- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MachineAdapter` interface
+- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MachineConnection` interface
 - **Contexts** (`src/context/`): `MachineStateContext` (positions), `SettingsContext` (persisted prefs)
-- **Hooks** (`src/hooks/`): `useDROMemory` (ABS/INC switching), `useSettings`, `useMachineState`
+- **Hooks** (`src/hooks/`): `useVolatileMemory` (ABS/INC switching), `useNonVolatileMemory` (persisted settings)
 - **URL config**: `?source=cncjs&host=localhost&port=8000` or `?source=mock`
 
 ### Component Structure

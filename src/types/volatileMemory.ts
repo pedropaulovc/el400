@@ -1,7 +1,6 @@
 /**
- * Machine data types for the EL400 DRO data interface.
- * These types provide a unified interface for receiving position and probe data
- * from various CNC controllers (CNCjs, LinuxCNC, etc.)
+ * Volatile memory types - runtime state that is lost on refresh.
+ * Combines machine state (from adapters) and DRO memory (internal state).
  */
 
 /**
@@ -33,7 +32,25 @@ export interface ProbeState {
 }
 
 /**
- * Unified machine state from any supported controller
+ * Supported controller types
+ */
+export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+
+/**
+ * Axis values for X, Y, Z
+ */
+export interface AxisValues {
+  X: number;
+  Y: number;
+  Z: number;
+}
+
+export type Axis = 'X' | 'Y' | 'Z';
+export type DatumMode = 'abs' | 'inc';
+
+/**
+ * Machine state from adapter (internal use)
+ * This is what adapters return - kept for adapter interface compatibility
  */
 export interface MachineState {
   /** Absolute machine coordinates */
@@ -49,11 +66,6 @@ export interface MachineState {
 }
 
 /**
- * Supported controller types
- */
-export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
-
-/**
  * Callback type for machine state updates
  */
 export interface MachineStateListener {
@@ -67,6 +79,39 @@ export interface DataSourceConfig {
   type: ControllerType;
   host: string;
   port: number;
+}
+
+/**
+ * Unified volatile memory - combines machine state and DRO memory
+ */
+export interface VolatileMemory {
+  // Machine state (from adapter)
+  machinePosition: MachinePosition;
+  workPosition?: MachinePosition;
+  probe: ProbeState;
+  connected: boolean;
+  controllerType: ControllerType;
+
+  // DRO memory (internal)
+  displayValues: AxisValues;
+  absolute: AxisValues;
+  incremental: AxisValues;
+  mode: DatumMode;
+  workOffsets: AxisValues;
+  activeAxis: Axis | null;
+}
+
+/**
+ * Actions for modifying volatile memory
+ */
+export interface VolatileMemoryActions {
+  toggleMode: () => void;
+  setMode: (mode: DatumMode) => void;
+  zeroAxis: (axis: Axis) => void;
+  zeroAll: () => void;
+  setAxisValue: (axis: Axis, value: number) => void;
+  selectAxis: (axis: Axis | null) => void;
+  halfAxis: (axis: Axis) => void;
 }
 
 /**
@@ -90,3 +135,5 @@ export function createDefaultMachineState(controllerType: ControllerType = 'manu
     controllerType,
   };
 }
+
+export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };

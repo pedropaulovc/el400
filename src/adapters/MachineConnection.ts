@@ -1,16 +1,16 @@
 /**
- * Machine adapter interface for connecting to CNC controllers.
+ * Machine connection interface for connecting to CNC controllers.
  * Implementations provide data from various sources (CNCjs, LinuxCNC, mock, etc.)
  */
 
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machine';
+import type { ControllerType, MachineState, MachineStateListener } from '../types/volatileMemory';
 
 /**
- * Abstract interface for machine data adapters.
- * Each adapter connects to a specific data source and normalizes
+ * Abstract interface for machine data connections.
+ * Each connection connects to a specific data source and normalizes
  * the data into the unified MachineState format.
  */
-export interface MachineAdapter {
+export interface MachineConnection {
   /**
    * Connect to the data source.
    * @returns Promise that resolves when connected
@@ -38,7 +38,7 @@ export interface MachineAdapter {
   getState(): MachineState;
 
   /**
-   * The type of controller this adapter connects to.
+   * The type of controller this connection connects to.
    */
   readonly controllerType: ControllerType;
 }

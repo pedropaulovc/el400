@@ -1,14 +1,10 @@
 import { Fragment } from "react";
 import DROButton from "./DROButton";
 import BeveledFrame from "./BeveledFrame";
+import { useVolatileMemory } from "../hooks/useVolatileMemory";
 
-interface AxisSelectionSectionProps {
-  activeAxis: 'X' | 'Y' | 'Z' | null;
-  onAxisSelect: (axis: 'X' | 'Y' | 'Z') => void;
-  onAxisZero: (axis: 'X' | 'Y' | 'Z') => void;
-}
-
-const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSelectionSectionProps) => {
+const AxisSelectionSection = () => {
+  const vMem = useVolatileMemory();
   const axes: ('X' | 'Y' | 'Z')[] = ['X', 'Y', 'Z'];
 
   return (
@@ -31,9 +27,9 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
               <DROButton
                 variant="dark"
                 size="axis"
-                onClick={() => onAxisSelect(axis)}
-                isActive={activeAxis === axis}
-                aria-pressed={activeAxis === axis}
+                onClick={() => vMem.selectAxis(axis)}
+                isActive={vMem.activeAxis === axis}
+                aria-pressed={vMem.activeAxis === axis}
                 data-testid={`axis-select-${axis.toLowerCase()}`}
               >
                 <span className="sr-only">Select {axis} axis</span>
@@ -44,7 +40,7 @@ const AxisSelectionSection = ({ activeAxis, onAxisSelect, onAxisZero }: AxisSele
               <DROButton
                 variant="dark"
                 size="square"
-                onClick={() => onAxisZero(axis)}
+                onClick={() => vMem.zeroAxis(axis)}
                 data-testid={`axis-zero-${axis.toLowerCase()}`}
               >
                 <span className="sr-only">Zero {axis} axis</span>

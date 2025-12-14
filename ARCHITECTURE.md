@@ -7,20 +7,23 @@ Technical documentation for developers working on the EL400 DRO simulator.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     EL400Simulator                              │
-│  (consumes MachineState via useMachineState hook)               │
+│  (consumes VolatileMemory via useVolatileMemory hook)           │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
-                              │
+          ┌───────────────────┴───────────────────┐
+          │                                       │
+┌─────────────────────────────┐   ┌─────────────────────────────┐
+│   VolatileMemoryContext     │   │  NonVolatileMemoryContext   │
+│  - Machine state from       │   │  - Persisted settings       │
+│    adapter                  │   │  - beepEnabled, defaultUnit │
+│  - DRO memory (ABS/INC)     │   │  - localStorage persistence │
+│  - activeAxis               │   │                             │
+│  - Connection management    │   │                             │
+└─────────────────────────────┘   └─────────────────────────────┘
+          ▲
+          │
 ┌─────────────────────────────────────────────────────────────────┐
-│                    MachineStateContext                          │
-│  - Provides current MachineState                                │
-│  - Manages active adapter                                       │
-│  - Handles connection lifecycle                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │
-┌─────────────────────────────────────────────────────────────────┐
-│                    MachineAdapter (Interface)                   │
+│                   MachineConnection (Interface)                  │
 │  - connect(): Promise<void>                                     │
 │  - disconnect(): void                                           │
 │  - subscribe(callback): unsubscribe                             │
@@ -35,9 +38,27 @@ Technical documentation for developers working on the EL400 DRO simulator.
 └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
+## Memory Model
+
+The DRO uses two types of memory:
+
+### Volatile Memory
+Runtime state that is lost on refresh. Includes:
+- Machine position from external adapter
+- DRO display values (ABS/INC modes)
+- Active axis selection
+- Work offsets
+- Connection state
+
+### Non-Volatile Memory
+Persisted settings saved to localStorage. Includes:
+- Default unit (inch/mm)
+- Beep enabled
+- Display precision
+
 ## Core Types
 
-### MachineState (`src/types/machine.ts`)
+### VolatileMemory (`src/types/volatileMemory.ts`)
 
 ```typescript
 interface MachinePosition {
@@ -51,35 +72,62 @@ interface ProbeState {
   triggered: boolean;  // Derived: pinState.includes('P')
 }
 
-interface MachineState {
-  position: MachinePosition;       // Absolute machine coordinates
-  workPosition?: MachinePosition;  // Work coordinates (if available)
+interface AxisValues {
+  X: number;
+  Y: number;
+  Z: number;
+}
+
+type Axis = 'X' | 'Y' | 'Z';
+type DatumMode = 'abs' | 'inc';
+type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+
+interface VolatileMemory {
+  // Machine state (from adapter)
+  machinePosition: MachinePosition;
+  workPosition?: MachinePosition;
   probe: ProbeState;
   connected: boolean;
   controllerType: ControllerType;
+
+  // DRO memory (internal)
+  displayValues: AxisValues;
+  absolute: AxisValues;
+  incremental: AxisValues;
+  mode: DatumMode;
+  workOffsets: AxisValues;
+  activeAxis: Axis | null;
 }
 
-type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+interface VolatileMemoryActions {
+  toggleMode: () => void;
+  setMode: (mode: DatumMode) => void;
+  zeroAxis: (axis: Axis) => void;
+  zeroAll: () => void;
+  setAxisValue: (axis: Axis, value: number) => void;
+  selectAxis: (axis: Axis | null) => void;
+  halfAxis: (axis: Axis) => void;
+}
 ```
 
-### DROSettings (`src/types/settings.ts`)
+### NonVolatileMemory (`src/types/nonVolatileMemory.ts`)
 
 ```typescript
-interface DROSettings {
+interface NonVolatileMemory {
   beepEnabled: boolean;        // Audio feedback on button press
-  defaultUnit: 'inch' | 'mm';  // Default unit on startup
+  defaultUnit: 'inch' | 'mm';  // Display unit
   precision: number;           // Decimal places (e.g., 4 for 0.0001)
 }
 ```
 
 ## Adapters
 
-### MachineAdapter Interface (`src/adapters/MachineAdapter.ts`)
+### MachineConnection Interface (`src/adapters/MachineConnection.ts`)
 
 All adapters implement this interface:
 
 ```typescript
-interface MachineAdapter {
+interface MachineConnection {
   connect(): Promise<void>;
   disconnect(): void;
   subscribe(listener: MachineStateListener): () => void;
@@ -109,24 +157,32 @@ Simulates machine movement for testing and development. Useful for:
 
 ## Hooks
 
-### useDROMemory (`src/hooks/useDROMemory.ts`)
+### useVolatileMemory (`src/hooks/useVolatileMemory.ts`)
 
-Manages separate ABS and INC value storage with automatic offset calculation:
+Convenience hook that returns the full volatile memory context:
 
 ```typescript
-const droMemory = useDROMemory(machineState);
+const vm = useVolatileMemory();
 
-// Returns:
+// Returns VolatileMemory & VolatileMemoryActions:
 {
-  displayValues: AxisValues;  // Current values based on mode
-  absolute: AxisValues;       // ABS values
-  incremental: AxisValues;    // INC values
-  mode: 'abs' | 'inc';
-  toggleMode: () => void;
-  setMode: (mode: DROMode) => void;
-  zeroAxis: (axis: Axis) => void;
-  zeroAll: () => void;
-  setAxisValue: (axis: Axis, value: number) => void;
+  machinePosition,
+  probe,
+  connected,
+  controllerType,
+  displayValues,
+  absolute,
+  incremental,
+  mode,
+  workOffsets,
+  activeAxis,
+  toggleMode,
+  setMode,
+  zeroAxis,
+  zeroAll,
+  setAxisValue,
+  selectAxis,
+  halfAxis,
 }
 ```
 
@@ -140,17 +196,33 @@ const droMemory = useDROMemory(machineState);
 - Zero resets counter to zero
 - Value entry sets counter directly
 
-### useSettings (`src/hooks/useSettings.ts`)
+### useNonVolatileMemory (`src/hooks/useNonVolatileMemory.ts`)
 
 Manages DRO settings with localStorage persistence:
 
 ```typescript
-const { settings, updateSettings, resetSettings } = useSettings();
+const { memory, updateMemory, resetMemory } = useNonVolatileMemory();
 ```
 
-- Loads from `localStorage['el400-dro-settings']` on mount
+- Loads from `localStorage['el400-dro-non-volatile-memory']` on mount
 - Debounces writes (300ms) to reduce I/O
 - Works in both standalone and iframe contexts
+
+### usePowerOnSequence (`src/hooks/usePowerOnSequence.ts`)
+
+Manages the power-on display sequence:
+
+```typescript
+const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(durationMs);
+```
+
+### useInputBuffer (`src/hooks/useInputBuffer.ts`)
+
+Manages numeric input accumulator for keypad entry:
+
+```typescript
+const { buffer, appendDigit, appendDecimal, toggleSign, clear, getValue } = useInputBuffer();
+```
 
 ### useDataSourceConfig (`src/hooks/useDataSourceConfig.ts`)
 
@@ -164,30 +236,39 @@ Parses URL parameters for data source configuration:
 
 ## Contexts
 
-### MachineStateContext (`src/context/MachineStateContext.tsx`)
+### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
 
-Provides machine state to the component tree:
+Provides machine state and DRO memory to the component tree:
 
 ```typescript
-interface MachineStateContextValue {
-  state: MachineState;
-  adapter: MachineAdapter | null;
+interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
+  adapter: MachineConnection | null;
   isConnecting: boolean;
   error: Error | null;
-  setAdapter: (adapter: MachineAdapter | null) => void;
+  setAdapter: (adapter: MachineConnection | null) => void;
 }
 ```
 
-### SettingsContext (`src/context/SettingsContext.tsx`)
+### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
 Provides settings to the component tree:
 
 ```typescript
-interface SettingsContextValue {
-  settings: DROSettings;
-  updateSettings: (partial: Partial<DROSettings>) => void;
-  resetSettings: () => void;
+interface NonVolatileMemoryContextValue {
+  memory: NonVolatileMemory;
+  updateMemory: (partial: Partial<NonVolatileMemory>) => void;
+  resetMemory: () => void;
 }
+```
+
+**Provider Order:** NonVolatileMemoryProvider must wrap VolatileMemoryProvider because the volatile memory context uses non-volatile settings for unit conversion.
+
+```tsx
+<NonVolatileMemoryProvider>
+  <VolatileMemoryProvider>
+    {children}
+  </VolatileMemoryProvider>
+</NonVolatileMemoryProvider>
 ```
 
 ## URL Configuration
@@ -226,9 +307,16 @@ The CncjsAdapter subscribes to these Socket.IO events:
 ```
 src/adapters/__tests__/MockAdapter.test.ts
 src/adapters/__tests__/CncjsAdapter.test.ts
-src/hooks/__tests__/useDROMemory.test.ts
-src/hooks/__tests__/useMachineState.test.tsx
-src/hooks/__tests__/useSettings.test.ts
+src/utils/__tests__/unitConversion.test.ts
+```
+
+### Integration Tests
+
+```
+src/components/PrimaryFunctionSection.integration.test.tsx
+src/components/SecondaryFunctionSection.integration.test.tsx
+src/components/AxisSelectionSection.integration.test.tsx
+src/components/UnitConversion.integration.test.tsx
 ```
 
 ### E2E Tests

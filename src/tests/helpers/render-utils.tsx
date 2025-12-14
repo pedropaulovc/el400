@@ -2,6 +2,8 @@ import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
+import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 
 /**
  * Custom render function that includes all necessary providers
@@ -42,7 +44,11 @@ export function renderWithProviders(
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
       <BrowserRouter>
-        {children}
+        <NonVolatileMemoryProvider>
+          <VolatileMemoryProvider>
+            {children}
+          </VolatileMemoryProvider>
+        </NonVolatileMemoryProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

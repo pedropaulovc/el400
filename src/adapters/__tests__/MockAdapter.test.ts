@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MockAdapter } from '../MockAdapter';
-import type { MachineState } from '../../types/machine';
+import type { MachineState } from '../../types/volatileMemory';
 
 describe('MockAdapter', () => {
   let adapter: MockAdapter;

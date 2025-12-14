@@ -3,9 +3,9 @@
  * Simulates machine position updates without real hardware.
  */
 
-import type { MachineAdapter } from './MachineAdapter';
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machine';
-import { createDefaultMachineState, createProbeState } from '../types/machine';
+import type { MachineConnection } from './MachineConnection';
+import type { ControllerType, MachineState, MachineStateListener } from '../types/volatileMemory';
+import { createDefaultMachineState, createProbeState } from '../types/volatileMemory';
 
 export interface MockAdapterOptions {
   /** Update interval in milliseconds (default: 100ms) */
@@ -18,7 +18,7 @@ export interface MockAdapterOptions {
   movementSpeed?: number;
 }
 
-export class MockAdapter implements MachineAdapter {
+export class MockAdapter implements MachineConnection {
   readonly controllerType: ControllerType = 'mock';
 
   private state: MachineState;
