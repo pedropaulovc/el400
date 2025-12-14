@@ -21,7 +21,7 @@ on:
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'copilot-swe-agent'
+    if: github.event.pull_request.user.login == 'copilot-swe-agent[bot]'
     steps:
       - name: Checkout repository
         timeout-minutes: 1
@@ -61,8 +61,8 @@ jobs:
             if [[ "$name" == "pedropaulovc" ]]; then
               has_pedropaulovc=true
             fi
-            # Exact match for copilot-swe-agent
-            if [[ "$name" == "copilot-swe-agent" ]]; then
+            # Exact match for copilot-swe-agent[bot]
+            if [[ "$name" == "copilot-swe-agent[bot]" ]]; then
               has_copilot=true
             fi
           done < /tmp/contributors.txt
