@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect } from "storybook/test";
 import SevenSegmentDigit from "./SevenSegmentDigit";
 
 const meta = {
@@ -117,14 +117,16 @@ export const RendersAllSegmentsAndDecimal: Story = {
     showDecimal: true,
   },
   play: async ({ canvasElement }) => {
+    const digit = canvasElement.querySelector(".seven-segment-digit");
+    await expect(digit).toBeInTheDocument();
 
-    const svg = canvasElement.querySelector("svg");
+    // Check all 7 segments are on for digit 8
+    const segmentsOn = canvasElement.querySelectorAll(".seg-on");
+    await expect(segmentsOn.length).toBe(8); // 7 segments + decimal
 
-    await expect(svg).toBeInTheDocument();
-    const polygons = canvasElement.querySelectorAll("polygon");
-    await expect(polygons.length).toBe(7);
-    const circle = canvasElement.querySelector("circle");
-    await expect(circle).toBeInTheDocument();
+    // Check decimal point is on
+    const decimalOn = canvasElement.querySelector(".seg-dp.seg-on");
+    await expect(decimalOn).toBeInTheDocument();
   },
 };
 
