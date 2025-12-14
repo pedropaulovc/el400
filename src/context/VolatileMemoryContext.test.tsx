@@ -593,5 +593,89 @@ describe('VolatileMemoryContext', () => {
 
       expect(result.current.adapter).toBe(adapter);
     });
+
+    it('setAxisValue adjusts work offset when connected', async () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapperWithAdapter(adapter),
+      });
+
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
+      });
+
+      // Set machine to position 100
+      act(() => {
+        adapter.setPosition(100, 200, 300);
+      });
+
+      await waitFor(() => {
+        expect(result.current.machinePosition.x).toBe(100);
+      });
+
+      // Set X axis value to 50 (should create offset of 100 - 50*25.4 in mm)
+      // Since we're in inch mode by default, 50 inches = 1270 mm
+      // offset = machinePos - valueMm = 100 - 1270 = -1170
+      act(() => {
+        result.current.setAxisValue('X', 50);
+      });
+
+      // The work offset should be adjusted so display shows the set value
+      expect(result.current.workOffsets.X).toBe(100 - 50 * 25.4);
+
+      // Set Y axis value (tests Y branch)
+      act(() => {
+        result.current.setAxisValue('Y', 25);
+      });
+      expect(result.current.workOffsets.Y).toBe(200 - 25 * 25.4);
+
+      // Set Z axis value (tests Z branch)
+      act(() => {
+        result.current.setAxisValue('Z', 10);
+      });
+      expect(result.current.workOffsets.Z).toBe(300 - 10 * 25.4);
+    });
+
+    it('halfAxis adjusts work offset when connected', async () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapperWithAdapter(adapter),
+      });
+
+      await waitFor(() => {
+        expect(result.current.connected).toBe(true);
+      });
+
+      // Set machine to position 100
+      act(() => {
+        adapter.setPosition(100, 200, 300);
+      });
+
+      await waitFor(() => {
+        expect(result.current.machinePosition.x).toBe(100);
+      });
+
+      // Current display value is 100 (machine pos - 0 offset)
+      // Halving should adjust offset so display shows 50
+      // New offset = machinePos - halfValue = 100 - 50 = 50
+      act(() => {
+        result.current.halfAxis('X');
+      });
+
+      expect(result.current.workOffsets.X).toBe(50);
+      expect(result.current.displayValues.X).toBe(50);
+
+      // Test Y axis (200 -> 100)
+      act(() => {
+        result.current.halfAxis('Y');
+      });
+      expect(result.current.workOffsets.Y).toBe(100);
+      expect(result.current.displayValues.Y).toBe(100);
+
+      // Test Z axis (300 -> 150)
+      act(() => {
+        result.current.halfAxis('Z');
+      });
+      expect(result.current.workOffsets.Z).toBe(150);
+      expect(result.current.displayValues.Z).toBe(150);
+    });
   });
 });
