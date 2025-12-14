@@ -5,35 +5,16 @@ import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import { useVolatileMemory, type Axis } from "../hooks/useVolatileMemory";
-import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { usePowerOnSequence } from "../hooks/usePowerOnSequence";
 
-const noop = () => {};
 export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 export const POWER_ON_DISPLAY_DURATION_MS = 1000;
 
 const EL400Simulator = () => {
-  // Unified volatile memory (machine state + DRO memory)
   const vMem = useVolatileMemory();
-
-  // Non-volatile memory (persisted settings)
-  const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
-
-  // Power-on sequence
   const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
-
-  // Handlers
-  const handleToggleUnit = () => {
-    updateNvMem({ defaultUnit: nvMem.defaultUnit === 'inch' ? 'mm' : 'inch' });
-  };
-
-  const handleHalf = () => {
-    if (vMem.activeAxis) {
-      vMem.halfAxis(vMem.activeAxis);
-    }
-  };
 
   const handleClear = () => {
     if (showPowerOnMessage) {
@@ -68,43 +49,15 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <AxisDisplaySection
-            axisValues={axisDisplayValues}
-            isAbs={vMem.mode === 'abs'}
-            isInch={nvMem.defaultUnit === 'inch'}
-          />
-
-          <AxisSelectionSection
-            activeAxis={vMem.activeAxis}
-            onAxisSelect={vMem.selectAxis}
-            onAxisZero={vMem.zeroAxis}
-          />
-
+          <AxisDisplaySection axisValues={axisDisplayValues} />
+          <AxisSelectionSection />
           <KeypadSection onClear={handleClear} />
         </div>
 
         {/* Bottom section */}
         <div className="mt-5 flex items-end justify-between">
-          <PrimaryFunctionSection
-            isInch={nvMem.defaultUnit === 'inch'}
-            isAbs={vMem.mode === 'abs'}
-            onToggleUnit={handleToggleUnit}
-            onSettings={noop}
-            onToggleAbs={vMem.toggleMode}
-            onCenter={noop}
-            onZeroAll={vMem.zeroAll}
-          />
-
-          <SecondaryFunctionSection
-            onBoltCircle={noop}
-            onArcContour={noop}
-            onAngleHole={noop}
-            onGridHole={noop}
-            onCalculator={noop}
-            onHalf={handleHalf}
-            onSDM={noop}
-            onFunction={noop}
-          />
+          <PrimaryFunctionSection />
+          <SecondaryFunctionSection />
         </div>
       </div>
 

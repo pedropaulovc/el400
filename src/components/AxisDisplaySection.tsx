@@ -3,6 +3,8 @@ import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
+import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 
 type AxisDisplayValue = number | string;
 
@@ -14,8 +16,6 @@ interface AxisValues {
 
 interface AxisDisplaySectionProps {
   axisValues: AxisValues;
-  isAbs: boolean;
-  isInch: boolean;
 }
 
 interface AxisDisplayProps {
@@ -94,9 +94,13 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
 
 const AxisDisplaySection = ({
   axisValues,
-  isAbs,
-  isInch,
 }: AxisDisplaySectionProps) => {
+  const vMem = useVolatileMemory();
+  const { nvMem } = useNonVolatileMemoryContext();
+
+  const isAbs = vMem.mode === 'abs';
+  const isInch = nvMem.defaultUnit === 'inch';
+
   // Convert values from mm (internal storage) to display unit (only for numeric values)
   const unit = isInch ? 'inch' : 'mm';
   const convertValue = (value: AxisDisplayValue): AxisDisplayValue => {
