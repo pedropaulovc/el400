@@ -1,0 +1,139 @@
+name: Auto Approve Workflows
+
+# This workflow uses pull_request_target to have write access to approve workflows.
+# Security measures include:
+# - Strict filtering by PR author (copilot-swe-agent)
+# - SHA format validation before any git operations
+# - Exact username matching for contributors (no wildcards)
+# - No untrusted code execution
+
+permissions:
+  actions: write
+  pull-requests: read
+  contents: read
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'copilot-swe-agent'
+    steps:
+      - name: Checkout repository
+        timeout-minutes: 1
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Validate SHA
+        id: validate_sha
+        timeout-minutes: 1
+        run: |
+          # Validate SHA format to prevent injection
+          if ! [[ "${{ github.event.pull_request.head.sha }}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid SHA format: ${{ github.event.pull_request.head.sha }}"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+          echo "SHA validation successful"
+
+      - name: Check contributors
+        if: steps.validate_sha.outputs.valid == 'true'
+        id: check_contributors
+        timeout-minutes: 1
+        run: |
+          # Get all contributors to the PR
+          git log --format='%an|%ae' "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}" | sort -u > /tmp/contributors.txt
+          
+          # Check if both required contributors are present
+          has_pedropaulovc=false
+          has_copilot=false
+          
+          while IFS='|' read -r name email; do
+            echo "Contributor: $name <$email>"
+            # Exact match for username or check for official email domains
+            if [[ "$name" == "pedropaulovc" ]]; then
+              has_pedropaulovc=true
+            fi
+            # Exact match for copilot-swe-agent
+            if [[ "$name" == "copilot-swe-agent" ]]; then
+              has_copilot=true
+            fi
+          done < /tmp/contributors.txt
+          
+          if [[ "$has_pedropaulovc" == "true" ]] && [[ "$has_copilot" == "true" ]]; then
+            echo "Both required contributors found"
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Required contributors not found"
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get pending workflow runs
+        if: steps.check_contributors.outputs.approved == 'true'
+        id: get_runs
+        timeout-minutes: 1
+        run: |
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get workflow runs for this PR that are waiting for approval (with pagination)
+          RUNS=$(gh api \
+            --paginate \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ github.repository }}/actions/runs?event=pull_request&status=action_required" \
+            --jq ".workflow_runs[] | select(.head_sha == \"$HEAD_SHA\") | .id")
+          
+          echo "Workflow runs pending approval:"
+          echo "$RUNS"
+          
+          # Save to output
+          {
+            echo "run_ids<<EOF"
+            echo "$RUNS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Approve workflow runs
+        if: steps.check_contributors.outputs.approved == 'true'
+        timeout-minutes: 2
+        run: |
+          if [ -z "${{ steps.get_runs.outputs.run_ids }}" ]; then
+            echo "No workflow runs pending approval"
+            exit 0
+          fi
+          
+          # Approve each workflow run
+          while IFS= read -r run_id; do
+            if [ -n "$run_id" ]; then
+              echo "Approving workflow run: $run_id"
+              
+              # Try to approve and capture response
+              if RESPONSE=$(gh api \
+                --method POST \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/repos/${{ github.repository }}/actions/runs/$run_id/approve" 2>&1); then
+                echo "Successfully approved workflow run $run_id"
+              else
+                # Parse error message
+                if echo "$RESPONSE" | grep -q "422"; then
+                  echo "Workflow run $run_id is already approved or not in pending state"
+                else
+                  echo "Failed to approve run $run_id: $RESPONSE"
+                fi
+              fi
+            fi
+          done <<< "${{ steps.get_runs.outputs.run_ids }}"
+          
+          echo "Workflow approval complete"
+        env:
+          GH_TOKEN: ${{ github.token }}
