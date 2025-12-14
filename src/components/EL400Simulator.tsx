@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import AxisDisplaySection from "./AxisDisplaySection";
@@ -12,6 +12,9 @@ import { useSettingsContext } from "../context/SettingsContext";
 import { fromAnyUnitToMm } from "../utils/unitConversion";
 
 const noop = () => {};
+export const MODEL_NUMBER = 'EL400';
+export const SOFTWARE_VERSION = 'vEr 1.0.0';
+export const POWER_ON_DISPLAY_DURATION_MS = 1000;
 
 const EL400Simulator = () => {
   // Get machine state from context (may be from CNCjs, LinuxCNC, mock, or manual)
@@ -26,6 +29,43 @@ const EL400Simulator = () => {
   // Local UI state
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null);
   const [inputBuffer, setInputBuffer] = useState('');
+  const powerOnTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const shouldBypassPowerOn = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const powerOnParam = params.get('powerOn');
+
+      if (powerOnParam === 'force') {
+        return false;
+      }
+
+      if (powerOnParam === 'skip') {
+        return true;
+      }
+    }
+
+    return import.meta.env.MODE === 'test';
+  }, []);
+
+  const [showPowerOnMessage, setShowPowerOnMessage] = useState(!shouldBypassPowerOn);
+
+  useEffect(() => {
+    if (!showPowerOnMessage) {
+      return;
+    }
+
+    powerOnTimerRef.current = setTimeout(() => {
+      setShowPowerOnMessage(false);
+    }, POWER_ON_DISPLAY_DURATION_MS);
+
+    return () => {
+      if (powerOnTimerRef.current) {
+        clearTimeout(powerOnTimerRef.current);
+        powerOnTimerRef.current = null;
+      }
+    };
+  }, [showPowerOnMessage]);
 
   const handleAxisSelect = (axis: Axis) => {
     setActiveAxis(axis);
@@ -65,8 +105,16 @@ const EL400Simulator = () => {
   }, [activeAxis]);
 
   const handleClear = useCallback(() => {
+    if (showPowerOnMessage) {
+      if (powerOnTimerRef.current) {
+        clearTimeout(powerOnTimerRef.current);
+        powerOnTimerRef.current = null;
+      }
+      setShowPowerOnMessage(false);
+      return;
+    }
     setInputBuffer('');
-  }, []);
+  }, [showPowerOnMessage]);
 
   const handleEnter = useCallback(() => {
     if (!activeAxis || !inputBuffer) {
@@ -101,6 +149,10 @@ const EL400Simulator = () => {
     }
   };
 
+  const axisDisplayValues = showPowerOnMessage
+    ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
+    : droMemory.displayValues;
+
   return (
     <div
       className="relative rounded-2xl select-none overflow-hidden"
@@ -125,7 +177,7 @@ const EL400Simulator = () => {
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
           <AxisDisplaySection
-            axisValues={droMemory.displayValues}
+            axisValues={axisDisplayValues}
             isAbs={droMemory.mode === 'abs'}
             isInch={settings.defaultUnit === 'inch'}
           />

@@ -1,12 +1,15 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
+import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 
+type AxisDisplayValue = number | string;
+
 interface AxisValues {
-  X: number;
-  Y: number;
-  Z: number;
+  X: AxisDisplayValue;
+  Y: AxisDisplayValue;
+  Z: AxisDisplayValue;
 }
 
 interface AxisDisplaySectionProps {
@@ -16,12 +19,14 @@ interface AxisDisplaySectionProps {
 }
 
 interface AxisDisplayProps {
-  value: number;
+  value: AxisDisplayValue;
   axis: 'X' | 'Y' | 'Z';
 }
 
+const DISPLAY_WIDTH = 8;
+
 const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
-  const formatValue = (num: number): { char: string; hasDecimal: boolean }[] => {
+  const formatNumberValue = (num: number): { char: string; hasDecimal: boolean }[] => {
     const isNegative = num < 0;
     const absNum = Math.abs(num);
     const formatted = absNum.toFixed(4);
@@ -47,7 +52,28 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     return result;
   };
 
-  const digits = formatValue(value);
+  const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] => {
+    const raw: { char: string; hasDecimal: boolean }[] = [];
+
+    for (const char of text) {
+      if (char === '.') {
+        if (raw.length > 0) {
+          raw[raw.length - 1].hasDecimal = true;
+        }
+        continue;
+      }
+      raw.push({ char, hasDecimal: false });
+    }
+
+    const truncated = raw.slice(-DISPLAY_WIDTH);
+    const padded = Array.from({ length: DISPLAY_WIDTH - truncated.length }, () => ({ char: ' ', hasDecimal: false }));
+
+    return padded.concat(truncated);
+  };
+
+  const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
+    ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
+    : formatTextValue(value as string);
 
   return (
     <div
@@ -71,13 +97,20 @@ const AxisDisplaySection = ({
   isAbs,
   isInch,
 }: AxisDisplaySectionProps) => {
-  // Convert values from mm (internal storage) to display unit
+  // Convert values from mm (internal storage) to display unit (only for numeric values)
   const unit = isInch ? 'inch' : 'mm';
-  const displayValues = {
-    X: fromMmToAnyUnit(axisValues.X, unit),
-    Y: fromMmToAnyUnit(axisValues.Y, unit),
-    Z: fromMmToAnyUnit(axisValues.Z, unit),
+  const convertValue = (value: AxisDisplayValue): AxisDisplayValue => {
+    return typeof value === 'number' ? fromMmToAnyUnit(value, unit) : value;
   };
+  
+  const displayValues = {
+    X: convertValue(axisValues.X),
+    Y: convertValue(axisValues.Y),
+    Z: convertValue(axisValues.Z),
+  };
+
+  const formatForScreenReader = (value: AxisDisplayValue) =>
+    typeof value === 'number' ? value.toFixed(4) : value;
 
   return (
     <div className="flex flex-col">
@@ -103,19 +136,19 @@ const AxisDisplaySection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {displayValues.X.toFixed(4)}
+                  {formatForScreenReader(displayValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {displayValues.Y.toFixed(4)}
+                  {formatForScreenReader(displayValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {displayValues.Z.toFixed(4)}
+                  {formatForScreenReader(displayValues.Z)}
                 </td>
               </tr>
             </tbody>
