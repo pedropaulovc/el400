@@ -64,33 +64,33 @@ test.describe('US-034: Forced Colors Mode', () => {
     await page.goto('/');
 
     // Wait for the display to render
-    await page.waitForSelector('svg polygon');
+    await page.waitForSelector('.seven-segment-digit');
 
-    const litSegments = page.locator('.segment-on');
-    const offSegments = page.locator('.segment-off');
+    const litSegments = page.locator('.seg-on');
+    const offSegments = page.locator('.seg-off');
 
     await expect(litSegments.first()).toBeVisible();
     await expect(offSegments.first()).toBeAttached();
 
-    // Get computed fill colors
-    const litFill = await litSegments.first().evaluate((el) => {
-      return window.getComputedStyle(el).fill;
+    // Get computed background colors (CSS-based segments use background-color)
+    const litBg = await litSegments.first().evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
     });
 
-    const offFill = await offSegments.first().evaluate((el) => {
-      return window.getComputedStyle(el).fill;
+    const offBg = await offSegments.first().evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
     });
 
-    // Get background color for contrast calculation with transparent
+    // Get parent background color for contrast calculation with transparent
     const bgColor = await page.evaluate(() => {
-      const display = document.querySelector('.segment-on')?.closest('svg')?.parentElement;
+      const display = document.querySelector('.seg-on')?.closest('.seven-segment-digit')?.parentElement;
       return display ? window.getComputedStyle(display).backgroundColor : 'rgb(0, 0, 0)';
     });
 
-    const litRgb = parseColor(litFill);
+    const litRgb = parseColor(litBg);
     // For transparent (alpha=0), use background color for contrast calculation
-    const isTransparent = offFill === 'none' || offFill === 'transparent' || offFill.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/);
-    const offRgb = isTransparent ? parseColor(bgColor) : parseColor(offFill);
+    const isTransparent = offBg === 'none' || offBg === 'transparent' || offBg.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/);
+    const offRgb = isTransparent ? parseColor(bgColor) : parseColor(offBg);
 
     const contrastRatio = getContrastRatio(litRgb, offRgb);
 
@@ -103,11 +103,11 @@ test.describe('US-034: Forced Colors Mode', () => {
     await page.goto('/');
 
     // Wait for display to render
-    await page.waitForSelector('svg polygon');
+    await page.waitForSelector('.seven-segment-digit');
 
-    // Verify lit segments have segment-on class
-    const litSegments = page.locator('polygon.segment-on');
-    const offSegments = page.locator('polygon.segment-off');
+    // Verify lit segments have seg-on class
+    const litSegments = page.locator('span.seg-on');
+    const offSegments = page.locator('span.seg-off');
 
     // For value 0.0000, we expect many segments to be lit
     const litCount = await litSegments.count();
@@ -116,8 +116,7 @@ test.describe('US-034: Forced Colors Mode', () => {
     expect(litCount).toBeGreaterThan(0);
     expect(offCount).toBeGreaterThan(0);
 
-    // Total segments should be 7 per digit × 8 digits × 3 axes = 168
-    // Plus decimal points: 8 × 3 = 24 (circles, not polygons)
+    // Total segments should be 8 per digit (7 segments + decimal) × 8 digits × 3 axes = 192
     expect(litCount + offCount).toBeGreaterThan(100);
   });
 
@@ -272,31 +271,31 @@ test.describe('US-034: Forced Colors Mode', () => {
     await page.goto('/');
 
     // Wait for the display to render
-    await page.waitForSelector('svg polygon');
+    await page.waitForSelector('.seven-segment-digit');
 
-    const offSegments = page.locator('.segment-off');
+    const offSegments = page.locator('.seg-off');
     await expect(offSegments.first()).toBeAttached();
 
-    // Get off segment fill color
-    const offFill = await offSegments.first().evaluate((el) => {
-      return window.getComputedStyle(el).fill;
+    // Get off segment background color (CSS-based segments use background-color)
+    const offBg = await offSegments.first().evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
     });
 
-    // Get background color
+    // Get parent background color
     const bgColor = await page.evaluate(() => {
-      const display = document.querySelector('.segment-off')?.closest('svg')?.parentElement;
+      const display = document.querySelector('.seg-off')?.closest('.seven-segment-digit')?.parentElement;
       return display ? window.getComputedStyle(display).backgroundColor : 'rgb(0, 0, 0)';
     });
 
     // Check if segment is transparent (blends with background)
-    const isTransparent = offFill === 'none' || offFill === 'transparent' || !!offFill.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/);
+    const isTransparent = offBg === 'none' || offBg === 'transparent' || !!offBg.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/);
 
     if (isTransparent) {
       // Transparent segments automatically have 1:1 contrast
       expect(isTransparent).toBe(true);
     } else {
       // If not transparent, check contrast is close to 1:1
-      const offRgb = parseColor(offFill);
+      const offRgb = parseColor(offBg);
       const bgRgb = parseColor(bgColor);
       const contrastRatio = getContrastRatio(offRgb, bgRgb);
 
@@ -315,7 +314,7 @@ test.describe('US-034: Forced Colors Mode', () => {
     await page.goto('/');
 
     // Wait for the display to render
-    await page.waitForSelector('svg polygon');
+    await page.waitForSelector('.seven-segment-digit');
 
     // Get the main DRO container (outermost div with the simulator)
     const droContainer = page.locator('.overflow-hidden.rounded-2xl').first();

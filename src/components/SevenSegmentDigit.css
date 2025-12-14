@@ -1,0 +1,86 @@
+.seven-segment-digit {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 68 / 79.8;
+  transform: skewX(-10deg);
+}
+
+.seven-segment-digit > span {
+  position: absolute;
+}
+
+.seven-segment-digit > span:not(.seg-dp) {
+  inset: 0;
+}
+
+/* Colors */
+.seg-on {
+  background-color: hsl(120, 100%, 50%);
+  filter: drop-shadow(0 0 2px hsl(120, 100%, 50%));
+}
+
+.seg-off {
+  background-color: hsl(120, 100%, 8%);
+}
+
+/* Segment shapes using clip-path polygon
+   Coordinates converted from SVG viewBox "-8 0 68 79.8" to percentages:
+   x% = (x + 8) / 68 * 100
+   y% = y / 79.8 * 100
+*/
+
+/* Segment A (top) */
+.seg-a {
+  clip-path: polygon(17.65% 2.86%, 70.59% 2.86%, 61.76% 14.29%, 26.47% 14.29%);
+}
+
+/* Segment B (top right) */
+.seg-b {
+  clip-path: polygon(72.06% 5.71%, 72.06% 47.14%, 63.24% 40%, 63.24% 15.71%);
+}
+
+/* Segment C (bottom right) */
+.seg-c {
+  clip-path: polygon(72.06% 52.86%, 72.06% 94.29%, 63.24% 84.29%, 63.24% 60%);
+}
+
+/* Segment D (bottom) */
+.seg-d {
+  clip-path: polygon(17.65% 97.14%, 70.59% 97.14%, 61.76% 85.71%, 26.47% 85.71%);
+}
+
+/* Segment E (bottom left) */
+.seg-e {
+  clip-path: polygon(16.18% 52.86%, 16.18% 94.29%, 25% 84.29%, 25% 60%);
+}
+
+/* Segment F (top left) */
+.seg-f {
+  clip-path: polygon(16.18% 5.71%, 16.18% 47.14%, 25% 40%, 25% 15.71%);
+}
+
+/* Segment G (middle) - hexagon */
+.seg-g {
+  clip-path: polygon(17.65% 50%, 26.47% 44.29%, 61.76% 44.29%, 70.59% 50%, 61.76% 55.71%, 26.47% 55.71%);
+}
+
+/* Decimal point - circle positioned at bottom right */
+.seg-dp {
+  /* Position: cx=47, cy=74.1, r=4 in SVG coords */
+  right: 7%;
+  bottom: 3%;
+  width: 12%;
+  height: 10%;
+  border-radius: 50%;
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .seg-on {
+    background-color: CanvasText;
+    filter: none;
+  }
+  .seg-off {
+    background-color: transparent;
+  }
+}
