@@ -30,6 +30,7 @@ npm run test
 npm run test:ui
 npm run test:watch
 npm run test:coverage
+npm run test:storybook
 npm run test:e2e
 npm run test:e2e:headed
 npm run test:e2e:ui
@@ -39,7 +40,6 @@ npm run test:all
 # Storybook
 npm run storybook
 npm run build-storybook
-npm run test-storybook
 ```
 
 ## Testing Strategy
