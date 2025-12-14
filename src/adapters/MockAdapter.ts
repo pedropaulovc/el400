@@ -4,8 +4,8 @@
  */
 
 import type { MachineAdapter } from './MachineAdapter';
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machine';
-import { createDefaultMachineState, createProbeState } from '../types/machine';
+import type { ControllerType, MachineState, MachineStateListener } from '../types/volatileMemory';
+import { createDefaultMachineState, createProbeState } from '../types/volatileMemory';
 
 export interface MockAdapterOptions {
   /** Update interval in milliseconds (default: 100ms) */

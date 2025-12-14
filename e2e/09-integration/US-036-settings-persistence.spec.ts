@@ -65,7 +65,7 @@ test.describe('US-036: Settings Persistence', () => {
 
     // Check localStorage
     const settings = await page.evaluate(() => {
-      return localStorage.getItem('el400-dro-settings');
+      return localStorage.getItem('el400-dro-non-volatile-memory');
     });
 
     expect(settings).toBeTruthy();
@@ -79,7 +79,7 @@ test.describe('US-036: Settings Persistence', () => {
   test('should handle corrupted localStorage gracefully', async ({ page, dro }) => {
     // Set corrupted localStorage
     await page.evaluate(() => {
-      localStorage.setItem('el400-dro-settings', 'invalid json {{{');
+      localStorage.setItem('el400-dro-non-volatile-memory', 'invalid json {{{');
     });
 
     // Reload page

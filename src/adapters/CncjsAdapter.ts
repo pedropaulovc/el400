@@ -5,8 +5,8 @@
 
 import { io, Socket } from 'socket.io-client';
 import type { MachineAdapter, MachineStateListener } from './MachineAdapter';
-import type { MachineState, MachinePosition } from '../types/machine';
-import { createProbeState, createDefaultMachineState } from '../types/machine';
+import type { MachineState, MachinePosition } from '../types/volatileMemory';
+import { createProbeState, createDefaultMachineState } from '../types/volatileMemory';
 
 export interface CncjsAdapterOptions {
   host: string;
