@@ -1,7 +1,7 @@
 # US-001: First Use and Power-Up Display
 
 **Manual Reference:** Section 5.4 Power Up
-**Priority:** High
+**Priority:** Low
 
 ## User Story
 **As a** machine operator
@@ -9,8 +9,8 @@
 **So that** I can verify the system is starting up correctly
 
 ## Acceptance Criteria
-- [ ] **AC 1.1:** When the DRO is powered ON, it displays the model number (e.g., `EL404-S`) momentarily.
-- [ ] **AC 1.2:** Following the model number, it displays the software version (e.g., `vEr 1.0.0`).
+- [ ] **AC 1.1:** When the DRO is powered ON, it displays the model number (e.g., `EL400`) momentarily in X axis.
+- [ ] **AC 1.2:** Under the model number, it displays the software version (e.g., `vEr 1.0.0`) in Y axis.
 - [ ] **AC 1.3:** The power-up message can be bypassed by pressing the `C` key.
 - [ ] **AC 1.4:** After the startup sequence, the DRO enters the normal counting display.
 
@@ -20,7 +20,7 @@ describe('US-001: First Use and Power-Up', () => {
   test('Power up sequence displays model and version', async () => {
     // Simulate Power ON
     await dro.powerOn();
-    await expect(dro.display).toHaveText('EL404-S');
+    await expect(dro.display).toHaveText('EL400');
     await dro.wait(1000); // Wait for potential delay
     await expect(dro.display).toHaveText('vEr 1.0.0');
     await dro.wait(1000);
@@ -32,7 +32,9 @@ describe('US-001: First Use and Power-Up', () => {
     await dro.powerOn();
     await dro.pressKey('C');
     // Expect immediate transition to counting screen (e.g., 0.000)
-    await expect(dro.display.xAxis).toBeVisible();
+    await expect(dro.display.xAxis).toHavePureNumber(0.0000)
+    await expect(dro.display.yAxis).toHavePureText("")
+    await expect(dro.display.zAxis).toHavePureText("")
   });
 });
 ```
