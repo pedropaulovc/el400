@@ -1,21 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import PrimaryFunctionSection from './PrimaryFunctionSection';
 
 describe('PrimaryFunctionSection', () => {
-  const defaultProps = {
-    isInch: true,
-    isAbs: true,
-    onToggleUnit: vi.fn(),
-    onSettings: vi.fn(),
-    onToggleAbs: vi.fn(),
-    onCenter: vi.fn(),
-    onZeroAll: vi.fn(),
-  };
-
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      render(<PrimaryFunctionSection {...defaultProps} />);
+      render(<PrimaryFunctionSection />);
 
       const heading = screen.getByRole('heading', { name: 'Primary functions' });
       expect(heading).toBeInTheDocument();
@@ -23,7 +13,7 @@ describe('PrimaryFunctionSection', () => {
     });
 
     it('has sr-only text for all buttons', () => {
-      render(<PrimaryFunctionSection {...defaultProps} />);
+      render(<PrimaryFunctionSection />);
 
       expect(screen.getByTestId('btn-settings').querySelector('.sr-only')).toHaveTextContent('Settings');
       expect(screen.getByTestId('btn-abs-inc').querySelector('.sr-only')).toHaveTextContent('Abs/Inc');

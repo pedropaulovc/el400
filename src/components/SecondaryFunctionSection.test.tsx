@@ -1,22 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import SecondaryFunctionSection from './SecondaryFunctionSection';
 
 describe('SecondaryFunctionSection', () => {
-  const defaultProps = {
-    onBoltCircle: vi.fn(),
-    onArcContour: vi.fn(),
-    onAngleHole: vi.fn(),
-    onGridHole: vi.fn(),
-    onCalculator: vi.fn(),
-    onHalf: vi.fn(),
-    onSDM: vi.fn(),
-    onFunction: vi.fn(),
-  };
-
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      render(<SecondaryFunctionSection {...defaultProps} />);
+      render(<SecondaryFunctionSection />);
 
       const heading = screen.getByRole('heading', { name: 'Secondary functions' });
       expect(heading).toBeInTheDocument();
@@ -24,7 +13,7 @@ describe('SecondaryFunctionSection', () => {
     });
 
     it('has sr-only text for all buttons', () => {
-      render(<SecondaryFunctionSection {...defaultProps} />);
+      render(<SecondaryFunctionSection />);
 
       expect(screen.getByTestId('btn-bolt-circle').querySelector('.sr-only')).toHaveTextContent('Bolt hole');
       expect(screen.getByTestId('btn-arc-contour').querySelector('.sr-only')).toHaveTextContent('Arc contour');
