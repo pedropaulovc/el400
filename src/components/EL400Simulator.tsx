@@ -16,22 +16,22 @@ export const POWER_ON_DISPLAY_DURATION_MS = 1000;
 
 const EL400Simulator = () => {
   // Unified volatile memory (machine state + DRO memory)
-  const vm = useVolatileMemory();
+  const vMem = useVolatileMemory();
 
   // Non-volatile memory (persisted settings)
-  const { memory, updateMemory } = useNonVolatileMemoryContext();
+  const { memory: nvMem, updateMemory } = useNonVolatileMemoryContext();
 
   // Power-on sequence
   const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
 
   // Handlers
   const handleToggleUnit = () => {
-    updateMemory({ defaultUnit: memory.defaultUnit === 'inch' ? 'mm' : 'inch' });
+    updateMemory({ defaultUnit: nvMem.defaultUnit === 'inch' ? 'mm' : 'inch' });
   };
 
   const handleHalf = () => {
-    if (vm.activeAxis) {
-      vm.halfAxis(vm.activeAxis);
+    if (vMem.activeAxis) {
+      vMem.halfAxis(vMem.activeAxis);
     }
   };
 
@@ -43,7 +43,7 @@ const EL400Simulator = () => {
 
   const axisDisplayValues = showPowerOnMessage
     ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
-    : vm.displayValues;
+    : vMem.displayValues;
 
   return (
     <div
@@ -70,14 +70,14 @@ const EL400Simulator = () => {
         <div className="flex gap-5 items-stretch">
           <AxisDisplaySection
             axisValues={axisDisplayValues}
-            isAbs={vm.mode === 'abs'}
-            isInch={memory.defaultUnit === 'inch'}
+            isAbs={vMem.mode === 'abs'}
+            isInch={nvMem.defaultUnit === 'inch'}
           />
 
           <AxisSelectionSection
-            activeAxis={vm.activeAxis}
-            onAxisSelect={vm.selectAxis}
-            onAxisZero={vm.zeroAxis}
+            activeAxis={vMem.activeAxis}
+            onAxisSelect={vMem.selectAxis}
+            onAxisZero={vMem.zeroAxis}
           />
 
           <KeypadSection onClear={handleClear} />
@@ -86,13 +86,13 @@ const EL400Simulator = () => {
         {/* Bottom section */}
         <div className="mt-5 flex items-end justify-between">
           <PrimaryFunctionSection
-            isInch={memory.defaultUnit === 'inch'}
-            isAbs={vm.mode === 'abs'}
+            isInch={nvMem.defaultUnit === 'inch'}
+            isAbs={vMem.mode === 'abs'}
             onToggleUnit={handleToggleUnit}
             onSettings={noop}
-            onToggleAbs={vm.toggleMode}
+            onToggleAbs={vMem.toggleMode}
             onCenter={noop}
-            onZeroAll={vm.zeroAll}
+            onZeroAll={vMem.zeroAll}
           />
 
           <SecondaryFunctionSection

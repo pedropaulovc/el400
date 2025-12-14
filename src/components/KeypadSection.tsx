@@ -10,29 +10,29 @@ interface KeypadSectionProps {
 }
 
 const KeypadSection = ({ onClear }: KeypadSectionProps) => {
-  const vm = useVolatileMemory();
+  const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
 
   const handleNumber = useCallback((num: string) => {
-    if (!vm.activeAxis) {
+    if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [vm.activeAxis, inputBuffer]);
+  }, [vMem.activeAxis, inputBuffer]);
 
   const handleDecimal = useCallback(() => {
-    if (!vm.activeAxis) {
+    if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDecimal();
-  }, [vm.activeAxis, inputBuffer]);
+  }, [vMem.activeAxis, inputBuffer]);
 
   const handleSign = useCallback(() => {
-    if (!vm.activeAxis) {
+    if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.toggleSign();
-  }, [vm.activeAxis, inputBuffer]);
+  }, [vMem.activeAxis, inputBuffer]);
 
   const handleClear = useCallback(() => {
     inputBuffer.clear();
@@ -40,15 +40,15 @@ const KeypadSection = ({ onClear }: KeypadSectionProps) => {
   }, [inputBuffer, onClear]);
 
   const handleEnter = useCallback(() => {
-    if (!vm.activeAxis) {
+    if (!vMem.activeAxis) {
       return;
     }
     const value = inputBuffer.getValue();
     if (value !== null) {
-      vm.setAxisValue(vm.activeAxis, value);
+      vMem.setAxisValue(vMem.activeAxis, value);
       inputBuffer.clear();
     }
-  }, [vm, inputBuffer]);
+  }, [vMem, inputBuffer]);
 
   return (
     <BeveledFrame>
