@@ -1,6 +1,7 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
+import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
 
 type AxisDisplayValue = number | string;
 
@@ -69,7 +70,9 @@ const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
     return padded.concat(truncated);
   };
 
-  const digits = typeof value === 'number' ? formatNumberValue(value) : formatTextValue(value);
+  const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
+    ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
+    : formatTextValue(value as string);
 
   return (
     <div

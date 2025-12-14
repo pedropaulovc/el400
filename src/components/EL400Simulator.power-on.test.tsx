@@ -15,10 +15,11 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('shows model and version on power-on', () => {
     vi.useFakeTimers();
-    renderSimulator({ searchParams: 'forcePowerOn=1' });
+    renderSimulator({ powerOnMode: 'force' });
 
     expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
     expect(getAxisDisplayPureTextValue('Y')).toBe('vEr 1.0.0');
+    expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
     act(() => {
       vi.runOnlyPendingTimers();
@@ -28,7 +29,7 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('transitions to counting mode after timeout', async () => {
     vi.useFakeTimers();
-    renderSimulator({ searchParams: 'forcePowerOn=1' });
+    renderSimulator({ powerOnMode: 'force' });
 
     await act(async () => {
       vi.advanceTimersByTime(POWER_ON_DISPLAY_DURATION_MS);
@@ -46,7 +47,7 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('allows bypassing the power-on message with the clear key', async () => {
     const user = userEvent.setup();
-    renderSimulator({ searchParams: 'forcePowerOn=1' });
+    renderSimulator({ powerOnMode: 'force' });
 
     await user.click(screen.getByTestId('key-clear'));
 
