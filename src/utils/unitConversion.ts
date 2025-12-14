@@ -23,15 +23,21 @@ export function inchToMm(inch: number): number {
 }
 
 /**
- * Convert a value from the display unit to mm (internal storage)
+ * Convert a value from any unit to mm (internal storage)
+ * @param value - The value to convert
+ * @param unit - The unit of the input value ('inch' or 'mm')
+ * @returns The value in millimeters
  */
-export function toMm(value: number, isInch: boolean): number {
-  return isInch ? inchToMm(value) : value;
+export function fromAnyUnitToMm(value: number, unit: 'inch' | 'mm'): number {
+  return unit === 'inch' ? inchToMm(value) : value;
 }
 
 /**
- * Convert a value from mm (internal storage) to the display unit
+ * Convert a value from mm (internal storage) to any unit
+ * @param valueMm - The value in millimeters
+ * @param unit - The target unit ('inch' or 'mm')
+ * @returns The value in the target unit
  */
-export function fromMm(valueMm: number, isInch: boolean): number {
-  return isInch ? mmToInch(valueMm) : valueMm;
+export function fromMmToAnyUnit(valueMm: number, unit: 'inch' | 'mm'): number {
+  return unit === 'inch' ? mmToInch(valueMm) : valueMm;
 }

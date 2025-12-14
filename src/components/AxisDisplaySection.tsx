@@ -1,7 +1,7 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
-import { fromMm } from "../utils/unitConversion";
+import { fromMmToAnyUnit } from "../utils/unitConversion";
 
 interface AxisValues {
   X: number;
@@ -72,10 +72,11 @@ const AxisDisplaySection = ({
   isInch,
 }: AxisDisplaySectionProps) => {
   // Convert values from mm (internal storage) to display unit
+  const unit = isInch ? 'inch' : 'mm';
   const displayValues = {
-    X: fromMm(axisValues.X, isInch),
-    Y: fromMm(axisValues.Y, isInch),
-    Z: fromMm(axisValues.Z, isInch),
+    X: fromMmToAnyUnit(axisValues.X, unit),
+    Y: fromMmToAnyUnit(axisValues.Y, unit),
+    Z: fromMmToAnyUnit(axisValues.Z, unit),
   };
 
   return (
