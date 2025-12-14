@@ -13,7 +13,13 @@ import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-co
 /**
  * Renders the EL400Simulator with all required providers
  */
-export function renderSimulator() {
+export function renderSimulator(options?: { searchParams?: string }) {
+  const search = options?.searchParams ?? 'bypassPowerOn=1';
+  if (typeof window !== 'undefined') {
+    const url = `${window.location.pathname}?${search}`;
+    window.history.replaceState({}, '', url);
+  }
+
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
