@@ -13,10 +13,19 @@ import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-co
 /**
  * Renders the EL400Simulator with all required providers
  */
-export function renderSimulator(options?: { searchParams?: string }) {
-  const search = options?.searchParams ?? 'bypassPowerOn=1';
+export function renderSimulator(options?: { powerOnMode?: 'force' | 'skip' | 'auto' }) {
+  const powerOnMode = options?.powerOnMode ?? 'skip';
   if (typeof window !== 'undefined') {
-    const url = `${window.location.pathname}?${search}`;
+    const params = new URLSearchParams(window.location.search);
+    if (powerOnMode === 'force') {
+      params.set('powerOn', 'force');
+    } else if (powerOnMode === 'skip') {
+      params.set('powerOn', 'skip');
+    } else {
+      params.delete('powerOn');
+    }
+    const search = params.toString();
+    const url = search ? `${window.location.pathname}?${search}` : window.location.pathname;
     window.history.replaceState({}, '', url);
   }
 

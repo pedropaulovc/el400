@@ -105,17 +105,15 @@ export class DROPage {
   /**
    * Navigate to the DRO simulator
    */
-  async goto(options?: { bypassPowerOn?: boolean; forcePowerOn?: boolean }) {
-    const bypassPowerOn = options?.bypassPowerOn ?? true;
-    const forcePowerOn = options?.forcePowerOn ?? false;
+  // powerOn: 'skip' (default for fast tests), 'force' (show startup), 'auto' (no query param)
+  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto' }) {
+    const powerOn = options?.powerOn ?? 'skip';
     const params = new URLSearchParams();
 
-    if (bypassPowerOn) {
-      params.set('bypassPowerOn', '1');
-    }
-
-    if (forcePowerOn) {
-      params.set('forcePowerOn', '1');
+    if (powerOn === 'force') {
+      params.set('powerOn', 'force');
+    } else if (powerOn === 'skip') {
+      params.set('powerOn', 'skip');
     }
 
     const query = params.toString();

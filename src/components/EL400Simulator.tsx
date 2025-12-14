@@ -33,14 +33,13 @@ const EL400Simulator = () => {
   const shouldBypassPowerOn = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const bypassParam = params.get('bypassPowerOn');
-      const forceParam = params.get('forcePowerOn');
+      const powerOnParam = params.get('powerOn');
 
-      if (forceParam === '1' || forceParam === 'true') {
+      if (powerOnParam === 'force') {
         return false;
       }
 
-      if (bypassParam === '1' || bypassParam === 'true') {
+      if (powerOnParam === 'skip') {
         return true;
       }
     }
@@ -148,7 +147,7 @@ const EL400Simulator = () => {
   };
 
   const axisDisplayValues = showPowerOnMessage
-    ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: droMemory.displayValues.Z }
+    ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
     : droMemory.displayValues;
 
   return (
