@@ -46,7 +46,8 @@ export interface MachineStateProviderProps {
 function createAdapterFromConfig(config: DataSourceConfig): MachineAdapter | null {
   switch (config.type) {
     case 'mock':
-      return new MockAdapter({ simulateMovement: true });
+      // Don't simulate automatic movement - tests can use setPosition() explicitly
+      return new MockAdapter({ simulateMovement: false });
     case 'cncjs':
       // CncjsAdapter will be imported dynamically to avoid bundling socket.io
       // when not needed. For now, return null and log.
@@ -137,6 +138,18 @@ export function MachineStateProvider({
     error,
     setAdapter,
   };
+
+  // Expose adapter to window object for E2E tests
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter = adapter;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as unknown as { __el400Adapter?: MachineAdapter | null }).__el400Adapter;
+      }
+    };
+  }, [adapter]);
 
   return (
     <MachineStateContext.Provider value={contextValue}>
