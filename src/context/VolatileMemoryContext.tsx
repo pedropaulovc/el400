@@ -20,13 +20,9 @@ import type {
   Axis,
   DatumMode,
   BootStage,
-  CenterFindingState,
-  FunctionMode,
-  StoredPoint,
 } from '../types/volatileMemory';
 import { ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { fromAnyUnitToMm } from '../utils/unitConversion';
-import { findLineCenter, findCircleCenter } from '../utils/centerFinding';
 import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
 import { useMachineStateContext } from './MachineStateContext';
 
@@ -63,13 +59,6 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
-  
-  // Center finding state
-  const [centerFindingState, setCenterFindingState] = useState<CenterFindingState>({
-    mode: 'normal',
-    storedPoints: [],
-    centerResult: null,
-  });
 
   /**
    * Boot Sequence State Machine
@@ -100,19 +89,11 @@ export function VolatileMemoryProvider({
   }, [bootStage]);
 
   // Boot stage action: C key dismisses showMessage → run
-  // Also exits function mode if active
   const clearKeyPressed = useCallback(() => {
     if (bootStage === 'showMessage') {
       setBootStage('run');
-    } else if (centerFindingState.mode !== 'normal') {
-      // Exit function mode when C is pressed
-      setCenterFindingState({
-        mode: 'normal',
-        storedPoints: [],
-        centerResult: null,
-      });
     }
-  }, [bootStage, centerFindingState.mode]);
+  }, [bootStage]);
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
@@ -223,109 +204,6 @@ export function VolatileMemoryProvider({
     }
   }, [mode, machineState, displayValues]);
 
-  // Center finding actions
-  const enterFunctionMode = useCallback(() => {
-    setCenterFindingState({
-      mode: 'centerMenu',
-      storedPoints: [],
-      centerResult: null,
-    });
-  }, []);
-
-  const selectCenterLine = useCallback(() => {
-    setCenterFindingState((prev) => ({
-      ...prev,
-      mode: 'centerLine',
-      storedPoints: [],
-      centerResult: null,
-    }));
-  }, []);
-
-  const selectCenterCircle = useCallback(() => {
-    setCenterFindingState((prev) => ({
-      ...prev,
-      mode: 'centerCircle',
-      storedPoints: [],
-      centerResult: null,
-    }));
-  }, []);
-
-  const storePoint = useCallback(() => {
-    // Store current position
-    const point: StoredPoint = {
-      X: displayValues.X,
-      Y: displayValues.Y,
-      Z: displayValues.Z,
-    };
-
-    setCenterFindingState((prev) => {
-      const newPoints = [...prev.storedPoints, point];
-      const isLine = prev.mode === 'centerLine';
-      const isCircle = prev.mode === 'centerCircle';
-      const hasEnoughPoints = (isLine && newPoints.length === 2) || (isCircle && newPoints.length === 3);
-
-      if (!hasEnoughPoints) {
-        return { ...prev, storedPoints: newPoints };
-      }
-
-      // Calculate center
-      let centerResult: AxisValues | null = null;
-      
-      if (isLine && newPoints.length === 2) {
-        const center = findLineCenter(
-          { x: newPoints[0].X, y: newPoints[0].Y },
-          { x: newPoints[1].X, y: newPoints[1].Y }
-        );
-        centerResult = { X: center.x, Y: center.y, Z: (newPoints[0].Z + newPoints[1].Z) / 2 };
-      } else if (isCircle && newPoints.length === 3) {
-        const center = findCircleCenter(
-          { x: newPoints[0].X, y: newPoints[0].Y },
-          { x: newPoints[1].X, y: newPoints[1].Y },
-          { x: newPoints[2].X, y: newPoints[2].Y }
-        );
-        if (center) {
-          centerResult = { X: center.x, Y: center.y, Z: (newPoints[0].Z + newPoints[1].Z + newPoints[2].Z) / 3 };
-        }
-      }
-
-      return {
-        ...prev,
-        storedPoints: newPoints,
-        centerResult,
-      };
-    });
-  }, [displayValues]);
-
-  const exitFunctionMode = useCallback(() => {
-    setCenterFindingState({
-      mode: 'normal',
-      storedPoints: [],
-      centerResult: null,
-    });
-  }, []);
-
-  const navigateMenu = useCallback((direction: 'next' | 'prev') => {
-    setCenterFindingState((prev) => {
-      if (prev.mode === 'centerMenu') {
-        // From menu, only next goes to LinE
-        if (direction === 'next') {
-          return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
-        }
-      } else if (prev.mode === 'centerLine') {
-        // From LinE, next goes to CirCLE, prev goes back to menu
-        if (direction === 'next') {
-          return { ...prev, mode: 'centerCircle', storedPoints: [], centerResult: null };
-        } else {
-          return { ...prev, mode: 'centerMenu', storedPoints: [], centerResult: null };
-        }
-      } else if (prev.mode === 'centerCircle') {
-        // From CirCLE, next wraps to LinE, prev goes back to LinE
-        return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
-      }
-      return prev;
-    });
-  }, []);
-
   const contextValue: VolatileMemoryContextValue = {
     // DRO memory state
     displayValues,
@@ -335,7 +213,6 @@ export function VolatileMemoryProvider({
     workOffsets,
     activeAxis,
     bootStage,
-    centerFinding: centerFindingState,
 
     // DRO actions
     toggleMode,
@@ -346,14 +223,6 @@ export function VolatileMemoryProvider({
     selectAxis,
     halfAxis,
     clearKeyPressed,
-    
-    // Center finding actions
-    enterFunctionMode,
-    selectCenterLine,
-    selectCenterCircle,
-    storePoint,
-    exitFunctionMode,
-    navigateMenu,
   };
 
   return (

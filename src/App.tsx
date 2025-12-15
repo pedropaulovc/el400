@@ -5,6 +5,7 @@ import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
 import { MachineStateProvider } from "./context/MachineStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
+import { CenterFindingProvider } from "./context/CenterFindingContext";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
 import { MockAdapter } from "./adapters/MockAdapter";
@@ -46,11 +47,13 @@ function AppContent() {
     <NonVolatileMemoryProvider>
       <MachineStateProvider initialAdapter={adapter}>
         <VolatileMemoryProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <CenterFindingProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </CenterFindingProvider>
         </VolatileMemoryProvider>
       </MachineStateProvider>
     </NonVolatileMemoryProvider>

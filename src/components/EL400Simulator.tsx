@@ -6,15 +6,17 @@ import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
+  const centerFinding = useCenterFinding();
 
   const showBootMessage = vMem.bootStage === 'showMessage';
-  const centerFindingMode = vMem.centerFinding.mode;
+  const centerFindingMode = centerFinding.mode;
 
   // Determine what to show on the display
   let axisDisplayValues;
@@ -22,18 +24,18 @@ const EL400Simulator = () => {
   if (showBootMessage) {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
-  } else if (centerFindingMode === 'centerMenu') {
+  } else if (centerFindingMode === 'menu') {
     // Show "CEntrE" menu
     axisDisplayValues = { X: 'CEntrE', Y: '', Z: '' };
-  } else if (centerFindingMode === 'centerLine' && vMem.centerFinding.storedPoints.length < 2) {
+  } else if (centerFindingMode === 'line' && centerFinding.storedPoints.length < 2) {
     // Show "LinE" while collecting points
     axisDisplayValues = { X: 'LinE', Y: '', Z: '' };
-  } else if (centerFindingMode === 'centerCircle' && vMem.centerFinding.storedPoints.length < 3) {
+  } else if (centerFindingMode === 'circle' && centerFinding.storedPoints.length < 3) {
     // Show "CirCLE" while collecting points
     axisDisplayValues = { X: 'CirCLE', Y: '', Z: '' };
-  } else if ((centerFindingMode === 'centerLine' || centerFindingMode === 'centerCircle') && vMem.centerFinding.centerResult) {
+  } else if ((centerFindingMode === 'line' || centerFindingMode === 'circle') && centerFinding.centerResult) {
     // Show distance-to-go when center is calculated
-    const center = vMem.centerFinding.centerResult;
+    const center = centerFinding.centerResult;
     const current = vMem.displayValues;
     axisDisplayValues = {
       X: center.X - current.X,
