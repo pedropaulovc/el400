@@ -170,13 +170,18 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
     });
   }, []);
 
-  // Cycle through menu options (line <-> circle)
+  // Cycle through menu options
   const cycleMenuOption = useCallback(() => {
     setState((prev) => {
       if (prev.mode === 'menu') {
-        // Cycle between line and circle when showing menu
-        const nextOption = prev.menuOption === 'line' ? 'circle' : 'line';
-        return { ...prev, menuOption: nextOption };
+        // Cycle: center -> line -> circle -> line -> ...
+        if (prev.menuOption === 'center') {
+          return { ...prev, menuOption: 'line' };
+        } else if (prev.menuOption === 'line') {
+          return { ...prev, menuOption: 'circle' };
+        } else {
+          return { ...prev, menuOption: 'line' };
+        }
       }
       return prev;
     });
