@@ -1,53 +1,39 @@
 import { test as base } from '@playwright/test';
 import { DROPage } from './dro-page';
-import { MockCncjsServer } from './mock-cncjs-server';
+
+const MOCK_CNCJS_PORT = 8765;
 
 /**
  * Custom fixtures for EL400 DRO E2E tests
  */
 type DROFixtures = {
   dro: DROPage;
-  mockCncjs: MockCncjsServer;
 };
 
 /**
  * Extend base test with DRO fixtures.
  *
- * Available fixtures:
- *   - `dro`: DROPage connected to mock CNCjs server (supports simulateEncoderMove)
- *   - `mockCncjs`: Raw MockCncjsServer for custom setup
+ * The mock CNCjs server runs globally (started by Playwright webServer config).
+ * Each test gets a fresh DROPage with a unique sessionId for isolation.
  *
  * Usage:
  *   import { test, expect } from '../helpers/fixtures';
  *
  *   test('my test', async ({ dro }) => {
- *     dro.simulateEncoderMove('X', 10);
+ *     await dro.simulateEncoderMove('X', 10);
  *     await dro.waitForAxisValue('X', 0.3937);
  *   });
  */
 export const test = base.extend<DROFixtures>({
   /**
-   * Mock CNCjs server fixture for testing socket.io connections.
-   * Automatically starts before test and stops after.
+   * DROPage connected to the global mock CNCjs server.
+   * Each test gets a unique sessionId for isolation.
    */
-  // eslint-disable-next-line no-empty-pattern
-  mockCncjs: async ({}, provide) => {
-    const server = new MockCncjsServer();
-    await server.start();
-    await provide(server);
-    await server.stop();
-  },
-
-  /**
-   * DROPage pre-wired with mock CNCjs server for encoder simulation.
-   * The page is already navigated and connected to the mock server.
-   * Use simulateEncoderMove() to simulate encoder movements.
-   */
-  dro: async ({ page, mockCncjs }, provide) => {
-    const dro = new DROPage(page);
-    dro.setMockServer(mockCncjs);
-    await dro.goto({ cncjs: { host: 'localhost', port: mockCncjs.getPort() } });
-    await provide(dro);
+  dro: async ({ page }, use) => {
+    const dro = new DROPage(page, MOCK_CNCJS_PORT);
+    await dro.goto();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    await use(dro);
   },
 });
 

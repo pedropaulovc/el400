@@ -1,5 +1,7 @@
 import { test, expect } from '../helpers/fixtures';
+import { test as baseTest } from '@playwright/test';
 import { expectAxisValues } from '../helpers/assertions';
+import { DROPage } from '../helpers/dro-page';
 
 /**
  * E2E Tests: US-035 External Machine Connection
@@ -12,8 +14,15 @@ import { expectAxisValues } from '../helpers/assertions';
 test.describe('US-035: External Machine Connection', () => {
   /**
    * AC35.4: When disconnected, the DRO continues to function in manual mode.
+   * Uses base test (not dro fixture) to navigate without CNCjs params.
    */
-  test('should default to manual mode without source parameter', async ({ dro }) => {
+  baseTest('should default to manual mode without source parameter', async ({ page }) => {
+    // Navigate without source parameter (defaults to manual mode)
+    await page.goto('/?bootMessageMode=skip');
+    await page.waitForLoadState('domcontentloaded');
+
+    const dro = new DROPage(page);
+
     // In manual mode, values should be zeros and controllable via keypad
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {
       x: 0,
@@ -34,22 +43,26 @@ test.describe('US-035: External Machine Connection', () => {
    * AC35.5: Connection parameters can be specified via URL (host, port).
    * Test CNCjs configuration via URL parameters.
    */
-  test('should parse cncjs URL parameters', async ({ page, mockCncjs }) => {
-    // Navigate with cncjs source parameters pointing to mock server
-    await page.goto(
-      `/?source=cncjs&host=localhost&port=${mockCncjs.getPort()}&bootMessageMode=skip`
-    );
-    await page.waitForLoadState('networkidle');
+  test('should parse cncjs URL parameters', async ({ dro }) => {
+    // The dro fixture already navigates to the mock CNCjs server
+    // If we got here, connection was successful (goto waits for initial state)
 
-    // Page should load and connect to mock server
-    const errorMessages = page.getByRole('alert');
+    // Verify page loaded and connected without errors
+    const errorMessages = dro.page.getByRole('alert');
     await expect(errorMessages).toHaveCount(0);
   });
 
   /**
    * Verify manual mode allows value entry when no external source.
+   * Uses base test (not dro fixture) to navigate without CNCjs params.
    */
-  test('should allow manual entry in disconnected state', async ({ dro }) => {
+  baseTest('should allow manual entry in disconnected state', async ({ page }) => {
+    // Navigate without source parameter (defaults to manual mode)
+    await page.goto('/?bootMessageMode=skip');
+    await page.waitForLoadState('domcontentloaded');
+
+    const dro = new DROPage(page);
+
     // Manual entry should work for all axes
     await dro.selectAxis('X');
     await dro.enterNumber('100');

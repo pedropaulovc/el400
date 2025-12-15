@@ -241,7 +241,7 @@ test.describe('US-003: ABS/INC Mode', () => {
    */
   test('should allow INC zeroing with encoder movement', async ({ dro }) => {
     // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
-    dro.simulateEncoderMove('X', 10);
+    await dro.simulateEncoderMove('X', 10);
     // 10mm = 0.3937 inches
     await dro.waitForAxisValue('X', 0.3937);
 

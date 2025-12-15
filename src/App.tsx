@@ -24,7 +24,7 @@ function createAdapter(config: DataSourceConfig): MachineConnection | null {
       // Tests can use setPosition() to explicitly control position
       return new MockAdapter({ simulateMovement: false });
     case 'cncjs':
-      return new CncjsAdapter({ host: config.host, port: config.port });
+      return new CncjsAdapter({ host: config.host, port: config.port, sessionId: config.sessionId });
     case 'linuxcnc':
       // TODO: implement LinuxCNC adapter
       return null;

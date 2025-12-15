@@ -13,6 +13,7 @@ export interface CncjsAdapterOptions {
   host: string;
   port: number;
   token?: string;
+  sessionId?: string;
 }
 
 type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
@@ -181,12 +182,16 @@ export class CncjsAdapter implements MachineConnection {
   }
 
   async connect(): Promise<void> {
-    const { host, port, token } = this.options;
+    const { host, port, token, sessionId } = this.options;
     const url = `http://${host}:${port}`;
 
     return new Promise((resolve, reject) => {
+      const query: Record<string, string> = {};
+      if (token) query.token = token;
+      if (sessionId) query.sessionId = sessionId;
+
       this.socket = io(url, {
-        query: token ? { token } : {},
+        query,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

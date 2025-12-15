@@ -8,21 +8,19 @@ import { test, expect } from '../helpers/fixtures';
  * @see project/user-stories/09-integration/US-036-settings-persistence.md
  */
 test.describe('US-036: Settings Persistence', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate first, then clear localStorage (can't access localStorage on about:blank)
-    await page.goto('/');
-    await page.evaluate(() => {
+  test.beforeEach(async ({ dro }) => {
+    // Clear localStorage on the current page (dro fixture already navigated)
+    await dro.page.evaluate(() => {
       localStorage.clear();
     });
     // Reload to apply cleared state
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    await dro.reload();
   });
 
   /**
    * Unit preference persists across page reload.
    */
-  test('should persist unit preference across page reload', async ({ page, dro }) => {
+  test('should persist unit preference across page reload', async ({ dro }) => {
     // Verify starting in inch mode (default)
     await expect(await dro.isInchUnits()).toBe(true);
 
@@ -31,7 +29,7 @@ test.describe('US-036: Settings Persistence', () => {
     await expect(await dro.isMmUnits()).toBe(true);
 
     // Wait for debounced save (settings have 300ms debounce)
-    await page.waitForTimeout(500);
+    await dro.page.waitForTimeout(500);
 
     // Reload the page using dro.reload() to preserve localStorage
     await dro.reload();
@@ -55,15 +53,15 @@ test.describe('US-036: Settings Persistence', () => {
   /**
    * Settings are stored in localStorage.
    */
-  test('should store settings in localStorage', async ({ page, dro }) => {
+  test('should store settings in localStorage', async ({ dro }) => {
     // Toggle unit to mm
     await dro.toggleInchMm();
 
     // Wait for debounced save
-    await page.waitForTimeout(500);
+    await dro.page.waitForTimeout(500);
 
     // Check localStorage
-    const settings = await page.evaluate(() => {
+    const settings = await dro.page.evaluate(() => {
       return localStorage.getItem('el400-dro-non-volatile-memory');
     });
 
@@ -75,15 +73,14 @@ test.describe('US-036: Settings Persistence', () => {
   /**
    * Corrupted localStorage falls back to defaults.
    */
-  test('should handle corrupted localStorage gracefully', async ({ page, dro }) => {
+  test('should handle corrupted localStorage gracefully', async ({ dro }) => {
     // Set corrupted localStorage
-    await page.evaluate(() => {
+    await dro.page.evaluate(() => {
       localStorage.setItem('el400-dro-non-volatile-memory', 'invalid json {{{');
     });
 
     // Reload page
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    await dro.reload();
 
     // Should fall back to defaults
     await expect(await dro.isInchUnits()).toBe(true);
@@ -93,7 +90,7 @@ test.describe('US-036: Settings Persistence', () => {
   /**
    * Settings persistence across multiple toggles.
    */
-  test('should persist settings through multiple changes', async ({ page, dro }) => {
+  test('should persist settings through multiple changes', async ({ dro }) => {
     // Start with defaults (inch)
     await expect(await dro.isInchUnits()).toBe(true);
 
@@ -102,18 +99,17 @@ test.describe('US-036: Settings Persistence', () => {
     await expect(await dro.isMmUnits()).toBe(true);
 
     // Wait for save
-    await page.waitForTimeout(300);
+    await dro.page.waitForTimeout(300);
 
     // Toggle back to inch
     await dro.toggleInchMm();
     await expect(await dro.isInchUnits()).toBe(true);
 
     // Wait for save
-    await page.waitForTimeout(300);
+    await dro.page.waitForTimeout(300);
 
     // Reload
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    await dro.reload();
 
     // Should be inch after reload
     await expect(await dro.isInchUnits()).toBe(true);
