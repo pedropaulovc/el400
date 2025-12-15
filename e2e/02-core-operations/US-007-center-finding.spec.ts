@@ -20,17 +20,22 @@ test.describe('US-007: Center Finding', () => {
    * - Display shows "Distance-to-go" to the center
    */
   test('Center of Line', async ({ dro }) => {
+    // Verify Fn LED is off initially
+    expect(await dro.isFnModeActive()).toBe(false);
+    
     // Press Fn key to access function menu
     await dro.functionButton.click();
     
-    // Verify display shows "CEntrE"
+    // Verify display shows "CEntrE" and Fn LED is on
     await expect(dro.xDisplay).toContainText('CEntrE');
+    expect(await dro.isFnModeActive()).toBe(true);
     
     // Press ENT to select LinE (default option)
     await dro.enterButton.click();
     
-    // Verify display shows "LinE" after entering line mode
+    // Verify display shows "LinE" after entering line mode and Fn LED remains on
     await expect(dro.xDisplay).toContainText('LinE');
+    expect(await dro.isFnModeActive()).toBe(true);
     
     // Point 1 at 0 (display will show "LinE" while collecting points)
     await dro.simulateEncoderMove('X', 0);
@@ -48,6 +53,9 @@ test.describe('US-007: Center Finding', () => {
     // In inch display mode: 100mm = ~3.937 inches, center = ~1.9685 inches
     // Distance to go: -50mm = ~-1.9685 inches
     await dro.waitForAxisValue('X', -1.9685, 1);
+    
+    // Fn LED should still be on after center calculation
+    expect(await dro.isFnModeActive()).toBe(true);
   });
 
   /**
@@ -62,11 +70,15 @@ test.describe('US-007: Center Finding', () => {
    * - Display shows "Distance-to-go" to the center
    */
   test('Center of Circle', async ({ dro }) => {
+    // Verify Fn LED is off initially
+    expect(await dro.isFnModeActive()).toBe(false);
+    
     // Press Fn key to access function menu
     await dro.functionButton.click();
     
-    // Verify display shows "CEntrE"
+    // Verify display shows "CEntrE" and Fn LED is on
     await expect(dro.xDisplay).toContainText('CEntrE');
+    expect(await dro.isFnModeActive()).toBe(true);
     
     // Navigate to "CirCLE" option (press key 6 for Right)
     await dro.key6.click(); // Key 6 navigates in menu mode
@@ -76,6 +88,9 @@ test.describe('US-007: Center Finding', () => {
     
     // Press ENT to confirm
     await dro.enterButton.click();
+    
+    // Fn LED should remain on during circle mode
+    expect(await dro.isFnModeActive()).toBe(true);
     
     // Point 1: (10, 0, 0) - Right side of circle with radius 10
     await dro.simulateEncoderMove('X', 10);
@@ -93,6 +108,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.key6.click();
     
     // Point 3: (-10, 0, 0) - Left side of circle
+    // simulateEncoderMove sets absolute position, so X=-10, Y=0 is correct
     await dro.simulateEncoderMove('X', -10);
     await dro.simulateEncoderMove('Y', 0);
     
@@ -104,36 +120,8 @@ test.describe('US-007: Center Finding', () => {
     // In inch mode: 10mm = ~0.3937 inches, 0mm = 0 inches
     await dro.waitForAxisValue('X', 0.3937, 1);
     await dro.waitForAxisValue('Y', 0, 1);
-  });
-
-  /**
-   * AC 7.4: The Fn LED glows while in this function
-   * 
-   * Note: This test verifies that when the function menu is active,
-   * the Fn LED indicator is lit. This requires:
-   * 1. An LED indicator for Fn mode
-   * 2. State management to track when function mode is active
-   */
-  test('Fn LED indicator glows during center finding', async ({ dro }) => {
-    // Verify Fn LED is off initially
-    expect(await dro.isFnModeActive()).toBe(false);
     
-    // Press Fn key to activate function menu
-    await dro.functionButton.click();
-    
-    // Verify Fn LED is on
-    expect(await dro.isFnModeActive()).toBe(true);
-    
-    // Press ENT to select LinE
-    await dro.enterButton.click();
-    
-    // Fn LED should remain on during function execution
-    expect(await dro.isFnModeActive()).toBe(true);
-    
-    // Press ENT to confirm LinE
-    await dro.enterButton.click();
-    
-    // Fn LED should still be on
+    // Fn LED should still be on after center calculation
     expect(await dro.isFnModeActive()).toBe(true);
   });
 
