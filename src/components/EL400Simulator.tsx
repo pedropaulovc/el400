@@ -26,15 +26,9 @@ const EL400Simulator = () => {
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
   } else if (centerFindingMode === 'menu') {
     // Show menu option text
-    const menuText = centerFinding.menuOption === 'center' ? 'CEntrE' :
-                     centerFinding.menuOption === 'line' ? 'LinE' : 'CirCLE';
+    const menuTextMap: Record<string, string> = { center: 'CEntrE', line: 'LinE', circle: 'CirCLE' };
+    const menuText = menuTextMap[centerFinding.menuOption];
     axisDisplayValues = { X: menuText, Y: '', Z: '' };
-  } else if (centerFindingMode === 'line' && centerFinding.storedPoints.length < 2) {
-    // Show "LinE" while collecting points
-    axisDisplayValues = { X: 'LinE', Y: '', Z: '' };
-  } else if (centerFindingMode === 'circle' && centerFinding.storedPoints.length < 3) {
-    // Show "CirCLE" while collecting points
-    axisDisplayValues = { X: 'CirCLE', Y: '', Z: '' };
   } else if ((centerFindingMode === 'line' || centerFindingMode === 'circle') && centerFinding.centerResult) {
     // Show distance-to-go when center is calculated
     const center = centerFinding.centerResult;
@@ -45,7 +39,7 @@ const EL400Simulator = () => {
       Z: center.Z - current.Z,
     };
   } else {
-    // Normal operation
+    // Normal operation (including while collecting points in line/circle mode)
     axisDisplayValues = vMem.displayValues;
   }
 

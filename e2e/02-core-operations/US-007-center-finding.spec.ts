@@ -33,25 +33,30 @@ test.describe('US-007: Center Finding', () => {
     // Press ENT to select LinE (default option)
     await dro.enterButton.click();
     
-    // Verify display shows "LinE" after entering line mode and Fn LED remains on
-    await expect(dro.xDisplay).toContainText('LinE');
+    // Fn LED should remain on during line mode
     expect(await dro.isFnModeActive()).toBe(true);
     
-    // Point 1 at 0 (display will show "LinE" while collecting points)
+    // Point 1 at 0
     await dro.simulateEncoderMove('X', 0);
+    
+    // Verify position is displayed: 0mm = 0 inches
+    await dro.waitForAxisValue('X', 0, 1);
     
     // Store Point 1 using key 6 (Right/Store)
     await dro.key6.click();
     
-    // Point 2 at 100mm (display still shows "LinE")
+    // Point 2 at 100mm
     await dro.simulateEncoderMove('X', 100);
+    
+    // Verify current position is displayed in inches: 100mm = ~3.937 inches
+    await dro.waitForAxisValue('X', 3.937, 1);
     
     // Store Point 2
     await dro.key6.click();
     
     // Center should be at 50mm. Distance to go from 100mm is -50mm
-    // In inch display mode: 100mm = ~3.937 inches, center = ~1.9685 inches
-    // Distance to go: -50mm = ~-1.9685 inches
+    // In inch display mode: center = ~1.9685 inches, current = ~3.937 inches
+    // Distance to go: 1.9685 - 3.937 = ~-1.9685 inches
     await dro.waitForAxisValue('X', -1.9685, 1);
     
     // Fn LED should still be on after center calculation
