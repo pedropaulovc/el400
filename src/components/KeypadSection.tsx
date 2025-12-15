@@ -12,10 +12,9 @@ const KeypadSection = () => {
   const centerFinding = useCenterFinding();
 
   const handleNumber = useCallback((num: string) => {
-    const centerMode = centerFinding.mode;
-    
     // Special handling for key 6 (Right arrow) in center finding mode
     if (num === '6') {
+      const centerMode = centerFinding.mode;
       if (centerMode === 'menu') {
         // Navigate through menu options
         centerFinding.cycleMenuOption();
