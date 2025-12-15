@@ -21,6 +21,7 @@ import type {
   AxisValues,
   Axis,
   DatumMode,
+  BootStage,
 } from '../types/volatileMemory';
 import { createDefaultMachineState, ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { MockAdapter } from '../adapters/MockAdapter';
@@ -39,6 +40,12 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
 }
 
 const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(null);
+
+/**
+ * Duration in milliseconds for the boot message to be displayed before auto-dismissing.
+ * Used in the boot sequence state machine.
+ */
+export const BOOT_MESSAGE_DURATION_MS = 1000;
 
 export interface VolatileMemoryProviderProps {
   children: ReactNode;
@@ -101,6 +108,44 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
+  const [bootStage, setBootStage] = useState<BootStage>('boot');
+
+  /**
+   * Boot Sequence State Machine
+   *
+   * States: boot | showMessage | run
+   *
+   * Transitions:
+   *   boot → showMessage  (when nvMem.bootMessageMode == 'show')
+   *   boot → run          (when nvMem.bootMessageMode == 'skip' or URL param bootMessageMode == 'skip')
+   *   boot → run          (when C key pressed)
+   *   showMessage → run   (when BOOT_MESSAGE_DURATION_MS timeout expires)
+   *   showMessage → run   (when C key pressed)
+   */
+  useEffect(() => {
+    if (bootStage === 'boot') {
+      // Check URL query param for skip override
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBootMode = urlParams.get('bootMessageMode');
+
+      // Transition based on non-volatile memory setting or URL param
+      const shouldSkip = nvMemory.bootMessageMode === 'skip' || urlBootMode === 'skip';
+      setBootStage(shouldSkip ? 'run' : 'showMessage');
+    }
+
+    // Timer for auto-dismiss
+    if (bootStage === 'showMessage') {
+      const timer = setTimeout(() => setBootStage('run'), BOOT_MESSAGE_DURATION_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [bootStage, nvMemory.bootMessageMode]);
+
+  // Boot stage action: C key skips boot/showMessage → run
+  const clearKeyPressed = useCallback(() => {
+    if (bootStage === 'boot' || bootStage === 'showMessage') {
+      setBootStage('run');
+    }
+  }, [bootStage]);
 
   // Handle adapter changes and connection
   useEffect(() => {
@@ -275,6 +320,7 @@ export function VolatileMemoryProvider({
     mode,
     workOffsets,
     activeAxis,
+    bootStage,
 
     // DRO actions
     toggleMode,
@@ -284,6 +330,7 @@ export function VolatileMemoryProvider({
     setAxisValue,
     selectAxis,
     halfAxis,
+    clearKeyPressed,
 
     // Adapter management
     adapter,

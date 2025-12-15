@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
-import AxisDisplaySection from './AxisDisplaySection';
+import MultiAxisSection from './MultiAxisSection';
 
-describe('AxisDisplaySection', () => {
+describe('MultiAxisSection', () => {
   const defaultProps = {
     axisValues: { X: 0, Y: 0, Z: 0 },
   };
 
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      render(<AxisDisplaySection {...defaultProps} />);
+      render(<MultiAxisSection {...defaultProps} />);
 
       const heading = screen.getByRole('heading', { name: 'Axis display' });
       expect(heading).toBeInTheDocument();
@@ -17,7 +17,7 @@ describe('AxisDisplaySection', () => {
     });
 
     it('has sr-only table with axis values', () => {
-      render(<AxisDisplaySection {...defaultProps} />);
+      render(<MultiAxisSection {...defaultProps} />);
 
       const table = screen.getByRole('table', { name: 'Axis positions' });
       expect(table).toBeInTheDocument();
@@ -25,7 +25,7 @@ describe('AxisDisplaySection', () => {
     });
 
     it('has text in LED indicators', () => {
-      render(<AxisDisplaySection {...defaultProps} />);
+      render(<MultiAxisSection {...defaultProps} />);
 
       expect(screen.getByTestId('led-abs')).toHaveTextContent('abs');
       expect(screen.getByTestId('led-inc')).toHaveTextContent('inc');

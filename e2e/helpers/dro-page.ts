@@ -103,29 +103,34 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator
+   * Navigate to the DRO simulator.
+   * @param options.source - 'mock' for encoder simulation, undefined for manual mode (default)
+   * @param options.skipBootMessage - Skip boot message via URL param (default: true for E2E tests)
    */
-  // powerOn: 'skip' (default for fast tests), 'force' (show startup), 'auto' (no query param)
-  // source: 'mock' (for encoder simulation), undefined (manual mode - default)
-  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto'; source?: 'mock' }) {
-    const powerOn = options?.powerOn ?? 'skip';
+  async goto(options?: { source?: 'mock'; skipBootMessage?: boolean }) {
     const params = new URLSearchParams();
 
-    if (powerOn === 'force') {
-      params.set('powerOn', 'force');
-    } else if (powerOn === 'skip') {
-      params.set('powerOn', 'skip');
-    }
-
-    // Add source parameter if specified (e.g., for MockAdapter support)
     if (options?.source) {
       params.set('source', options.source);
+    }
+
+    // Skip boot message by default to prevent tests from reading "EL400" and "vEr 1.0.0" as numeric values
+    if (options?.skipBootMessage !== false) {
+      params.set('bootMessageMode', 'skip');
     }
 
     const query = params.toString();
     const url = query ? `/?${query}` : '/';
 
     await this.page.goto(url);
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Reload the page preserving current URL params.
+   */
+  async reload() {
+    await this.page.reload();
     await this.page.waitForLoadState('networkidle');
   }
 

@@ -1,100 +1,25 @@
-import SevenSegmentDigit from "./SevenSegmentDigit";
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
-import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
+import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 
-type AxisDisplayValue = number | string;
-
-interface AxisValues {
+export interface AxisValues {
   X: AxisDisplayValue;
   Y: AxisDisplayValue;
   Z: AxisDisplayValue;
 }
 
-interface AxisDisplaySectionProps {
+export type { AxisDisplayValue };
+
+interface MultiAxisSectionProps {
   axisValues: AxisValues;
 }
 
-interface AxisDisplayProps {
-  value: AxisDisplayValue;
-  axis: 'X' | 'Y' | 'Z';
-}
-
-const DISPLAY_WIDTH = 8;
-
-const AxisDisplay = ({ value, axis }: AxisDisplayProps) => {
-  const formatNumberValue = (num: number): { char: string; hasDecimal: boolean }[] => {
-    const isNegative = num < 0;
-    const absNum = Math.abs(num);
-    const formatted = absNum.toFixed(4);
-
-    const result: { char: string; hasDecimal: boolean }[] = [];
-
-    result.push({ char: isNegative ? '-' : ' ', hasDecimal: false });
-
-    const [intPart, decPart] = formatted.split('.');
-    const paddedInt = intPart.padStart(3, ' ');
-
-    for (let i = 0; i < paddedInt.length; i++) {
-      result.push({
-        char: paddedInt[i],
-        hasDecimal: i === paddedInt.length - 1,
-      });
-    }
-
-    for (const char of decPart) {
-      result.push({ char, hasDecimal: false });
-    }
-
-    return result;
-  };
-
-  const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] => {
-    const raw: { char: string; hasDecimal: boolean }[] = [];
-
-    for (const char of text) {
-      if (char === '.') {
-        if (raw.length > 0) {
-          raw[raw.length - 1].hasDecimal = true;
-        }
-        continue;
-      }
-      raw.push({ char, hasDecimal: false });
-    }
-
-    const truncated = raw.slice(-DISPLAY_WIDTH);
-    const padded = Array.from({ length: DISPLAY_WIDTH - truncated.length }, () => ({ char: ' ', hasDecimal: false }));
-
-    return padded.concat(truncated);
-  };
-
-  const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
-    ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
-    : formatTextValue(value as string);
-
-  return (
-    <div
-      className="flex items-center gap-0.5 px-2"
-      aria-hidden="true"
-      data-testid={`axis-display-${axis.toLowerCase()}`}
-    >
-      <div className="flex items-center -space-x-1">
-        {digits.map((digit, index) => (
-          <div key={index} className="w-12 h-20">
-            <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const AxisDisplaySection = ({
+const MultiAxisSection = ({
   axisValues,
-}: AxisDisplaySectionProps) => {
+}: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
   const { nvMem } = useNonVolatileMemoryContext();
 
@@ -159,9 +84,9 @@ const AxisDisplaySection = ({
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <AxisDisplay value={displayValues.X} axis="X" />
-            <AxisDisplay value={displayValues.Y} axis="Y" />
-            <AxisDisplay value={displayValues.Z} axis="Z" />
+            <Axis value={displayValues.X} axis="X" />
+            <Axis value={displayValues.Y} axis="Y" />
+            <Axis value={displayValues.Z} axis="Z" />
           </div>
 
           {/* LED Indicators */}
@@ -213,4 +138,4 @@ const AxisDisplaySection = ({
   );
 };
 
-export default AxisDisplaySection;
+export default MultiAxisSection;

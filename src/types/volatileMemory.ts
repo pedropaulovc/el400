@@ -47,6 +47,7 @@ export interface AxisValues {
 
 export type Axis = 'X' | 'Y' | 'Z';
 export type DatumMode = 'abs' | 'inc';
+export type BootStage = 'boot' | 'showMessage' | 'run';
 
 /**
  * Machine state from adapter (internal use)
@@ -99,6 +100,7 @@ export interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
+  bootStage: BootStage;
 }
 
 /**
@@ -112,6 +114,7 @@ export interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
+  clearKeyPressed: () => void;
 }
 
 /**

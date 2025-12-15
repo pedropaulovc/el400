@@ -1,28 +1,21 @@
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
-import AxisDisplaySection from "./AxisDisplaySection";
+import MultiAxisSection from "./MultiAxisSection";
 import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { usePowerOnSequence } from "../hooks/usePowerOnSequence";
 
 export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
-export const POWER_ON_DISPLAY_DURATION_MS = 1000;
 
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
-  const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(POWER_ON_DISPLAY_DURATION_MS);
 
-  const handleClear = () => {
-    if (showPowerOnMessage) {
-      dismissPowerOnMessage();
-    }
-  };
+  const showBootMessage = vMem.bootStage === 'showMessage';
 
-  const axisDisplayValues = showPowerOnMessage
+  const axisDisplayValues = showBootMessage
     ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
     : vMem.displayValues;
 
@@ -49,9 +42,9 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <AxisDisplaySection axisValues={axisDisplayValues} />
+          <MultiAxisSection axisValues={axisDisplayValues} />
           <AxisSelectionSection />
-          <KeypadSection onClear={handleClear} />
+          <KeypadSection />
         </div>
 
         {/* Bottom section */}

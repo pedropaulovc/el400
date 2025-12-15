@@ -6,7 +6,7 @@ import {
   getAxisDisplayPureTextValue,
   renderSimulator,
 } from '../tests/helpers/integration-test-utils';
-import { POWER_ON_DISPLAY_DURATION_MS } from './EL400Simulator';
+import { BOOT_MESSAGE_DURATION_MS } from '../context/VolatileMemoryContext';
 
 describe('EL400Simulator power-on sequence', () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('shows model and version on power-on', () => {
     vi.useFakeTimers();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator({ bootMessageMode: 'show' });
 
     expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
     expect(getAxisDisplayPureTextValue('Y')).toBe('vEr 1.0.0');
@@ -29,10 +29,10 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('transitions to counting mode after timeout', async () => {
     vi.useFakeTimers();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator({ bootMessageMode: 'show' });
 
     await act(async () => {
-      vi.advanceTimersByTime(POWER_ON_DISPLAY_DURATION_MS);
+      vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
     });
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
@@ -47,7 +47,7 @@ describe('EL400Simulator power-on sequence', () => {
 
   it('allows bypassing the power-on message with the clear key', async () => {
     const user = userEvent.setup();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator({ bootMessageMode: 'show' });
 
     await user.click(screen.getByTestId('key-clear'));
 

@@ -9,25 +9,41 @@ import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
+import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
+import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
+/**
+ * Sets non-volatile memory in localStorage
+ * Can set partial values - merges with existing data
+ */
+export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
+  const existing = localStorage.getItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
+  const current = existing ? JSON.parse(existing) : {};
+  localStorage.setItem(NON_VOLATILE_MEMORY_STORAGE_KEY, JSON.stringify({
+    ...current,
+    ...values,
+  }));
+}
+
+/**
+ * Clears non-volatile memory from localStorage
+ */
+export function clearNonVolatileMemory(): void {
+  localStorage.removeItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
+}
+
+interface RenderSimulatorOptions {
+  /** Boot message mode - defaults to 'skip' for faster tests */
+  bootMessageMode?: 'show' | 'skip';
+}
 
 /**
  * Renders the EL400Simulator with all required providers
+ * Defaults to skipping boot message for faster tests
  */
-export function renderSimulator(options?: { powerOnMode?: 'force' | 'skip' | 'auto' }) {
-  const powerOnMode = options?.powerOnMode ?? 'skip';
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    if (powerOnMode === 'force') {
-      params.set('powerOn', 'force');
-    } else if (powerOnMode === 'skip') {
-      params.set('powerOn', 'skip');
-    } else {
-      params.delete('powerOn');
-    }
-    const search = params.toString();
-    const url = search ? `${window.location.pathname}?${search}` : window.location.pathname;
-    window.history.replaceState({}, '', url);
-  }
+export function renderSimulator(options?: RenderSimulatorOptions) {
+  const { bootMessageMode = 'skip' } = options ?? {};
+
+  setNonVolatileMemory({ bootMessageMode });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

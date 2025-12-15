@@ -11,7 +11,8 @@ test.describe('US-001: First Use and Power-Up Display', () => {
    * AC 1.1-1.4: Power-up shows model/version and transitions to counting mode
    */
   test('Power-up displays model and version before counting mode', async ({ dro }) => {
-    await dro.goto({ powerOn: 'force' });
+    // Show boot message for this test
+    await dro.goto({ skipBootMessage: false });
 
     await expectPureTextValue(dro.xDisplay, 'EL400');
     await expectPureTextValue(dro.yDisplay, 'vEr 1.0.0');
@@ -50,7 +51,8 @@ test.describe('US-001: First Use and Power-Up Display', () => {
    * Power-up message can be bypassed with the C key (AC 1.3)
    */
   test('Bypass power-up message with clear key', async ({ dro }) => {
-    await dro.goto({ powerOn: 'force' });
+    // Show boot message for this test
+    await dro.goto({ skipBootMessage: false });
 
     await expectPureTextValue(dro.xDisplay, 'EL400');
     await dro.clearButton.click();
