@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
+import * as crypto from 'crypto';
 
 /**
  * Page Object Model for the EL400 DRO Simulator
@@ -58,7 +59,7 @@ export class DROPage {
   constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
     this.page = page;
     this.mockServerPort = mockServerPort;
-    this.sessionId = sessionId || `test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    this.sessionId = sessionId || `test-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
 
     // Initialize display elements using testids (values are in sr-only table)
     this.xDisplay = page.getByTestId('axis-value-x');
