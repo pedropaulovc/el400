@@ -1,7 +1,7 @@
 /**
  * Volatile memory context for DRO state throughout the app.
  * Manages DRO memory (mode, offsets, incremental values, boot stage).
- * Consumes machine state from MachineStateContext.
+ * Consumes machine state from MachineStateContext internally for calculations.
  */
 
 import {
@@ -13,7 +13,6 @@ import {
   useMemo,
   type ReactNode,
 } from 'react';
-import type { MachineConnection } from '../adapters/MachineConnection';
 import type {
   VolatileMemory,
   VolatileMemoryActions,
@@ -27,16 +26,7 @@ import { fromAnyUnitToMm } from '../utils/unitConversion';
 import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
 import { useMachineStateContext } from './MachineStateContext';
 
-export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
-  /** Currently active adapter (or null if none) */
-  adapter: MachineConnection | null;
-  /** Whether the adapter is currently connecting */
-  isConnecting: boolean;
-  /** Error from last connection attempt */
-  error: Error | null;
-  /** Set or replace the active adapter */
-  setAdapter: (adapter: MachineConnection | null) => void;
-}
+export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
 
 const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(null);
 
@@ -52,13 +42,13 @@ export interface VolatileMemoryProviderProps {
 
 /**
  * Provider component for volatile memory (DRO memory).
- * Consumes machine state from MachineStateContext and manages DRO-specific state.
+ * Consumes machine state from MachineStateContext internally for calculations.
  */
 export function VolatileMemoryProvider({
   children,
 }: VolatileMemoryProviderProps) {
-  // Get machine state from MachineStateContext
-  const { machineState, adapter, isConnecting, error, setAdapter } = useMachineStateContext();
+  // Get machine state from MachineStateContext (used internally for calculations)
+  const { machineState } = useMachineStateContext();
 
   // Non-volatile memory for unit conversion
   const { nvMem: nvMemory } = useNonVolatileMemoryContext();
@@ -215,13 +205,6 @@ export function VolatileMemoryProvider({
   }, [mode, machineState, displayValues]);
 
   const contextValue: VolatileMemoryContextValue = {
-    // Machine state (pass-through from MachineStateContext)
-    machinePosition: machineState.position,
-    workPosition: machineState.workPosition,
-    probe: machineState.probe,
-    connected: machineState.connected,
-    controllerType: machineState.controllerType,
-
     // DRO memory state
     displayValues,
     absolute: absoluteValues,
@@ -240,12 +223,6 @@ export function VolatileMemoryProvider({
     selectAxis,
     halfAxis,
     clearKeyPressed,
-
-    // Adapter management (pass-through from MachineStateContext)
-    adapter,
-    isConnecting,
-    error,
-    setAdapter,
   };
 
   return (
@@ -256,8 +233,10 @@ export function VolatileMemoryProvider({
 }
 
 /**
- * Hook to access the volatile memory context (machine state + DRO memory).
+ * Hook to access the volatile memory context (DRO memory).
  * Must be used within a VolatileMemoryProvider.
+ *
+ * For machine state (position, probe, connected), use useMachineStateContext instead.
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useVolatileMemoryContext(): VolatileMemoryContextValue {

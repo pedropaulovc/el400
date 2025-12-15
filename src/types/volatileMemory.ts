@@ -2,8 +2,6 @@
  * Volatile memory types - DRO runtime state that is lost on refresh.
  */
 
-import type { MachinePosition, ProbeState, ControllerType } from './machineState';
-
 /**
  * Axis values for X, Y, Z
  */
@@ -18,17 +16,9 @@ export type DatumMode = 'abs' | 'inc';
 export type BootStage = 'boot' | 'showMessage' | 'run';
 
 /**
- * Unified volatile memory - combines machine state and DRO memory
+ * DRO volatile memory - runtime state managed by VolatileMemoryContext
  */
 export interface VolatileMemory {
-  // Machine state (from MachineStateContext)
-  machinePosition: MachinePosition;
-  workPosition?: MachinePosition;
-  probe: ProbeState;
-  connected: boolean;
-  controllerType: ControllerType;
-
-  // DRO memory (internal)
   displayValues: AxisValues;
   absolute: AxisValues;
   incremental: AxisValues;
