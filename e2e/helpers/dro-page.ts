@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
+import * as crypto from 'crypto';
 
 /**
  * Page Object Model for the EL400 DRO Simulator
@@ -7,6 +8,8 @@ import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
  */
 export class DROPage {
   readonly page: Page;
+  private readonly mockServerPort: number;
+  private readonly sessionId: string;
 
   // Display elements
   readonly xDisplay: Locator;
@@ -53,8 +56,10 @@ export class DROPage {
   readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
     this.page = page;
+    this.mockServerPort = mockServerPort;
+    this.sessionId = sessionId || `test-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
 
     // Initialize display elements using testids (values are in sr-only table)
     this.xDisplay = page.getByTestId('axis-value-x');
@@ -103,27 +108,30 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator.
-   * @param options.source - 'mock' for encoder simulation, undefined for manual mode (default)
-   * @param options.skipBootMessage - Skip boot message via URL param (default: true for E2E tests)
+   * Navigate to the DRO simulator connected to the mock CNCjs server.
+   * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { source?: 'mock'; skipBootMessage?: boolean }) {
+  async goto(options?: { skipBootMessage?: boolean }) {
     const params = new URLSearchParams();
+    params.set('source', 'cncjs');
+    params.set('host', 'localhost');
+    params.set('port', this.mockServerPort.toString());
+    params.set('sessionId', this.sessionId);
 
-    if (options?.source) {
-      params.set('source', options.source);
-    }
-
-    // Skip boot message by default to prevent tests from reading "EL400" and "vEr 1.0.0" as numeric values
-    if (options?.skipBootMessage !== false) {
+    const skipBoot = options?.skipBootMessage !== false;
+    if (skipBoot) {
       params.set('bootMessageMode', 'skip');
     }
 
-    const query = params.toString();
-    const url = query ? `/?${query}` : '/';
-
+    const url = `/?${params.toString()}`;
     await this.page.goto(url);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
+
+    // Wait for Socket.IO connection (initial state received)
+    // Only wait when boot message is skipped - otherwise display shows "EL400" text first
+    if (skipBoot) {
+      await this.waitForAxisValue('X', 0, 0);
+    }
   }
 
   /**
@@ -131,7 +139,7 @@ export class DROPage {
    */
   async reload() {
     await this.page.reload();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -141,17 +149,17 @@ export class DROPage {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
     const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
-    
+
     if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
       throw new Error(`Invalid numeric value in axis ${axis}: ${text}`);
     }
-    
+
     const value = parseFloat(cleanedText);
-    
+
     if (isNaN(value)) {
       throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
     }
-    
+
     return value;
   }
 
@@ -183,11 +191,23 @@ export class DROPage {
   }
 
   /**
-   * Wait for a specific display value
+   * Wait for an axis to reach a specific numeric value.
+   * Uses polling to handle async updates (e.g., from Socket.IO events).
+   *
+   * @param axis - The axis to check
+   * @param expected - The expected value
+   * @param precision - Number of decimal places for comparison (default: 2)
+   * @param timeout - Maximum time to wait in ms (default: 500)
    */
-  async waitForAxisValue(axis: 'X' | 'Y' | 'Z', value: number, timeout = 5000) {
-    const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
-    await expect(display).toContainText(value.toString(), { timeout });
+  async waitForAxisValue(
+    axis: 'X' | 'Y' | 'Z',
+    expected: number,
+    precision = 2,
+    timeout = 500
+  ): Promise<void> {
+    await expect
+      .poll(() => this.getAxisValue(axis), { timeout })
+      .toBeCloseTo(expected, precision);
   }
 
   /**
@@ -250,43 +270,23 @@ export class DROPage {
 
   /**
    * Simulate encoder movement for an axis.
-   * This uses the MockAdapter's setPosition method to simulate physical encoder movement.
-   * 
+   * Calls the mock CNCjs server HTTP API to update position.
+   *
    * @param axis - The axis to move ('X', 'Y', or 'Z')
-   * @param value - The new position value to simulate
-   * 
-   * Note: This only works when the DRO is connected to a MockAdapter.
-   * For E2E tests that need encoder simulation, ensure the page is loaded with ?source=mock
+   * @param value - The new position value to simulate (in mm)
    */
   async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
-    // Use page.evaluate to call the exposed adapter's setPosition method
-    await this.page.evaluate(({ axis, value }) => {
-      interface MockAdapterWindow extends Window {
-        __el400Adapter?: {
-          setPosition: (x: number, y: number, z: number) => void;
-          getState: () => {
-            position: { x: number; y: number; z: number };
-          };
-        };
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-move?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, value }),
       }
-      
-      const adapter = (window as unknown as MockAdapterWindow).__el400Adapter;
-      if (!adapter) {
-        throw new Error('No adapter available. Ensure page is loaded with ?source=mock');
-      }
-      if (typeof adapter.setPosition !== 'function') {
-        throw new Error('Adapter does not support setPosition. Only MockAdapter is supported.');
-      }
-      
-      // Get current state and update only the specified axis
-      const currentState = adapter.getState();
-      const newPosition = {
-        x: axis === 'X' ? value : currentState.position.x,
-        y: axis === 'Y' ? value : currentState.position.y,
-        z: axis === 'Z' ? value : currentState.position.z,
-      };
-      
-      adapter.setPosition(newPosition.x, newPosition.y, newPosition.z);
-    }, { axis, value });
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to simulate encoder move: ${response.statusText}`);
+    }
   }
 }

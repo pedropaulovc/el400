@@ -1,51 +1,39 @@
 import { test as base } from '@playwright/test';
 import { DROPage } from './dro-page';
-import { MockCncjsServer } from './mock-cncjs-server';
+
+const MOCK_CNCJS_PORT = 8765;
 
 /**
  * Custom fixtures for EL400 DRO E2E tests
  */
 type DROFixtures = {
   dro: DROPage;
-  mockCncjs: MockCncjsServer;
 };
 
 /**
- * Extend base test with DRO page fixture.
- * The DRO loads in manual mode by default, but supports MockAdapter
- * for tests that need encoder simulation via simulateEncoderMove().
- * 
+ * Extend base test with DRO fixtures.
+ *
+ * The mock CNCjs server runs globally (started by Playwright webServer config).
+ * Each test gets a fresh DROPage with a unique sessionId for isolation.
+ *
  * Usage:
  *   import { test, expect } from '../helpers/fixtures';
- *   // Manual mode (default):
- *   test('my test', async ({ dro }) => { ... });
- *   
- *   // With MockAdapter for encoder simulation:
- *   test('encoder test', async ({ dro }) => { 
- *     await dro.goto({ source: 'mock' });
+ *
+ *   test('my test', async ({ dro }) => {
  *     await dro.simulateEncoderMove('X', 10);
+ *     await dro.waitForAxisValue('X', 0.3937);
  *   });
  */
 export const test = base.extend<DROFixtures>({
-  dro: async ({ page }, provide) => {
-    const dro = new DROPage(page);
-    await dro.goto();
-    await provide(dro);
-  },
-
   /**
-   * Mock CNCjs server fixture for testing socket.io connections.
-   * Automatically starts before test and stops after.
-   * Usage:
-   *   test('my test', async ({ page, mockCncjs }) => {
-   *     await page.goto(`/?source=cncjs&host=localhost&port=${mockCncjs.getPort()}`);
-   *   });
+   * DROPage connected to the global mock CNCjs server.
+   * Each test gets a unique sessionId for isolation.
    */
-  mockCncjs: async ({ baseURL: _baseURL }, provide) => {
-    const server = new MockCncjsServer(8765);
-    await server.start();
-    await provide(server);
-    await server.stop();
+  dro: async ({ page }, use) => {
+    const dro = new DROPage(page, MOCK_CNCJS_PORT);
+    await dro.goto();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    await use(dro);
   },
 });
 

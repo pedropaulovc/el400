@@ -41,11 +41,13 @@ export function useDataSourceConfig(): DataSourceConfig {
     const host = searchParams.get('host') || DEFAULT_CONFIG.host;
     const portStr = searchParams.get('port');
     const port = portStr ? parseInt(portStr, 10) : DEFAULT_CONFIG.port;
+    const sessionId = searchParams.get('sessionId') || undefined;
 
     return {
       type,
       host,
       port: isNaN(port) ? DEFAULT_CONFIG.port : port,
+      sessionId,
     };
   }, [searchParams]);
 }
