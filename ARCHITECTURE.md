@@ -108,7 +108,7 @@ interface DataSourceConfig {
 
 ### VolatileMemory (`src/types/volatileMemory.ts`)
 
-Types for DRO runtime state:
+Types for DRO runtime state (does not include machine state - use MachineStateContext for that):
 
 ```typescript
 interface AxisValues {
@@ -122,14 +122,6 @@ type DatumMode = 'abs' | 'inc';
 type BootStage = 'boot' | 'showMessage' | 'run';
 
 interface VolatileMemory {
-  // Machine state (from MachineStateContext)
-  machinePosition: MachinePosition;
-  workPosition?: MachinePosition;
-  probe: ProbeState;
-  connected: boolean;
-  controllerType: ControllerType;
-
-  // DRO memory (internal)
   displayValues: AxisValues;
   absolute: AxisValues;
   incremental: AxisValues;
@@ -198,25 +190,39 @@ Simulates machine movement for testing and development. Useful for:
 
 ## Hooks
 
+### useMachineState (`src/hooks/useMachineState.ts`)
+
+Convenience hook for accessing machine state from MachineStateContext:
+
+```typescript
+const { machineState } = useMachineState();
+
+// Returns MachineState:
+{
+  position,      // { x, y, z }
+  workPosition,  // { x, y, z } (optional)
+  probe,         // { pinState, triggered }
+  connected,     // boolean
+  controllerType // 'cncjs' | 'linuxcnc' | 'mock' | 'manual'
+}
+```
+
 ### useVolatileMemory (`src/hooks/useVolatileMemory.ts`)
 
-Convenience hook that returns the full volatile memory context:
+Convenience hook that returns DRO memory state and actions:
 
 ```typescript
 const vm = useVolatileMemory();
 
 // Returns VolatileMemory & VolatileMemoryActions:
 {
-  machinePosition,
-  probe,
-  connected,
-  controllerType,
   displayValues,
   absolute,
   incremental,
   mode,
   workOffsets,
   activeAxis,
+  bootStage,
   toggleMode,
   setMode,
   zeroAxis,
@@ -224,8 +230,11 @@ const vm = useVolatileMemory();
   setAxisValue,
   selectAxis,
   halfAxis,
+  clearKeyPressed,
 }
 ```
+
+**Note:** For machine state (position, probe, connected), use `useMachineState` instead.
 
 **ABS Mode Behavior:**
 - Display shows machine position minus work offset
@@ -279,34 +288,53 @@ Parses URL parameters for data source configuration:
 
 ### MachineStateContext (`src/context/MachineStateContext.tsx`)
 
-Manages adapter lifecycle and machine state from external data sources:
+Manages adapter lifecycle and machine state from external data sources. This is the single source of truth for machine position, probe state, and connection status.
 
 ```typescript
 interface MachineStateContextValue {
-  machineState: MachineState;
-  adapter: MachineConnection | null;
-  isConnecting: boolean;
-  error: Error | null;
-  setAdapter: (adapter: MachineConnection | null) => void;
+  machineState: MachineState;      // Current machine state (position, probe, connected)
+  adapter: MachineConnection | null; // Current adapter instance
+  isConnecting: boolean;           // True while adapter.connect() is pending
+  error: Error | null;             // Connection error, if any
+  setAdapter: (adapter: MachineConnection | null) => void; // Switch adapters
 }
 ```
 
-Responsibilities:
-- Adapter connect/disconnect lifecycle
-- Subscribe to adapter state updates
-- Track connection status and errors
+**Responsibilities:**
+- Adapter connect/disconnect lifecycle management
+- Subscribe to adapter state updates and propagate to consumers
+- Track connection status (connecting, connected, error)
+- Clean up subscriptions when adapter changes or unmounts
+
+**Lifecycle:**
+1. When `initialAdapter` prop is provided or `setAdapter` is called with a new adapter
+2. Context calls `adapter.connect()` and sets `isConnecting: true`
+3. On success: subscribes to adapter updates, sets `isConnecting: false`
+4. On failure: sets `error` with the connection error
+5. On unmount or adapter change: calls `adapter.disconnect()` and unsubscribes
+
+**Usage:**
+```typescript
+// Direct context access
+const { machineState, adapter, setAdapter } = useMachineStateContext();
+
+// Convenience hook (recommended)
+const { machineState } = useMachineState();
+
+// Check connection
+if (machineState.connected) {
+  console.log(`Position: ${machineState.position.x}, ${machineState.position.y}`);
+}
+```
+
+**Note:** VolatileMemoryContext consumes MachineStateContext internally for DRO calculations. Components needing machine state should use `useMachineState()` or `useMachineStateContext()` directly.
 
 ### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
 
-Provides DRO memory to the component tree. Consumes machine state from MachineStateContext:
+Provides DRO memory to the component tree. Consumes machine state from MachineStateContext internally for calculations:
 
 ```typescript
-interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
-  adapter: MachineConnection | null;
-  isConnecting: boolean;
-  error: Error | null;
-  setAdapter: (adapter: MachineConnection | null) => void;
-}
+interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
 ```
 
 Responsibilities:
@@ -314,6 +342,8 @@ Responsibilities:
 - Active axis selection
 - Boot sequence state machine
 - Calculate display values from machine position and offsets
+
+**Note:** Machine state (position, probe, connected, adapter) is accessed via MachineStateContext, not VolatileMemoryContext.
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 

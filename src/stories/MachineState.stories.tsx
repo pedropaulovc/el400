@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { VolatileMemoryProvider, useVolatileMemoryContext } from "../context/VolatileMemoryContext";
-import { MachineStateProvider } from "../context/MachineStateContext";
-import { NonVolatileMemoryProvider } from "../context/NonVolatileMemoryContext";
+import { MachineStateProvider, useMachineStateContext } from "../context/MachineStateContext";
 import { MockAdapter } from "../adapters/MockAdapter";
 
 /**
@@ -10,7 +8,7 @@ import { MockAdapter } from "../adapters/MockAdapter";
  * Used in stories to visualize the data contract.
  */
 function MachineStateDisplay() {
-  const vMem = useVolatileMemoryContext();
+  const { machineState } = useMachineStateContext();
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-lg font-mono text-sm space-y-4 min-w-[400px]">
@@ -21,22 +19,22 @@ function MachineStateDisplay() {
           <h3 className="text-gray-400 text-xs uppercase mb-2">Connection</h3>
           <div className="flex items-center gap-2">
             <span
-              className={`w-3 h-3 rounded-full ${vMem.connected ? "bg-green-500" : "bg-red-500"}`}
+              className={`w-3 h-3 rounded-full ${machineState.connected ? "bg-green-500" : "bg-red-500"}`}
             />
-            <span>{vMem.connected ? "Connected" : "Disconnected"}</span>
+            <span>{machineState.connected ? "Connected" : "Disconnected"}</span>
           </div>
-          <div className="text-gray-500 mt-1">Type: {vMem.controllerType}</div>
+          <div className="text-gray-500 mt-1">Type: {machineState.controllerType}</div>
         </div>
 
         <div>
           <h3 className="text-gray-400 text-xs uppercase mb-2">Probe</h3>
           <div className="flex items-center gap-2">
             <span
-              className={`w-3 h-3 rounded-full ${vMem.probe.triggered ? "bg-yellow-500" : "bg-gray-600"}`}
+              className={`w-3 h-3 rounded-full ${machineState.probe.triggered ? "bg-yellow-500" : "bg-gray-600"}`}
             />
-            <span>{vMem.probe.triggered ? "Triggered" : "Open"}</span>
+            <span>{machineState.probe.triggered ? "Triggered" : "Open"}</span>
           </div>
-          <div className="text-gray-500 mt-1">Pin: {vMem.probe.pinState || "(none)"}</div>
+          <div className="text-gray-500 mt-1">Pin: {machineState.probe.pinState || "(none)"}</div>
         </div>
       </div>
 
@@ -45,34 +43,34 @@ function MachineStateDisplay() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <span className="text-red-400">X:</span>{" "}
-            <span className="text-white">{vMem.machinePosition.x.toFixed(4)}</span>
+            <span className="text-white">{machineState.position.x.toFixed(4)}</span>
           </div>
           <div>
             <span className="text-green-400">Y:</span>{" "}
-            <span className="text-white">{vMem.machinePosition.y.toFixed(4)}</span>
+            <span className="text-white">{machineState.position.y.toFixed(4)}</span>
           </div>
           <div>
             <span className="text-blue-400">Z:</span>{" "}
-            <span className="text-white">{vMem.machinePosition.z.toFixed(4)}</span>
+            <span className="text-white">{machineState.position.z.toFixed(4)}</span>
           </div>
         </div>
       </div>
 
-      {vMem.workPosition && (
+      {machineState.workPosition && (
         <div>
           <h3 className="text-gray-400 text-xs uppercase mb-2">Position (Work)</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <span className="text-red-400">X:</span>{" "}
-              <span className="text-white">{vMem.workPosition.x.toFixed(4)}</span>
+              <span className="text-white">{machineState.workPosition.x.toFixed(4)}</span>
             </div>
             <div>
               <span className="text-green-400">Y:</span>{" "}
-              <span className="text-white">{vMem.workPosition.y.toFixed(4)}</span>
+              <span className="text-white">{machineState.workPosition.y.toFixed(4)}</span>
             </div>
             <div>
               <span className="text-blue-400">Z:</span>{" "}
-              <span className="text-white">{vMem.workPosition.z.toFixed(4)}</span>
+              <span className="text-white">{machineState.workPosition.z.toFixed(4)}</span>
             </div>
           </div>
         </div>
@@ -92,13 +90,9 @@ function StoryWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <NonVolatileMemoryProvider>
-      <MachineStateProvider initialAdapter={adapter}>
-        <VolatileMemoryProvider>
-          {children}
-        </VolatileMemoryProvider>
-      </MachineStateProvider>
-    </NonVolatileMemoryProvider>
+    <MachineStateProvider initialAdapter={adapter}>
+      {children}
+    </MachineStateProvider>
   );
 }
 

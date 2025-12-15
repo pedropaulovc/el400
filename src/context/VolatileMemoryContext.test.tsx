@@ -6,9 +6,16 @@ import {
   useVolatileMemoryContext,
   BOOT_MESSAGE_DURATION_MS,
 } from './VolatileMemoryContext';
-import { MachineStateProvider } from './MachineStateContext';
+import { MachineStateProvider, useMachineStateContext } from './MachineStateContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
 import { MockAdapter } from '../adapters/MockAdapter';
+
+// Combined hook for tests that need both contexts
+function useBothContexts() {
+  const vMem = useVolatileMemoryContext();
+  const { machineState } = useMachineStateContext();
+  return { vMem, machineState };
+}
 
 // Wrapper with all providers (NonVolatileMemory and MachineState required by VolatileMemory)
 function createWrapper() {
@@ -65,15 +72,6 @@ describe('VolatileMemoryContext', () => {
       });
 
       expect(result.current.activeAxis).toBeNull();
-    });
-
-    it('starts disconnected in manual mode', () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.connected).toBe(false);
-      expect(result.current.controllerType).toBe('manual');
     });
 
     it('starts with zero display values', () => {
@@ -514,45 +512,13 @@ describe('VolatileMemoryContext', () => {
       adapter = new MockAdapter();
     });
 
-    it('passes through connected state from MachineStateContext', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
-      });
-
-      await waitFor(() => {
-        expect(result.current.connected).toBe(true);
-      });
-
-      expect(result.current.controllerType).toBe('mock');
-    });
-
-    it('passes through machine position from MachineStateContext', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
-      });
-
-      await waitFor(() => {
-        expect(result.current.connected).toBe(true);
-      });
-
-      act(() => {
-        adapter.setPosition(10, 20, 30);
-      });
-
-      await waitFor(() => {
-        expect(result.current.machinePosition.x).toBe(10);
-        expect(result.current.machinePosition.y).toBe(20);
-        expect(result.current.machinePosition.z).toBe(30);
-      });
-    });
-
     it('calculates absolute values with work offsets', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
+      const { result } = renderHook(() => useBothContexts(), {
         wrapper: createWrapperWithAdapter(adapter),
       });
 
       await waitFor(() => {
-        expect(result.current.connected).toBe(true);
+        expect(result.current.machineState.connected).toBe(true);
       });
 
       // Set machine to position 100
@@ -561,17 +527,17 @@ describe('VolatileMemoryContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machinePosition.x).toBe(100);
+        expect(result.current.machineState.position.x).toBe(100);
       });
 
       // Zero the axis (creates work offset)
       act(() => {
-        result.current.zeroAxis('X');
+        result.current.vMem.zeroAxis('X');
       });
 
       // Display should be 0, work offset should be 100
-      expect(result.current.displayValues.X).toBe(0);
-      expect(result.current.workOffsets.X).toBe(100);
+      expect(result.current.vMem.displayValues.X).toBe(0);
+      expect(result.current.vMem.workOffsets.X).toBe(100);
 
       // Move machine to 150
       act(() => {
@@ -579,36 +545,20 @@ describe('VolatileMemoryContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machinePosition.x).toBe(150);
+        expect(result.current.machineState.position.x).toBe(150);
       });
 
       // Display should be 50 (150 - 100 offset)
-      expect(result.current.displayValues.X).toBe(50);
-    });
-
-    it('passes through setAdapter from MachineStateContext', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.adapter).toBeNull();
-
-      act(() => {
-        result.current.setAdapter(adapter);
-      });
-
-      await waitFor(() => {
-        expect(result.current.adapter).toBe(adapter);
-      });
+      expect(result.current.vMem.displayValues.X).toBe(50);
     });
 
     it('setAxisValue adjusts work offset when connected', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
+      const { result } = renderHook(() => useBothContexts(), {
         wrapper: createWrapperWithAdapter(adapter),
       });
 
       await waitFor(() => {
-        expect(result.current.connected).toBe(true);
+        expect(result.current.machineState.connected).toBe(true);
       });
 
       // Set machine to position 100
@@ -617,39 +567,39 @@ describe('VolatileMemoryContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machinePosition.x).toBe(100);
+        expect(result.current.machineState.position.x).toBe(100);
       });
 
       // Set X axis value to 50 (should create offset of 100 - 50*25.4 in mm)
       // Since we're in inch mode by default, 50 inches = 1270 mm
       // offset = machinePos - valueMm = 100 - 1270 = -1170
       act(() => {
-        result.current.setAxisValue('X', 50);
+        result.current.vMem.setAxisValue('X', 50);
       });
 
       // The work offset should be adjusted so display shows the set value
-      expect(result.current.workOffsets.X).toBe(100 - 50 * 25.4);
+      expect(result.current.vMem.workOffsets.X).toBe(100 - 50 * 25.4);
 
       // Set Y axis value (tests Y branch)
       act(() => {
-        result.current.setAxisValue('Y', 25);
+        result.current.vMem.setAxisValue('Y', 25);
       });
-      expect(result.current.workOffsets.Y).toBe(200 - 25 * 25.4);
+      expect(result.current.vMem.workOffsets.Y).toBe(200 - 25 * 25.4);
 
       // Set Z axis value (tests Z branch)
       act(() => {
-        result.current.setAxisValue('Z', 10);
+        result.current.vMem.setAxisValue('Z', 10);
       });
-      expect(result.current.workOffsets.Z).toBe(300 - 10 * 25.4);
+      expect(result.current.vMem.workOffsets.Z).toBe(300 - 10 * 25.4);
     });
 
     it('halfAxis adjusts work offset when connected', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
+      const { result } = renderHook(() => useBothContexts(), {
         wrapper: createWrapperWithAdapter(adapter),
       });
 
       await waitFor(() => {
-        expect(result.current.connected).toBe(true);
+        expect(result.current.machineState.connected).toBe(true);
       });
 
       // Set machine to position 100
@@ -658,32 +608,32 @@ describe('VolatileMemoryContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machinePosition.x).toBe(100);
+        expect(result.current.machineState.position.x).toBe(100);
       });
 
       // Current display value is 100 (machine pos - 0 offset)
       // Halving should adjust offset so display shows 50
       // New offset = machinePos - halfValue = 100 - 50 = 50
       act(() => {
-        result.current.halfAxis('X');
+        result.current.vMem.halfAxis('X');
       });
 
-      expect(result.current.workOffsets.X).toBe(50);
-      expect(result.current.displayValues.X).toBe(50);
+      expect(result.current.vMem.workOffsets.X).toBe(50);
+      expect(result.current.vMem.displayValues.X).toBe(50);
 
       // Test Y axis (200 -> 100)
       act(() => {
-        result.current.halfAxis('Y');
+        result.current.vMem.halfAxis('Y');
       });
-      expect(result.current.workOffsets.Y).toBe(100);
-      expect(result.current.displayValues.Y).toBe(100);
+      expect(result.current.vMem.workOffsets.Y).toBe(100);
+      expect(result.current.vMem.displayValues.Y).toBe(100);
 
       // Test Z axis (300 -> 150)
       act(() => {
-        result.current.halfAxis('Z');
+        result.current.vMem.halfAxis('Z');
       });
-      expect(result.current.workOffsets.Z).toBe(150);
-      expect(result.current.displayValues.Z).toBe(150);
+      expect(result.current.vMem.workOffsets.Z).toBe(150);
+      expect(result.current.vMem.displayValues.Z).toBe(150);
     });
   });
 
