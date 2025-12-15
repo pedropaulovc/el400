@@ -7,6 +7,12 @@
  * @see project/user-stories/02-core-operations/US-007-center-finding.md
  */
 
+/**
+ * Epsilon value for floating point comparisons.
+ * Used to determine if values are effectively zero or if lines are parallel.
+ */
+const EPSILON = 1e-10;
+
 export interface Point2D {
   x: number;
   y: number;
@@ -73,8 +79,8 @@ export function findCircleCenter(
   const dy2 = p3.y - p2.y;
 
   // Check if chords are vertical (dx = 0)
-  const isVertical1 = Math.abs(dx1) < 1e-10;
-  const isVertical2 = Math.abs(dx2) < 1e-10;
+  const isVertical1 = Math.abs(dx1) < EPSILON;
+  const isVertical2 = Math.abs(dx2) < EPSILON;
 
   // Calculate slopes (only if not vertical)
   const slope1 = isVertical1 ? Infinity : dy1 / dx1;
@@ -86,7 +92,7 @@ export function findCircleCenter(
     return null;
   } else if (!isVertical1 && !isVertical2) {
     // Both chords have finite slope - check if parallel
-    if (Math.abs(slope1 - slope2) < 1e-10) {
+    if (Math.abs(slope1 - slope2) < EPSILON) {
       return null; // Points are collinear, no unique circle
     }
   }
@@ -99,7 +105,7 @@ export function findCircleCenter(
   // Handle vertical chords (infinite slope -> horizontal bisector)
   if (isVertical1) {
     perpSlope1 = 0; // Horizontal bisector
-  } else if (Math.abs(slope1) < 1e-10) {
+  } else if (Math.abs(slope1) < EPSILON) {
     perpSlope1 = Infinity; // Vertical bisector
   } else {
     perpSlope1 = -1 / slope1;
@@ -107,7 +113,7 @@ export function findCircleCenter(
 
   if (isVertical2) {
     perpSlope2 = 0; // Horizontal bisector
-  } else if (Math.abs(slope2) < 1e-10) {
+  } else if (Math.abs(slope2) < EPSILON) {
     perpSlope2 = Infinity; // Vertical bisector
   } else {
     perpSlope2 = -1 / slope2;
