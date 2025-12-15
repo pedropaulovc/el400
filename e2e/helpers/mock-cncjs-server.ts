@@ -11,7 +11,10 @@ export class MockCncjsServer {
   private port: number;
   private currentPosition = { x: 0, y: 0, z: 0 };
 
-  constructor(port: number = 8000) {
+  /**
+   * @param port - Port to listen on. Use 0 for auto-assign (recommended for parallel tests).
+   */
+  constructor(port: number = 0) {
     this.port = port;
     this.httpServer = createServer();
     this.io = new SocketIOServer(this.httpServer, {
@@ -63,6 +66,11 @@ export class MockCncjsServer {
   async start(): Promise<void> {
     return new Promise((resolve) => {
       this.httpServer.listen(this.port, () => {
+        // Get the actual port (important when using port 0 for auto-assign)
+        const address = this.httpServer.address();
+        if (address && typeof address === 'object') {
+          this.port = address.port;
+        }
         resolve();
       });
     });
@@ -70,7 +78,11 @@ export class MockCncjsServer {
 
   async stop(): Promise<void> {
     return new Promise((resolve) => {
+      // Disconnect all sockets first
+      this.io.disconnectSockets(true);
+      // Close Socket.IO server
       this.io.close(() => {
+        // Close HTTP server
         this.httpServer.close(() => {
           resolve();
         });
