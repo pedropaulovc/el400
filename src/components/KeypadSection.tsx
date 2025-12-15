@@ -4,23 +4,30 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
+  const centerFinding = useCenterFinding();
 
   const handleNumber = useCallback((num: string) => {
-    const centerMode = vMem.centerFinding.mode;
+    const centerMode = centerFinding.mode;
     
     // Special handling for key 6 (Right arrow) in center finding mode
     if (num === '6') {
-      if (centerMode === 'centerMenu') {
+      if (centerMode === 'menu') {
         // Navigate from menu to first option
-        vMem.selectCenterLine();
+        centerFinding.selectLine();
         return;
-      } else if (centerMode === 'centerLine' || centerMode === 'centerCircle') {
+      } else if (centerMode === 'line' || centerMode === 'circle') {
         // Store current point
-        vMem.storePoint();
+        const point = {
+          X: vMem.displayValues.X,
+          Y: vMem.displayValues.Y,
+          Z: vMem.displayValues.Z,
+        };
+        centerFinding.storePoint(point);
         return;
       }
     }
@@ -30,7 +37,7 @@ const KeypadSection = () => {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [vMem, inputBuffer]);
+  }, [vMem, inputBuffer, centerFinding]);
 
   const handleDecimal = useCallback(() => {
     if (!vMem.activeAxis) {
@@ -49,22 +56,26 @@ const KeypadSection = () => {
   const handleClear = useCallback(() => {
     inputBuffer.clear();
     vMem.clearKeyPressed();
-  }, [inputBuffer, vMem]);
+    // Also exit center finding mode if active
+    if (centerFinding.mode !== 'inactive') {
+      centerFinding.exit();
+    }
+  }, [inputBuffer, vMem, centerFinding]);
 
   const handleEnter = useCallback(() => {
-    const centerMode = vMem.centerFinding.mode;
+    const centerMode = centerFinding.mode;
     
     // Handle center finding menu navigation
-    if (centerMode === 'centerMenu') {
-      // In menu, ENT selects the first option (LinE)
-      vMem.selectCenterLine();
+    if (centerMode === 'menu') {
+      // In menu, ENT selects the first option (Line)
+      centerFinding.selectLine();
       return;
-    } else if (centerMode === 'centerLine' && vMem.centerFinding.storedPoints.length === 0) {
-      // First ENT in LinE mode confirms selection, ready to collect points
-      // Just stay in centerLine mode, user will now store points
+    } else if (centerMode === 'line' && centerFinding.storedPoints.length === 0) {
+      // First ENT in Line mode confirms selection, ready to collect points
+      // Just stay in line mode, user will now store points
       return;
-    } else if (centerMode === 'centerCircle' && vMem.centerFinding.storedPoints.length === 0) {
-      // First ENT in CirCLE mode confirms selection
+    } else if (centerMode === 'circle' && centerFinding.storedPoints.length === 0) {
+      // First ENT in Circle mode confirms selection
       return;
     }
     
@@ -77,7 +88,7 @@ const KeypadSection = () => {
       vMem.setAxisValue(vMem.activeAxis, value);
       inputBuffer.clear();
     }
-  }, [vMem, inputBuffer]);
+  }, [vMem, inputBuffer, centerFinding]);
 
   return (
     <BeveledFrame>
