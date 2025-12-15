@@ -84,6 +84,9 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --user 1001
     steps:
       - name: Checkout repository
         timeout-minutes: 1
@@ -93,16 +96,11 @@ jobs:
         timeout-minutes: 1
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
         timeout-minutes: 1
         run: npm ci
-
-      - name: Install Playwright browsers
-        timeout-minutes: 1
-        run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run E2E tests
         timeout-minutes: 3
@@ -110,6 +108,9 @@ jobs:
 
   storybook-tests:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --user 1001
     steps:
       - name: Checkout repository
         timeout-minutes: 1
@@ -119,16 +120,11 @@ jobs:
         timeout-minutes: 1
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
         timeout-minutes: 1
         run: npm ci
-
-      - name: Install Playwright browsers
-        timeout-minutes: 1
-        run: npx playwright install --with-deps chromium-headless-shell
 
       - name: Run storybook tests
         timeout-minutes: 1
