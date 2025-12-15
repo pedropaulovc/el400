@@ -72,6 +72,9 @@ const KeypadSection = () => {
         centerFinding.selectLine();
       } else if (centerFinding.menuOption === 'circle') {
         centerFinding.selectCircle();
+      } else if (centerFinding.menuOption === 'center') {
+        // From initial "CEntrE" text, ENT selects default option (line)
+        centerFinding.selectLine();
       }
       return;
     } else if (centerMode === 'line' && centerFinding.storedPoints.length === 0) {
