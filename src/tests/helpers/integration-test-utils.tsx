@@ -10,9 +10,7 @@ import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContex
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
-
-const NON_VOLATILE_MEMORY_STORAGE_KEY = 'el400-dro-non-volatile-memory';
-
+import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
 /**
  * Sets non-volatile memory in localStorage
  * Can set partial values - merges with existing data
