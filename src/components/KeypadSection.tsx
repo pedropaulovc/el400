@@ -17,8 +17,8 @@ const KeypadSection = () => {
     // Special handling for key 6 (Right arrow) in center finding mode
     if (num === '6') {
       if (centerMode === 'menu') {
-        // Navigate from menu to first option
-        centerFinding.selectLine();
+        // Navigate through menu options
+        centerFinding.cycleMenuOption();
         return;
       } else if (centerMode === 'line' || centerMode === 'circle') {
         // Store current point
@@ -67,8 +67,12 @@ const KeypadSection = () => {
     
     // Handle center finding menu navigation
     if (centerMode === 'menu') {
-      // In menu, ENT selects the first option (Line)
-      centerFinding.selectLine();
+      // In menu, ENT confirms the selected option
+      if (centerFinding.menuOption === 'line') {
+        centerFinding.selectLine();
+      } else if (centerFinding.menuOption === 'circle') {
+        centerFinding.selectCircle();
+      }
       return;
     } else if (centerMode === 'line' && centerFinding.storedPoints.length === 0) {
       // First ENT in Line mode confirms selection, ready to collect points
