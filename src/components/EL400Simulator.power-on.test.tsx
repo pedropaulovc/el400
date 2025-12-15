@@ -7,8 +7,7 @@ import {
   renderSimulator,
   setBootMessageMode,
 } from '../tests/helpers/integration-test-utils';
-
-const BOOT_MESSAGE_DURATION_MS = 1000;
+import { BOOT_MESSAGE_DURATION_MS } from '../context/VolatileMemoryContext';
 
 describe('EL400Simulator power-on sequence', () => {
   beforeEach(() => {

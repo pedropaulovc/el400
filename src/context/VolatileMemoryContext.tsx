@@ -41,6 +41,12 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
 
 const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(null);
 
+/**
+ * Duration in milliseconds for the boot message to be displayed before auto-dismissing.
+ * Used in the boot sequence state machine.
+ */
+export const BOOT_MESSAGE_DURATION_MS = 1000;
+
 export interface VolatileMemoryProviderProps {
   children: ReactNode;
   /** Optional initial adapter */
@@ -113,7 +119,7 @@ export function VolatileMemoryProvider({
    *   boot → showMessage  (when nvMem.bootMessageMode == 'show')
    *   boot → run          (when nvMem.bootMessageMode == 'skip' or URL param bootMessageMode == 'skip')
    *   boot → run          (when C key pressed)
-   *   showMessage → run   (when 1000ms timeout expires)
+   *   showMessage → run   (when BOOT_MESSAGE_DURATION_MS timeout expires)
    *   showMessage → run   (when C key pressed)
    */
   useEffect(() => {
@@ -129,7 +135,7 @@ export function VolatileMemoryProvider({
 
     // Timer for auto-dismiss
     if (bootStage === 'showMessage') {
-      const timer = setTimeout(() => setBootStage('run'), 1000);
+      const timer = setTimeout(() => setBootStage('run'), BOOT_MESSAGE_DURATION_MS);
       return () => clearTimeout(timer);
     }
   }, [bootStage, nvMemory.bootMessageMode]);
