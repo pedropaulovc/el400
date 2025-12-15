@@ -239,25 +239,25 @@ test.describe('US-003: ABS/INC Mode', () => {
    * Note: simulateEncoderMove sets position in mm (internal storage format).
    * With default inch display, 10mm displays as ~0.3937 inches.
    */
-  test('should allow INC zeroing with encoder movement', async ({ droWithCncjs }) => {
+  test('should allow INC zeroing with encoder movement', async ({ dro }) => {
     // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
-    droWithCncjs.simulateEncoderMove('X', 10);
+    dro.simulateEncoderMove('X', 10);
     // 10mm = 0.3937 inches
-    await droWithCncjs.waitForAxisValue('X', 0.3937);
+    await dro.waitForAxisValue('X', 0.3937);
 
     // Switch to INC
-    await droWithCncjs.toggleAbsInc();
-    expect(await droWithCncjs.isIncMode()).toBe(true);
+    await dro.toggleAbsInc();
+    expect(await dro.isIncMode()).toBe(true);
 
     // Zero X in INC mode
-    await droWithCncjs.zeroAxis('X');
-    await droWithCncjs.waitForAxisValue('X', 0, 1);
+    await dro.zeroAxis('X');
+    await dro.waitForAxisValue('X', 0, 1);
 
     // Switch back to ABS
-    await droWithCncjs.toggleAbsInc();
-    expect(await droWithCncjs.isAbsMode()).toBe(true);
+    await dro.toggleAbsInc();
+    expect(await dro.isAbsMode()).toBe(true);
 
     // ABS value should still be 0.3937 inches (10mm preserved)
-    await droWithCncjs.waitForAxisValue('X', 0.3937);
+    await dro.waitForAxisValue('X', 0.3937);
   });
 });
