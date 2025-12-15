@@ -55,6 +55,7 @@ export class DROPage {
   readonly absIncButton: Locator;
   readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
+  readonly functionButton: Locator;
 
   constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
     this.page = page;
@@ -105,6 +106,7 @@ export class DROPage {
     this.absIncButton = page.getByTestId('btn-abs-inc');
     this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
     this.centerButton = page.getByTestId('btn-center');
+    this.functionButton = page.getByTestId('btn-function');
   }
 
   /**
