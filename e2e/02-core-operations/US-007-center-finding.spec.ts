@@ -26,25 +26,20 @@ test.describe('US-007: Center Finding', () => {
     // Verify display shows "CEntrE"
     await expect(dro.xDisplay).toContainText('CEntrE');
     
-    // Press ENT to select CENTRE (which selects LinE by default)
+    // Press ENT to select LinE (default option)
     await dro.enterButton.click();
     
-    // Verify display shows "LinE" (first option)
+    // Verify display shows "LinE" after entering line mode
     await expect(dro.xDisplay).toContainText('LinE');
     
-    // Press ENT to confirm LinE selection
-    await dro.enterButton.click();
-    
-    // Point 1 at 0
+    // Point 1 at 0 (display will show "LinE" while collecting points)
     await dro.simulateEncoderMove('X', 0);
-    await dro.waitForAxisValue('X', 0, 1);
     
     // Store Point 1 using key 6 (Right/Store)
     await dro.key6.click();
     
-    // Point 2 at 100mm
+    // Point 2 at 100mm (display still shows "LinE")
     await dro.simulateEncoderMove('X', 100);
-    await dro.waitForAxisValue('X', 100, 1);
     
     // Store Point 2
     await dro.key6.click();
