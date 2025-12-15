@@ -72,6 +72,7 @@ jobs:
           file-coverage-mode: ${{ github.event_name == 'pull_request' && 'changes' || 'all' }}
           pr-number: ${{ github.event.pull_request.number }}
           json-summary-compare-path: ${{ steps.download-coverage-baseline.outcome == 'success' && 'coverage-baseline/coverage-summary.json' || '' }}
+          threshold-icons: "{0: '🔴', 70: '🟡', 75: '🔵', 85: '🟢'}"
 
       - name: Upload coverage baseline
         if: github.ref == 'refs/heads/main'
