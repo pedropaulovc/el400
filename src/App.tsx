@@ -3,13 +3,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
+import { MachineStateProvider } from "./context/MachineStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
 import { MockAdapter } from "./adapters/MockAdapter";
 import { CncjsAdapter } from "./adapters/CncjsAdapter";
 import type { MachineConnection } from "./adapters/MachineConnection";
-import type { DataSourceConfig } from "./types/volatileMemory";
+import type { DataSourceConfig } from "./types/machineState";
 
 const queryClient = new QueryClient();
 
@@ -43,13 +44,15 @@ function AppContent() {
 
   return (
     <NonVolatileMemoryProvider>
-      <VolatileMemoryProvider initialAdapter={adapter}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </VolatileMemoryProvider>
+      <MachineStateProvider initialAdapter={adapter}>
+        <VolatileMemoryProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </VolatileMemoryProvider>
+      </MachineStateProvider>
     </NonVolatileMemoryProvider>
   );
 }

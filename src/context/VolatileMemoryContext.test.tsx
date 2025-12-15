@@ -6,15 +6,18 @@ import {
   useVolatileMemoryContext,
   BOOT_MESSAGE_DURATION_MS,
 } from './VolatileMemoryContext';
+import { MachineStateProvider } from './MachineStateContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
 import { MockAdapter } from '../adapters/MockAdapter';
 
-// Wrapper with both providers (NonVolatileMemory required by VolatileMemory)
+// Wrapper with all providers (NonVolatileMemory and MachineState required by VolatileMemory)
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NonVolatileMemoryProvider>
-        <VolatileMemoryProvider>{children}</VolatileMemoryProvider>
+        <MachineStateProvider>
+          <VolatileMemoryProvider>{children}</VolatileMemoryProvider>
+        </MachineStateProvider>
       </NonVolatileMemoryProvider>
     );
   };
@@ -24,9 +27,11 @@ function createWrapperWithAdapter(adapter: MockAdapter) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NonVolatileMemoryProvider>
-        <VolatileMemoryProvider initialAdapter={adapter}>
-          {children}
-        </VolatileMemoryProvider>
+        <MachineStateProvider initialAdapter={adapter}>
+          <VolatileMemoryProvider>
+            {children}
+          </VolatileMemoryProvider>
+        </MachineStateProvider>
       </NonVolatileMemoryProvider>
     );
   };

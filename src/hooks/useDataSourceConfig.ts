@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ControllerType, DataSourceConfig } from '../types/volatileMemory';
+import type { ControllerType, DataSourceConfig } from '../types/machineState';
 
 const DEFAULT_CONFIG: DataSourceConfig = {
   type: 'manual',
