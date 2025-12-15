@@ -12,21 +12,14 @@ import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-co
 
 /**
  * Renders the EL400Simulator with all required providers
+ * By default, skips the boot message for faster tests
  */
-export function renderSimulator(options?: { powerOnMode?: 'force' | 'skip' | 'auto' }) {
-  const powerOnMode = options?.powerOnMode ?? 'skip';
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    if (powerOnMode === 'force') {
-      params.set('powerOn', 'force');
-    } else if (powerOnMode === 'skip') {
-      params.set('powerOn', 'skip');
-    } else {
-      params.delete('powerOn');
-    }
-    const search = params.toString();
-    const url = search ? `${window.location.pathname}?${search}` : window.location.pathname;
-    window.history.replaceState({}, '', url);
+export function renderSimulator() {
+  // Skip boot message by default for tests (unless already set in localStorage)
+  if (!localStorage.getItem('el400-dro-non-volatile-memory')) {
+    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+      bootMessageMode: 'skip',
+    }));
   }
 
   const queryClient = new QueryClient({

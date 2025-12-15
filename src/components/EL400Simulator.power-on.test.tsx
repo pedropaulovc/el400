@@ -6,7 +6,8 @@ import {
   getAxisDisplayPureTextValue,
   renderSimulator,
 } from '../tests/helpers/integration-test-utils';
-import { POWER_ON_DISPLAY_DURATION_MS } from './EL400Simulator';
+
+const BOOT_MESSAGE_DURATION_MS = 1000;
 
 describe('EL400Simulator power-on sequence', () => {
   beforeEach(() => {
@@ -14,8 +15,13 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('shows model and version on power-on', () => {
+    // Set bootMessageMode to 'show' (default behavior)
+    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+      bootMessageMode: 'show',
+    }));
+
     vi.useFakeTimers();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator();
 
     expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
     expect(getAxisDisplayPureTextValue('Y')).toBe('vEr 1.0.0');
@@ -28,11 +34,15 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('transitions to counting mode after timeout', async () => {
+    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+      bootMessageMode: 'show',
+    }));
+
     vi.useFakeTimers();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator();
 
     await act(async () => {
-      vi.advanceTimersByTime(POWER_ON_DISPLAY_DURATION_MS);
+      vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
     });
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
@@ -46,8 +56,12 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('allows bypassing the power-on message with the clear key', async () => {
+    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+      bootMessageMode: 'show',
+    }));
+
     const user = userEvent.setup();
-    renderSimulator({ powerOnMode: 'force' });
+    renderSimulator();
 
     await user.click(screen.getByTestId('key-clear'));
 

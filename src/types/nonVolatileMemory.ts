@@ -12,6 +12,8 @@ export interface NonVolatileMemory {
   defaultUnit: 'inch' | 'mm';
   /** Decimal places for display (e.g., 4 for 0.0001) */
   precision: number;
+  /** Whether to show boot message on startup */
+  bootMessageMode: 'show' | 'skip';
 }
 
 /**
@@ -21,6 +23,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   beepEnabled: true,
   defaultUnit: 'inch',
   precision: 4,
+  bootMessageMode: 'show',
 };
 
 /**
