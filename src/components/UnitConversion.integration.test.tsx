@@ -5,7 +5,6 @@ import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
   enterValue,
-  setBootMessageMode,
 } from '../tests/helpers/integration-test-utils';
 
 describe('Unit Conversion Integration', () => {
@@ -14,7 +13,6 @@ describe('Unit Conversion Integration', () => {
   beforeEach(() => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.clear();
-    setBootMessageMode('skip');
   });
 
   afterEach(() => {
