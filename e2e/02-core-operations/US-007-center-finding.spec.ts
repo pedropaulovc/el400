@@ -40,14 +40,14 @@ test.describe('US-007: Center Finding', () => {
     await dro.waitForAxisValue('X', 0, 1);
     
     // Store Point 1 using key 6 (Right/Store)
-    await dro.storePoint();
+    await dro.key6.click();
     
     // Point 2 at 100mm
     await dro.simulateEncoderMove('X', 100);
     await dro.waitForAxisValue('X', 100, 1);
     
     // Store Point 2
-    await dro.storePoint();
+    await dro.key6.click();
     
     // Center should be at 50mm. Distance to go from 100mm is -50mm
     // In inch display mode: 100mm = ~3.937 inches, center = ~1.9685 inches
@@ -74,7 +74,7 @@ test.describe('US-007: Center Finding', () => {
     await expect(dro.xDisplay).toContainText('CEntrE');
     
     // Navigate to "CirCLE" option (press key 6 for Right)
-    await dro.storePoint(); // Key 6 navigates in menu mode
+    await dro.key6.click(); // Key 6 navigates in menu mode
     
     // Verify display shows "CirCLE"
     await expect(dro.xDisplay).toContainText('CirCLE');
@@ -88,27 +88,27 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Z', 0);
     
     // Store Point 1
-    await dro.storePoint();
+    await dro.key6.click();
     
     // Point 2: (0, 10, 0) - Top of circle
     await dro.simulateEncoderMove('X', 0);
     await dro.simulateEncoderMove('Y', 10);
     
     // Store Point 2
-    await dro.storePoint();
+    await dro.key6.click();
     
     // Point 3: (-10, 0, 0) - Left side of circle
     await dro.simulateEncoderMove('X', -10);
     await dro.simulateEncoderMove('Y', 0);
     
     // Store Point 3
-    await dro.storePoint();
+    await dro.key6.click();
     
     // Circle center should be at (0, 0, 0)
-    // Distance to go from Point 3 (-10, 0, 0) to center (0, 0, 0) is (10, -10, 0)
-    // In inch mode: 10mm = ~0.3937 inches, -10mm = ~-0.3937 inches
+    // Distance to go from Point 3 (-10, 0, 0) to center (0, 0, 0) is (10, 0, 0)
+    // In inch mode: 10mm = ~0.3937 inches, 0mm = 0 inches
     await dro.waitForAxisValue('X', 0.3937, 1);
-    await dro.waitForAxisValue('Y', -0.3937, 1);
+    await dro.waitForAxisValue('Y', 0, 1);
   });
 
   /**
