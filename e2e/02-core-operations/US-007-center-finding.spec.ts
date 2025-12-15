@@ -81,6 +81,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.enterButton.click();
     
     // Navigate to "CirCLE" option (press Right)
+    // Note: Temporary placeholder - will need proper navigation method when implemented
     await dro.page.keyboard.press('ArrowRight');
     
     // Verify display shows "CirCLE"
@@ -95,6 +96,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Z', 0);
     
     // Store Point 1
+    // Note: Temporary placeholder - will need proper storePoint method when implemented
     await dro.page.keyboard.press('ArrowRight');
     
     // Point 2: (0, 10, 0) - Top of circle
@@ -102,6 +104,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Y', 10);
     
     // Store Point 2
+    // Note: Temporary placeholder - will need proper storePoint method when implemented
     await dro.page.keyboard.press('ArrowRight');
     
     // Point 3: (-10, 0, 0) - Left side of circle
@@ -109,6 +112,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Y', 0);
     
     // Store Point 3
+    // Note: Temporary placeholder - will need proper storePoint method when implemented
     await dro.page.keyboard.press('ArrowRight');
     
     // Circle center should be at (0, 0, 0)
