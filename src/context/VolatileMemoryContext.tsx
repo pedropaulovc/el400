@@ -339,18 +339,6 @@ export function VolatileMemoryProvider({
     setAdapter,
   };
 
-  // Expose adapter to window object for E2E and integration tests.
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as unknown as { __el400Adapter?: MachineConnection | null }).__el400Adapter = adapter;
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        delete (window as unknown as { __el400Adapter?: MachineConnection | null }).__el400Adapter;
-      }
-    };
-  }, [adapter]);
-
   return (
     <VolatileMemoryContext.Provider value={contextValue}>
       {children}
