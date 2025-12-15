@@ -26,7 +26,7 @@ import type {
 } from '../types/volatileMemory';
 import { ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { fromAnyUnitToMm } from '../utils/unitConversion';
-import { findLineCenter, findCircleCenter, calculateDistanceToGo } from '../utils/centerFinding';
+import { findLineCenter, findCircleCenter } from '../utils/centerFinding';
 import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
 import { useMachineStateContext } from './MachineStateContext';
 
@@ -307,24 +307,20 @@ export function VolatileMemoryProvider({
   const navigateMenu = useCallback((direction: 'next' | 'prev') => {
     setCenterFindingState((prev) => {
       if (prev.mode === 'centerMenu') {
-        // Currently showing "CEntrE", navigate to "LinE" (next) or stay (prev from start)
+        // From menu, only next goes to LinE
         if (direction === 'next') {
           return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
         }
       } else if (prev.mode === 'centerLine') {
-        // Currently showing "LinE", navigate to "CirCLE" (next) or back to menu (prev)
+        // From LinE, next goes to CirCLE, prev goes back to menu
         if (direction === 'next') {
           return { ...prev, mode: 'centerCircle', storedPoints: [], centerResult: null };
         } else {
           return { ...prev, mode: 'centerMenu', storedPoints: [], centerResult: null };
         }
       } else if (prev.mode === 'centerCircle') {
-        // Currently showing "CirCLE", wrap to "LinE" (next) or back to "LinE" (prev)
-        if (direction === 'next') {
-          return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
-        } else {
-          return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
-        }
+        // From CirCLE, next wraps to LinE, prev goes back to LinE
+        return { ...prev, mode: 'centerLine', storedPoints: [], centerResult: null };
       }
       return prev;
     });
