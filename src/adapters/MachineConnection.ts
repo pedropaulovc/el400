@@ -3,7 +3,7 @@
  * Implementations provide data from various sources (CNCjs, LinuxCNC, mock, etc.)
  */
 
-import type { ControllerType, MachineState, MachineStateListener } from '../types/volatileMemory';
+import type { ControllerType, MachineState, MachineStateListener } from '../types/machineState';
 
 /**
  * Abstract interface for machine data connections.

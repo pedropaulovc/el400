@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { VolatileMemoryProvider } from "../context/VolatileMemoryContext";
+import { MachineStateProvider, useMachineStateContext } from "../context/MachineStateContext";
 import { NonVolatileMemoryProvider, useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockAdapter } from "../adapters/MockAdapter";
@@ -12,6 +13,7 @@ import type { Axis } from "../types/volatileMemory";
  */
 function VolatileMemoryDemo() {
   const vMem = useVolatileMemory();
+  const { machineState } = useMachineStateContext();
   const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
 
   const handleZeroAxis = (axis: Axis) => {
@@ -26,10 +28,10 @@ function VolatileMemoryDemo() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span
-            className={`w-3 h-3 rounded-full ${vMem.connected ? "bg-green-500" : "bg-gray-600"}`}
+            className={`w-3 h-3 rounded-full ${machineState.connected ? "bg-green-500" : "bg-gray-600"}`}
           />
           <span className="text-gray-400">
-            {vMem.connected ? "Mock Connected" : "Manual Mode"}
+            {machineState.connected ? "Mock Connected" : "Manual Mode"}
           </span>
         </div>
         <span className="text-gray-600">|</span>
@@ -150,9 +152,11 @@ function StoryWrapper({
 }) {
   return (
     <NonVolatileMemoryProvider>
-      <VolatileMemoryProvider initialAdapter={adapter}>
-        {children}
-      </VolatileMemoryProvider>
+      <MachineStateProvider initialAdapter={adapter}>
+        <VolatileMemoryProvider>
+          {children}
+        </VolatileMemoryProvider>
+      </MachineStateProvider>
     </NonVolatileMemoryProvider>
   );
 }

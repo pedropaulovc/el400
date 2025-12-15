@@ -10,16 +10,23 @@ Technical documentation for developers working on the EL400 DRO simulator.
 │  (consumes VolatileMemory via useVolatileMemory hook)           │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
-          ┌───────────────────┴───────────────────┐
-          │                                       │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
 ┌─────────────────────────────┐   ┌─────────────────────────────┐
 │   VolatileMemoryContext     │   │  NonVolatileMemoryContext   │
-│  - Machine state from       │   │  - Persisted settings       │
-│    adapter                  │   │  - beepEnabled, defaultUnit │
-│  - DRO memory (ABS/INC)     │   │  - localStorage persistence │
-│  - activeAxis               │   │                             │
-│  - Connection management    │   │                             │
+│  - DRO memory (ABS/INC)     │   │  - Persisted settings       │
+│  - activeAxis, workOffsets  │   │  - beepEnabled, defaultUnit │
+│  - Boot sequence state      │   │  - localStorage persistence │
+│  - Consumes MachineState    │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
+          ▲
+          │
+┌─────────────────────────────────────────────────────────────────┐
+│                   MachineStateContext                            │
+│  - Adapter lifecycle (connect/disconnect)                       │
+│  - Machine state from adapter                                   │
+│  - Connection status (isConnecting, error)                      │
+└─────────────────────────────────────────────────────────────────┘
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -43,12 +50,19 @@ Technical documentation for developers working on the EL400 DRO simulator.
 The DRO uses two types of memory:
 
 ### Volatile Memory
-Runtime state that is lost on refresh. Includes:
+Runtime state that is lost on refresh. Split across two contexts:
+
+**MachineStateContext:**
 - Machine position from external adapter
+- Probe state
+- Connection state and errors
+- Adapter lifecycle
+
+**VolatileMemoryContext:**
 - DRO display values (ABS/INC modes)
 - Active axis selection
 - Work offsets
-- Connection state
+- Boot sequence state
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
@@ -58,7 +72,9 @@ Persisted settings saved to localStorage. Includes:
 
 ## Core Types
 
-### VolatileMemory (`src/types/volatileMemory.ts`)
+### MachineState (`src/types/machineState.ts`)
+
+Types for machine data from external adapters:
 
 ```typescript
 interface MachinePosition {
@@ -72,6 +88,29 @@ interface ProbeState {
   triggered: boolean;  // Derived: pinState.includes('P')
 }
 
+type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+
+interface MachineState {
+  position: MachinePosition;
+  workPosition?: MachinePosition;
+  probe: ProbeState;
+  connected: boolean;
+  controllerType: ControllerType;
+}
+
+interface DataSourceConfig {
+  type: ControllerType;
+  host: string;
+  port: number;
+  sessionId?: string;
+}
+```
+
+### VolatileMemory (`src/types/volatileMemory.ts`)
+
+Types for DRO runtime state (does not include machine state - use MachineStateContext for that):
+
+```typescript
 interface AxisValues {
   X: number;
   Y: number;
@@ -80,23 +119,16 @@ interface AxisValues {
 
 type Axis = 'X' | 'Y' | 'Z';
 type DatumMode = 'abs' | 'inc';
-type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+type BootStage = 'boot' | 'showMessage' | 'run';
 
 interface VolatileMemory {
-  // Machine state (from adapter)
-  machinePosition: MachinePosition;
-  workPosition?: MachinePosition;
-  probe: ProbeState;
-  connected: boolean;
-  controllerType: ControllerType;
-
-  // DRO memory (internal)
   displayValues: AxisValues;
   absolute: AxisValues;
   incremental: AxisValues;
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
+  bootStage: BootStage;
 }
 
 interface VolatileMemoryActions {
@@ -107,6 +139,7 @@ interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
+  clearKeyPressed: () => void;
 }
 ```
 
@@ -157,25 +190,39 @@ Simulates machine movement for testing and development. Useful for:
 
 ## Hooks
 
+### useMachineState (`src/hooks/useMachineState.ts`)
+
+Convenience hook for accessing machine state from MachineStateContext:
+
+```typescript
+const { machineState } = useMachineState();
+
+// Returns MachineState:
+{
+  position,      // { x, y, z }
+  workPosition,  // { x, y, z } (optional)
+  probe,         // { pinState, triggered }
+  connected,     // boolean
+  controllerType // 'cncjs' | 'linuxcnc' | 'mock' | 'manual'
+}
+```
+
 ### useVolatileMemory (`src/hooks/useVolatileMemory.ts`)
 
-Convenience hook that returns the full volatile memory context:
+Convenience hook that returns DRO memory state and actions:
 
 ```typescript
 const vm = useVolatileMemory();
 
 // Returns VolatileMemory & VolatileMemoryActions:
 {
-  machinePosition,
-  probe,
-  connected,
-  controllerType,
   displayValues,
   absolute,
   incremental,
   mode,
   workOffsets,
   activeAxis,
+  bootStage,
   toggleMode,
   setMode,
   zeroAxis,
@@ -183,8 +230,11 @@ const vm = useVolatileMemory();
   setAxisValue,
   selectAxis,
   halfAxis,
+  clearKeyPressed,
 }
 ```
+
+**Note:** For machine state (position, probe, connected), use `useMachineState` instead.
 
 **ABS Mode Behavior:**
 - Display shows machine position minus work offset
@@ -236,18 +286,64 @@ Parses URL parameters for data source configuration:
 
 ## Contexts
 
-### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
+### MachineStateContext (`src/context/MachineStateContext.tsx`)
 
-Provides machine state and DRO memory to the component tree:
+Manages adapter lifecycle and machine state from external data sources. This is the single source of truth for machine position, probe state, and connection status.
 
 ```typescript
-interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
-  adapter: MachineConnection | null;
-  isConnecting: boolean;
-  error: Error | null;
-  setAdapter: (adapter: MachineConnection | null) => void;
+interface MachineStateContextValue {
+  machineState: MachineState;      // Current machine state (position, probe, connected)
+  adapter: MachineConnection | null; // Current adapter instance
+  isConnecting: boolean;           // True while adapter.connect() is pending
+  error: Error | null;             // Connection error, if any
+  setAdapter: (adapter: MachineConnection | null) => void; // Switch adapters
 }
 ```
+
+**Responsibilities:**
+- Adapter connect/disconnect lifecycle management
+- Subscribe to adapter state updates and propagate to consumers
+- Track connection status (connecting, connected, error)
+- Clean up subscriptions when adapter changes or unmounts
+
+**Lifecycle:**
+1. When `initialAdapter` prop is provided or `setAdapter` is called with a new adapter
+2. Context calls `adapter.connect()` and sets `isConnecting: true`
+3. On success: subscribes to adapter updates, sets `isConnecting: false`
+4. On failure: sets `error` with the connection error
+5. On unmount or adapter change: calls `adapter.disconnect()` and unsubscribes
+
+**Usage:**
+```typescript
+// Direct context access
+const { machineState, adapter, setAdapter } = useMachineStateContext();
+
+// Convenience hook (recommended)
+const { machineState } = useMachineState();
+
+// Check connection
+if (machineState.connected) {
+  console.log(`Position: ${machineState.position.x}, ${machineState.position.y}`);
+}
+```
+
+**Note:** VolatileMemoryContext consumes MachineStateContext internally for DRO calculations. Components needing machine state should use `useMachineState()` or `useMachineStateContext()` directly.
+
+### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
+
+Provides DRO memory to the component tree. Consumes machine state from MachineStateContext internally for calculations:
+
+```typescript
+interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
+```
+
+Responsibilities:
+- DRO memory (ABS/INC mode, work offsets, incremental values)
+- Active axis selection
+- Boot sequence state machine
+- Calculate display values from machine position and offsets
+
+**Note:** Machine state (position, probe, connected, adapter) is accessed via MachineStateContext, not VolatileMemoryContext.
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
@@ -261,13 +357,18 @@ interface NonVolatileMemoryContextValue {
 }
 ```
 
-**Provider Order:** NonVolatileMemoryProvider must wrap VolatileMemoryProvider because the volatile memory context uses non-volatile settings for unit conversion.
+**Provider Order:** The contexts must be nested in this order:
+1. NonVolatileMemoryProvider (outer) - no dependencies
+2. MachineStateProvider - receives adapter, manages connection
+3. VolatileMemoryProvider (inner) - consumes both MachineState and NonVolatileMemory
 
 ```tsx
 <NonVolatileMemoryProvider>
-  <VolatileMemoryProvider>
-    {children}
-  </VolatileMemoryProvider>
+  <MachineStateProvider initialAdapter={adapter}>
+    <VolatileMemoryProvider>
+      {children}
+    </VolatileMemoryProvider>
+  </MachineStateProvider>
 </NonVolatileMemoryProvider>
 ```
 

@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
+import { MachineStateProvider } from '../../context/MachineStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
@@ -53,9 +54,11 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <NonVolatileMemoryProvider>
-          <VolatileMemoryProvider>
-            <EL400Simulator />
-          </VolatileMemoryProvider>
+          <MachineStateProvider>
+            <VolatileMemoryProvider>
+              <EL400Simulator />
+            </VolatileMemoryProvider>
+          </MachineStateProvider>
         </NonVolatileMemoryProvider>
       </BrowserRouter>
     </QueryClientProvider>
