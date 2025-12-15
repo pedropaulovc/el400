@@ -51,7 +51,6 @@ export interface CenterFindingActions {
   selectCircle: () => void;
   storePoint: (point: StoredPoint) => void;
   exit: () => void;
-  navigateMenu: (direction: 'next' | 'prev') => void;
 }
 
 export interface CenterFindingContextValue extends CenterFindingState, CenterFindingActions {}
@@ -161,29 +160,6 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
     });
   }, []);
 
-  // Navigate through menu options
-  const navigateMenu = useCallback((direction: 'next' | 'prev') => {
-    setState((prev) => {
-      if (prev.mode === 'menu') {
-        // From menu, only next goes to line
-        if (direction === 'next') {
-          return { ...prev, mode: 'line', storedPoints: [], centerResult: null };
-        }
-      } else if (prev.mode === 'line') {
-        // From line, next goes to circle, prev goes back to menu
-        if (direction === 'next') {
-          return { ...prev, mode: 'circle', storedPoints: [], centerResult: null };
-        } else {
-          return { ...prev, mode: 'menu', storedPoints: [], centerResult: null };
-        }
-      } else if (prev.mode === 'circle') {
-        // From circle, both directions go back to line
-        return { ...prev, mode: 'line', storedPoints: [], centerResult: null };
-      }
-      return prev;
-    });
-  }, []);
-
   const contextValue: CenterFindingContextValue = {
     // State
     mode: state.mode,
@@ -196,7 +172,6 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
     selectCircle,
     storePoint,
     exit,
-    navigateMenu,
   };
 
   return (

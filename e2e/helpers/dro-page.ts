@@ -295,14 +295,6 @@ export class DROPage {
   }
 
   /**
-   * Store a point in center finding mode.
-   * Presses the key-6 button which acts as the "Right/Store" button.
-   */
-  async storePoint(): Promise<void> {
-    await this.key6.click();
-  }
-
-  /**
    * Check if Fn LED is on (function mode active)
    */
   async isFnModeActive(): Promise<boolean> {
