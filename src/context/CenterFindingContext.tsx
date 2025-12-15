@@ -174,13 +174,13 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
   const cycleMenuOption = useCallback(() => {
     setState((prev) => {
       if (prev.mode === 'menu') {
-        // Cycle: center -> line -> circle -> line -> ...
+        // Cycle: center -> circle -> line -> circle -> ...
         if (prev.menuOption === 'center') {
-          return { ...prev, menuOption: 'line' };
-        } else if (prev.menuOption === 'line') {
           return { ...prev, menuOption: 'circle' };
-        } else {
+        } else if (prev.menuOption === 'circle') {
           return { ...prev, menuOption: 'line' };
+        } else {
+          return { ...prev, menuOption: 'circle' };
         }
       }
       return prev;

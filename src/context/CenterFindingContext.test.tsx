@@ -41,23 +41,23 @@ describe('CenterFindingContext', () => {
       // Start at 'center'
       expect(result.current.menuOption).toBe('center');
 
-      // Cycle to 'line'
-      act(() => {
-        result.current.cycleMenuOption();
-      });
-      expect(result.current.menuOption).toBe('line');
-
       // Cycle to 'circle'
       act(() => {
         result.current.cycleMenuOption();
       });
       expect(result.current.menuOption).toBe('circle');
 
-      // Cycle back to 'line'
+      // Cycle to 'line'
       act(() => {
         result.current.cycleMenuOption();
       });
       expect(result.current.menuOption).toBe('line');
+
+      // Cycle back to 'circle'
+      act(() => {
+        result.current.cycleMenuOption();
+      });
+      expect(result.current.menuOption).toBe('circle');
     });
 
     it('should not cycle menu options when not in menu mode', () => {

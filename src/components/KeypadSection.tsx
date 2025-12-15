@@ -77,13 +77,6 @@ const KeypadSection = () => {
         centerFinding.selectLine();
       }
       return;
-    } else if (centerMode === 'line' && centerFinding.storedPoints.length === 0) {
-      // First ENT in Line mode confirms selection, ready to collect points
-      // Just stay in line mode, user will now store points
-      return;
-    } else if (centerMode === 'circle' && centerFinding.storedPoints.length === 0) {
-      // First ENT in Circle mode confirms selection
-      return;
     }
     
     // Normal mode: handle numeric entry
