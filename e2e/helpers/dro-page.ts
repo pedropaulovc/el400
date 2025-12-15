@@ -1,6 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
-import { DEFAULT_NON_VOLATILE_MEMORY, NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../src/types/nonVolatileMemory';
 
 /**
  * Page Object Model for the EL400 DRO Simulator
@@ -104,63 +103,34 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator
+   * Navigate to the DRO simulator.
    * @param options.source - 'mock' for encoder simulation, undefined for manual mode (default)
    * @param options.skipBootMessage - Skip boot message via URL param (default: true for E2E tests)
    */
   async goto(options?: { source?: 'mock'; skipBootMessage?: boolean }) {
     const params = new URLSearchParams();
 
-    // Add source parameter if specified (e.g., for MockAdapter support)
     if (options?.source) {
       params.set('source', options.source);
     }
 
     // Skip boot message by default to prevent tests from reading "EL400" and "vEr 1.0.0" as numeric values
-    const skipBootMessage = options?.skipBootMessage !== false; // default to true
-    if (skipBootMessage) {
+    if (options?.skipBootMessage !== false) {
       params.set('bootMessageMode', 'skip');
     }
 
     const query = params.toString();
     const url = query ? `/?${query}` : '/';
 
-    // Reset localStorage to known state before navigation
-    // Skip reset if sessionStorage flag is set (used by reload() method for persistence testing)
-    await this.page.addInitScript(({ defaults, storageKey }) => {
-      // Check if we should preserve localStorage (set by reload() method)
-      const preserveStorage = sessionStorage.getItem('__dro_preserve_storage');
-
-      if (preserveStorage === 'true') {
-        // Clear the flag after reading it
-        sessionStorage.removeItem('__dro_preserve_storage');
-        return; // Don't reset localStorage
-      }
-
-      // Always reset to known state
-      localStorage.setItem(storageKey, JSON.stringify(defaults));
-    }, {
-      defaults: DEFAULT_NON_VOLATILE_MEMORY,
-      storageKey: NON_VOLATILE_MEMORY_STORAGE_KEY,
-    });
-
     await this.page.goto(url);
     await this.page.waitForLoadState('networkidle');
   }
 
   /**
-   * Reload the page without resetting localStorage to default values.
-   * Use this when testing localStorage persistence.
-   * Sets a flag in sessionStorage to prevent init script from resetting localStorage.
+   * Reload the page preserving current URL params.
    */
   async reload() {
-    // Set flag to preserve localStorage on next navigation
-    await this.page.evaluate(() => {
-      sessionStorage.setItem('__dro_preserve_storage', 'true');
-    });
-
-    const currentUrl = this.page.url();
-    await this.page.goto(currentUrl);
+    await this.page.reload();
     await this.page.waitForLoadState('networkidle');
   }
 
