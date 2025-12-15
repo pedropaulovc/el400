@@ -12,7 +12,7 @@ This is a faithful, touch-friendly web-based simulator of the Electronica EL400 
 - **Routing:** react-router-dom
 - **Real-time:** socket.io-client (CNCjs integration)
 - **Unit Testing:** Vitest + @testing-library/react + jsdom
-- **E2E Testing:** Playwright with Page Object Model
+- **E2E Testing:** Playwright with Page Object Model and Chrome headless (`npx playwright install --with-deps chromium-headless-shell`)
 - **Component Testing:** Storybook
 
 ## Development Commands
