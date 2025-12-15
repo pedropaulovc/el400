@@ -21,6 +21,7 @@ import type {
   AxisValues,
   Axis,
   DatumMode,
+  BootStage,
 } from '../types/volatileMemory';
 import { createDefaultMachineState, ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { MockAdapter } from '../adapters/MockAdapter';
@@ -101,6 +102,21 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
+  const [bootStage, setBootStage] = useState<BootStage>('boot');
+
+  // Boot sequence state machine
+  useEffect(() => {
+    if (bootStage === 'boot') {
+      // Transition based on non-volatile memory setting
+      setBootStage(nvMemory.bootMessageMode === 'skip' ? 'run' : 'showMessage');
+    }
+
+    // Timer for auto-dismiss
+    if (bootStage === 'showMessage') {
+      const timer = setTimeout(() => setBootStage('run'), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [bootStage, nvMemory.bootMessageMode]);
 
   // Handle adapter changes and connection
   useEffect(() => {
@@ -260,6 +276,12 @@ export function VolatileMemoryProvider({
     }
   }, [mode, machineState, displayValues]);
 
+  const clearKeyPressed = useCallback(() => {
+    if (bootStage === 'boot' || bootStage === 'showMessage') {
+      setBootStage('run');
+    }
+  }, [bootStage]);
+
   const contextValue: VolatileMemoryContextValue = {
     // Machine state
     machinePosition: machineState.position,
@@ -275,6 +297,7 @@ export function VolatileMemoryProvider({
     mode,
     workOffsets,
     activeAxis,
+    bootStage,
 
     // DRO actions
     toggleMode,
@@ -284,6 +307,7 @@ export function VolatileMemoryProvider({
     setAxisValue,
     selectAxis,
     halfAxis,
+    clearKeyPressed,
 
     // Adapter management
     adapter,

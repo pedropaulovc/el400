@@ -678,4 +678,82 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.displayValues.Z).toBe(150);
     });
   });
+
+  describe('Boot sequence state machine', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('transitions to showMessage when bootMessageMode is show (default)', async () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      // Should transition from boot to showMessage
+      expect(result.current.bootStage).toBe('showMessage');
+    });
+
+    it('transitions to run when bootMessageMode is skip', async () => {
+      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+        bootMessageMode: 'skip',
+      }));
+
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      // Should transition from boot to run
+      expect(result.current.bootStage).toBe('run');
+    });
+
+    it('transitions from showMessage to run after timeout', async () => {
+      vi.useFakeTimers();
+
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.bootStage).toBe('showMessage');
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current.bootStage).toBe('run');
+
+      vi.useRealTimers();
+    });
+
+    it('allows manual dismissal from showMessage stage', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.bootStage).toBe('showMessage');
+
+      act(() => {
+        result.current.clearKeyPressed();
+      });
+
+      expect(result.current.bootStage).toBe('run');
+    });
+
+    it('does nothing when clearKeyPressed called in run stage', () => {
+      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+        bootMessageMode: 'skip',
+      }));
+
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.bootStage).toBe('run');
+
+      act(() => {
+        result.current.clearKeyPressed();
+      });
+
+      expect(result.current.bootStage).toBe('run');
+    });
+  });
 });
