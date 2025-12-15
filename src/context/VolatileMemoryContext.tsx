@@ -104,11 +104,27 @@ export function VolatileMemoryProvider({
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [bootStage, setBootStage] = useState<BootStage>('boot');
 
-  // Boot sequence state machine
+  /**
+   * Boot Sequence State Machine
+   *
+   * States: boot | showMessage | run
+   *
+   * Transitions:
+   *   boot → showMessage  (when nvMem.bootMessageMode == 'show')
+   *   boot → run          (when nvMem.bootMessageMode == 'skip' or URL param bootMessageMode == 'skip')
+   *   boot → run          (when C key pressed)
+   *   showMessage → run   (when 1000ms timeout expires)
+   *   showMessage → run   (when C key pressed)
+   */
   useEffect(() => {
     if (bootStage === 'boot') {
-      // Transition based on non-volatile memory setting
-      setBootStage(nvMemory.bootMessageMode === 'skip' ? 'run' : 'showMessage');
+      // Check URL query param for skip override
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBootMode = urlParams.get('bootMessageMode');
+
+      // Transition based on non-volatile memory setting or URL param
+      const shouldSkip = nvMemory.bootMessageMode === 'skip' || urlBootMode === 'skip';
+      setBootStage(shouldSkip ? 'run' : 'showMessage');
     }
 
     // Timer for auto-dismiss
@@ -117,6 +133,13 @@ export function VolatileMemoryProvider({
       return () => clearTimeout(timer);
     }
   }, [bootStage, nvMemory.bootMessageMode]);
+
+  // Boot stage action: C key skips boot/showMessage → run
+  const clearKeyPressed = useCallback(() => {
+    if (bootStage === 'boot' || bootStage === 'showMessage') {
+      setBootStage('run');
+    }
+  }, [bootStage]);
 
   // Handle adapter changes and connection
   useEffect(() => {
@@ -275,12 +298,6 @@ export function VolatileMemoryProvider({
       setIncrementalValues((prev) => ({ ...prev, [axis]: halfValue }));
     }
   }, [mode, machineState, displayValues]);
-
-  const clearKeyPressed = useCallback(() => {
-    if (bootStage === 'boot' || bootStage === 'showMessage') {
-      setBootStage('run');
-    }
-  }, [bootStage]);
 
   const contextValue: VolatileMemoryContextValue = {
     // Machine state

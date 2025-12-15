@@ -580,7 +580,7 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.displayValues.X).toBe(50);
     });
 
-    it('exposes adapter via setAdapter', () => {
+    it('exposes adapter via setAdapter', async () => {
       const { result } = renderHook(() => useVolatileMemoryContext(), {
         wrapper: createWrapper(),
       });
@@ -591,7 +591,9 @@ describe('VolatileMemoryContext', () => {
         result.current.setAdapter(adapter);
       });
 
-      expect(result.current.adapter).toBe(adapter);
+      await waitFor(() => {
+        expect(result.current.adapter).toBe(adapter);
+      });
     });
 
     it('setAxisValue adjusts work offset when connected', async () => {

@@ -33,9 +33,8 @@ test.describe('US-036: Settings Persistence', () => {
     // Wait for debounced save (settings have 300ms debounce)
     await page.waitForTimeout(500);
 
-    // Reload the page
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    // Reload the page using dro.reload() to preserve localStorage
+    await dro.reload();
 
     // Verify still in mm mode
     await expect(await dro.isMmUnits()).toBe(true);
