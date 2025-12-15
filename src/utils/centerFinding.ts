@@ -66,13 +66,29 @@ export function findCircleCenter(
   const mid1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   const mid2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
 
-  // Calculate slopes of the chords
-  const slope1 = (p2.y - p1.y) / (p2.x - p1.x);
-  const slope2 = (p3.y - p2.y) / (p3.x - p2.x);
+  // Calculate slopes of the chords, handling vertical lines
+  const dx1 = p2.x - p1.x;
+  const dy1 = p2.y - p1.y;
+  const dx2 = p3.x - p2.x;
+  const dy2 = p3.y - p2.y;
 
-  // Check if points are collinear (parallel slopes)
-  if (Math.abs(slope1 - slope2) < 1e-10) {
-    return null; // Points are collinear, no unique circle
+  // Check if chords are vertical (dx = 0)
+  const isVertical1 = Math.abs(dx1) < 1e-10;
+  const isVertical2 = Math.abs(dx2) < 1e-10;
+
+  // Calculate slopes (only if not vertical)
+  const slope1 = isVertical1 ? Infinity : dy1 / dx1;
+  const slope2 = isVertical2 ? Infinity : dy2 / dx2;
+
+  // Check if points are collinear
+  if (isVertical1 && isVertical2) {
+    // Both chords vertical means all points on same vertical line
+    return null;
+  } else if (!isVertical1 && !isVertical2) {
+    // Both chords have finite slope - check if parallel
+    if (Math.abs(slope1 - slope2) < 1e-10) {
+      return null; // Points are collinear, no unique circle
+    }
   }
 
   // Calculate slopes of perpendicular bisectors
@@ -80,8 +96,8 @@ export function findCircleCenter(
   let perpSlope1: number;
   let perpSlope2: number;
 
-  // Handle vertical chords (infinite slope)
-  if (!isFinite(slope1)) {
+  // Handle vertical chords (infinite slope -> horizontal bisector)
+  if (isVertical1) {
     perpSlope1 = 0; // Horizontal bisector
   } else if (Math.abs(slope1) < 1e-10) {
     perpSlope1 = Infinity; // Vertical bisector
@@ -89,7 +105,7 @@ export function findCircleCenter(
     perpSlope1 = -1 / slope1;
   }
 
-  if (!isFinite(slope2)) {
+  if (isVertical2) {
     perpSlope2 = 0; // Horizontal bisector
   } else if (Math.abs(slope2) < 1e-10) {
     perpSlope2 = Infinity; // Vertical bisector
