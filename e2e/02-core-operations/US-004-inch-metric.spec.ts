@@ -39,7 +39,7 @@ test.describe('US-004: Inch/Metric Mode', () => {
     expect(value).toBeCloseTo(25.4, 3);
     
     // AC 4.5: Test persistence across reload
-    await page.reload();
+    await dro.reload();
     await expect(await dro.isMmUnits()).toBe(true);
     
     // AC 4.1 & 4.2: Toggle back to inch
@@ -49,7 +49,7 @@ test.describe('US-004: Inch/Metric Mode', () => {
     // Verify persistence by toggling back to mm and reloading
     await dro.toggleInchMm();
     await expect(await dro.isMmUnits()).toBe(true);
-    await page.reload();
+    await dro.reload();
     await expect(await dro.isMmUnits()).toBe(true);
     
     // Clean up: toggle back to inch (default)
