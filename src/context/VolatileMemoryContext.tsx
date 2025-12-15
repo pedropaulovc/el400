@@ -63,16 +63,16 @@ export function VolatileMemoryProvider({
   /**
    * Boot Sequence State Machine
    *
-   * States: boot | showMessage | run
+   * States: showMessage | run
+   *
+   * Initial state determined by settings:
+   *   - 'run' if nvMem.bootMessageMode === 'skip' or URL param bootMessageMode === 'skip'
+   *   - 'showMessage' otherwise
    *
    * Transitions:
-   *   boot → showMessage  (when nvMem.bootMessageMode == 'show')
-   *   boot → run          (when nvMem.bootMessageMode == 'skip' or URL param bootMessageMode == 'skip')
-   *   boot → run          (when C key pressed)
    *   showMessage → run   (when BOOT_MESSAGE_DURATION_MS timeout expires)
    *   showMessage → run   (when C key pressed)
    */
-  // Compute initial boot stage based on settings
   const [bootStage, setBootStage] = useState<BootStage>(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlBootMode = urlParams.get('bootMessageMode');
@@ -88,9 +88,9 @@ export function VolatileMemoryProvider({
     }
   }, [bootStage]);
 
-  // Boot stage action: C key skips boot/showMessage → run
+  // Boot stage action: C key dismisses showMessage → run
   const clearKeyPressed = useCallback(() => {
-    if (bootStage === 'boot' || bootStage === 'showMessage') {
+    if (bootStage === 'showMessage') {
       setBootStage('run');
     }
   }, [bootStage]);

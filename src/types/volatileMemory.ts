@@ -13,7 +13,7 @@ export interface AxisValues {
 
 export type Axis = 'X' | 'Y' | 'Z';
 export type DatumMode = 'abs' | 'inc';
-export type BootStage = 'boot' | 'showMessage' | 'run';
+export type BootStage = 'showMessage' | 'run';
 
 /**
  * DRO volatile memory - runtime state managed by VolatileMemoryContext
