@@ -9,19 +9,42 @@ import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
+import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
+
+const NON_VOLATILE_MEMORY_STORAGE_KEY = 'el400-dro-non-volatile-memory';
+
+/**
+ * Sets non-volatile memory in localStorage
+ * Can set partial values - merges with existing data
+ */
+export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
+  const existing = localStorage.getItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
+  const current = existing ? JSON.parse(existing) : {};
+  localStorage.setItem(NON_VOLATILE_MEMORY_STORAGE_KEY, JSON.stringify({
+    ...current,
+    ...values,
+  }));
+}
+
+/**
+ * Sets the boot message mode in localStorage
+ */
+export function setBootMessageMode(mode: 'show' | 'skip'): void {
+  setNonVolatileMemory({ bootMessageMode: mode });
+}
+
+/**
+ * Clears non-volatile memory from localStorage
+ */
+export function clearNonVolatileMemory(): void {
+  localStorage.removeItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
+}
 
 /**
  * Renders the EL400Simulator with all required providers
- * By default, skips the boot message for faster tests
+ * Note: Call setBootMessageMode('skip') in beforeEach to skip boot message for faster tests
  */
 export function renderSimulator() {
-  // Skip boot message by default for tests (unless already set in localStorage)
-  if (!localStorage.getItem('el400-dro-non-volatile-memory')) {
-    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-      bootMessageMode: 'skip',
-    }));
-  }
-
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
