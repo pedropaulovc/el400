@@ -5,11 +5,7 @@ import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
 
-interface KeypadSectionProps {
-  onClear: () => void; // For power-on dismiss
-}
-
-const KeypadSection = ({ onClear }: KeypadSectionProps) => {
+const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
 
@@ -36,8 +32,8 @@ const KeypadSection = ({ onClear }: KeypadSectionProps) => {
 
   const handleClear = useCallback(() => {
     inputBuffer.clear();
-    onClear();
-  }, [inputBuffer, onClear]);
+    vMem.clearKeyPressed();
+  }, [inputBuffer, vMem]);
 
   const handleEnter = useCallback(() => {
     if (!vMem.activeAxis) {

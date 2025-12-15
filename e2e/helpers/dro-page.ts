@@ -104,18 +104,10 @@ export class DROPage {
 
   /**
    * Navigate to the DRO simulator
+   * @param options.source - 'mock' for encoder simulation, undefined for manual mode (default)
    */
-  // powerOn: 'skip' (default for fast tests), 'force' (show startup), 'auto' (no query param)
-  // source: 'mock' (for encoder simulation), undefined (manual mode - default)
-  async goto(options?: { powerOn?: 'force' | 'skip' | 'auto'; source?: 'mock' }) {
-    const powerOn = options?.powerOn ?? 'skip';
+  async goto(options?: { source?: 'mock' }) {
     const params = new URLSearchParams();
-
-    if (powerOn === 'force') {
-      params.set('powerOn', 'force');
-    } else if (powerOn === 'skip') {
-      params.set('powerOn', 'skip');
-    }
 
     // Add source parameter if specified (e.g., for MockAdapter support)
     if (options?.source) {
