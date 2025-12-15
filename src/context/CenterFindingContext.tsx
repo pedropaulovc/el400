@@ -34,10 +34,16 @@ export interface StoredPoint {
 }
 
 /**
+ * Menu option when in menu mode
+ */
+export type MenuOption = 'center' | 'line' | 'circle';
+
+/**
  * Center finding state
  */
 export interface CenterFindingState {
   mode: CenterFindingMode;
+  menuOption: MenuOption;  // Which option is currently shown in menu
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
 }
@@ -49,6 +55,7 @@ export interface CenterFindingActions {
   enterMenu: () => void;
   selectLine: () => void;
   selectCircle: () => void;
+  cycleMenuOption: () => void;  // Cycle through menu options
   storePoint: (point: StoredPoint) => void;
   exit: () => void;
 }
@@ -68,6 +75,7 @@ export interface CenterFindingProviderProps {
 export function CenterFindingProvider({ children }: CenterFindingProviderProps) {
   const [state, setState] = useState<CenterFindingState>({
     mode: 'inactive',
+    menuOption: 'center',
     storedPoints: [],
     centerResult: null,
   });
@@ -76,6 +84,7 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
   const enterMenu = useCallback(() => {
     setState({
       mode: 'menu',
+      menuOption: 'center',
       storedPoints: [],
       centerResult: null,
     });
@@ -155,14 +164,28 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
   const exit = useCallback(() => {
     setState({
       mode: 'inactive',
+      menuOption: 'center',
       storedPoints: [],
       centerResult: null,
+    });
+  }, []);
+
+  // Cycle through menu options (line <-> circle)
+  const cycleMenuOption = useCallback(() => {
+    setState((prev) => {
+      if (prev.mode === 'menu') {
+        // Cycle between line and circle when showing menu
+        const nextOption = prev.menuOption === 'line' ? 'circle' : 'line';
+        return { ...prev, menuOption: nextOption };
+      }
+      return prev;
     });
   }, []);
 
   const contextValue: CenterFindingContextValue = {
     // State
     mode: state.mode,
+    menuOption: state.menuOption,
     storedPoints: state.storedPoints,
     centerResult: state.centerResult,
 
@@ -170,6 +193,7 @@ export function CenterFindingProvider({ children }: CenterFindingProviderProps) 
     enterMenu,
     selectLine,
     selectCircle,
+    cycleMenuOption,
     storePoint,
     exit,
   };

@@ -25,8 +25,10 @@ const EL400Simulator = () => {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
   } else if (centerFindingMode === 'menu') {
-    // Show "CEntrE" menu
-    axisDisplayValues = { X: 'CEntrE', Y: '', Z: '' };
+    // Show menu option text
+    const menuText = centerFinding.menuOption === 'center' ? 'CEntrE' :
+                     centerFinding.menuOption === 'line' ? 'LinE' : 'CirCLE';
+    axisDisplayValues = { X: menuText, Y: '', Z: '' };
   } else if (centerFindingMode === 'line' && centerFinding.storedPoints.length < 2) {
     // Show "LinE" while collecting points
     axisDisplayValues = { X: 'LinE', Y: '', Z: '' };
