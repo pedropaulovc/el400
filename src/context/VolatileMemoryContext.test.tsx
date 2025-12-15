@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import {
   VolatileMemoryProvider,
   useVolatileMemoryContext,
+  BOOT_MESSAGE_DURATION_MS,
 } from './VolatileMemoryContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
 import { MockAdapter } from '../adapters/MockAdapter';
@@ -745,7 +746,7 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.bootStage).toBe('showMessage');
 
       act(() => {
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
       });
 
       expect(result.current.bootStage).toBe('run');
