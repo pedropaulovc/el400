@@ -5,6 +5,7 @@ import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
   enterValue,
+  setBootMessageMode,
 } from '../tests/helpers/integration-test-utils';
 
 describe('PrimaryFunctionSection Integration', () => {
@@ -13,6 +14,7 @@ describe('PrimaryFunctionSection Integration', () => {
   beforeEach(() => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.clear();
+    setBootMessageMode('skip');
   });
 
   afterEach(() => {

@@ -5,6 +5,7 @@ import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
   renderSimulator,
+  setBootMessageMode,
 } from '../tests/helpers/integration-test-utils';
 
 const BOOT_MESSAGE_DURATION_MS = 1000;
@@ -15,10 +16,7 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('shows model and version on power-on', () => {
-    // Set bootMessageMode to 'show' (default behavior)
-    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-      bootMessageMode: 'show',
-    }));
+    setBootMessageMode('show');
 
     vi.useFakeTimers();
     renderSimulator();
@@ -34,9 +32,7 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('transitions to counting mode after timeout', async () => {
-    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-      bootMessageMode: 'show',
-    }));
+    setBootMessageMode('show');
 
     vi.useFakeTimers();
     renderSimulator();
@@ -56,9 +52,7 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('allows bypassing the power-on message with the clear key', async () => {
-    localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-      bootMessageMode: 'show',
-    }));
+    setBootMessageMode('show');
 
     const user = userEvent.setup();
     renderSimulator();
