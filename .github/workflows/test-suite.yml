@@ -69,7 +69,7 @@ jobs:
         if: always()
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          file-coverage-mode: changes
+          file-coverage-mode: ${{ github.event_name == 'pull_request' && 'changes' || 'all' }}
           pr-number: ${{ github.event.pull_request.number }}
           json-summary-compare-path: ${{ steps.download-coverage-baseline.outcome == 'success' && 'coverage-baseline/coverage-summary.json' || '' }}
 
