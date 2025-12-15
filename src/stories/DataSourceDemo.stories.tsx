@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { VolatileMemoryProvider } from "../context/VolatileMemoryContext";
+import { MachineStateProvider } from "../context/MachineStateContext";
 import { NonVolatileMemoryProvider, useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockAdapter } from "../adapters/MockAdapter";
@@ -150,9 +151,11 @@ function StoryWrapper({
 }) {
   return (
     <NonVolatileMemoryProvider>
-      <VolatileMemoryProvider initialAdapter={adapter}>
-        {children}
-      </VolatileMemoryProvider>
+      <MachineStateProvider initialAdapter={adapter}>
+        <VolatileMemoryProvider>
+          {children}
+        </VolatileMemoryProvider>
+      </MachineStateProvider>
     </NonVolatileMemoryProvider>
   );
 }

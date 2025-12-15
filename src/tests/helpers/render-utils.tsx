@@ -3,6 +3,7 @@ import { ReactElement } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
+import { MachineStateProvider } from '../../context/MachineStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 
 /**
@@ -45,9 +46,11 @@ export function renderWithProviders(
     <QueryClientProvider client={client}>
       <BrowserRouter>
         <NonVolatileMemoryProvider>
-          <VolatileMemoryProvider>
-            {children}
-          </VolatileMemoryProvider>
+          <MachineStateProvider>
+            <VolatileMemoryProvider>
+              {children}
+            </VolatileMemoryProvider>
+          </MachineStateProvider>
         </NonVolatileMemoryProvider>
       </BrowserRouter>
     </QueryClientProvider>

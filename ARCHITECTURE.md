@@ -10,16 +10,23 @@ Technical documentation for developers working on the EL400 DRO simulator.
 │  (consumes VolatileMemory via useVolatileMemory hook)           │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
-          ┌───────────────────┴───────────────────┐
-          │                                       │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
 ┌─────────────────────────────┐   ┌─────────────────────────────┐
 │   VolatileMemoryContext     │   │  NonVolatileMemoryContext   │
-│  - Machine state from       │   │  - Persisted settings       │
-│    adapter                  │   │  - beepEnabled, defaultUnit │
-│  - DRO memory (ABS/INC)     │   │  - localStorage persistence │
-│  - activeAxis               │   │                             │
-│  - Connection management    │   │                             │
+│  - DRO memory (ABS/INC)     │   │  - Persisted settings       │
+│  - activeAxis, workOffsets  │   │  - beepEnabled, defaultUnit │
+│  - Boot sequence state      │   │  - localStorage persistence │
+│  - Consumes MachineState    │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
+          ▲
+          │
+┌─────────────────────────────────────────────────────────────────┐
+│                   MachineStateContext                            │
+│  - Adapter lifecycle (connect/disconnect)                       │
+│  - Machine state from adapter                                   │
+│  - Connection status (isConnecting, error)                      │
+└─────────────────────────────────────────────────────────────────┘
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -43,12 +50,19 @@ Technical documentation for developers working on the EL400 DRO simulator.
 The DRO uses two types of memory:
 
 ### Volatile Memory
-Runtime state that is lost on refresh. Includes:
+Runtime state that is lost on refresh. Split across two contexts:
+
+**MachineStateContext:**
 - Machine position from external adapter
+- Probe state
+- Connection state and errors
+- Adapter lifecycle
+
+**VolatileMemoryContext:**
 - DRO display values (ABS/INC modes)
 - Active axis selection
 - Work offsets
-- Connection state
+- Boot sequence state
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
@@ -58,7 +72,9 @@ Persisted settings saved to localStorage. Includes:
 
 ## Core Types
 
-### VolatileMemory (`src/types/volatileMemory.ts`)
+### MachineState (`src/types/machineState.ts`)
+
+Types for machine data from external adapters:
 
 ```typescript
 interface MachinePosition {
@@ -72,6 +88,29 @@ interface ProbeState {
   triggered: boolean;  // Derived: pinState.includes('P')
 }
 
+type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+
+interface MachineState {
+  position: MachinePosition;
+  workPosition?: MachinePosition;
+  probe: ProbeState;
+  connected: boolean;
+  controllerType: ControllerType;
+}
+
+interface DataSourceConfig {
+  type: ControllerType;
+  host: string;
+  port: number;
+  sessionId?: string;
+}
+```
+
+### VolatileMemory (`src/types/volatileMemory.ts`)
+
+Types for DRO runtime state:
+
+```typescript
 interface AxisValues {
   X: number;
   Y: number;
@@ -80,10 +119,10 @@ interface AxisValues {
 
 type Axis = 'X' | 'Y' | 'Z';
 type DatumMode = 'abs' | 'inc';
-type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+type BootStage = 'boot' | 'showMessage' | 'run';
 
 interface VolatileMemory {
-  // Machine state (from adapter)
+  // Machine state (from MachineStateContext)
   machinePosition: MachinePosition;
   workPosition?: MachinePosition;
   probe: ProbeState;
@@ -97,6 +136,7 @@ interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
+  bootStage: BootStage;
 }
 
 interface VolatileMemoryActions {
@@ -107,6 +147,7 @@ interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
+  clearKeyPressed: () => void;
 }
 ```
 
@@ -236,9 +277,28 @@ Parses URL parameters for data source configuration:
 
 ## Contexts
 
+### MachineStateContext (`src/context/MachineStateContext.tsx`)
+
+Manages adapter lifecycle and machine state from external data sources:
+
+```typescript
+interface MachineStateContextValue {
+  machineState: MachineState;
+  adapter: MachineConnection | null;
+  isConnecting: boolean;
+  error: Error | null;
+  setAdapter: (adapter: MachineConnection | null) => void;
+}
+```
+
+Responsibilities:
+- Adapter connect/disconnect lifecycle
+- Subscribe to adapter state updates
+- Track connection status and errors
+
 ### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
 
-Provides machine state and DRO memory to the component tree:
+Provides DRO memory to the component tree. Consumes machine state from MachineStateContext:
 
 ```typescript
 interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
@@ -248,6 +308,12 @@ interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActio
   setAdapter: (adapter: MachineConnection | null) => void;
 }
 ```
+
+Responsibilities:
+- DRO memory (ABS/INC mode, work offsets, incremental values)
+- Active axis selection
+- Boot sequence state machine
+- Calculate display values from machine position and offsets
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
@@ -261,13 +327,18 @@ interface NonVolatileMemoryContextValue {
 }
 ```
 
-**Provider Order:** NonVolatileMemoryProvider must wrap VolatileMemoryProvider because the volatile memory context uses non-volatile settings for unit conversion.
+**Provider Order:** The contexts must be nested in this order:
+1. NonVolatileMemoryProvider (outer) - no dependencies
+2. MachineStateProvider - receives adapter, manages connection
+3. VolatileMemoryProvider (inner) - consumes both MachineState and NonVolatileMemory
 
 ```tsx
 <NonVolatileMemoryProvider>
-  <VolatileMemoryProvider>
-    {children}
-  </VolatileMemoryProvider>
+  <MachineStateProvider initialAdapter={adapter}>
+    <VolatileMemoryProvider>
+      {children}
+    </VolatileMemoryProvider>
+  </MachineStateProvider>
 </NonVolatileMemoryProvider>
 ```
 

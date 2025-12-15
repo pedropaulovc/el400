@@ -1,6 +1,7 @@
 /**
- * Volatile memory context for providing machine data and DRO state throughout the app.
- * Manages adapter connection lifecycle, state updates, and DRO memory.
+ * Volatile memory context for DRO state throughout the app.
+ * Manages DRO memory (mode, offsets, incremental values, boot stage).
+ * Consumes machine state from MachineStateContext.
  */
 
 import {
@@ -14,8 +15,6 @@ import {
 } from 'react';
 import type { MachineConnection } from '../adapters/MachineConnection';
 import type {
-  MachineState,
-  DataSourceConfig,
   VolatileMemory,
   VolatileMemoryActions,
   AxisValues,
@@ -23,10 +22,10 @@ import type {
   DatumMode,
   BootStage,
 } from '../types/volatileMemory';
-import { createDefaultMachineState, ZERO_AXIS_VALUES } from '../types/volatileMemory';
-import { MockAdapter } from '../adapters/MockAdapter';
+import { ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { fromAnyUnitToMm } from '../utils/unitConversion';
 import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
+import { useMachineStateContext } from './MachineStateContext';
 
 export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {
   /** Currently active adapter (or null if none) */
@@ -49,58 +48,20 @@ export const BOOT_MESSAGE_DURATION_MS = 1000;
 
 export interface VolatileMemoryProviderProps {
   children: ReactNode;
-  /** Optional initial adapter */
-  initialAdapter?: MachineConnection | null;
-  /** Optional initial config to auto-create adapter */
-  config?: DataSourceConfig;
 }
 
 /**
- * Creates an adapter based on the config type.
- * Returns null for 'manual' mode.
- */
-function createAdapterFromConfig(config: DataSourceConfig): MachineConnection | null {
-  switch (config.type) {
-    case 'mock':
-      // Don't simulate automatic movement - tests can use setPosition() explicitly
-      return new MockAdapter({ simulateMovement: false });
-    case 'cncjs':
-      // CncjsAdapter will be imported dynamically to avoid bundling socket.io
-      // when not needed. For now, return null and log.
-      console.log('CNCjs adapter requested, host:', config.host, 'port:', config.port);
-      // TODO: return new CncjsAdapter({ host: config.host, port: config.port });
-      return null;
-    case 'linuxcnc':
-      // LinuxCNC adapter not implemented yet
-      console.log('LinuxCNC adapter requested');
-      return null;
-    case 'manual':
-    default:
-      return null;
-  }
-}
-
-/**
- * Provider component for volatile memory (machine state + DRO memory).
- * Manages adapter connection lifecycle and broadcasts state updates.
+ * Provider component for volatile memory (DRO memory).
+ * Consumes machine state from MachineStateContext and manages DRO-specific state.
  */
 export function VolatileMemoryProvider({
   children,
-  initialAdapter,
-  config,
 }: VolatileMemoryProviderProps) {
+  // Get machine state from MachineStateContext
+  const { machineState, adapter, isConnecting, error, setAdapter } = useMachineStateContext();
+
   // Non-volatile memory for unit conversion
   const { nvMem: nvMemory } = useNonVolatileMemoryContext();
-
-  // Adapter state
-  const [adapter, setAdapterState] = useState<MachineConnection | null>(
-    initialAdapter ?? (config ? createAdapterFromConfig(config) : null)
-  );
-  const [machineState, setMachineState] = useState<MachineState>(
-    adapter?.getState() ?? createDefaultMachineState('manual')
-  );
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
   // DRO memory state
   const [mode, setModeState] = useState<DatumMode>('abs');
@@ -108,7 +69,6 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
-  const [bootStage, setBootStage] = useState<BootStage>('boot');
 
   /**
    * Boot Sequence State Machine
@@ -122,23 +82,21 @@ export function VolatileMemoryProvider({
    *   showMessage → run   (when BOOT_MESSAGE_DURATION_MS timeout expires)
    *   showMessage → run   (when C key pressed)
    */
+  // Compute initial boot stage based on settings
+  const [bootStage, setBootStage] = useState<BootStage>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlBootMode = urlParams.get('bootMessageMode');
+    const shouldSkip = nvMemory.bootMessageMode === 'skip' || urlBootMode === 'skip';
+    return shouldSkip ? 'run' : 'showMessage';
+  });
+
+  // Timer for auto-dismiss from showMessage
   useEffect(() => {
-    if (bootStage === 'boot') {
-      // Check URL query param for skip override
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlBootMode = urlParams.get('bootMessageMode');
-
-      // Transition based on non-volatile memory setting or URL param
-      const shouldSkip = nvMemory.bootMessageMode === 'skip' || urlBootMode === 'skip';
-      setBootStage(shouldSkip ? 'run' : 'showMessage');
-    }
-
-    // Timer for auto-dismiss
     if (bootStage === 'showMessage') {
       const timer = setTimeout(() => setBootStage('run'), BOOT_MESSAGE_DURATION_MS);
       return () => clearTimeout(timer);
     }
-  }, [bootStage, nvMemory.bootMessageMode]);
+  }, [bootStage]);
 
   // Boot stage action: C key skips boot/showMessage → run
   const clearKeyPressed = useCallback(() => {
@@ -146,55 +104,6 @@ export function VolatileMemoryProvider({
       setBootStage('run');
     }
   }, [bootStage]);
-
-  // Handle adapter changes and connection
-  useEffect(() => {
-    if (!adapter) {
-      setMachineState(createDefaultMachineState('manual'));
-      return;
-    }
-
-    let mounted = true;
-
-    // Subscribe to state updates
-    const unsubscribe = adapter.subscribe((newState) => {
-      if (mounted) {
-        setMachineState(newState);
-      }
-    });
-
-    // Connect if not already connected
-    const connect = async () => {
-      if (!adapter.getState().connected) {
-        setIsConnecting(true);
-        setError(null);
-        try {
-          await adapter.connect();
-        } catch (err) {
-          if (mounted) {
-            setError(err instanceof Error ? err : new Error(String(err)));
-          }
-        } finally {
-          if (mounted) {
-            setIsConnecting(false);
-          }
-        }
-      }
-    };
-
-    connect();
-
-    return () => {
-      mounted = false;
-      unsubscribe();
-      adapter.disconnect();
-    };
-  }, [adapter]);
-
-  const setAdapter = useCallback((newAdapter: MachineConnection | null) => {
-    setAdapterState(newAdapter);
-    setError(null);
-  }, []);
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
@@ -306,7 +215,7 @@ export function VolatileMemoryProvider({
   }, [mode, machineState, displayValues]);
 
   const contextValue: VolatileMemoryContextValue = {
-    // Machine state
+    // Machine state (pass-through from MachineStateContext)
     machinePosition: machineState.position,
     workPosition: machineState.workPosition,
     probe: machineState.probe,
@@ -332,7 +241,7 @@ export function VolatileMemoryProvider({
     halfAxis,
     clearKeyPressed,
 
-    // Adapter management
+    // Adapter management (pass-through from MachineStateContext)
     adapter,
     isConnecting,
     error,
