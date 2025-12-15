@@ -14,6 +14,10 @@ const SecondaryFunctionSection = () => {
     }
   };
 
+  const handleFunction = () => {
+    vMem.enterFunctionMode();
+  };
+
   return (
     <>
       <h2 className="sr-only">Secondary functions</h2>
@@ -47,7 +51,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm">
               <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-function">
+            <DROButton onClick={handleFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function">
               <Icon name="function" /><span className="sr-only">Function</span>
             </DROButton>
           </div>

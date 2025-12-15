@@ -16,6 +16,33 @@ export type DatumMode = 'abs' | 'inc';
 export type BootStage = 'showMessage' | 'run';
 
 /**
+ * Function mode for center finding and other special functions
+ */
+export type FunctionMode =
+  | 'normal'          // Normal DRO operation
+  | 'centerMenu'      // Showing "CEntrE" menu
+  | 'centerLine'      // Line center finding mode - collecting 2 points
+  | 'centerCircle';   // Circle center finding mode - collecting 3 points
+
+/**
+ * Stored point for center finding
+ */
+export interface StoredPoint {
+  X: number;
+  Y: number;
+  Z: number;
+}
+
+/**
+ * Center finding state
+ */
+export interface CenterFindingState {
+  mode: FunctionMode;
+  storedPoints: StoredPoint[];
+  centerResult: AxisValues | null;
+}
+
+/**
  * DRO volatile memory - runtime state managed by VolatileMemoryContext
  */
 export interface VolatileMemory {
@@ -26,6 +53,7 @@ export interface VolatileMemory {
   workOffsets: AxisValues;
   activeAxis: Axis | null;
   bootStage: BootStage;
+  centerFinding: CenterFindingState;
 }
 
 /**
@@ -40,6 +68,13 @@ export interface VolatileMemoryActions {
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
   clearKeyPressed: () => void;
+  // Center finding actions
+  enterFunctionMode: () => void;
+  selectCenterLine: () => void;
+  selectCenterCircle: () => void;
+  storePoint: () => void;
+  exitFunctionMode: () => void;
+  navigateMenu: (direction: 'next' | 'prev') => void;
 }
 
 export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };
