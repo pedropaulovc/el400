@@ -4,17 +4,39 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
+  const centerFinding = useCenterFinding();
 
   const handleNumber = useCallback((num: string) => {
+    // Special handling for key 6 (Right arrow) in center finding mode
+    if (num === '6') {
+      const centerMode = centerFinding.mode;
+      if (centerMode === 'menu') {
+        // Navigate through menu options
+        centerFinding.cycleMenuOption();
+        return;
+      } else if (centerMode === 'line' || centerMode === 'circle') {
+        // Store current point
+        const point = {
+          X: vMem.displayValues.X,
+          Y: vMem.displayValues.Y,
+          Z: vMem.displayValues.Z,
+        };
+        centerFinding.storePoint(point);
+        return;
+      }
+    }
+    
+    // Normal mode: append digit
     if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [vMem.activeAxis, inputBuffer]);
+  }, [vMem, inputBuffer, centerFinding]);
 
   const handleDecimal = useCallback(() => {
     if (!vMem.activeAxis) {
@@ -33,9 +55,30 @@ const KeypadSection = () => {
   const handleClear = useCallback(() => {
     inputBuffer.clear();
     vMem.clearKeyPressed();
-  }, [inputBuffer, vMem]);
+    // Also exit center finding mode if active
+    if (centerFinding.mode !== 'inactive') {
+      centerFinding.exit();
+    }
+  }, [inputBuffer, vMem, centerFinding]);
 
   const handleEnter = useCallback(() => {
+    const centerMode = centerFinding.mode;
+    
+    // Handle center finding menu navigation
+    if (centerMode === 'menu') {
+      // In menu, ENT confirms the selected option
+      if (centerFinding.menuOption === 'line') {
+        centerFinding.selectLine();
+      } else if (centerFinding.menuOption === 'circle') {
+        centerFinding.selectCircle();
+      } else if (centerFinding.menuOption === 'center') {
+        // From initial "CEntrE" text, ENT selects default option (line)
+        centerFinding.selectLine();
+      }
+      return;
+    }
+    
+    // Normal mode: handle numeric entry
     if (!vMem.activeAxis) {
       return;
     }
@@ -44,7 +87,7 @@ const KeypadSection = () => {
       vMem.setAxisValue(vMem.activeAxis, value);
       inputBuffer.clear();
     }
-  }, [vMem, inputBuffer]);
+  }, [vMem, inputBuffer, centerFinding]);
 
   return (
     <BeveledFrame>

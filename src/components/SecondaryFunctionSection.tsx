@@ -2,16 +2,22 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 const noop = () => {};
 
 const SecondaryFunctionSection = () => {
   const vMem = useVolatileMemory();
+  const centerFinding = useCenterFinding();
 
   const handleHalf = () => {
     if (vMem.activeAxis) {
       vMem.halfAxis(vMem.activeAxis);
     }
+  };
+
+  const handleFunction = () => {
+    centerFinding.enterMenu();
   };
 
   return (
@@ -47,7 +53,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm">
               <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-function">
+            <DROButton onClick={handleFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function">
               <Icon name="function" /><span className="sr-only">Function</span>
             </DROButton>
           </div>

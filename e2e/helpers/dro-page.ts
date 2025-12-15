@@ -21,6 +21,7 @@ export class DROPage {
   readonly incLED: Locator;
   readonly inchLED: Locator;
   readonly mmLED: Locator;
+  readonly fnLED: Locator;
 
   // Axis buttons
   readonly xButton: Locator;
@@ -55,6 +56,7 @@ export class DROPage {
   readonly absIncButton: Locator;
   readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
+  readonly functionButton: Locator;
 
   constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
     this.page = page;
@@ -71,6 +73,7 @@ export class DROPage {
     this.incLED = page.getByTestId('led-inc');
     this.inchLED = page.getByTestId('led-inch');
     this.mmLED = page.getByTestId('led-mm');
+    this.fnLED = page.getByTestId('led-fn');
 
     // Initialize axis buttons using data-testid
     this.xButton = page.getByTestId('axis-select-x');
@@ -105,6 +108,7 @@ export class DROPage {
     this.absIncButton = page.getByTestId('btn-abs-inc');
     this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
     this.centerButton = page.getByTestId('btn-center');
+    this.functionButton = page.getByTestId('btn-function');
   }
 
   /**
@@ -288,5 +292,12 @@ export class DROPage {
     if (!response.ok) {
       throw new Error(`Failed to simulate encoder move: ${response.statusText}`);
     }
+  }
+
+  /**
+   * Check if Fn LED is on (function mode active)
+   */
+  async isFnModeActive(): Promise<boolean> {
+    return await this.isLEDOn(this.fnLED);
   }
 }

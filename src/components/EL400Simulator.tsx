@@ -6,18 +6,42 @@ import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
+  const centerFinding = useCenterFinding();
 
   const showBootMessage = vMem.bootStage === 'showMessage';
+  const centerFindingMode = centerFinding.mode;
 
-  const axisDisplayValues = showBootMessage
-    ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
-    : vMem.displayValues;
+  // Determine what to show on the display
+  let axisDisplayValues;
+  
+  if (showBootMessage) {
+    // Boot message
+    axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
+  } else if (centerFindingMode === 'menu') {
+    // Show menu option text
+    const menuTextMap: Record<string, string> = { center: 'CEntrE', line: 'LinE', circle: 'CirCLE' };
+    const menuText = menuTextMap[centerFinding.menuOption];
+    axisDisplayValues = { X: menuText, Y: '', Z: '' };
+  } else if ((centerFindingMode === 'line' || centerFindingMode === 'circle') && centerFinding.centerResult) {
+    // Show distance-to-go when center is calculated
+    const center = centerFinding.centerResult;
+    const current = vMem.displayValues;
+    axisDisplayValues = {
+      X: center.X - current.X,
+      Y: center.Y - current.Y,
+      Z: center.Z - current.Z,
+    };
+  } else {
+    // Normal operation (including while collecting points in line/circle mode)
+    axisDisplayValues = vMem.displayValues;
+  }
 
   return (
     <div

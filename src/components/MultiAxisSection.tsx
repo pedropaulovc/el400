@@ -4,6 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { useCenterFinding } from "../context/CenterFindingContext";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -22,6 +23,7 @@ const MultiAxisSection = ({
 }: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
   const { nvMem } = useNonVolatileMemoryContext();
+  const centerFinding = useCenterFinding();
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';
@@ -128,6 +130,12 @@ const MultiAxisSection = ({
             {/* Status indicators */}
             <fieldset className="flex gap-4 border-0 p-0 m-0">
               <legend className="sr-only">Status</legend>
+              <LEDIndicator 
+                label="Fn" 
+                name="status" 
+                isOn={centerFinding.mode !== 'inactive'}
+                data-testid="led-fn"
+              />
               <LEDIndicator label="Ø" name="status" isOn={false} />
               <LEDIndicator label="r" name="status" isOn={false} />
             </fieldset>
