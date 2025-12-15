@@ -1,6 +1,6 @@
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
-import AxisDisplaySection from "./AxisDisplaySection";
+import MultiAxisSection from "./MultiAxisSection";
 import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
@@ -49,7 +49,7 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <AxisDisplaySection axisValues={axisDisplayValues} />
+          <MultiAxisSection axisValues={axisDisplayValues} />
           <AxisSelectionSection />
           <KeypadSection onClear={handleClear} />
         </div>
