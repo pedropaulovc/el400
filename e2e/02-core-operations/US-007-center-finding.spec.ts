@@ -42,8 +42,8 @@ test.describe('US-007: Center Finding', () => {
     await dro.waitForAxisValue('X', 0, 1);
     
     // Press Right (6►) to store Point 1
-    // Note: In the user story, this is the 6► key which stores the point
-    // We need to add this functionality to DROPage
+    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
+    // See: US-007 acceptance criteria for proper point storage behavior
     await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Point 2 at 100mm
@@ -51,6 +51,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.waitForAxisValue('X', 100, 1);
     
     // Press Right (6►) to store Point 2
+    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
     await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Center should be at 50mm. Distance to go from 100mm is -50mm
@@ -81,8 +82,8 @@ test.describe('US-007: Center Finding', () => {
     await dro.enterButton.click();
     
     // Navigate to "CirCLE" option (press Right)
-    // Note: Temporary placeholder - will need proper navigation method when implemented
-    await dro.page.keyboard.press('ArrowRight');
+    // TODO: Replace with proper menu navigation method when center finding feature is implemented
+    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Verify display shows "CirCLE"
     await expect(dro.xDisplay).toContainText('CirCLE');
@@ -96,24 +97,24 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Z', 0);
     
     // Store Point 1
-    // Note: Temporary placeholder - will need proper storePoint method when implemented
-    await dro.page.keyboard.press('ArrowRight');
+    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
+    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Point 2: (0, 10, 0) - Top of circle
     await dro.simulateEncoderMove('X', 0);
     await dro.simulateEncoderMove('Y', 10);
     
     // Store Point 2
-    // Note: Temporary placeholder - will need proper storePoint method when implemented
-    await dro.page.keyboard.press('ArrowRight');
+    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
+    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Point 3: (-10, 0, 0) - Left side of circle
     await dro.simulateEncoderMove('X', -10);
     await dro.simulateEncoderMove('Y', 0);
     
     // Store Point 3
-    // Note: Temporary placeholder - will need proper storePoint method when implemented
-    await dro.page.keyboard.press('ArrowRight');
+    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
+    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
     
     // Circle center should be at (0, 0, 0)
     // Distance to go from Point 3 (-10, 0, 0) to center (0, 0, 0) is (10, -10, 0)
