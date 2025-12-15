@@ -5,7 +5,6 @@ import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
   renderSimulator,
-  setBootMessageMode,
 } from '../tests/helpers/integration-test-utils';
 
 const BOOT_MESSAGE_DURATION_MS = 1000;
@@ -16,10 +15,8 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('shows model and version on power-on', () => {
-    setBootMessageMode('show');
-
     vi.useFakeTimers();
-    renderSimulator();
+    renderSimulator({ bootMessageMode: 'show' });
 
     expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
     expect(getAxisDisplayPureTextValue('Y')).toBe('vEr 1.0.0');
@@ -32,10 +29,8 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('transitions to counting mode after timeout', async () => {
-    setBootMessageMode('show');
-
     vi.useFakeTimers();
-    renderSimulator();
+    renderSimulator({ bootMessageMode: 'show' });
 
     await act(async () => {
       vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
@@ -52,10 +47,8 @@ describe('EL400Simulator power-on sequence', () => {
   });
 
   it('allows bypassing the power-on message with the clear key', async () => {
-    setBootMessageMode('show');
-
     const user = userEvent.setup();
-    renderSimulator();
+    renderSimulator({ bootMessageMode: 'show' });
 
     await user.click(screen.getByTestId('key-clear'));
 

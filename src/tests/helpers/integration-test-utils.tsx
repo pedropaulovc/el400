@@ -25,24 +25,26 @@ export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
 }
 
 /**
- * Sets the boot message mode in localStorage
- */
-export function setBootMessageMode(mode: 'show' | 'skip'): void {
-  setNonVolatileMemory({ bootMessageMode: mode });
-}
-
-/**
  * Clears non-volatile memory from localStorage
  */
 export function clearNonVolatileMemory(): void {
   localStorage.removeItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
 }
 
+interface RenderSimulatorOptions {
+  /** Boot message mode - defaults to 'skip' for faster tests */
+  bootMessageMode?: 'show' | 'skip';
+}
+
 /**
  * Renders the EL400Simulator with all required providers
- * Note: Call setBootMessageMode('skip') in beforeEach to skip boot message for faster tests
+ * Defaults to skipping boot message for faster tests
  */
-export function renderSimulator() {
+export function renderSimulator(options?: RenderSimulatorOptions) {
+  const { bootMessageMode = 'skip' } = options ?? {};
+
+  setNonVolatileMemory({ bootMessageMode });
+
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
