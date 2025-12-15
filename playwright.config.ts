@@ -58,11 +58,19 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:8080',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  /* Run your local dev server and mock CNCjs server before starting the tests */
+  webServer: [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:8080',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      command: 'npx tsx e2e/mock-cncjs-server.ts',
+      url: 'http://localhost:8765/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 10 * 1000,
+    },
+  ],
 });

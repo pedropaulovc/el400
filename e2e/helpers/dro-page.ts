@@ -1,6 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
-import { MockCncjsServer } from './mock-cncjs-server';
 
 /**
  * Page Object Model for the EL400 DRO Simulator
@@ -8,7 +7,8 @@ import { MockCncjsServer } from './mock-cncjs-server';
  */
 export class DROPage {
   readonly page: Page;
-  private mockServer?: MockCncjsServer;
+  private readonly mockServerPort: number;
+  private readonly sessionId: string;
 
   // Display elements
   readonly xDisplay: Locator;
@@ -55,8 +55,10 @@ export class DROPage {
   readonly toggleUnitButton: Locator;
   readonly centerButton: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
     this.page = page;
+    this.mockServerPort = mockServerPort;
+    this.sessionId = sessionId || `test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     // Initialize display elements using testids (values are in sr-only table)
     this.xDisplay = page.getByTestId('axis-value-x');
@@ -105,40 +107,30 @@ export class DROPage {
   }
 
   /**
-   * Set the mock CNCjs server for encoder simulation.
-   * Must be called before simulateEncoderMove() can be used.
+   * Navigate to the DRO simulator connected to the mock CNCjs server.
+   * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  setMockServer(server: MockCncjsServer): void {
-    this.mockServer = server;
-  }
-
-  /**
-   * Navigate to the DRO simulator.
-   * @param options.cncjs - Connect to CNCjs server at specified host/port
-   * @param options.skipBootMessage - Skip boot message via URL param (default: true for E2E tests)
-   */
-  async goto(options?: {
-    cncjs?: { host: string; port: number };
-    skipBootMessage?: boolean;
-  }) {
+  async goto(options?: { skipBootMessage?: boolean }) {
     const params = new URLSearchParams();
+    params.set('source', 'cncjs');
+    params.set('host', 'localhost');
+    params.set('port', this.mockServerPort.toString());
+    params.set('sessionId', this.sessionId);
 
-    if (options?.cncjs) {
-      params.set('source', 'cncjs');
-      params.set('host', options.cncjs.host);
-      params.set('port', options.cncjs.port.toString());
-    }
-
-    // Skip boot message by default to prevent tests from reading "EL400" and "vEr 1.0.0" as numeric values
-    if (options?.skipBootMessage !== false) {
+    const skipBoot = options?.skipBootMessage !== false;
+    if (skipBoot) {
       params.set('bootMessageMode', 'skip');
     }
 
-    const query = params.toString();
-    const url = query ? `/?${query}` : '/';
-
+    const url = `/?${params.toString()}`;
     await this.page.goto(url);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
+
+    // Wait for Socket.IO connection (initial state received)
+    // Only wait when boot message is skipped - otherwise display shows "EL400" text first
+    if (skipBoot) {
+      await this.waitForAxisValue('X', 0, 0);
+    }
   }
 
   /**
@@ -146,7 +138,7 @@ export class DROPage {
    */
   async reload() {
     await this.page.reload();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -156,17 +148,17 @@ export class DROPage {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
     const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
-    
+
     if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
       throw new Error(`Invalid numeric value in axis ${axis}: ${text}`);
     }
-    
+
     const value = parseFloat(cleanedText);
-    
+
     if (isNaN(value)) {
       throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
     }
-    
+
     return value;
   }
 
@@ -277,22 +269,23 @@ export class DROPage {
 
   /**
    * Simulate encoder movement for an axis.
-   * This triggers the mock CNCjs server to emit a position update via Socket.IO.
+   * Calls the mock CNCjs server HTTP API to update position.
    *
    * @param axis - The axis to move ('X', 'Y', or 'Z')
-   * @param value - The new position value to simulate
-   *
-   * Note: Requires setMockServer() to be called first and page loaded with cncjs source.
-   * The event is emitted synchronously, but the browser may not have processed it yet.
-   * Use expect.poll() in tests to wait for the value to appear.
+   * @param value - The new position value to simulate (in mm)
    */
-  simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): void {
-    if (!this.mockServer) {
-      throw new Error(
-        'No mock server available. Call setMockServer() before using simulateEncoderMove().'
-      );
-    }
+  async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-move?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, value }),
+      }
+    );
 
-    this.mockServer.simulateEncoderMove(axis, value);
+    if (!response.ok) {
+      throw new Error(`Failed to simulate encoder move: ${response.statusText}`);
+    }
   }
 }
