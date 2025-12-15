@@ -507,14 +507,14 @@ describe('VolatileMemoryContext', () => {
     });
   });
 
-  describe('Adapter management', () => {
+  describe('Connected mode (with adapter)', () => {
     let adapter: MockAdapter;
 
     beforeEach(() => {
       adapter = new MockAdapter();
     });
 
-    it('connects with initial adapter', async () => {
+    it('passes through connected state from MachineStateContext', async () => {
       const { result } = renderHook(() => useVolatileMemoryContext(), {
         wrapper: createWrapperWithAdapter(adapter),
       });
@@ -526,7 +526,7 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.controllerType).toBe('mock');
     });
 
-    it('receives position updates from adapter', async () => {
+    it('passes through machine position from MachineStateContext', async () => {
       const { result } = renderHook(() => useVolatileMemoryContext(), {
         wrapper: createWrapperWithAdapter(adapter),
       });
@@ -586,7 +586,7 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.displayValues.X).toBe(50);
     });
 
-    it('exposes adapter via setAdapter', async () => {
+    it('passes through setAdapter from MachineStateContext', async () => {
       const { result } = renderHook(() => useVolatileMemoryContext(), {
         wrapper: createWrapper(),
       });
