@@ -708,6 +708,33 @@ describe('VolatileMemoryContext', () => {
       expect(result.current.bootStage).toBe('run');
     });
 
+    it('URL param bootMessageMode=skip overrides localStorage show setting', async () => {
+      // Set localStorage to 'show'
+      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+        bootMessageMode: 'show',
+      }));
+
+      // Mock URL param to 'skip'
+      const originalSearch = window.location.search;
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, search: '?bootMessageMode=skip' },
+        writable: true,
+      });
+
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      // URL param should override localStorage - should skip to run
+      expect(result.current.bootStage).toBe('run');
+
+      // Restore
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, search: originalSearch },
+        writable: true,
+      });
+    });
+
     it('transitions from showMessage to run after timeout', async () => {
       vi.useFakeTimers();
 
