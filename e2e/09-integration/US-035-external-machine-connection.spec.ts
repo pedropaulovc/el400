@@ -31,26 +31,14 @@ test.describe('US-035: External Machine Connection', () => {
   });
 
   /**
-   * AC35.5: Connection parameters can be specified via URL.
-   * Test mock adapter loading via source parameter.
-   */
-  test('should parse source URL parameter', async ({ page }) => {
-    // Navigate with mock source
-    await page.goto('/?source=mock');
-    await page.waitForLoadState('networkidle');
-
-    // Page should load without errors
-    const errorMessages = page.getByRole('alert');
-    await expect(errorMessages).toHaveCount(0);
-  });
-
-  /**
    * AC35.5: Connection parameters can be specified via URL (host, port).
    * Test CNCjs configuration via URL parameters.
    */
   test('should parse cncjs URL parameters', async ({ page, mockCncjs }) => {
     // Navigate with cncjs source parameters pointing to mock server
-    await page.goto(`/?source=cncjs&host=localhost&port=${mockCncjs.getPort()}`);
+    await page.goto(
+      `/?source=cncjs&host=localhost&port=${mockCncjs.getPort()}&bootMessageMode=skip`
+    );
     await page.waitForLoadState('networkidle');
 
     // Page should load and connect to mock server

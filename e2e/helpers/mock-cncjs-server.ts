@@ -9,6 +9,7 @@ export class MockCncjsServer {
   private httpServer: HttpServer;
   private io: SocketIOServer;
   private port: number;
+  private currentPosition = { x: 0, y: 0, z: 0 };
 
   constructor(port: number = 8000) {
     this.port = port;
@@ -26,11 +27,13 @@ export class MockCncjsServer {
   private setupHandlers(): void {
     this.io.on('connection', (socket) => {
       // Send initial controller state (simulating Grbl)
+      // GRBL format uses arrays for mpos/wpos: [x, y, z]
+      const { x, y, z } = this.currentPosition;
       socket.emit('controller:state', 'grbl', {
         status: {
           activeState: 'Idle',
-          mpos: { x: 0, y: 0, z: 0 },
-          wpos: { x: 0, y: 0, z: 0 },
+          mpos: [x, y, z],
+          wpos: [x, y, z],
         },
         parserstate: {
           modal: {
@@ -44,11 +47,12 @@ export class MockCncjsServer {
         // Acknowledge commands silently
         if (cmd === '?') {
           // Status query - send current state
+          const { x, y, z } = this.currentPosition;
           socket.emit('controller:state', 'grbl', {
             status: {
               activeState: 'Idle',
-              mpos: { x: 0, y: 0, z: 0 },
-              wpos: { x: 0, y: 0, z: 0 },
+              mpos: [x, y, z],
+              wpos: [x, y, z],
             },
           });
         }
@@ -80,14 +84,33 @@ export class MockCncjsServer {
 
   /**
    * Emit a controller state update to all connected clients.
+   * Uses GRBL format with arrays for mpos/wpos.
    */
   emitState(x: number, y: number, z: number): void {
+    this.currentPosition = { x, y, z };
     this.io.emit('controller:state', 'grbl', {
       status: {
         activeState: 'Idle',
-        mpos: { x, y, z },
-        wpos: { x, y, z },
+        mpos: [x, y, z],
+        wpos: [x, y, z],
       },
     });
+  }
+
+  /**
+   * Simulate encoder movement for a specific axis.
+   * Updates the internal position and emits the new state to all clients.
+   */
+  simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): void {
+    const newPosition = { ...this.currentPosition };
+    newPosition[axis.toLowerCase() as 'x' | 'y' | 'z'] = value;
+    this.emitState(newPosition.x, newPosition.y, newPosition.z);
+  }
+
+  /**
+   * Get the current position.
+   */
+  getPosition(): { x: number; y: number; z: number } {
+    return { ...this.currentPosition };
   }
 }

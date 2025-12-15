@@ -235,32 +235,29 @@ test.describe('US-003: ABS/INC Mode', () => {
   /**
    * Test from user story: INC mode allows independent zeroing using encoder simulation.
    * This test uses simulateEncoderMove instead of manual keypad entry.
-   * 
+   *
    * Note: simulateEncoderMove sets position in mm (internal storage format).
    * With default inch display, 10mm displays as ~0.3937 inches.
    */
-  test('should allow INC zeroing with encoder movement', async ({ dro }) => {
-    // Load with MockAdapter to enable encoder simulation
-    await dro.goto({ source: 'mock' });
-    
+  test('should allow INC zeroing with encoder movement', async ({ droWithCncjs }) => {
     // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
-    await dro.simulateEncoderMove('X', 10);
+    droWithCncjs.simulateEncoderMove('X', 10);
     // 10mm = 0.3937 inches
-    await expect(await dro.getAxisValue('X')).toBeCloseTo(0.3937, 2);
+    await droWithCncjs.waitForAxisValue('X', 0.3937);
 
     // Switch to INC
-    await dro.toggleAbsInc();
-    await expect(await dro.isIncMode()).toBe(true);
-    
+    await droWithCncjs.toggleAbsInc();
+    expect(await droWithCncjs.isIncMode()).toBe(true);
+
     // Zero X in INC mode
-    await dro.zeroAxis('X');
-    await expect(await dro.getAxisValue('X')).toBeCloseTo(0, 1);
+    await droWithCncjs.zeroAxis('X');
+    await droWithCncjs.waitForAxisValue('X', 0, 1);
 
     // Switch back to ABS
-    await dro.toggleAbsInc();
-    await expect(await dro.isAbsMode()).toBe(true);
-    
+    await droWithCncjs.toggleAbsInc();
+    expect(await droWithCncjs.isAbsMode()).toBe(true);
+
     // ABS value should still be 0.3937 inches (10mm preserved)
-    await expect(await dro.getAxisValue('X')).toBeCloseTo(0.3937, 2);
+    await droWithCncjs.waitForAxisValue('X', 0.3937);
   });
 });
