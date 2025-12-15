@@ -24,35 +24,30 @@ test.describe('US-007: Center Finding', () => {
     await dro.functionButton.click();
     
     // Verify display shows "CEntrE"
-    // Note: This test will fail until center finding is implemented
-    // The display should show "CEntrE" on the X axis display area
     await expect(dro.xDisplay).toContainText('CEntrE');
     
-    // Press ENT to select CENTRE
+    // Press ENT to select CENTRE (which selects LinE by default)
     await dro.enterButton.click();
     
     // Verify display shows "LinE" (first option)
     await expect(dro.xDisplay).toContainText('LinE');
     
-    // LinE is already selected, press ENT to confirm
+    // Press ENT to confirm LinE selection
     await dro.enterButton.click();
     
     // Point 1 at 0
     await dro.simulateEncoderMove('X', 0);
     await dro.waitForAxisValue('X', 0, 1);
     
-    // Press Right (6►) to store Point 1
-    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
-    // See: US-007 acceptance criteria for proper point storage behavior
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    // Store Point 1 using key 6 (Right/Store)
+    await dro.storePoint();
     
     // Point 2 at 100mm
     await dro.simulateEncoderMove('X', 100);
     await dro.waitForAxisValue('X', 100, 1);
     
-    // Press Right (6►) to store Point 2
-    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    // Store Point 2
+    await dro.storePoint();
     
     // Center should be at 50mm. Distance to go from 100mm is -50mm
     // In inch display mode: 100mm = ~3.937 inches, center = ~1.9685 inches
@@ -78,12 +73,8 @@ test.describe('US-007: Center Finding', () => {
     // Verify display shows "CEntrE"
     await expect(dro.xDisplay).toContainText('CEntrE');
     
-    // Press ENT to select CENTRE
-    await dro.enterButton.click();
-    
-    // Navigate to "CirCLE" option (press Right)
-    // TODO: Replace with proper menu navigation method when center finding feature is implemented
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    // Navigate to "CirCLE" option (press key 6 for Right)
+    await dro.storePoint(); // Key 6 navigates in menu mode
     
     // Verify display shows "CirCLE"
     await expect(dro.xDisplay).toContainText('CirCLE');
@@ -97,24 +88,21 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderMove('Z', 0);
     
     // Store Point 1
-    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    await dro.storePoint();
     
     // Point 2: (0, 10, 0) - Top of circle
     await dro.simulateEncoderMove('X', 0);
     await dro.simulateEncoderMove('Y', 10);
     
     // Store Point 2
-    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    await dro.storePoint();
     
     // Point 3: (-10, 0, 0) - Left side of circle
     await dro.simulateEncoderMove('X', -10);
     await dro.simulateEncoderMove('Y', 0);
     
     // Store Point 3
-    // TODO: Replace with dro.storePoint() method when center finding feature is implemented
-    await dro.page.keyboard.press('ArrowRight'); // Temporary placeholder
+    await dro.storePoint();
     
     // Circle center should be at (0, 0, 0)
     // Distance to go from Point 3 (-10, 0, 0) to center (0, 0, 0) is (10, -10, 0)
@@ -131,38 +119,47 @@ test.describe('US-007: Center Finding', () => {
    * 1. An LED indicator for Fn mode
    * 2. State management to track when function mode is active
    */
-  test.skip('Fn LED indicator glows during center finding', async ({ dro }) => {
-    // This test is skipped until LED indicator is implemented
-    
+  test('Fn LED indicator glows during center finding', async ({ dro }) => {
     // Verify Fn LED is off initially
-    // await expect(dro.fnLED).not.toHaveClass('text-red-400');
+    expect(await dro.isFnModeActive()).toBe(false);
     
     // Press Fn key to activate function menu
     await dro.functionButton.click();
     
     // Verify Fn LED is on
-    // await expect(dro.fnLED).toHaveClass('text-red-400');
+    expect(await dro.isFnModeActive()).toBe(true);
     
-    // Press ENT and select a function
-    await dro.enterButton.click();
+    // Press ENT to select LinE
     await dro.enterButton.click();
     
     // Fn LED should remain on during function execution
-    // await expect(dro.fnLED).toHaveClass('text-red-400');
+    expect(await dro.isFnModeActive()).toBe(true);
+    
+    // Press ENT to confirm LinE
+    await dro.enterButton.click();
+    
+    // Fn LED should still be on
+    expect(await dro.isFnModeActive()).toBe(true);
   });
 
   /**
    * Test canceling center finding mode
    */
-  test.skip('should allow canceling center finding mode', async ({ dro }) => {
+  test('should allow canceling center finding mode', async ({ dro }) => {
     // Press Fn key
     await dro.functionButton.click();
     await expect(dro.xDisplay).toContainText('CEntrE');
+    
+    // Verify Fn LED is on
+    expect(await dro.isFnModeActive()).toBe(true);
     
     // Press C to cancel
     await dro.clearButton.click();
     
     // Display should return to normal position display
     await dro.waitForAxisValue('X', 0, 1);
+    
+    // Fn LED should be off
+    expect(await dro.isFnModeActive()).toBe(false);
   });
 });

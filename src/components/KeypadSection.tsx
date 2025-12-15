@@ -10,11 +10,27 @@ const KeypadSection = () => {
   const inputBuffer = useInputBuffer();
 
   const handleNumber = useCallback((num: string) => {
+    const centerMode = vMem.centerFinding.mode;
+    
+    // Special handling for key 6 (Right arrow) in center finding mode
+    if (num === '6') {
+      if (centerMode === 'centerMenu') {
+        // Navigate from menu to first option
+        vMem.selectCenterLine();
+        return;
+      } else if (centerMode === 'centerLine' || centerMode === 'centerCircle') {
+        // Store current point
+        vMem.storePoint();
+        return;
+      }
+    }
+    
+    // Normal mode: append digit
     if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [vMem.activeAxis, inputBuffer]);
+  }, [vMem, inputBuffer]);
 
   const handleDecimal = useCallback(() => {
     if (!vMem.activeAxis) {
@@ -36,6 +52,23 @@ const KeypadSection = () => {
   }, [inputBuffer, vMem]);
 
   const handleEnter = useCallback(() => {
+    const centerMode = vMem.centerFinding.mode;
+    
+    // Handle center finding menu navigation
+    if (centerMode === 'centerMenu') {
+      // In menu, ENT selects the first option (LinE)
+      vMem.selectCenterLine();
+      return;
+    } else if (centerMode === 'centerLine' && vMem.centerFinding.storedPoints.length === 0) {
+      // First ENT in LinE mode confirms selection, ready to collect points
+      // Just stay in centerLine mode, user will now store points
+      return;
+    } else if (centerMode === 'centerCircle' && vMem.centerFinding.storedPoints.length === 0) {
+      // First ENT in CirCLE mode confirms selection
+      return;
+    }
+    
+    // Normal mode: handle numeric entry
     if (!vMem.activeAxis) {
       return;
     }

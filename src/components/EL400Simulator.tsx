@@ -14,10 +14,36 @@ const EL400Simulator = () => {
   const vMem = useVolatileMemory();
 
   const showBootMessage = vMem.bootStage === 'showMessage';
+  const centerFindingMode = vMem.centerFinding.mode;
 
-  const axisDisplayValues = showBootMessage
-    ? { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' }
-    : vMem.displayValues;
+  // Determine what to show on the display
+  let axisDisplayValues;
+  
+  if (showBootMessage) {
+    // Boot message
+    axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
+  } else if (centerFindingMode === 'centerMenu') {
+    // Show "CEntrE" menu
+    axisDisplayValues = { X: 'CEntrE', Y: '', Z: '' };
+  } else if (centerFindingMode === 'centerLine' && vMem.centerFinding.storedPoints.length < 2) {
+    // Show "LinE" while collecting points
+    axisDisplayValues = { X: 'LinE', Y: '', Z: '' };
+  } else if (centerFindingMode === 'centerCircle' && vMem.centerFinding.storedPoints.length < 3) {
+    // Show "CirCLE" while collecting points
+    axisDisplayValues = { X: 'CirCLE', Y: '', Z: '' };
+  } else if ((centerFindingMode === 'centerLine' || centerFindingMode === 'centerCircle') && vMem.centerFinding.centerResult) {
+    // Show distance-to-go when center is calculated
+    const center = vMem.centerFinding.centerResult;
+    const current = vMem.displayValues;
+    axisDisplayValues = {
+      X: center.X - current.X,
+      Y: center.Y - current.Y,
+      Z: center.Z - current.Z,
+    };
+  } else {
+    // Normal operation
+    axisDisplayValues = vMem.displayValues;
+  }
 
   return (
     <div
