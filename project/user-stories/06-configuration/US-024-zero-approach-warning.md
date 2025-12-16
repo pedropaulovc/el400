@@ -137,7 +137,7 @@ describe('US-024: Setup Menu - Zero Approach Warning', () => {
   test('Warning Beep in Preset mode (G-015)', async () => {
     // In Preset mode
     await dro.setPreset('X', 0);
-    await dro.simulateEncoderMove('X', 0.001);
+    await dro.simulateEncoderAbsoluteMove('X', 0.001);
     await expect(dro.audio).toBePlaying();
   });
 });

@@ -234,14 +234,14 @@ test.describe('US-003: ABS/INC Mode', () => {
 
   /**
    * Test from user story: INC mode allows independent zeroing using encoder simulation.
-   * This test uses simulateEncoderMove instead of manual keypad entry.
+   * This test uses simulateEncoderAbsoluteMove instead of manual keypad entry.
    *
-   * Note: simulateEncoderMove sets position in mm (internal storage format).
+   * Note: simulateEncoderAbsoluteMove sets position in mm (internal storage format).
    * With default inch display, 10mm displays as ~0.3937 inches.
    */
   test('should allow INC zeroing with encoder movement', async ({ dro }) => {
     // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
-    await dro.simulateEncoderMove('X', 10);
+    await dro.simulateEncoderAbsoluteMove('X', 10);
     // 10mm = 0.3937 inches
     await dro.waitForAxisValue('X', 0.3937);
 

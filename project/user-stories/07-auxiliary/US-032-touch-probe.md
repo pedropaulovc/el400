@@ -50,7 +50,7 @@ describe('US-032: Touch Probe', () => {
     await dro.pressKey('X');
 
     // Simulate probe movement
-    await dro.simulateEncoderMove('X', 50.0);
+    await dro.simulateEncoderAbsoluteMove('X', 50.0);
 
     // Simulate probe contact
     await dro.simulateProbeContact();
@@ -72,11 +72,11 @@ describe('US-032: Touch Probe', () => {
     await dro.pressKey('X');
 
     // Touch first edge
-    await dro.simulateEncoderMove('X', 10.0);
+    await dro.simulateEncoderAbsoluteMove('X', 10.0);
     await dro.simulateProbeContact();
 
     // Touch second edge
-    await dro.simulateEncoderMove('X', 50.0);
+    await dro.simulateEncoderAbsoluteMove('X', 50.0);
     await dro.simulateProbeContact();
 
     // Midpoint = (10 + 50) / 2 = 30
@@ -98,11 +98,11 @@ describe('US-032: Touch Probe', () => {
     await dro.pressKey('ENT');
 
     // Touch first inside wall
-    await dro.simulateEncoderMove('X', 10.0);
+    await dro.simulateEncoderAbsoluteMove('X', 10.0);
     await dro.simulateProbeContact();
 
     // Touch opposite inside wall
-    await dro.simulateEncoderMove('X', 60.0);
+    await dro.simulateEncoderAbsoluteMove('X', 60.0);
     await dro.simulateProbeContact();
 
     // Inside diameter = (60 - 10) + 6 = 56mm
@@ -123,11 +123,11 @@ describe('US-032: Touch Probe', () => {
     await dro.pressKey('ENT');
 
     // Touch first outside surface
-    await dro.simulateEncoderMove('X', 0.0);
+    await dro.simulateEncoderAbsoluteMove('X', 0.0);
     await dro.simulateProbeContact();
 
     // Touch opposite outside surface
-    await dro.simulateEncoderMove('X', 50.0);
+    await dro.simulateEncoderAbsoluteMove('X', 50.0);
     await dro.simulateProbeContact();
 
     // Outside diameter = (50 - 0) - 6 = 44mm
@@ -138,14 +138,14 @@ describe('US-032: Touch Probe', () => {
     // Configure Freeze mode
     await dro.configureProbeMode('Freeze');
 
-    await dro.simulateEncoderMove('X', 25.0);
+    await dro.simulateEncoderAbsoluteMove('X', 25.0);
     await dro.simulateProbeContact();
 
     // Display should freeze at contact point
     await expect(dro.display.xAxis).toHaveValue(25.000);
 
     // Continue moving (display should not update)
-    await dro.simulateEncoderMove('X', 30.0);
+    await dro.simulateEncoderAbsoluteMove('X', 30.0);
     await expect(dro.display.xAxis).toHaveValue(25.000);
   });
 });

@@ -22,7 +22,7 @@ describe('US-009: SDM Learn Mode', () => {
     await dro.enterSDMLearnMode();
 
     // Step 1
-    await dro.simulateEncoderMove('X', 10.0);
+    await dro.simulateEncoderAbsoluteMove('X', 10.0);
     await dro.pressKey('Right'); // Store step 1
 
     // Check if advanced to step 2

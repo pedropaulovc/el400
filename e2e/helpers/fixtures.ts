@@ -20,7 +20,7 @@ type DROFixtures = {
  *   import { test, expect } from '../helpers/fixtures';
  *
  *   test('my test', async ({ dro }) => {
- *     await dro.simulateEncoderMove('X', 10);
+ *     await dro.simulateEncoderAbsoluteMove('X', 10);
  *     await dro.waitForAxisValue('X', 0.3937);
  *   });
  */

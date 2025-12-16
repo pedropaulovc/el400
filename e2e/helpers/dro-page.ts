@@ -279,7 +279,7 @@ export class DROPage {
    * @param axis - The axis to move ('X', 'Y', or 'Z')
    * @param value - The new position value to simulate (in mm)
    */
-  async simulateEncoderMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+  async simulateEncoderAbsoluteMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-move?sessionId=${this.sessionId}`,
       {

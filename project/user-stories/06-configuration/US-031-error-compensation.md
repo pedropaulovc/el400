@@ -45,7 +45,7 @@ describe('US-031: Error Compensation', () => {
 
     // Measure known distance (e.g., 100mm slip gauge)
     // Display shows measured: 100.05mm
-    await dro.simulateEncoderMove('X', 100.05);
+    await dro.simulateEncoderAbsoluteMove('X', 100.05);
 
     // Enter reference value
     await dro.enterNumber(100.00);

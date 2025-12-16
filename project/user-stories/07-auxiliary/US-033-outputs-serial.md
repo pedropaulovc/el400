@@ -69,7 +69,7 @@ describe('US-033: Six Output & Serial Communication', () => {
       await dro.programOutput(1, 'X', 100.0, 'Pulse', 500);
 
       // Move to position
-      await dro.simulateEncoderMove('X', 100.0);
+      await dro.simulateEncoderAbsoluteMove('X', 100.0);
 
       // Output should activate
       await expect(dro.output1).toBeActive();
@@ -86,13 +86,13 @@ describe('US-033: Six Output & Serial Communication', () => {
       await dro.programOutput(2, 'Y', 50.0, 'Continuous');
 
       // Move to position
-      await dro.simulateEncoderMove('Y', 50.0);
+      await dro.simulateEncoderAbsoluteMove('Y', 50.0);
 
       // Output activates and stays on
       await expect(dro.output2).toBeActive();
 
       // Move away
-      await dro.simulateEncoderMove('Y', 60.0);
+      await dro.simulateEncoderAbsoluteMove('Y', 60.0);
 
       // Output still active (continuous mode)
       await expect(dro.output2).toBeActive();
@@ -156,9 +156,9 @@ describe('US-033: Six Output & Serial Communication', () => {
     });
 
     test('Data format includes all axis positions', async () => {
-      await dro.simulateEncoderMove('X', 123.456);
-      await dro.simulateEncoderMove('Y', 78.910);
-      await dro.simulateEncoderMove('Z', -45.678);
+      await dro.simulateEncoderAbsoluteMove('X', 123.456);
+      await dro.simulateEncoderAbsoluteMove('Y', 78.910);
+      await dro.simulateEncoderAbsoluteMove('Z', -45.678);
 
       await dro.configureSerialMode('SEr iAL');
 
