@@ -5,12 +5,12 @@
  */
 
 import type { DROShape, FeatureReducer } from '../types';
-import type { DROState } from '../../types/droStateMachine';
+import type { DROState } from '../droStateMachine';
 import {
   INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
   isFunctionMenuSelectionState,
-} from '../../types/droStateMachine';
+} from '../droStateMachine';
 
 /**
  * Menu navigation ring - bidirectional, wraps around.

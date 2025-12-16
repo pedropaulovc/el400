@@ -13,7 +13,7 @@ import {
   isResultState,
   isFunctionActive,
 } from './index';
-import type { DROState } from '../types/droStateMachine';
+import type { DROState } from './droStateMachine';
 
 describe('isFunctionMenuSelectionState', () => {
   it('should return true for function menu selection states', () => {

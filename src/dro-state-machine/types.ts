@@ -8,7 +8,7 @@ import type {
   DROState,
   DROContext,
   DROEvent,
-} from '../types/droStateMachine';
+} from './droStateMachine';
 
 /**
  * The shape of the state machine state.

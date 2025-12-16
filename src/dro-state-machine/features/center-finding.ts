@@ -10,13 +10,13 @@ import type {
   DROContext,
   CenterFindingData,
   StoredPoint,
-} from '../../types/droStateMachine';
+} from '../droStateMachine';
 import {
   INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
   isCenterLineState,
   isCenterCircleState,
-} from '../../types/droStateMachine';
+} from '../droStateMachine';
 import type { AxisValues } from '../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
 
