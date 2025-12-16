@@ -1,11 +1,17 @@
 import { createServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { parse } from 'url';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
 
 const PORT = 8765;
 
-// State per session (sessionId -> { socket, position })
-const sessions = new Map<string, { socket: Socket | null; position: { x: number; y: number; z: number } }>();
+// State per session (sessionId -> { position, probeState })
+const sessions = new Map<string, { position: { x: number; y: number; z: number }; probeState?: { pinState: string } }>();
 
 const httpServer = createServer((req, res) => {
   const { pathname, query } = parse(req.url || '', true);
@@ -20,6 +26,22 @@ const httpServer = createServer((req, res) => {
     res.writeHead(200);
     res.end();
     return;
+  }
+
+  // Serve frontend HTML
+  if ((pathname === '/' || pathname === '/index.html') && req.method === 'GET') {
+    try {
+      const htmlPath = resolve(__dirname, 'mock-cncjs-frontend.html');
+      const html = readFileSync(htmlPath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    } catch (error) {
+      console.error('[MockCncjs] Failed to read frontend HTML:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Frontend not available' }));
+      return;
+    }
   }
 
   // Health check
@@ -76,6 +98,7 @@ const httpServer = createServer((req, res) => {
         }
 
         session.position[axis.toLowerCase() as 'x' | 'y' | 'z'] = value;
+        console.log(`[MockCncjs] encoder-move ${sessionId}: ${axis}=${value}, new position=[${session.position.x}, ${session.position.y}, ${session.position.z}]`);
         emitStateToSession(sessionId);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -85,6 +108,58 @@ const httpServer = createServer((req, res) => {
         res.end(JSON.stringify({ error: 'Invalid JSON' }));
       }
     });
+    return;
+  }
+
+  // Probe trigger
+  if (pathname === '/api/probe-trigger' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+
+    let session = sessions.get(sessionId);
+    if (!session) {
+      session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+      sessions.set(sessionId, session);
+    }
+
+    // Simulate probe trigger (set pinState to 'P')
+    session.probeState = {
+      pinState: 'P',
+    };
+
+    emitStateToSession(sessionId);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, probe: session.probeState }));
+    return;
+  }
+
+  // Probe clear
+  if (pathname === '/api/probe-clear' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+
+    let session = sessions.get(sessionId);
+    if (!session) {
+      session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+      sessions.set(sessionId, session);
+    }
+
+    // Clear probe state (set pinState to empty)
+    session.probeState = {
+      pinState: '',
+    };
+
+    emitStateToSession(sessionId);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, probe: session.probeState }));
     return;
   }
 
@@ -98,20 +173,36 @@ const io = new SocketIOServer(httpServer, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  pingInterval: 25000,
+  pingTimeout: 60000,
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
 });
 
 function emitStateToSession(sessionId: string) {
   const session = sessions.get(sessionId);
-  if (!session?.socket) return;
+  if (!session) {
+    console.log(`[MockCncjs] emitStateToSession: session not found for ${sessionId}`);
+    return;
+  }
 
   const { x, y, z } = session.position;
-  session.socket.emit('controller:state', 'grbl', {
-    status: {
-      activeState: 'Idle',
-      mpos: [x, y, z],
-      wpos: [x, y, z],
-    },
-  });
+  console.log(`[MockCncjs] emitting state for ${sessionId}: pos=[${x}, ${y}, ${z}]`);
+
+  try {
+    // Use Socket.io rooms to broadcast to all sockets in this session
+    io.to(sessionId).emit('controller:state', 'grbl', {
+      status: {
+        activeState: 'Idle',
+        mpos: [x, y, z],
+        wpos: [x, y, z],
+      },
+      probe: session.probeState || '',
+    });
+    console.log(`[MockCncjs] emit successful for ${sessionId}`);
+  } catch (error) {
+    console.log(`[MockCncjs] emit error for ${sessionId}: ${error}`);
+  }
 }
 
 io.on('connection', (socket) => {
@@ -129,10 +220,16 @@ io.on('connection', (socket) => {
   // Get or create session
   let session = sessions.get(sessionId);
   if (!session) {
-    session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+    console.log(`[MockCncjs] creating new session for ${sessionId}`);
+    session = { position: { x: 0, y: 0, z: 0 } };
     sessions.set(sessionId, session);
+  } else {
+    console.log(`[MockCncjs] reusing existing session for ${sessionId}, position=[${session.position.x}, ${session.position.y}, ${session.position.z}]`);
   }
-  session.socket = socket;
+
+  // Join socket to a room named after the sessionId
+  socket.join(sessionId);
+  console.log(`[MockCncjs] socket ${socket.id} joined room ${sessionId}`);
 
   // Send initial controller state
   const { x, y, z } = session.position;
@@ -142,20 +239,12 @@ io.on('connection', (socket) => {
       mpos: [x, y, z],
       wpos: [x, y, z],
     },
-    parserstate: {
-      modal: {
-        units: 'G21',
-      },
-    },
+    probe: session.probeState || '',
   });
 
   socket.on('disconnect', (reason) => {
     console.log(`[MockCncjs] client disconnected: ${socket.id}, session: ${sessionId}, reason: ${reason}`);
-    // Clear socket reference but keep position state (for reconnects)
-    const s = sessions.get(sessionId);
-    if (s && s.socket === socket) {
-      s.socket = null;
-    }
+    // Session state is preserved, socket will automatically leave the room
   });
 
   socket.on('command', (_port: string, cmd: string) => {
@@ -163,36 +252,23 @@ io.on('connection', (socket) => {
       const s = sessions.get(sessionId);
       if (s) {
         const { x, y, z } = s.position;
-        socket.emit('controller:state', 'grbl', {
+        // Broadcast to the room instead of just this socket
+        io.to(sessionId).emit('controller:state', 'grbl', {
           status: {
             activeState: 'Idle',
             mpos: [x, y, z],
             wpos: [x, y, z],
           },
+          probe: s.probeState || '',
         });
       }
     }
   });
 });
 
-// Clean up stale sessions periodically (sessions without sockets for > 1 min)
-setInterval(() => {
-  const staleThreshold = 60000;
-  const now = Date.now();
-  for (const [sessionId, session] of sessions.entries()) {
-    if (!session.socket) {
-      // Mark for deletion on next check if still no socket
-      if (!(session as { staleAt?: number }).staleAt) {
-        (session as { staleAt?: number }).staleAt = now;
-      } else if (now - (session as { staleAt?: number }).staleAt! > staleThreshold) {
-        sessions.delete(sessionId);
-        console.log(`[MockCncjs] cleaned up stale session: ${sessionId}`);
-      }
-    } else {
-      delete (session as { staleAt?: number }).staleAt;
-    }
-  }
-}, 30000);
+// Note: Sessions are now automatically managed by Socket.io rooms.
+// Sessions persist to preserve position state across reconnections.
+// For a production server, you could add memory limits or TTL-based cleanup.
 
 httpServer.listen(PORT, () => {
   console.log(`[MockCncjs] Mock CNCjs server listening on port ${PORT}`);
