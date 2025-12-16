@@ -1,16 +1,19 @@
-const TRANSPARENT_REGEX = /rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0(?:\.\d+)?\s*\)/;
+const TRANSPARENT_REGEX = /rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0(?:\.0+)?\s*\)/;
 
+// High-contrast targets intentional near-black/white pairs for the DRO display
 export const MIN_HIGH_CONTRAST_RATIO = 20;
+// Buttons should meet or exceed Windows HC defaults (~17:1)
 export const MIN_ACCESSIBLE_CONTRAST_RATIO = 17;
-export const APPROX_EQUAL_CONTRAST_RATIO = 1.5;
+// Used to assert "off" or inactive elements are visually minimal
+export const APPROX_EQUAL_CONTRAST_RATIO = 1.2;
 
 export const isTransparentColor = (color: string): boolean => {
   return color === "none" || color === "transparent" || TRANSPARENT_REGEX.test(color);
 };
 
-export const parseColor = (color: string): [number, number, number] => {
+export const parseColor = (color: string): [number, number, number] | null => {
   if (isTransparentColor(color)) {
-    return [0, 0, 0];
+    return null;
   }
 
   const rgbMatch = color.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\s*\)/);

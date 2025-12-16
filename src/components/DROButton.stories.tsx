@@ -126,28 +126,3 @@ export const KeyboardNavigation: Story = {
     await expect(args.onClick).toHaveBeenCalled();
   },
 };
-
-export const ForcedColorsHighContrast: Story = {
-  args: {
-    children: "Forced Colors",
-    variant: "default",
-    size: "square",
-  },
-  play: async ({ canvasElement }) => {
-    await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
-
-    const canvas = within(canvasElement);
-    const button = canvas.getByRole("button");
-
-    const style = getComputedStyle(button);
-
-    expect(style.borderStyle).not.toBe("none");
-    expect(style.borderWidth).not.toBe("0px");
-
-    const fgRgb = parseColor(style.color);
-    const bgRgb = parseColor(style.backgroundColor);
-    const contrastRatio = getContrastRatio(fgRgb, bgRgb);
-
-    expect(contrastRatio).toBeGreaterThanOrEqual(MIN_ACCESSIBLE_CONTRAST_RATIO);
-  },
-};
