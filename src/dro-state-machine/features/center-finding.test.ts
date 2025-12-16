@@ -6,17 +6,17 @@
 
 import { describe, it, expect } from 'vitest';
 import { centerFindingReducer } from './center-finding';
-import type { DROModeShape } from '../types';
-import type { DROModeState, CenterFindingData } from '../../types/droMode';
+import type { DROShape } from '../types';
+import type { DROState, CenterFindingData } from '../../types/droStateMachine';
 import {
-  INITIAL_DRO_MODE_DATA,
+  INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
-} from '../../types/droMode';
+} from '../../types/droStateMachine';
 
 describe('centerFindingReducer', () => {
   describe('state handling', () => {
     it('should return null for non-center-finding states', () => {
-      const nonCenterStates: DROModeState[] = [
+      const nonCenterStates: DROState[] = [
         'boot',
         'showMessage',
         'idle',
@@ -28,9 +28,9 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of nonCenterStates) {
-        const current: DROModeShape = {
+        const current: DROShape = {
           state,
-          data: INITIAL_DRO_MODE_DATA,
+          data: INITIAL_DRO_CONTEXT,
         };
 
         const result = centerFindingReducer(current, { type: 'KEY_CLEAR' });
@@ -39,14 +39,14 @@ describe('centerFindingReducer', () => {
     });
 
     it('should handle all center-line states', () => {
-      const lineStates: DROModeState[] = [
+      const lineStates: DROState[] = [
         'function-menu-center-line-point-1',
         'function-menu-center-line-point-2',
         'function-menu-center-line-result',
       ];
 
       for (const state of lineStates) {
-        const current: DROModeShape = {
+        const current: DROShape = {
           state,
           data: INITIAL_CENTER_FINDING_DATA,
         };
@@ -58,7 +58,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should handle all center-circle states', () => {
-      const circleStates: DROModeState[] = [
+      const circleStates: DROState[] = [
         'function-menu-center-circle-point-1',
         'function-menu-center-circle-point-2',
         'function-menu-center-circle-point-3',
@@ -66,7 +66,7 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of circleStates) {
-        const current: DROModeShape = {
+        const current: DROShape = {
           state,
           data: INITIAL_CENTER_FINDING_DATA,
         };
@@ -79,7 +79,7 @@ describe('centerFindingReducer', () => {
 
   describe('KEY_CLEAR cancellation', () => {
     it('should cancel from center-line-point-1', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };
@@ -91,7 +91,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should cancel from center-line-point-2', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -107,7 +107,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should cancel from center-line-result', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-result',
         data: {
           type: 'center-finding',
@@ -123,7 +123,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should cancel from all circle point collection states', () => {
-      const circleStates: DROModeState[] = [
+      const circleStates: DROState[] = [
         'function-menu-center-circle-point-1',
         'function-menu-center-circle-point-2',
         'function-menu-center-circle-point-3',
@@ -131,7 +131,7 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of circleStates) {
-        const current: DROModeShape = {
+        const current: DROShape = {
           state,
           data: INITIAL_CENTER_FINDING_DATA,
         };
@@ -146,7 +146,7 @@ describe('centerFindingReducer', () => {
 
   describe('center-line point collection', () => {
     it('should store first point and advance to point-2', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };
@@ -164,7 +164,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should store second point and calculate result', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -188,7 +188,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should calculate center for horizontal line', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -208,7 +208,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should calculate center for vertical line', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -228,7 +228,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should calculate center for diagonal line', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -249,7 +249,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should handle negative coordinates', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -271,7 +271,7 @@ describe('centerFindingReducer', () => {
 
   describe('center-line result state', () => {
     it('should stay in result state for unhandled events', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-result',
         data: {
           type: 'center-finding',
@@ -288,7 +288,7 @@ describe('centerFindingReducer', () => {
 
   describe('center-circle point collection', () => {
     it('should store first point and advance to point-2', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };
@@ -304,7 +304,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should store second point and advance to point-3', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-2',
         data: {
           type: 'center-finding',
@@ -324,7 +324,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should store third point and calculate circle center', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-3',
         data: {
           type: 'center-finding',
@@ -350,7 +350,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should calculate center for circle not at origin', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-3',
         data: {
           type: 'center-finding',
@@ -373,7 +373,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should calculate average Z for circle center', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-3',
         data: {
           type: 'center-finding',
@@ -395,7 +395,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should handle collinear points (return null center)', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-3',
         data: {
           type: 'center-finding',
@@ -420,7 +420,7 @@ describe('centerFindingReducer', () => {
 
   describe('center-circle result state', () => {
     it('should stay in result state for unhandled events', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-result',
         data: {
           type: 'center-finding',
@@ -440,7 +440,7 @@ describe('centerFindingReducer', () => {
 
   describe('unhandled events in point collection', () => {
     it('should return current state for non-POINT_DATA events in point-1', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };
@@ -451,7 +451,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should return current state for non-POINT_DATA events in point-2', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-2',
         data: {
           type: 'center-finding',
@@ -464,7 +464,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should return current state for non-POINT_DATA events in circle point-3', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-circle-point-3',
         data: {
           type: 'center-finding',
@@ -482,7 +482,7 @@ describe('centerFindingReducer', () => {
 
   describe('data initialization', () => {
     it('should initialize data if not center-finding type', () => {
-      const current: DROModeShape = {
+      const current: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: { type: 'none' },
       };
@@ -500,7 +500,7 @@ describe('centerFindingReducer', () => {
 
   describe('full workflow', () => {
     it('should complete center-line workflow from point-1 to result', () => {
-      let state: DROModeShape = {
+      let state: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };
@@ -524,7 +524,7 @@ describe('centerFindingReducer', () => {
     });
 
     it('should complete center-circle workflow from point-1 to result', () => {
-      let state: DROModeShape = {
+      let state: DROShape = {
         state: 'function-menu-center-circle-point-1',
         data: INITIAL_CENTER_FINDING_DATA,
       };

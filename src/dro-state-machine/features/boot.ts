@@ -4,11 +4,11 @@
  * Handles boot sequence, idle state, and transitional mode toggle states.
  */
 
-import type { DROModeShape, FeatureReducer } from '../types';
-import type { DROModeState } from '../../types/droMode';
-import { INITIAL_DRO_MODE_DATA } from '../../types/droMode';
+import type { DROShape, FeatureReducer } from '../types';
+import type { DROState } from '../../types/droStateMachine';
+import { INITIAL_DRO_CONTEXT } from '../../types/droStateMachine';
 
-const BOOT_STATES: DROModeState[] = [
+const BOOT_STATES: DROState[] = [
   'boot',
   'showMessage',
   'idle',
@@ -16,7 +16,7 @@ const BOOT_STATES: DROModeState[] = [
   'inch-mm-mode',
 ];
 
-function isBootState(state: DROModeState): boolean {
+function isBootState(state: DROState): boolean {
   return BOOT_STATES.includes(state);
 }
 
@@ -30,14 +30,14 @@ export const bootReducer: FeatureReducer = (current, event) => {
       if (event.type === 'BOOT_COMPLETE') {
         return {
           state: event.skipMessage ? 'idle' : 'showMessage',
-          data: INITIAL_DRO_MODE_DATA,
+          data: INITIAL_DRO_CONTEXT,
         };
       }
       return current;
 
     case 'showMessage':
       if (event.type === 'BOOT_MESSAGE_TIMEOUT' || event.type === 'KEY_CLEAR') {
-        return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+        return { state: 'idle', data: INITIAL_DRO_CONTEXT };
       }
       return current;
 
@@ -48,7 +48,7 @@ export const bootReducer: FeatureReducer = (current, event) => {
         case 'BTN_INCH_MM':
           return { state: 'inch-mm-mode', data };
         case 'BTN_FUNCTION':
-          return { state: 'function-menu-center', data: INITIAL_DRO_MODE_DATA };
+          return { state: 'function-menu-center', data: INITIAL_DRO_CONTEXT };
         default:
           return current;
       }
@@ -56,7 +56,7 @@ export const bootReducer: FeatureReducer = (current, event) => {
     case 'abs-inc-mode':
     case 'inch-mm-mode':
       if (event.type === 'MODE_TOGGLE_COMPLETE') {
-        return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+        return { state: 'idle', data: INITIAL_DRO_CONTEXT };
       }
       return current;
 

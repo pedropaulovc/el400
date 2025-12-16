@@ -8,34 +8,34 @@ import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
-  DROModeProvider,
-  useDROModeState,
-  useDROModeDispatch,
-  useDROModeData,
+  DROProvider,
+  useDROState,
+  useDRODispatch,
+  useDROContext,
   useCenterResult,
   useStoredPointsCount,
-  type DROModeShape,
+  type DROShape,
 } from './index';
-import { INITIAL_DRO_MODE_DATA } from '../types/droMode';
+import { INITIAL_DRO_CONTEXT } from '../types/droStateMachine';
 
-function createWrapper(initialState?: DROModeShape) {
+function createWrapper(initialState?: DROShape) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <DROModeProvider initialState={initialState}>{children}</DROModeProvider>
+      <DROProvider initialState={initialState}>{children}</DROProvider>
     );
   };
 }
 
-describe('DROModeProvider', () => {
+describe('DROProvider', () => {
   describe('context access', () => {
     it('should throw error when hooks are used outside provider', () => {
       expect(() => {
-        renderHook(() => useDROModeState());
-      }).toThrow('useDROModeState must be used within a DROModeProvider');
+        renderHook(() => useDROState());
+      }).toThrow('useDROState must be used within a DROProvider');
     });
 
     it('should provide context when wrapped in provider', () => {
-      const { result } = renderHook(() => useDROModeState(), {
+      const { result } = renderHook(() => useDROState(), {
         wrapper: createWrapper(),
       });
 
@@ -45,7 +45,7 @@ describe('DROModeProvider', () => {
 
   describe('initial state', () => {
     it('should start in boot state by default', () => {
-      const { result } = renderHook(() => useDROModeState(), {
+      const { result } = renderHook(() => useDROState(), {
         wrapper: createWrapper(),
       });
 
@@ -53,7 +53,7 @@ describe('DROModeProvider', () => {
     });
 
     it('should start with none data by default', () => {
-      const { result } = renderHook(() => useDROModeData(), {
+      const { result } = renderHook(() => useDROContext(), {
         wrapper: createWrapper(),
       });
 
@@ -61,12 +61,12 @@ describe('DROModeProvider', () => {
     });
 
     it('should accept custom initial state', () => {
-      const initialState: DROModeShape = {
+      const initialState: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
-      const { result } = renderHook(() => useDROModeState(), {
+      const { result } = renderHook(() => useDROState(), {
         wrapper: createWrapper(initialState),
       });
 
@@ -75,10 +75,10 @@ describe('DROModeProvider', () => {
   });
 });
 
-describe('useDROModeState', () => {
+describe('useDROState', () => {
   it('should return current state', () => {
-    const { result } = renderHook(() => useDROModeState(), {
-      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_MODE_DATA }),
+    const { result } = renderHook(() => useDROState(), {
+      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_CONTEXT }),
     });
 
     expect(result.current).toBe('idle');
@@ -87,10 +87,10 @@ describe('useDROModeState', () => {
   it('should update when state changes', () => {
     const { result } = renderHook(
       () => ({
-        state: useDROModeState(),
-        dispatch: useDROModeDispatch(),
+        state: useDROState(),
+        dispatch: useDRODispatch(),
       }),
-      { wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_MODE_DATA }) }
+      { wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_CONTEXT }) }
     );
 
     act(() => {
@@ -101,10 +101,10 @@ describe('useDROModeState', () => {
   });
 });
 
-describe('useDROModeData', () => {
+describe('useDROContext', () => {
   it('should return current data', () => {
-    const { result } = renderHook(() => useDROModeData(), {
-      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_MODE_DATA }),
+    const { result } = renderHook(() => useDROContext(), {
+      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_CONTEXT }),
     });
 
     expect(result.current.type).toBe('none');
@@ -113,13 +113,13 @@ describe('useDROModeData', () => {
   it('should update when data changes', () => {
     const { result } = renderHook(
       () => ({
-        data: useDROModeData(),
-        dispatch: useDROModeDispatch(),
+        data: useDROContext(),
+        dispatch: useDRODispatch(),
       }),
       {
         wrapper: createWrapper({
           state: 'function-menu-center',
-          data: INITIAL_DRO_MODE_DATA,
+          data: INITIAL_DRO_CONTEXT,
         }),
       }
     );
@@ -132,9 +132,9 @@ describe('useDROModeData', () => {
   });
 });
 
-describe('useDROModeDispatch', () => {
+describe('useDRODispatch', () => {
   it('should return dispatch function', () => {
-    const { result } = renderHook(() => useDROModeDispatch(), {
+    const { result } = renderHook(() => useDRODispatch(), {
       wrapper: createWrapper(),
     });
 
@@ -144,8 +144,8 @@ describe('useDROModeDispatch', () => {
   it('should dispatch events that trigger state transitions', () => {
     const { result } = renderHook(
       () => ({
-        state: useDROModeState(),
-        dispatch: useDROModeDispatch(),
+        state: useDROState(),
+        dispatch: useDRODispatch(),
       }),
       { wrapper: createWrapper() }
     );
@@ -161,7 +161,7 @@ describe('useDROModeDispatch', () => {
 describe('useCenterResult', () => {
   it('should return null when not in center-finding data', () => {
     const { result } = renderHook(() => useCenterResult(), {
-      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_MODE_DATA }),
+      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_CONTEXT }),
     });
 
     expect(result.current).toBeNull();
@@ -201,7 +201,7 @@ describe('useCenterResult', () => {
 describe('useStoredPointsCount', () => {
   it('should return 0 when not in center-finding data', () => {
     const { result } = renderHook(() => useStoredPointsCount(), {
-      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_MODE_DATA }),
+      wrapper: createWrapper({ state: 'idle', data: INITIAL_DRO_CONTEXT }),
     });
 
     expect(result.current).toBe(0);
@@ -237,7 +237,7 @@ describe('useStoredPointsCount', () => {
     const { result } = renderHook(
       () => ({
         count: useStoredPointsCount(),
-        dispatch: useDROModeDispatch(),
+        dispatch: useDRODispatch(),
       }),
       {
         wrapper: createWrapper({
@@ -264,11 +264,11 @@ describe('Provider integration', () => {
   it('should support full center-line workflow through hooks', () => {
     const { result } = renderHook(
       () => ({
-        state: useDROModeState(),
-        data: useDROModeData(),
+        state: useDROState(),
+        data: useDROContext(),
         centerResult: useCenterResult(),
         pointsCount: useStoredPointsCount(),
-        dispatch: useDROModeDispatch(),
+        dispatch: useDRODispatch(),
       }),
       { wrapper: createWrapper() }
     );

@@ -6,15 +6,15 @@
 
 import { describe, it, expect } from 'vitest';
 import { bootReducer } from './boot';
-import type { DROModeShape } from '../types';
-import { INITIAL_DRO_MODE_DATA } from '../../types/droMode';
+import type { DROShape } from '../types';
+import { INITIAL_DRO_CONTEXT } from '../../types/droStateMachine';
 
 describe('bootReducer', () => {
   describe('state handling', () => {
     it('should return null for non-boot states', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'function-menu-center',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'KEY_CLEAR' });
@@ -26,9 +26,9 @@ describe('bootReducer', () => {
       const bootStates = ['boot', 'showMessage', 'idle', 'abs-inc-mode', 'inch-mm-mode'] as const;
 
       for (const bootState of bootStates) {
-        const state: DROModeShape = {
+        const state: DROShape = {
           state: bootState,
-          data: INITIAL_DRO_MODE_DATA,
+          data: INITIAL_DRO_CONTEXT,
         };
 
         // Should not return null for boot states (may return current state if event not handled)
@@ -40,9 +40,9 @@ describe('bootReducer', () => {
 
   describe('boot state', () => {
     it('should transition to showMessage on BOOT_COMPLETE with skipMessage=false', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BOOT_COMPLETE', skipMessage: false });
@@ -52,9 +52,9 @@ describe('bootReducer', () => {
     });
 
     it('should transition to idle on BOOT_COMPLETE with skipMessage=true', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BOOT_COMPLETE', skipMessage: true });
@@ -64,9 +64,9 @@ describe('bootReducer', () => {
     });
 
     it('should return current state for unhandled events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BTN_FUNCTION' });
@@ -75,9 +75,9 @@ describe('bootReducer', () => {
     });
 
     it('should ignore mode toggle events during boot', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       expect(bootReducer(state, { type: 'BTN_ABS_INC' })).toBe(state);
@@ -87,9 +87,9 @@ describe('bootReducer', () => {
 
   describe('showMessage state', () => {
     it('should transition to idle on BOOT_MESSAGE_TIMEOUT', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'showMessage',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BOOT_MESSAGE_TIMEOUT' });
@@ -99,9 +99,9 @@ describe('bootReducer', () => {
     });
 
     it('should transition to idle on KEY_CLEAR', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'showMessage',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'KEY_CLEAR' });
@@ -111,9 +111,9 @@ describe('bootReducer', () => {
     });
 
     it('should return current state for unhandled events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'showMessage',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'KEY_ENTER' });
@@ -124,9 +124,9 @@ describe('bootReducer', () => {
 
   describe('idle state', () => {
     it('should transition to abs-inc-mode on BTN_ABS_INC', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BTN_ABS_INC' });
@@ -136,9 +136,9 @@ describe('bootReducer', () => {
     });
 
     it('should transition to inch-mm-mode on BTN_INCH_MM', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BTN_INCH_MM' });
@@ -148,9 +148,9 @@ describe('bootReducer', () => {
     });
 
     it('should transition to function-menu-center on BTN_FUNCTION', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'BTN_FUNCTION' });
@@ -160,9 +160,9 @@ describe('bootReducer', () => {
     });
 
     it('should return current state for unhandled events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
@@ -172,9 +172,9 @@ describe('bootReducer', () => {
     });
 
     it('should ignore numeric key events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const numericKeys = ['KEY_0', 'KEY_1', 'KEY_2_DOWN', 'KEY_3', 'KEY_4_LEFT', 'KEY_5', 'KEY_6_RIGHT', 'KEY_7', 'KEY_8_UP', 'KEY_9'] as const;
@@ -188,9 +188,9 @@ describe('bootReducer', () => {
 
   describe('abs-inc-mode state', () => {
     it('should transition to idle on MODE_TOGGLE_COMPLETE', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'abs-inc-mode',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'MODE_TOGGLE_COMPLETE' });
@@ -200,9 +200,9 @@ describe('bootReducer', () => {
     });
 
     it('should return current state for unhandled events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'abs-inc-mode',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
@@ -212,9 +212,9 @@ describe('bootReducer', () => {
 
   describe('inch-mm-mode state', () => {
     it('should transition to idle on MODE_TOGGLE_COMPLETE', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'inch-mm-mode',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       const result = bootReducer(state, { type: 'MODE_TOGGLE_COMPLETE' });
@@ -224,9 +224,9 @@ describe('bootReducer', () => {
     });
 
     it('should return current state for unhandled events', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'inch-mm-mode',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
@@ -237,7 +237,7 @@ describe('bootReducer', () => {
   describe('data preservation', () => {
     it('should preserve data during mode toggle transitions', () => {
       const customData = { type: 'none' as const };
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
         data: customData,
       };
@@ -248,7 +248,7 @@ describe('bootReducer', () => {
     });
 
     it('should reset data when entering function menu', () => {
-      const state: DROModeShape = {
+      const state: DROShape = {
         state: 'idle',
         data: { type: 'none' },
       };

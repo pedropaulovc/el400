@@ -4,26 +4,26 @@
  * Handles center-line (2 points) and center-circle (3 points) operations.
  */
 
-import type { DROModeShape, FeatureReducer } from '../types';
+import type { DROShape, FeatureReducer } from '../types';
 import type {
-  DROModeState,
-  DROModeData,
+  DROState,
+  DROContext,
   CenterFindingData,
   StoredPoint,
-} from '../../types/droMode';
+} from '../../types/droStateMachine';
 import {
-  INITIAL_DRO_MODE_DATA,
+  INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
   isCenterLineState,
   isCenterCircleState,
-} from '../../types/droMode';
+} from '../../types/droStateMachine';
 import type { AxisValues } from '../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
 
 /**
  * Check if state is handled by this feature.
  */
-function isCenterFindingState(state: DROModeState): boolean {
+function isCenterFindingState(state: DROState): boolean {
   return isCenterLineState(state) || isCenterCircleState(state);
 }
 
@@ -31,7 +31,7 @@ function isCenterFindingState(state: DROModeState): boolean {
  * Add a point to the center finding data.
  */
 function addPointToData(
-  data: DROModeData,
+  data: DROContext,
   point: StoredPoint
 ): CenterFindingData {
   if (data.type === 'center-finding') {
@@ -87,7 +87,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
 
   // All center finding states can be cancelled with KEY_CLEAR
   if (event.type === 'KEY_CLEAR') {
-    return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+    return { state: 'idle', data: INITIAL_DRO_CONTEXT };
   }
 
   switch (state) {

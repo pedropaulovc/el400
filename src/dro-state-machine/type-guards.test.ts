@@ -13,11 +13,11 @@ import {
   isResultState,
   isFunctionActive,
 } from './index';
-import type { DROModeState } from '../types/droMode';
+import type { DROState } from '../types/droStateMachine';
 
 describe('isFunctionMenuSelectionState', () => {
   it('should return true for function menu selection states', () => {
-    const menuStates: DROModeState[] = [
+    const menuStates: DROState[] = [
       'function-menu-center',
       'function-menu-circle',
       'function-menu-line',
@@ -31,7 +31,7 @@ describe('isFunctionMenuSelectionState', () => {
   });
 
   it('should return false for non-menu states', () => {
-    const nonMenuStates: DROModeState[] = [
+    const nonMenuStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -45,7 +45,7 @@ describe('isFunctionMenuSelectionState', () => {
   });
 
   it('should return false for point collection states', () => {
-    const pointStates: DROModeState[] = [
+    const pointStates: DROState[] = [
       'function-menu-center-line-point-1',
       'function-menu-center-line-point-2',
       'function-menu-center-circle-point-1',
@@ -59,7 +59,7 @@ describe('isFunctionMenuSelectionState', () => {
   });
 
   it('should return false for result states', () => {
-    const resultStates: DROModeState[] = [
+    const resultStates: DROState[] = [
       'function-menu-center-line-result',
       'function-menu-center-circle-result',
     ];
@@ -72,7 +72,7 @@ describe('isFunctionMenuSelectionState', () => {
 
 describe('isCollectingPoints', () => {
   it('should return true for all point collection states', () => {
-    const pointStates: DROModeState[] = [
+    const pointStates: DROState[] = [
       'function-menu-center-line-point-1',
       'function-menu-center-line-point-2',
       'function-menu-center-circle-point-1',
@@ -86,7 +86,7 @@ describe('isCollectingPoints', () => {
   });
 
   it('should return false for non-point states', () => {
-    const nonPointStates: DROModeState[] = [
+    const nonPointStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -106,7 +106,7 @@ describe('isCollectingPoints', () => {
 
 describe('isCenterLineState', () => {
   it('should return true for center-line states', () => {
-    const lineStates: DROModeState[] = [
+    const lineStates: DROState[] = [
       'function-menu-center-line-point-1',
       'function-menu-center-line-point-2',
       'function-menu-center-line-result',
@@ -118,7 +118,7 @@ describe('isCenterLineState', () => {
   });
 
   it('should return false for center-circle states', () => {
-    const circleStates: DROModeState[] = [
+    const circleStates: DROState[] = [
       'function-menu-center-circle-point-1',
       'function-menu-center-circle-point-2',
       'function-menu-center-circle-point-3',
@@ -131,7 +131,7 @@ describe('isCenterLineState', () => {
   });
 
   it('should return false for non-center-finding states', () => {
-    const otherStates: DROModeState[] = [
+    const otherStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -147,7 +147,7 @@ describe('isCenterLineState', () => {
 
 describe('isCenterCircleState', () => {
   it('should return true for center-circle states', () => {
-    const circleStates: DROModeState[] = [
+    const circleStates: DROState[] = [
       'function-menu-center-circle-point-1',
       'function-menu-center-circle-point-2',
       'function-menu-center-circle-point-3',
@@ -160,7 +160,7 @@ describe('isCenterCircleState', () => {
   });
 
   it('should return false for center-line states', () => {
-    const lineStates: DROModeState[] = [
+    const lineStates: DROState[] = [
       'function-menu-center-line-point-1',
       'function-menu-center-line-point-2',
       'function-menu-center-line-result',
@@ -172,7 +172,7 @@ describe('isCenterCircleState', () => {
   });
 
   it('should return false for non-center-finding states', () => {
-    const otherStates: DROModeState[] = [
+    const otherStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -188,7 +188,7 @@ describe('isCenterCircleState', () => {
 
 describe('isResultState', () => {
   it('should return true for result states', () => {
-    const resultStates: DROModeState[] = [
+    const resultStates: DROState[] = [
       'function-menu-center-line-result',
       'function-menu-center-circle-result',
     ];
@@ -199,7 +199,7 @@ describe('isResultState', () => {
   });
 
   it('should return false for point collection states', () => {
-    const pointStates: DROModeState[] = [
+    const pointStates: DROState[] = [
       'function-menu-center-line-point-1',
       'function-menu-center-line-point-2',
       'function-menu-center-circle-point-1',
@@ -213,7 +213,7 @@ describe('isResultState', () => {
   });
 
   it('should return false for menu and other states', () => {
-    const otherStates: DROModeState[] = [
+    const otherStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -229,7 +229,7 @@ describe('isResultState', () => {
 
 describe('isFunctionActive', () => {
   it('should return true for all function-menu-* states', () => {
-    const functionStates: DROModeState[] = [
+    const functionStates: DROState[] = [
       'function-menu-center',
       'function-menu-circle',
       'function-menu-line',
@@ -250,7 +250,7 @@ describe('isFunctionActive', () => {
   });
 
   it('should return false for non-function states', () => {
-    const nonFunctionStates: DROModeState[] = [
+    const nonFunctionStates: DROState[] = [
       'boot',
       'showMessage',
       'idle',
@@ -266,7 +266,7 @@ describe('isFunctionActive', () => {
 
 describe('type guard combinations', () => {
   it('should correctly categorize menu selection states', () => {
-    const state: DROModeState = 'function-menu-center';
+    const state: DROState = 'function-menu-center';
 
     expect(isFunctionMenuSelectionState(state)).toBe(true);
     expect(isFunctionActive(state)).toBe(true);
@@ -277,7 +277,7 @@ describe('type guard combinations', () => {
   });
 
   it('should correctly categorize point collection states', () => {
-    const state: DROModeState = 'function-menu-center-line-point-1';
+    const state: DROState = 'function-menu-center-line-point-1';
 
     expect(isFunctionMenuSelectionState(state)).toBe(false);
     expect(isFunctionActive(state)).toBe(true);
@@ -288,7 +288,7 @@ describe('type guard combinations', () => {
   });
 
   it('should correctly categorize result states', () => {
-    const state: DROModeState = 'function-menu-center-circle-result';
+    const state: DROState = 'function-menu-center-circle-result';
 
     expect(isFunctionMenuSelectionState(state)).toBe(false);
     expect(isFunctionActive(state)).toBe(true);
@@ -299,7 +299,7 @@ describe('type guard combinations', () => {
   });
 
   it('should correctly categorize idle state', () => {
-    const state: DROModeState = 'idle';
+    const state: DROState = 'idle';
 
     expect(isFunctionMenuSelectionState(state)).toBe(false);
     expect(isFunctionActive(state)).toBe(false);

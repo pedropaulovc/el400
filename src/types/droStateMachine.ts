@@ -1,17 +1,17 @@
 /**
- * DRO Mode State Machine Types
+ * DRO State Machine Types
  *
- * Defines the unified DRO mode state machine that manages boot sequence,
+ * Defines the unified DRO state machine that manages boot sequence,
  * mode toggles, and function menu states.
  */
 
 import type { AxisValues } from './volatileMemory';
 
 // ─────────────────────────────────────────────────────────────────
-// DRO MODE STATE - Flat string union, no nested substates
+// DRO STATE - Flat string union, no nested substates
 // ─────────────────────────────────────────────────────────────────
 
-export type DROModeState =
+export type DROState =
   // Boot sequence
   | 'boot'
   | 'showMessage'
@@ -37,37 +37,37 @@ export type DROModeState =
   | 'function-menu-center-circle-result';
 
 // ─────────────────────────────────────────────────────────────────
-// DRO MODE DATA - Discriminated union for feature-specific data
+// DRO CONTEXT - Discriminated union for feature-specific data
 // ─────────────────────────────────────────────────────────────────
 
-/** Base interface ensures all data types have a discriminator */
-interface BaseDROModeData {
+/** Base interface ensures all context types have a discriminator */
+interface BaseDROContext {
   readonly type: string;
 }
 
-/** Data is a discriminated union - each feature has its own data type */
-export type DROModeData =
+/** Context is a discriminated union - each feature has its own context type */
+export type DROContext =
   | NoneData
   | CenterFindingData
   | BoltHoleData
   | ArcData;
 
-/** Compile-time assertion: all data types must extend BaseDROModeData */
-type _AssertDataHasType = DROModeData extends BaseDROModeData ? true : never;
+/** Compile-time assertion: all context types must extend BaseDROContext */
+type _AssertContextHasType = DROContext extends BaseDROContext ? true : never;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _assertDataHasType: _AssertDataHasType = true;
+const _assertContextHasType: _AssertContextHasType = true;
 
-export interface NoneData extends BaseDROModeData {
+export interface NoneData extends BaseDROContext {
   readonly type: 'none';
 }
 
-export interface CenterFindingData extends BaseDROModeData {
+export interface CenterFindingData extends BaseDROContext {
   readonly type: 'center-finding';
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
 }
 
-export interface BoltHoleData extends BaseDROModeData {
+export interface BoltHoleData extends BaseDROContext {
   readonly type: 'bolt-hole';
   holeCount: number;
   radius: number;
@@ -75,7 +75,7 @@ export interface BoltHoleData extends BaseDROModeData {
   currentHole: number;
 }
 
-export interface ArcData extends BaseDROModeData {
+export interface ArcData extends BaseDROContext {
   readonly type: 'arc';
   // TODO: define arc-specific fields when implementing arc feature
 }
@@ -88,10 +88,10 @@ export interface StoredPoint {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// DRO MODE EVENTS - Raw key/button events, state machine interprets
+// DRO EVENTS - Raw key/button events, state machine interprets
 // ─────────────────────────────────────────────────────────────────
 
-export type DROModeEvent =
+export type DROEvent =
   // System events
   | { type: 'BOOT_COMPLETE'; skipMessage: boolean }
   | { type: 'BOOT_MESSAGE_TIMEOUT' }
@@ -127,37 +127,37 @@ export type DROModeEvent =
 // ─────────────────────────────────────────────────────────────────
 
 /** Check if state is a function menu selection state (not collecting points) */
-export const isFunctionMenuSelectionState = (s: DROModeState): boolean =>
+export const isFunctionMenuSelectionState = (s: DROState): boolean =>
   s.startsWith('function-menu-') &&
   !s.includes('-point-') &&
   !s.includes('-result');
 
 /** Check if state is in center line workflow */
-export const isCenterLineState = (s: DROModeState): boolean =>
+export const isCenterLineState = (s: DROState): boolean =>
   s.includes('center-line-');
 
 /** Check if state is in center circle workflow */
-export const isCenterCircleState = (s: DROModeState): boolean =>
+export const isCenterCircleState = (s: DROState): boolean =>
   s.includes('center-circle-');
 
 /** Check if state is collecting points (any point-N state) */
-export const isCollectingPoints = (s: DROModeState): boolean =>
+export const isCollectingPoints = (s: DROState): boolean =>
   s.endsWith('-point-1') || s.endsWith('-point-2') || s.endsWith('-point-3');
 
 /** Check if state is showing a result */
-export const isResultState = (s: DROModeState): boolean => s.endsWith('-result');
+export const isResultState = (s: DROState): boolean => s.endsWith('-result');
 
 /** Check if function menu is active (any function-menu-* state) */
-export const isFunctionActive = (s: DROModeState): boolean =>
+export const isFunctionActive = (s: DROState): boolean =>
   s.startsWith('function-menu-');
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
 
-export const INITIAL_DRO_MODE_STATE: DROModeState = 'boot';
+export const INITIAL_DRO_STATE: DROState = 'boot';
 
-export const INITIAL_DRO_MODE_DATA: DROModeData = { type: 'none' };
+export const INITIAL_DRO_CONTEXT: DROContext = { type: 'none' };
 
 export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
   type: 'center-finding',
