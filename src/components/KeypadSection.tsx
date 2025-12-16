@@ -5,17 +5,17 @@ import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
 import {
-  useOperationState,
-  useOperationDispatch,
+  useDROModeState,
+  useDROModeDispatch,
   isFunctionMenuSelectionState,
   isCollectingPoints,
-} from "../state-machine";
+} from "../dro-mode";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
-  const opState = useOperationState();
-  const dispatch = useOperationDispatch();
+  const opState = useDROModeState();
+  const dispatch = useDROModeDispatch();
 
   const handleNumber = useCallback((num: string) => {
     // Dispatch raw key events to the operation state machine

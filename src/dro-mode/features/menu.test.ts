@@ -5,15 +5,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { menuReducer } from '../features/menu';
-import type { OperationStateShape } from '../types';
-import type { OperationState } from '../../types/operationState';
-import { INITIAL_OPERATION_CONTEXT } from '../../types/operationState';
+import { menuReducer } from './menu';
+import type { DROModeShape } from '../types';
+import type { DROModeState } from '../../types/droMode';
+import { INITIAL_DRO_MODE_DATA } from '../../types/droMode';
 
 describe('menuReducer', () => {
   describe('state handling', () => {
     it('should return null for non-menu states', () => {
-      const nonMenuStates: OperationState[] = [
+      const nonMenuStates: DROModeState[] = [
         'boot',
         'showMessage',
         'idle',
@@ -24,9 +24,9 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of nonMenuStates) {
-        const state: OperationStateShape = {
+        const state: DROModeShape = {
           state: menuState,
-          context: INITIAL_OPERATION_CONTEXT,
+          data: INITIAL_DRO_MODE_DATA,
         };
 
         const result = menuReducer(state, { type: 'KEY_6' });
@@ -35,7 +35,7 @@ describe('menuReducer', () => {
     });
 
     it('should handle all menu selection states', () => {
-      const menuStates: OperationState[] = [
+      const menuStates: DROModeState[] = [
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
@@ -44,9 +44,9 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of menuStates) {
-        const state: OperationStateShape = {
+        const state: DROModeShape = {
           state: menuState,
-          context: INITIAL_OPERATION_CONTEXT,
+          data: INITIAL_DRO_MODE_DATA,
         };
 
         const result = menuReducer(state, { type: 'KEY_6' });
@@ -57,9 +57,9 @@ describe('menuReducer', () => {
 
   describe('forward navigation (KEY_6)', () => {
     it('should navigate from center to circle', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
@@ -68,9 +68,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from circle to line', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-circle',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
@@ -79,9 +79,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from line to linear', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-line',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
@@ -90,9 +90,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from linear to polar', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-linear',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
@@ -101,9 +101,9 @@ describe('menuReducer', () => {
     });
 
     it('should wrap from polar to center', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-polar',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
@@ -111,24 +111,24 @@ describe('menuReducer', () => {
       expect(result?.state).toBe('function-menu-center');
     });
 
-    it('should preserve context during navigation', () => {
-      const context = { type: 'none' as const };
-      const state: OperationStateShape = {
+    it('should preserve data during navigation', () => {
+      const data = { type: 'none' as const };
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context,
+        data,
       };
 
       const result = menuReducer(state, { type: 'KEY_6' });
 
-      expect(result?.context).toBe(context);
+      expect(result?.data).toBe(data);
     });
   });
 
   describe('backward navigation (KEY_4)', () => {
     it('should navigate from circle to center', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-circle',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_4' });
@@ -137,9 +137,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from line to circle', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-line',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_4' });
@@ -148,9 +148,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from linear to line', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-linear',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_4' });
@@ -159,9 +159,9 @@ describe('menuReducer', () => {
     });
 
     it('should navigate from polar to linear', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-polar',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_4' });
@@ -170,9 +170,9 @@ describe('menuReducer', () => {
     });
 
     it('should wrap from center to polar', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_4' });
@@ -183,7 +183,7 @@ describe('menuReducer', () => {
 
   describe('menu ring cycle', () => {
     it('should complete full forward cycle', () => {
-      const menuStates: OperationState[] = [
+      const menuStates: DROModeState[] = [
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
@@ -191,9 +191,9 @@ describe('menuReducer', () => {
         'function-menu-polar',
       ];
 
-      let state: OperationStateShape = {
+      let state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       for (let i = 0; i < menuStates.length; i++) {
@@ -207,7 +207,7 @@ describe('menuReducer', () => {
     });
 
     it('should complete full backward cycle', () => {
-      const menuStates: OperationState[] = [
+      const menuStates: DROModeState[] = [
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
@@ -215,9 +215,9 @@ describe('menuReducer', () => {
         'function-menu-polar',
       ];
 
-      let state: OperationStateShape = {
+      let state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       for (let i = 0; i < menuStates.length; i++) {
@@ -233,7 +233,7 @@ describe('menuReducer', () => {
 
   describe('menu exit (KEY_CLEAR)', () => {
     it('should exit to idle from any menu state', () => {
-      const menuStates: OperationState[] = [
+      const menuStates: DROModeState[] = [
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
@@ -242,31 +242,31 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of menuStates) {
-        const state: OperationStateShape = {
+        const state: DROModeShape = {
           state: menuState,
-          context: INITIAL_OPERATION_CONTEXT,
+          data: INITIAL_DRO_MODE_DATA,
         };
 
         const result = menuReducer(state, { type: 'KEY_CLEAR' });
 
         expect(result?.state).toBe('idle');
-        expect(result?.context.type).toBe('none');
+        expect(result?.data.type).toBe('none');
       }
     });
   });
 
   describe('menu entry (KEY_ENTER)', () => {
     it('should enter center-line point collection from center menu', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_ENTER' });
 
       expect(result?.state).toBe('function-menu-center-line-point-1');
-      expect(result?.context.type).toBe('center-finding');
-      expect(result?.context).toEqual({
+      expect(result?.data.type).toBe('center-finding');
+      expect(result?.data).toEqual({
         type: 'center-finding',
         storedPoints: [],
         centerResult: null,
@@ -274,59 +274,59 @@ describe('menuReducer', () => {
     });
 
     it('should enter center-line point collection from line menu', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-line',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_ENTER' });
 
       expect(result?.state).toBe('function-menu-center-line-point-1');
-      expect(result?.context.type).toBe('center-finding');
+      expect(result?.data.type).toBe('center-finding');
     });
 
     it('should enter center-circle point collection from circle menu', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-circle',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_ENTER' });
 
       expect(result?.state).toBe('function-menu-center-circle-point-1');
-      expect(result?.context.type).toBe('center-finding');
+      expect(result?.data.type).toBe('center-finding');
     });
 
     it('should return to idle from linear menu (not yet implemented)', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-linear',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_ENTER' });
 
       expect(result?.state).toBe('idle');
-      expect(result?.context.type).toBe('none');
+      expect(result?.data.type).toBe('none');
     });
 
     it('should return to idle from polar menu (not yet implemented)', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-polar',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const result = menuReducer(state, { type: 'KEY_ENTER' });
 
       expect(result?.state).toBe('idle');
-      expect(result?.context.type).toBe('none');
+      expect(result?.data.type).toBe('none');
     });
   });
 
   describe('unhandled events', () => {
     it('should return current state for unhandled events', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       expect(menuReducer(state, { type: 'KEY_5' })).toBe(state);
@@ -336,9 +336,9 @@ describe('menuReducer', () => {
     });
 
     it('should ignore numeric keys other than 4 and 6', () => {
-      const state: OperationStateShape = {
+      const state: DROModeShape = {
         state: 'function-menu-center',
-        context: INITIAL_OPERATION_CONTEXT,
+        data: INITIAL_DRO_MODE_DATA,
       };
 
       const keysToIgnore = ['KEY_0', 'KEY_1', 'KEY_2', 'KEY_3', 'KEY_5', 'KEY_7', 'KEY_8', 'KEY_9'] as const;

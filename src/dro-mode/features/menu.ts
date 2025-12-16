@@ -4,18 +4,18 @@
  * Handles function menu navigation (center, circle, line, linear, polar).
  */
 
-import type { OperationStateShape, FeatureReducer } from '../types';
-import type { OperationState } from '../../types/operationState';
+import type { DROModeShape, FeatureReducer } from '../types';
+import type { DROModeState } from '../../types/droMode';
 import {
-  INITIAL_OPERATION_CONTEXT,
-  INITIAL_CENTER_FINDING_CONTEXT,
+  INITIAL_DRO_MODE_DATA,
+  INITIAL_CENTER_FINDING_DATA,
   isFunctionMenuSelectionState,
-} from '../../types/operationState';
+} from '../../types/droMode';
 
 /**
  * Menu navigation ring - bidirectional, wraps around.
  */
-const MENU_RING: OperationState[] = [
+const MENU_RING: DROModeState[] = [
   'function-menu-center',
   'function-menu-circle',
   'function-menu-line',
@@ -23,53 +23,53 @@ const MENU_RING: OperationState[] = [
   'function-menu-polar',
 ];
 
-function getNextMenuState(current: OperationState): OperationState {
+function getNextMenuState(current: DROModeState): DROModeState {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
   return MENU_RING[(idx + 1) % MENU_RING.length];
 }
 
-function getPrevMenuState(current: OperationState): OperationState {
+function getPrevMenuState(current: DROModeState): DROModeState {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
   return MENU_RING[(idx - 1 + MENU_RING.length) % MENU_RING.length];
 }
 
-function handleMenuEnter(menuState: OperationState): OperationStateShape {
+function handleMenuEnter(menuState: DROModeState): DROModeShape {
   switch (menuState) {
     case 'function-menu-center':
     case 'function-menu-line':
       // Center and Line both go to line center finding (2 points)
       return {
         state: 'function-menu-center-line-point-1',
-        context: INITIAL_CENTER_FINDING_CONTEXT,
+        data: INITIAL_CENTER_FINDING_DATA,
       };
     case 'function-menu-circle':
       return {
         state: 'function-menu-center-circle-point-1',
-        context: INITIAL_CENTER_FINDING_CONTEXT,
+        data: INITIAL_CENTER_FINDING_DATA,
       };
     case 'function-menu-linear':
     case 'function-menu-polar':
       // TODO: implement linear and polar
-      return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
     default:
-      return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
   }
 }
 
 export const menuReducer: FeatureReducer = (current, event) => {
-  const { state, context } = current;
+  const { state, data } = current;
 
   if (!isFunctionMenuSelectionState(state)) return null;
 
   switch (event.type) {
     case 'KEY_CLEAR':
-      return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
     case 'KEY_6':
-      return { state: getNextMenuState(state), context };
+      return { state: getNextMenuState(state), data };
     case 'KEY_4':
-      return { state: getPrevMenuState(state), context };
+      return { state: getPrevMenuState(state), data };
     case 'KEY_ENTER':
       return handleMenuEnter(state);
     default:

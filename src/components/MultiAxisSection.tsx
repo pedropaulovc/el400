@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useOperationState, isFunctionActive } from "../state-machine";
+import { useDROModeState, isFunctionActive } from "../dro-mode";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -23,7 +23,7 @@ const MultiAxisSection = ({
 }: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
   const { nvMem } = useNonVolatileMemoryContext();
-  const opState = useOperationState();
+  const opState = useDROModeState();
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';

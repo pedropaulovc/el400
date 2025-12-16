@@ -4,11 +4,11 @@
  * Handles boot sequence, idle state, and transitional mode toggle states.
  */
 
-import type { OperationStateShape, FeatureReducer } from '../types';
-import type { OperationState } from '../../types/operationState';
-import { INITIAL_OPERATION_CONTEXT } from '../../types/operationState';
+import type { DROModeShape, FeatureReducer } from '../types';
+import type { DROModeState } from '../../types/droMode';
+import { INITIAL_DRO_MODE_DATA } from '../../types/droMode';
 
-const BOOT_STATES: OperationState[] = [
+const BOOT_STATES: DROModeState[] = [
   'boot',
   'showMessage',
   'idle',
@@ -16,12 +16,12 @@ const BOOT_STATES: OperationState[] = [
   'inch-mm-mode',
 ];
 
-function isBootState(state: OperationState): boolean {
+function isBootState(state: DROModeState): boolean {
   return BOOT_STATES.includes(state);
 }
 
 export const bootReducer: FeatureReducer = (current, event) => {
-  const { state, context } = current;
+  const { state, data } = current;
 
   if (!isBootState(state)) return null;
 
@@ -30,25 +30,25 @@ export const bootReducer: FeatureReducer = (current, event) => {
       if (event.type === 'BOOT_COMPLETE') {
         return {
           state: event.skipMessage ? 'idle' : 'showMessage',
-          context: INITIAL_OPERATION_CONTEXT,
+          data: INITIAL_DRO_MODE_DATA,
         };
       }
       return current;
 
     case 'showMessage':
       if (event.type === 'BOOT_MESSAGE_TIMEOUT' || event.type === 'KEY_CLEAR') {
-        return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+        return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
       }
       return current;
 
     case 'idle':
       switch (event.type) {
         case 'BTN_ABS_INC':
-          return { state: 'abs-inc-mode', context };
+          return { state: 'abs-inc-mode', data };
         case 'BTN_INCH_MM':
-          return { state: 'inch-mm-mode', context };
+          return { state: 'inch-mm-mode', data };
         case 'BTN_FUNCTION':
-          return { state: 'function-menu-center', context: INITIAL_OPERATION_CONTEXT };
+          return { state: 'function-menu-center', data: INITIAL_DRO_MODE_DATA };
         default:
           return current;
       }
@@ -56,7 +56,7 @@ export const bootReducer: FeatureReducer = (current, event) => {
     case 'abs-inc-mode':
     case 'inch-mm-mode':
       if (event.type === 'MODE_TOGGLE_COMPLETE') {
-        return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+        return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
       }
       return current;
 

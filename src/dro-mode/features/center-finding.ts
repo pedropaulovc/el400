@@ -4,44 +4,44 @@
  * Handles center-line (2 points) and center-circle (3 points) operations.
  */
 
-import type { OperationStateShape, FeatureReducer } from '../types';
+import type { DROModeShape, FeatureReducer } from '../types';
 import type {
-  OperationState,
-  OperationContext,
-  CenterFindingContext,
+  DROModeState,
+  DROModeData,
+  CenterFindingData,
   StoredPoint,
-} from '../../types/operationState';
+} from '../../types/droMode';
 import {
-  INITIAL_OPERATION_CONTEXT,
-  INITIAL_CENTER_FINDING_CONTEXT,
+  INITIAL_DRO_MODE_DATA,
+  INITIAL_CENTER_FINDING_DATA,
   isCenterLineState,
   isCenterCircleState,
-} from '../../types/operationState';
+} from '../../types/droMode';
 import type { AxisValues } from '../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
 
 /**
  * Check if state is handled by this feature.
  */
-function isCenterFindingState(state: OperationState): boolean {
+function isCenterFindingState(state: DROModeState): boolean {
   return isCenterLineState(state) || isCenterCircleState(state);
 }
 
 /**
- * Add a point to the center finding context.
+ * Add a point to the center finding data.
  */
-function addPointToContext(
-  context: OperationContext,
+function addPointToData(
+  data: DROModeData,
   point: StoredPoint
-): CenterFindingContext {
-  if (context.type === 'center-finding') {
+): CenterFindingData {
+  if (data.type === 'center-finding') {
     return {
-      ...context,
-      storedPoints: [...context.storedPoints, point],
+      ...data,
+      storedPoints: [...data.storedPoints, point],
     };
   }
   return {
-    ...INITIAL_CENTER_FINDING_CONTEXT,
+    ...INITIAL_CENTER_FINDING_DATA,
     storedPoints: [point],
   };
 }
@@ -81,13 +81,13 @@ function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
 }
 
 export const centerFindingReducer: FeatureReducer = (current, event) => {
-  const { state, context } = current;
+  const { state, data } = current;
 
   if (!isCenterFindingState(state)) return null;
 
   // All center finding states can be cancelled with KEY_CLEAR
   if (event.type === 'KEY_CLEAR') {
-    return { state: 'idle', context: INITIAL_OPERATION_CONTEXT };
+    return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
   }
 
   switch (state) {
@@ -98,18 +98,18 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
       if (event.type === 'POINT_DATA') {
         return {
           state: 'function-menu-center-line-point-2',
-          context: addPointToContext(context, event.point),
+          data: addPointToData(data, event.point),
         };
       }
       return current;
 
     case 'function-menu-center-line-point-2':
       if (event.type === 'POINT_DATA') {
-        const newContext = addPointToContext(context, event.point);
-        const centerResult = calculateLineCenterResult(newContext.storedPoints);
+        const newData = addPointToData(data, event.point);
+        const centerResult = calculateLineCenterResult(newData.storedPoints);
         return {
           state: 'function-menu-center-line-result',
-          context: { ...newContext, centerResult },
+          data: { ...newData, centerResult },
         };
       }
       return current;
@@ -125,7 +125,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
       if (event.type === 'POINT_DATA') {
         return {
           state: 'function-menu-center-circle-point-2',
-          context: addPointToContext(context, event.point),
+          data: addPointToData(data, event.point),
         };
       }
       return current;
@@ -134,18 +134,18 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
       if (event.type === 'POINT_DATA') {
         return {
           state: 'function-menu-center-circle-point-3',
-          context: addPointToContext(context, event.point),
+          data: addPointToData(data, event.point),
         };
       }
       return current;
 
     case 'function-menu-center-circle-point-3':
       if (event.type === 'POINT_DATA') {
-        const newContext = addPointToContext(context, event.point);
-        const centerResult = calculateCircleCenterResult(newContext.storedPoints);
+        const newData = addPointToData(data, event.point);
+        const centerResult = calculateCircleCenterResult(newData.storedPoints);
         return {
           state: 'function-menu-center-circle-result',
-          context: { ...newContext, centerResult },
+          data: { ...newData, centerResult },
         };
       }
       return current;
