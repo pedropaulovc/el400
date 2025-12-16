@@ -122,8 +122,8 @@ The DRO uses a flat state machine pattern to manage operation modes, function me
 ```
 src/dro-state-machine/
 ├── index.ts              # Public API exports
-├── types.ts              # DROShape, FeatureReducer
-├── droStateMachine.ts    # DROState, DROEvent, DROContext types
+├── types.ts              # DROStatePayload, FeatureReducer
+├── droStateMachine.ts    # DROStateName, DROEventPayload, DROStateData types
 ├── reducer.ts            # Root reducer (composes features)
 ├── context.tsx           # DROProvider, hooks
 └── features/
@@ -139,7 +139,7 @@ src/dro-state-machine/
 **Flat State Union:** All states are simple strings in a discriminated union. No nested substates.
 
 ```typescript
-type DROState =
+type DROStateName =
   // Boot sequence
   | 'boot' | 'showMessage' | 'idle'
   // Mode toggles (transitional)
@@ -188,22 +188,23 @@ Feature reducers handle a subset of states and return `null` if they don't handl
 
 ```typescript
 type FeatureReducer = (
-  current: DROShape,
-  event: DROEvent
-) => DROShape | null;
+  statePayload: DROStatePayload,
+  eventPayload: DROEventPayload
+) => DROStatePayload | null;
 
 // Example: boot.ts
-export const bootReducer: FeatureReducer = (current, event) => {
-  const { state, data } = current;
-  switch (state) {
+export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
+  const { stateName, stateData } = statePayload;
+  const { eventName } = eventPayload;
+  switch (stateName) {
     case 'boot':
-      if (event.type === 'BOOT_STARTED') {
+      if (eventName === 'BOOT_STARTED') {
         return {
-          state: event.skipMessage ? 'idle' : 'showMessage',
-          data: INITIAL_DRO_CONTEXT,
+          stateName: eventPayload.skipBootMessage ? 'idle' : 'showMessage',
+          stateData: INITIAL_DRO_STATE_DATA,
         };
       }
-      return current;
+      return statePayload;
     // ... other cases
     default:
       return null; // Not handled by this feature
@@ -213,14 +214,14 @@ export const bootReducer: FeatureReducer = (current, event) => {
 
 ### Context Data (Discriminated Union)
 
-Each feature can have its own context data type, discriminated by `type`:
+Each feature can have its own context data type, discriminated by `stateDataType`:
 
 ```typescript
-type DROContext =
-  | { type: 'none' }
-  | { type: 'center-finding'; storedPoints: StoredPoint[]; centerResult: AxisValues | null }
-  | { type: 'bolt-hole'; holeCount: number; radius: number; /* ... */ }
-  | { type: 'arc'; /* ... */ };
+type DROStateData =
+  | { stateDataType: 'none' }
+  | { stateDataType: 'center-finding'; storedPoints: StoredPoint[]; centerResult: AxisValues | null }
+  | { stateDataType: 'bolt-hole'; holeCount: number; radius: number; /* ... */ }
+  | { stateDataType: 'arc'; /* ... */ };
 ```
 
 ### Hooks
@@ -230,11 +231,11 @@ type DROContext =
 const state = useDROState();  // 'idle' | 'function-menu-center' | ...
 
 // Get context data
-const data = useDROContext();  // { type: 'none' } | { type: 'center-finding', ... }
+const data = useDROContext();  // { stateDataType: 'none' } | { stateDataType: 'center-finding', ... }
 
 // Dispatch events
 const dispatch = useDRODispatch();
-dispatch({ type: 'BTN_FUNCTION' });
+dispatch({ eventName: 'BTN_FUNCTION' });
 
 // Convenience hooks
 const result = useCenterResult();      // AxisValues | null
