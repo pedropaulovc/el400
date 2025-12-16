@@ -13,15 +13,19 @@ export default defineConfig({
           storybookTest({ configDir: path.join(__dirname, '.storybook') }),
         ],
         test: {
-          name: 'storybook',
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright(),
-            instances: [{ browser: 'chromium' }],
+            name: 'storybook',
+            browser: {
+              enabled: true,
+              headless: true,
+              provider: playwright({
+                contextOptions: {
+                  forcedColors: 'active',
+                },
+              }),
+              instances: [{ browser: 'chromium' }],
+            },
+            setupFiles: ['./.storybook/vitest.setup.ts'],
           },
-          setupFiles: ['./.storybook/vitest.setup.ts'],
-        },
       },
     ],
   },

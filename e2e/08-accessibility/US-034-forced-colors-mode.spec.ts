@@ -49,12 +49,12 @@ function parseColor(color: string): [number, number, number] {
 /**
  * E2E Tests: US-034 Forced Colors Mode (High Contrast) Support
  *
- * Tests that the 7-segment display and UI elements are accessible
- * in Windows High Contrast mode.
+ * Migrated to Storybook test runner for faster coverage. Keeping this suite
+ * skipped prevents duplicate coverage while maintaining the historical spec.
  *
  * @see project/user-stories/08-accessibility/US-034-forced-colors-mode.md
  */
-test.describe('US-034: Forced Colors Mode', () => {
+test.describe.skip('US-034: Forced Colors Mode (migrated to Storybook)', () => {
   test('lit vs off segments have at least 20:1 contrast ratio', async ({ browser }) => {
     // Create context with forced-colors emulation
     const context = await browser.newContext({

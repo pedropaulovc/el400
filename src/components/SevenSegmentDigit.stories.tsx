@@ -1,6 +1,33 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import SevenSegmentDigit from "./SevenSegmentDigit";
+
+const parseColor = (color: string): [number, number, number] => {
+  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbMatch) {
+    return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+  }
+  if (color === "none" || color === "transparent") {
+    return [0, 0, 0];
+  }
+  throw new Error(`Cannot parse color: ${color}`);
+};
+
+const getLuminance = (r: number, g: number, b: number): number => {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    const sRGB = c / 255;
+    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+};
+
+const getContrastRatio = (rgb1: [number, number, number], rgb2: [number, number, number]): number => {
+  const l1 = getLuminance(...rgb1);
+  const l2 = getLuminance(...rgb2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+};
 
 const meta = {
   title: "Components/SevenSegmentDigit",
@@ -127,6 +154,60 @@ export const RendersAllSegmentsAndDecimal: Story = {
     // Check decimal point is on
     const decimalOn = canvasElement.querySelector(".seg-dp.seg-on");
     await expect(decimalOn).toBeInTheDocument();
+  },
+};
+
+export const ForcedColorsContrast: Story = {
+  args: {
+    value: "0",
+    showDecimal: false,
+  },
+  parameters: {
+    docs: { disable: true },
+  },
+  render: (args) => (
+    <div data-testid="forced-colors-digit" style={{ width: "60px", height: "80px" }}>
+      <SevenSegmentDigit {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
+
+    const wrapper = canvasElement.querySelector("[data-testid='forced-colors-digit']") as HTMLElement | null;
+    await expect(wrapper).toBeInTheDocument();
+
+    const digit = wrapper?.querySelector(".seven-segment-digit") as HTMLElement | null;
+    await expect(digit).toBeInTheDocument();
+    await waitFor(() => {
+      expect(digit!.querySelectorAll("span").length).toBeGreaterThan(0);
+    });
+
+    const segments = Array.from(digit!.querySelectorAll("span")) as HTMLElement[];
+    const parentBg = getComputedStyle(digit!.parentElement ?? digit!).backgroundColor;
+
+    const litSegment = segments.find((segment) => {
+      const bg = getComputedStyle(segment).backgroundColor;
+      return bg !== "transparent" && !/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(bg);
+    }) ?? segments[0];
+
+    const offSegment = segments.find((segment) => {
+      const bg = getComputedStyle(segment).backgroundColor;
+      return bg === "transparent" || /rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(bg);
+    }) ?? segments[segments.length - 1];
+
+    const litBg = getComputedStyle(litSegment).backgroundColor;
+    const offBg = getComputedStyle(offSegment).backgroundColor;
+    const isTransparent = offBg === "none" || offBg === "transparent" || /rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(offBg);
+
+    const litRgb = parseColor(litBg);
+    const offRgb = parseColor(isTransparent ? parentBg : offBg);
+    const bgRgb = parseColor(parentBg);
+
+    const litContrast = getContrastRatio(litRgb, bgRgb);
+    expect(litContrast).toBeGreaterThanOrEqual(20);
+
+    const offContrast = getContrastRatio(offRgb, bgRgb);
+    expect(offContrast).toBeLessThan(1.5);
   },
 };
 
