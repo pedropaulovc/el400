@@ -16,7 +16,7 @@ import {
   useStoredPointsCount,
   type DROShape,
 } from './index';
-import { INITIAL_DRO_CONTEXT } from '../types/droStateMachine';
+import { INITIAL_DRO_CONTEXT } from './droStateMachine';
 
 function createWrapper(initialState?: DROShape) {
   return function Wrapper({ children }: { children: ReactNode }) {

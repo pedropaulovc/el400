@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { bootReducer } from './boot';
 import type { DROShape } from '../types';
-import { INITIAL_DRO_CONTEXT } from '../../types/droStateMachine';
+import { INITIAL_DRO_CONTEXT } from '../droStateMachine';
 
 describe('bootReducer', () => {
   describe('state handling', () => {

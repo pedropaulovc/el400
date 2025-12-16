@@ -6,7 +6,7 @@
  */
 
 import type { DROShape, FeatureReducer } from './types';
-import type { DROEvent } from '../types/droStateMachine';
+import type { DROEvent } from './droStateMachine';
 import { bootReducer } from './features/boot';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';

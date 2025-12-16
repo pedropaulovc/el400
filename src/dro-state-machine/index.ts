@@ -31,4 +31,4 @@ export {
   type DROContext,
   type DROEvent,
   type StoredPoint,
-} from '../types/droStateMachine';
+} from './droStateMachine';

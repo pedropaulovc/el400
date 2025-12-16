@@ -16,11 +16,11 @@ import type {
   DROState,
   DROContext as DROContextType,
   DROEvent,
-} from '../types/droStateMachine';
+} from './droStateMachine';
 import {
   INITIAL_DRO_STATE,
   INITIAL_DRO_CONTEXT,
-} from '../types/droStateMachine';
+} from './droStateMachine';
 import type { AxisValues } from '../types/volatileMemory';
 import { droReducer } from './reducer';
 

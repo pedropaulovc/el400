@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { droReducer } from './reducer';
 import type { DROShape } from './types';
-import { INITIAL_DRO_CONTEXT } from '../types/droStateMachine';
+import { INITIAL_DRO_CONTEXT } from './droStateMachine';
 
 describe('droReducer', () => {
   describe('reducer composition', () => {

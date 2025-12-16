@@ -7,8 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import { menuReducer } from './menu';
 import type { DROShape } from '../types';
-import type { DROState } from '../../types/droStateMachine';
-import { INITIAL_DRO_CONTEXT } from '../../types/droStateMachine';
+import type { DROState } from '../droStateMachine';
+import { INITIAL_DRO_CONTEXT } from '../droStateMachine';
 
 describe('menuReducer', () => {
   describe('state handling', () => {

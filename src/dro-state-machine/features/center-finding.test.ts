@@ -7,11 +7,11 @@
 import { describe, it, expect } from 'vitest';
 import { centerFindingReducer } from './center-finding';
 import type { DROShape } from '../types';
-import type { DROState, CenterFindingData } from '../../types/droStateMachine';
+import type { DROState, CenterFindingData } from '../droStateMachine';
 import {
   INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
-} from '../../types/droStateMachine';
+} from '../droStateMachine';
 
 describe('centerFindingReducer', () => {
   describe('state handling', () => {
