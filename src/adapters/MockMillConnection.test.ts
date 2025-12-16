@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MockMillConnection } from '../MockMillConnection';
-import type { MillState } from '../../types/millState';
+import { MockMillConnection } from './MockMillConnection';
+import type { MillState } from '../types/millState';
 
 describe('MockMillConnection', () => {
   let adapter: MockMillConnection;

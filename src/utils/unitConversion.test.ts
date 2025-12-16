@@ -9,7 +9,7 @@ import {
   inchToMm,
   fromAnyUnitToMm,
   fromMmToAnyUnit,
-} from '../unitConversion';
+} from './unitConversion';
 
 describe('unitConversion', () => {
   describe('constants', () => {
