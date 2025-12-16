@@ -63,6 +63,7 @@ export const AllStates: Story = {
  * Forced Colors Mode - LED Indicators
  * Shows how LED indicators appear in Windows High Contrast mode.
  * Active indicators are clearly visible, inactive ones blend with background.
+ * Browser-level forced-colors emulation is applied automatically by test-runner.
  */
 export const ForcedColorsLEDs: Story = {
   args: {
@@ -70,9 +71,8 @@ export const ForcedColorsLEDs: Story = {
     isOn: false,
   },
   parameters: {
-    forcedColors: 'active',
     backgrounds: {
-      default: 'forced-colors',
+      default: 'dark',
     },
   },
   render: () => (

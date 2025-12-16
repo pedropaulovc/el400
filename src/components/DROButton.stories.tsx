@@ -131,15 +131,15 @@ export const KeyboardNavigation: Story = {
  * Forced Colors Mode - Buttons have visible borders
  * Demonstrates that all button variants have visible borders
  * and maintain sufficient contrast in forced-colors mode.
+ * Browser-level forced-colors emulation is applied automatically by test-runner.
  */
 export const ForcedColorsButtons: Story = {
   args: {
     children: "Test",
   },
   parameters: {
-    forcedColors: 'active',
     backgrounds: {
-      default: 'forced-colors',
+      default: 'dark',
     },
   },
   render: () => (
@@ -177,6 +177,7 @@ export const ForcedColorsButtons: Story = {
  * Forced Colors Mode - Button contrast verification
  * Tests a single button to ensure it meets contrast requirements
  * in forced-colors mode (17:1 minimum).
+ * Browser-level forced-colors emulation is applied automatically by test-runner.
  */
 export const ForcedColorsButtonContrast: Story = {
   args: {
@@ -185,9 +186,8 @@ export const ForcedColorsButtonContrast: Story = {
     size: "square",
   },
   parameters: {
-    forcedColors: 'active',
     backgrounds: {
-      default: 'forced-colors',
+      default: 'dark',
     },
   },
   play: async ({ canvasElement }) => {

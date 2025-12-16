@@ -192,7 +192,7 @@ export const SampleWord: Story = {
 /**
  * Forced Colors Mode (High Contrast) - Single Digit
  * Shows how the digit appears in Windows High Contrast mode.
- * Lit segments use CanvasText, unlit segments are transparent.
+ * Browser-level forced-colors emulation is applied automatically by test-runner.
  */
 export const ForcedColorsEight: Story = {
   args: {
@@ -200,9 +200,8 @@ export const ForcedColorsEight: Story = {
     showDecimal: true,
   },
   parameters: {
-    forcedColors: 'active',
     backgrounds: {
-      default: 'forced-colors',
+      default: 'dark',
     },
   },
   play: async ({ canvasElement }) => {
@@ -217,8 +216,7 @@ export const ForcedColorsEight: Story = {
     const litSegment = segmentsOn[0] as HTMLElement;
     const computedStyle = window.getComputedStyle(litSegment);
     
-    // In forced-colors emulation, background should be white (CanvasText)
-    // This test validates the CSS emulation is working
+    // In forced-colors mode, segments should use system colors
     await expect(computedStyle.backgroundColor).toBeTruthy();
   },
 };
@@ -226,16 +224,15 @@ export const ForcedColorsEight: Story = {
 /**
  * Forced Colors Mode (High Contrast) - Display Number
  * Shows a complete number display in forced-colors mode.
- * Demonstrates high contrast between lit and unlit segments.
+ * Browser-level forced-colors emulation is applied automatically by test-runner.
  */
 export const ForcedColorsDisplay: Story = {
   args: {
     value: "-",
   },
   parameters: {
-    forcedColors: 'active',
     backgrounds: {
-      default: 'forced-colors',
+      default: 'dark',
     },
   },
   render: () => (

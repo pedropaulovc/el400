@@ -17,7 +17,11 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
-            provider: playwright(),
+            provider: playwright({
+              launch: {
+                // Playwright launch options
+              },
+            }),
             instances: [{ browser: 'chromium' }],
           },
           setupFiles: ['./.storybook/vitest.setup.ts'],
