@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CncjsMillConnection, normalizeControllerState } from '../CncjsMillConnection';
+import { CncjsMillConnection, normalizeControllerState } from './CncjsMillConnection';
 
 // Mock socket.io-client
 const mockSocket = {

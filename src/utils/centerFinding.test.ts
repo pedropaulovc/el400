@@ -5,7 +5,7 @@ import {
   calculateRadius,
   calculateDistanceToGo,
   type Point2D,
-} from '../centerFinding';
+} from './centerFinding';
 
 /**
  * Unit tests for center finding utility functions
