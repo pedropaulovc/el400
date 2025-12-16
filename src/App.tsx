@@ -8,8 +8,8 @@ import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
 import { CenterFindingProvider } from "./context/CenterFindingContext";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
-import { MockMillConnection } from "./adapters/MockMillConnection";
 import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
+import { NoOpMillConnection } from "./adapters/NoOpMillConnection";
 import type { MillConnection } from "./adapters/MillConnection";
 import type { DataSourceConfig } from "./types/millState";
 
@@ -17,23 +17,13 @@ const queryClient = new QueryClient();
 
 /**
  * Creates a connection based on URL config.
- * This is used inside the BrowserRouter context.
+ * Returns CncjsMillConnection when source=cncjs, otherwise NoOpMillConnection.
  */
-function createConnection(config: DataSourceConfig): MillConnection | null {
-  switch (config.type) {
-    case 'mock':
-      // Don't simulate automatic movement for E2E tests
-      // Tests can use setPosition() to explicitly control position
-      return new MockMillConnection({ simulateMovement: false });
-    case 'cncjs':
-      return new CncjsMillConnection({ host: config.host, port: config.port, sessionId: config.sessionId });
-    case 'linuxcnc':
-      // TODO: implement LinuxCNC connection
-      return null;
-    case 'manual':
-    default:
-      return null;
+function createConnection(config: DataSourceConfig): MillConnection {
+  if (config.type === 'cncjs') {
+    return new CncjsMillConnection({ host: config.host, port: config.port, sessionId: config.sessionId });
   }
+  return new NoOpMillConnection();
 }
 
 /**

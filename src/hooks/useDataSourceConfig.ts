@@ -1,11 +1,10 @@
 /**
  * Hook for parsing data source configuration from URL parameters.
- * Supports configuration via query params for both CNCjs (iframe) and LinuxCNC (QtWebEngine).
+ * Supports configuration via query params for CNCjs (iframe) and LinuxCNC (QtWebEngine).
  *
  * URL format:
  * - /?source=cncjs&host=192.168.1.100&port=8000
- * - /?source=mock
- * - /?source=manual (or no params - default)
+ * - / (no params - uses NoOpMillConnection)
  */
 
 import { useMemo } from 'react';
@@ -13,19 +12,20 @@ import { useSearchParams } from 'react-router-dom';
 import type { ControllerType, DataSourceConfig } from '../types/millState';
 
 const DEFAULT_CONFIG: DataSourceConfig = {
-  type: 'manual',
+  type: 'noop',
   host: 'localhost',
   port: 8000,
 };
 
 /**
- * Parse and validate controller type from URL param
+ * Parse and validate controller type from URL param.
+ * Only 'cncjs' and 'linuxcnc' are recognized; everything else defaults to 'noop'.
  */
 function parseControllerType(value: string | null): ControllerType {
-  if (value === 'cncjs' || value === 'linuxcnc' || value === 'mock' || value === 'manual') {
+  if (value === 'cncjs' || value === 'linuxcnc') {
     return value;
   }
-  return 'manual';
+  return 'noop';
 }
 
 /**

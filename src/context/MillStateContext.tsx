@@ -12,28 +12,28 @@ import {
   type ReactNode,
 } from 'react';
 import type { MillConnection } from '../adapters/MillConnection';
+import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
 import type { MillState } from '../types/millState';
-import { createDefaultMillState } from '../types/millState';
 
 export interface MillStateContextValue {
   /** Current mill state from connection */
   millState: MillState;
-  /** Currently active connection (or null if none) */
-  connection: MillConnection | null;
+  /** Currently active connection */
+  connection: MillConnection;
   /** Whether the connection is currently connecting */
   isConnecting: boolean;
   /** Error from last connection attempt */
   error: Error | null;
   /** Set or replace the active connection */
-  setConnection: (connection: MillConnection | null) => void;
+  setConnection: (connection: MillConnection) => void;
 }
 
 const MillStateContext = createContext<MillStateContextValue | null>(null);
 
 export interface MillStateProviderProps {
   children: ReactNode;
-  /** Optional initial connection */
-  initialConnection?: MillConnection | null;
+  /** Optional initial connection (defaults to NoOpMillConnection) */
+  initialConnection?: MillConnection;
 }
 
 /**
@@ -44,23 +44,18 @@ export function MillStateProvider({
   children,
   initialConnection,
 }: MillStateProviderProps) {
-  // Connection state
-  const [connection, setConnectionState] = useState<MillConnection | null>(
-    initialConnection ?? null
+  // Connection state - defaults to NoOpMillConnection
+  const [connection, setConnectionState] = useState<MillConnection>(
+    () => initialConnection ?? new NoOpMillConnection()
   );
   const [millState, setMillState] = useState<MillState>(
-    connection?.getState() ?? createDefaultMillState('manual')
+    () => connection.getState()
   );
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   // Handle connection changes
   useEffect(() => {
-    if (!connection) {
-      setMillState(createDefaultMillState('manual'));
-      return;
-    }
-
     let mounted = true;
 
     // Subscribe to state updates
@@ -98,7 +93,7 @@ export function MillStateProvider({
     };
   }, [connection]);
 
-  const setConnection = useCallback((newConnection: MillConnection | null) => {
+  const setConnection = useCallback((newConnection: MillConnection) => {
     setConnectionState(newConnection);
     setError(null);
   }, []);
