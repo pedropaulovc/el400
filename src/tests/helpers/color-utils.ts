@@ -12,13 +12,14 @@ export function parseColor(color: string): [number, number, number] | null {
   // Handle rgb(r, g, b) format with flexible whitespace
   const rgbMatch = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
   if (rgbMatch) {
-    return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+    return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
   }
   
-  // Handle rgba(r, g, b, a) format with flexible whitespace and decimal alpha
+  // Handle rgba(r, g, b, a) format with flexible whitespace
+  // Supports both integer and decimal alpha values
   const rgbaMatch = color.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
   if (rgbaMatch) {
-    return [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3])];
+    return [parseInt(rgbaMatch[1], 10), parseInt(rgbaMatch[2], 10), parseInt(rgbaMatch[3], 10)];
   }
   
   // Handle transparent/none
