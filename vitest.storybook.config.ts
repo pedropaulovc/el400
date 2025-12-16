@@ -13,19 +13,35 @@ export default defineConfig({
           storybookTest({ configDir: path.join(__dirname, '.storybook') }),
         ],
         test: {
-            name: 'storybook',
-            browser: {
-              enabled: true,
-              headless: true,
-              provider: playwright({
-                contextOptions: {
-                  forcedColors: 'active',
-                },
-              }),
-              instances: [{ browser: 'chromium' }],
-            },
-            setupFiles: ['./.storybook/vitest.setup.ts'],
+          name: 'storybook',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
           },
+          setupFiles: ['./.storybook/vitest.setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        plugins: [
+          storybookTest({ configDir: path.join(__dirname, '.storybook-forced') }),
+        ],
+        test: {
+          name: 'storybook-forced-colors',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({
+              contextOptions: {
+                forcedColors: 'active',
+              },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+          setupFiles: ['./.storybook/vitest.setup.ts'],
+        },
       },
     ],
   },

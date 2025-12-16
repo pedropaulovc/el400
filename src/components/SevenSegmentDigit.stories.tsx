@@ -137,64 +137,6 @@ export const RendersAllSegmentsAndDecimal: Story = {
   },
 };
 
-export const ForcedColorsContrast: Story = {
-  args: {
-    value: "0",
-    showDecimal: false,
-  },
-  parameters: {
-    docs: { disable: true },
-  },
-  render: (args) => (
-    <div
-      data-testid="forced-colors-digit"
-      style={{ width: "60px", height: "80px", backgroundColor: "Canvas", color: "CanvasText" }}
-    >
-      <SevenSegmentDigit {...args} />
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
-
-    const wrapper = canvasElement.querySelector("[data-testid='forced-colors-digit']") as HTMLElement | null;
-    await expect(wrapper).toBeInTheDocument();
-
-    const digit = wrapper?.querySelector(".seven-segment-digit") as HTMLElement | null;
-    await expect(digit).toBeInTheDocument();
-    await waitFor(() => {
-      expect(digit!.querySelectorAll("span").length).toBeGreaterThan(0);
-    });
-
-    const segments = Array.from(digit!.querySelectorAll("span")) as HTMLElement[];
-    const parentBg = getComputedStyle(digit!.parentElement ?? digit!).backgroundColor;
-    const effectiveParentBg = isTransparentColor(parentBg) ? "rgb(255, 255, 255)" : parentBg;
-
-    const litSegment = segments.find((segment) => {
-      const bg = getComputedStyle(segment).backgroundColor;
-      return !isTransparentColor(bg);
-    }) ?? segments[0];
-
-    const offSegment = segments.find((segment) => {
-      const bg = getComputedStyle(segment).backgroundColor;
-      return isTransparentColor(bg);
-    }) ?? segments[segments.length - 1];
-
-    const litBg = getComputedStyle(litSegment).backgroundColor;
-    const offBg = getComputedStyle(offSegment).backgroundColor;
-    const isTransparent = isTransparentColor(offBg);
-
-    const litRgb = parseColor(litBg);
-    const offRgb = parseColor(isTransparent ? effectiveParentBg : offBg);
-    const bgRgb = parseColor(effectiveParentBg);
-
-    const litContrast = getContrastRatio(litRgb, bgRgb);
-    expect(litContrast).toBeGreaterThanOrEqual(MIN_HIGH_CONTRAST_RATIO);
-
-    const offContrast = getContrastRatio(offRgb, bgRgb);
-    expect(offContrast).toBeLessThan(APPROX_EQUAL_CONTRAST_RATIO);
-  },
-};
-
 // Letter examples
 export const LetterA: Story = {
   args: {
