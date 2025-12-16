@@ -130,14 +130,12 @@ const MultiAxisSection = ({
             {/* Status indicators */}
             <fieldset className="flex gap-4 border-0 p-0 m-0">
               <legend className="sr-only">Status</legend>
-              <LEDIndicator 
-                label="Fn" 
-                name="status" 
+              <LEDIndicator
+                label="fn"
+                name="status"
                 isOn={centerFinding.mode !== 'inactive'}
                 data-testid="led-fn"
               />
-              <LEDIndicator label="Ø" name="status" isOn={false} />
-              <LEDIndicator label="r" name="status" isOn={false} />
             </fieldset>
           </div>
         </div>
