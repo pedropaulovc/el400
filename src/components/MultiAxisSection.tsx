@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useOperationState, isFunctionActive } from "../context/OperationStateContext";
+import { useOperationState, isFunctionActive } from "../state-machine";
 
 export interface AxisValues {
   X: AxisDisplayValue;

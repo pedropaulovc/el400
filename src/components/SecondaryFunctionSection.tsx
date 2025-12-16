@@ -2,7 +2,7 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useOperationDispatch } from "../context/OperationStateContext";
+import { useOperationDispatch } from "../state-machine";
 
 const noop = () => {};
 

@@ -14,9 +14,10 @@ import {
   isCenterCircleState,
   isResultState,
   isFunctionActive,
-} from './OperationStateContext';
-import type { OperationState, OperationStateShape } from './OperationStateContext';
-import { INITIAL_OPERATION_CONTEXT } from '../types/operationState';
+  INITIAL_OPERATION_CONTEXT,
+  type OperationState,
+  type OperationStateShape,
+} from '../state-machine';
 
 function createWrapper(initialState?: OperationStateShape) {
   return function Wrapper({ children }: { children: ReactNode }) {

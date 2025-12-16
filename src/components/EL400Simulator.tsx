@@ -14,7 +14,7 @@ import {
   isFunctionMenuSelectionState,
   isCollectingPoints,
   isResultState,
-} from "../context/OperationStateContext";
+} from "../state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { BOOT_MESSAGE_DURATION_MS } from "../context/VolatileMemoryContext";
 
