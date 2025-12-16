@@ -2,13 +2,13 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useCenterFinding } from "../context/CenterFindingContext";
+import { useOperationDispatch } from "../context/OperationStateContext";
 
 const noop = () => {};
 
 const SecondaryFunctionSection = () => {
   const vMem = useVolatileMemory();
-  const centerFinding = useCenterFinding();
+  const dispatch = useOperationDispatch();
 
   const handleHalf = () => {
     if (vMem.activeAxis) {
@@ -17,7 +17,7 @@ const SecondaryFunctionSection = () => {
   };
 
   const handleFunction = () => {
-    centerFinding.enterMenu();
+    dispatch({ type: 'BTN_FUNCTION' });
   };
 
   return (

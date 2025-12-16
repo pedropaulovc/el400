@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import {
   VolatileMemoryProvider,
   useVolatileMemoryContext,
-  BOOT_MESSAGE_DURATION_MS,
 } from './VolatileMemoryContext';
 import { MillStateProvider, useMillStateContext } from './MillStateContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
@@ -637,108 +636,5 @@ describe('VolatileMemoryContext', () => {
     });
   });
 
-  describe('Boot sequence state machine', () => {
-    beforeEach(() => {
-      localStorage.clear();
-    });
-
-    it('transitions to showMessage when bootMessageMode is show (default)', async () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      // Should transition from boot to showMessage
-      expect(result.current.bootStage).toBe('showMessage');
-    });
-
-    it('transitions to run when bootMessageMode is skip', async () => {
-      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-        bootMessageMode: 'skip',
-      }));
-
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      // Should transition from boot to run
-      expect(result.current.bootStage).toBe('run');
-    });
-
-    it('URL param bootMessageMode=skip overrides localStorage show setting', async () => {
-      // Set localStorage to 'show'
-      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-        bootMessageMode: 'show',
-      }));
-
-      // Mock URL param to 'skip'
-      const originalSearch = window.location.search;
-      Object.defineProperty(window, 'location', {
-        value: { ...window.location, search: '?bootMessageMode=skip' },
-        writable: true,
-      });
-
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      // URL param should override localStorage - should skip to run
-      expect(result.current.bootStage).toBe('run');
-
-      // Restore
-      Object.defineProperty(window, 'location', {
-        value: { ...window.location, search: originalSearch },
-        writable: true,
-      });
-    });
-
-    it('transitions from showMessage to run after timeout', async () => {
-      vi.useFakeTimers();
-
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.bootStage).toBe('showMessage');
-
-      act(() => {
-        vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
-      });
-
-      expect(result.current.bootStage).toBe('run');
-
-      vi.useRealTimers();
-    });
-
-    it('allows manual dismissal from showMessage stage', () => {
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.bootStage).toBe('showMessage');
-
-      act(() => {
-        result.current.clearKeyPressed();
-      });
-
-      expect(result.current.bootStage).toBe('run');
-    });
-
-    it('does nothing when clearKeyPressed called in run stage', () => {
-      localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
-        bootMessageMode: 'skip',
-      }));
-
-      const { result } = renderHook(() => useVolatileMemoryContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.bootStage).toBe('run');
-
-      act(() => {
-        result.current.clearKeyPressed();
-      });
-
-      expect(result.current.bootStage).toBe('run');
-    });
-  });
+  // Boot sequence state machine tests moved to OperationStateContext.test.tsx
 });

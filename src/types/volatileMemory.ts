@@ -13,10 +13,10 @@ export interface AxisValues {
 
 export type Axis = 'X' | 'Y' | 'Z';
 export type DatumMode = 'abs' | 'inc';
-export type BootStage = 'showMessage' | 'run';
 
 /**
  * DRO volatile memory - runtime state managed by VolatileMemoryContext
+ * Note: Boot stage is now managed by OperationStateContext
  */
 export interface VolatileMemory {
   displayValues: AxisValues;
@@ -25,11 +25,11 @@ export interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
-  bootStage: BootStage;
 }
 
 /**
  * Actions for modifying volatile memory
+ * Note: clearKeyPressed is now handled by OperationStateContext
  */
 export interface VolatileMemoryActions {
   toggleMode: () => void;
@@ -39,7 +39,6 @@ export interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
-  clearKeyPressed: () => void;
 }
 
 export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };
