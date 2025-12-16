@@ -17,7 +17,7 @@ const SecondaryFunctionSection = () => {
   };
 
   const handleFunction = () => {
-    dispatch({ type: 'BTN_FUNCTION' });
+    dispatch({ eventName: 'BTN_FUNCTION' });
   };
 
   return (

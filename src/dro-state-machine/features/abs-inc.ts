@@ -5,13 +5,13 @@
  */
 
 import type { FeatureReducer } from '../types';
-import { INITIAL_DRO_CONTEXT } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 
 export const absIncReducer: FeatureReducer = (current, event) => {
-  if (current.state !== 'abs-inc-mode') return null;
+  if (current.stateName !== 'abs-inc-mode') return null;
 
-  if (event.type === 'MODE_TOGGLE_COMPLETE') {
-    return { state: 'idle', data: INITIAL_DRO_CONTEXT };
+  if (event.eventName === 'MODE_TOGGLE_COMPLETE') {
+    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
   }
   return current;
 };

@@ -5,8 +5,8 @@
  * Each feature reducer handles its own subset of states.
  */
 
-import type { DROShape, FeatureReducer } from './types';
-import type { DROEvent } from './droStateMachine';
+import type { DROStatePayload, FeatureReducer } from './types';
+import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
 import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
@@ -33,9 +33,9 @@ const featureReducers: FeatureReducer[] = [
  * Root reducer that delegates to feature reducers.
  */
 export function droReducer(
-  current: DROShape,
-  event: DROEvent
-): DROShape {
+  current: DROStatePayload,
+  event: DROEventPayload
+): DROStatePayload {
   for (const reducer of featureReducers) {
     const result = reducer(current, event);
     if (result !== null) {

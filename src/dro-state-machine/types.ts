@@ -5,17 +5,17 @@
  */
 
 import type {
-  DROState,
-  DROContext,
-  DROEvent,
+  DROStateName,
+  DROStateData,
+  DROEventPayload,
 } from './droStateMachine';
 
 /**
  * The shape of the state machine state.
  */
-export interface DROShape {
-  state: DROState;
-  data: DROContext;
+export interface DROStatePayload {
+  stateName: DROStateName;
+  stateData: DROStateData;
 }
 
 /**
@@ -23,6 +23,6 @@ export interface DROShape {
  * Returns the new state if it handled the event, or null if not.
  */
 export type FeatureReducer = (
-  current: DROShape,
-  event: DROEvent
-) => DROShape | null;
+  statePayload: DROStatePayload,
+  eventPayload: DROEventPayload
+) => DROStatePayload | null;

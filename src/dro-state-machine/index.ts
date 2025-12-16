@@ -16,7 +16,7 @@ export {
 } from './context';
 
 // Types
-export type { DROShape, FeatureReducer } from './types';
+export type { DROStatePayload as DROShape, FeatureReducer } from './types';
 
 // Re-export type guards and types from droStateMachine
 export {
@@ -26,9 +26,9 @@ export {
   isCenterCircleState,
   isResultState,
   isFunctionActive,
-  INITIAL_DRO_CONTEXT,
-  type DROState,
-  type DROContext,
-  type DROEvent,
+  INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT,
+  type DROStateName as DROState,
+  type DROStateData as DROContext,
+  type DROEventPayload as DROEvent,
   type StoredPoint,
 } from './droStateMachine';
