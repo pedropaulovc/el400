@@ -95,7 +95,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.20",
+    "eslint-plugin-react-refresh": "^0.4.25",
     "eslint-plugin-storybook": "^10.1.5",
     "globals": "^16.5.0",
     "http-server": "^14.1.1",
