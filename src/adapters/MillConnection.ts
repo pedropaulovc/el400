@@ -1,16 +1,16 @@
 /**
- * Machine connection interface for connecting to CNC controllers.
+ * Mill connection interface for connecting to CNC controllers.
  * Implementations provide data from various sources (CNCjs, LinuxCNC, mock, etc.)
  */
 
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machineState';
+import type { ControllerType, MillState, MillStateListener } from '../types/millState';
 
 /**
- * Abstract interface for machine data connections.
+ * Abstract interface for mill data connections.
  * Each connection connects to a specific data source and normalizes
- * the data into the unified MachineState format.
+ * the data into the unified MillState format.
  */
-export interface MachineConnection {
+export interface MillConnection {
   /**
    * Connect to the data source.
    * @returns Promise that resolves when connected
@@ -25,17 +25,17 @@ export interface MachineConnection {
   disconnect(): void;
 
   /**
-   * Subscribe to machine state updates.
+   * Subscribe to mill state updates.
    * @param listener Callback invoked when state changes
    * @returns Unsubscribe function
    */
-  subscribe(listener: MachineStateListener): () => void;
+  subscribe(listener: MillStateListener): () => void;
 
   /**
-   * Get the current machine state.
-   * @returns Current MachineState
+   * Get the current mill state.
+   * @returns Current MillState
    */
-  getState(): MachineState;
+  getState(): MillState;
 
   /**
    * The type of controller this connection connects to.

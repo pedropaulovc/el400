@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ControllerType, DataSourceConfig } from '../types/machineState';
+import type { ControllerType, DataSourceConfig } from '../types/millState';
 
 const DEFAULT_CONFIG: DataSourceConfig = {
   type: 'manual',

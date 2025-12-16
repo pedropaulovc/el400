@@ -7,7 +7,7 @@ This is a faithful, touch-friendly web-based simulator of the Electronica EL400 
 - **Build Tool:** Vite
 - **Framework:** React 18 with TypeScript
 - **Styling:** Tailwind CSS
-- **State Management:** React Context + hooks (MachineStateContext, SettingsContext)
+- **State Management:** React Context + hooks (MillStateContext, SettingsContext)
 - **Data Fetching:** @tanstack/react-query
 - **Routing:** react-router-dom
 - **Real-time:** socket.io-client (CNCjs integration)
@@ -60,8 +60,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed data flow and adapter implem
 
 ### Data Interface
 
-- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MachineConnection` interface
-- **Contexts** (`src/context/`): `MachineStateContext` (positions), `SettingsContext` (persisted prefs)
+- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MillConnection` interface
+- **Contexts** (`src/context/`): `MillStateContext` (positions), `SettingsContext` (persisted prefs)
 - **Hooks** (`src/hooks/`): `useVolatileMemory` (ABS/INC switching), `useNonVolatileMemory` (persisted settings)
 - **URL config**: `?source=cncjs&host=localhost&port=8000` or `?source=mock`
 

@@ -6,39 +6,39 @@ import {
   useVolatileMemoryContext,
   BOOT_MESSAGE_DURATION_MS,
 } from './VolatileMemoryContext';
-import { MachineStateProvider, useMachineStateContext } from './MachineStateContext';
+import { MillStateProvider, useMillStateContext } from './MillStateContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
-import { MockAdapter } from '../adapters/MockAdapter';
+import { MockMillConnection } from '../adapters/MockMillConnection';
 
 // Combined hook for tests that need both contexts
 function useBothContexts() {
   const vMem = useVolatileMemoryContext();
-  const { machineState } = useMachineStateContext();
-  return { vMem, machineState };
+  const { millState } = useMillStateContext();
+  return { vMem, millState };
 }
 
-// Wrapper with all providers (NonVolatileMemory and MachineState required by VolatileMemory)
+// Wrapper with all providers (NonVolatileMemory and MillState required by VolatileMemory)
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NonVolatileMemoryProvider>
-        <MachineStateProvider>
+        <MillStateProvider>
           <VolatileMemoryProvider>{children}</VolatileMemoryProvider>
-        </MachineStateProvider>
+        </MillStateProvider>
       </NonVolatileMemoryProvider>
     );
   };
 }
 
-function createWrapperWithAdapter(adapter: MockAdapter) {
+function createWrapperWithConnection(connection: MockMillConnection) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NonVolatileMemoryProvider>
-        <MachineStateProvider initialAdapter={adapter}>
+        <MillStateProvider initialConnection={connection}>
           <VolatileMemoryProvider>
             {children}
           </VolatileMemoryProvider>
-        </MachineStateProvider>
+        </MillStateProvider>
       </NonVolatileMemoryProvider>
     );
   };
@@ -505,29 +505,29 @@ describe('VolatileMemoryContext', () => {
     });
   });
 
-  describe('Connected mode (with adapter)', () => {
-    let adapter: MockAdapter;
+  describe('Connected mode (with connection)', () => {
+    let connection: MockMillConnection;
 
     beforeEach(() => {
-      adapter = new MockAdapter();
+      connection = new MockMillConnection();
     });
 
     it('calculates absolute values with work offsets', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 100, 100);
+        connection.setPosition(100, 100, 100);
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.position.x).toBe(100);
+        expect(result.current.millState.position.x).toBe(100);
       });
 
       // Zero the axis (creates work offset)
@@ -541,11 +541,11 @@ describe('VolatileMemoryContext', () => {
 
       // Move machine to 150
       act(() => {
-        adapter.setPosition(150, 100, 100);
+        connection.setPosition(150, 100, 100);
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.position.x).toBe(150);
+        expect(result.current.millState.position.x).toBe(150);
       });
 
       // Display should be 50 (150 - 100 offset)
@@ -554,20 +554,20 @@ describe('VolatileMemoryContext', () => {
 
     it('setAxisValue adjusts work offset when connected', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 200, 300);
+        connection.setPosition(100, 200, 300);
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.position.x).toBe(100);
+        expect(result.current.millState.position.x).toBe(100);
       });
 
       // Set X axis value to 50 (should create offset of 100 - 50*25.4 in mm)
@@ -595,20 +595,20 @@ describe('VolatileMemoryContext', () => {
 
     it('halfAxis adjusts work offset when connected', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 200, 300);
+        connection.setPosition(100, 200, 300);
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.position.x).toBe(100);
+        expect(result.current.millState.position.x).toBe(100);
       });
 
       // Current display value is 100 (machine pos - 0 offset)

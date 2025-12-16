@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { VolatileMemoryProvider } from "../context/VolatileMemoryContext";
-import { MachineStateProvider, useMachineStateContext } from "../context/MachineStateContext";
+import { MillStateProvider, useMillStateContext } from "../context/MillStateContext";
 import { NonVolatileMemoryProvider, useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { MockAdapter } from "../adapters/MockAdapter";
+import { MockMillConnection } from "../adapters/MockMillConnection";
 import type { Axis } from "../types/volatileMemory";
 
 /**
@@ -13,7 +13,7 @@ import type { Axis } from "../types/volatileMemory";
  */
 function VolatileMemoryDemo() {
   const vMem = useVolatileMemory();
-  const { machineState } = useMachineStateContext();
+  const { millState } = useMillStateContext();
   const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
 
   const handleZeroAxis = (axis: Axis) => {
@@ -28,10 +28,10 @@ function VolatileMemoryDemo() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span
-            className={`w-3 h-3 rounded-full ${machineState.connected ? "bg-green-500" : "bg-gray-600"}`}
+            className={`w-3 h-3 rounded-full ${millState.connected ? "bg-green-500" : "bg-gray-600"}`}
           />
           <span className="text-gray-400">
-            {machineState.connected ? "Mock Connected" : "Manual Mode"}
+            {millState.connected ? "Mock Connected" : "Manual Mode"}
           </span>
         </div>
         <span className="text-gray-600">|</span>
@@ -144,19 +144,19 @@ function VolatileMemoryDemo() {
  * Story wrapper with providers.
  */
 function StoryWrapper({
-  adapter,
+  connection,
   children,
 }: {
-  adapter: MockAdapter | null;
+  connection: MockMillConnection | null;
   children: React.ReactNode;
 }) {
   return (
     <NonVolatileMemoryProvider>
-      <MachineStateProvider initialAdapter={adapter}>
+      <MillStateProvider initialConnection={connection}>
         <VolatileMemoryProvider>
           {children}
         </VolatileMemoryProvider>
-      </MachineStateProvider>
+      </MillStateProvider>
     </NonVolatileMemoryProvider>
   );
 }
@@ -171,7 +171,7 @@ const meta = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <StoryWrapper adapter={null}>
+      <StoryWrapper connection={null}>
         <Story />
       </StoryWrapper>
     ),
@@ -188,22 +188,22 @@ type Story = StoryObj<typeof meta>;
 export const ManualMode: Story = {};
 
 /**
- * Mock adapter connected with live position updates.
+ * Mock connection with live position updates.
  * ABS values track machine position, INC values for work offsets.
  */
 export const MockWithMovement: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(
-        () => new MockAdapter({ simulateMovement: true, updateInterval: 200 })
+      const [connection] = useState(
+        () => new MockMillConnection({ simulateMovement: true, updateInterval: 200 })
       );
 
       useEffect(() => {
-        return () => adapter.disconnect();
-      }, [adapter]);
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -212,21 +212,21 @@ export const MockWithMovement: Story = {
 };
 
 /**
- * Mock adapter with fixed position.
+ * Mock connection with fixed position.
  * Good for testing ABS/INC switching and zeroing.
  */
 export const MockFixedPosition: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(() => new MockAdapter());
+      const [connection] = useState(() => new MockMillConnection());
 
       useEffect(() => {
-        adapter.setPosition(123.4567, 89.1234, -45.6789);
-        return () => adapter.disconnect();
-      }, [adapter]);
+        connection.setPosition(123.4567, 89.1234, -45.6789);
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -244,15 +244,15 @@ export const MockFixedPosition: Story = {
 export const InteractiveDemo: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(() => new MockAdapter());
+      const [connection] = useState(() => new MockMillConnection());
 
       useEffect(() => {
-        adapter.setPosition(50.0, 100.0, 25.0);
-        return () => adapter.disconnect();
-      }, [adapter]);
+        connection.setPosition(50.0, 100.0, 25.0);
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );

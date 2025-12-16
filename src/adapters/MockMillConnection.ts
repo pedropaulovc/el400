@@ -3,11 +3,11 @@
  * Simulates machine position updates without real hardware.
  */
 
-import type { MachineConnection } from './MachineConnection';
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machineState';
-import { createDefaultMachineState, createProbeState } from '../types/machineState';
+import type { MillConnection } from './MillConnection';
+import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import { createDefaultMillState, createProbeState } from '../types/millState';
 
-export interface MockAdapterOptions {
+export interface MockMillConnectionOptions {
   /** Update interval in milliseconds (default: 100ms) */
   updateInterval?: number;
   /** Initial position */
@@ -18,15 +18,15 @@ export interface MockAdapterOptions {
   movementSpeed?: number;
 }
 
-export class MockAdapter implements MachineConnection {
+export class MockMillConnection implements MillConnection {
   readonly controllerType: ControllerType = 'mock';
 
-  private state: MachineState;
-  private listeners: Set<MachineStateListener> = new Set();
+  private state: MillState;
+  private listeners: Set<MillStateListener> = new Set();
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private options: Required<MockAdapterOptions>;
+  private options: Required<MockMillConnectionOptions>;
 
-  constructor(options: MockAdapterOptions = {}) {
+  constructor(options: MockMillConnectionOptions = {}) {
     this.options = {
       updateInterval: options.updateInterval ?? 100,
       initialPosition: options.initialPosition ?? { x: 0, y: 0, z: 0 },
@@ -35,7 +35,7 @@ export class MockAdapter implements MachineConnection {
     };
 
     this.state = {
-      ...createDefaultMachineState('mock'),
+      ...createDefaultMillState('mock'),
       position: { ...this.options.initialPosition },
     };
   }
@@ -58,7 +58,7 @@ export class MockAdapter implements MachineConnection {
     this.notifyListeners();
   }
 
-  subscribe(listener: MachineStateListener): () => void {
+  subscribe(listener: MillStateListener): () => void {
     this.listeners.add(listener);
     // Immediately notify with current state
     listener(this.state);
@@ -68,7 +68,7 @@ export class MockAdapter implements MachineConnection {
     };
   }
 
-  getState(): MachineState {
+  getState(): MillState {
     return this.state;
   }
 

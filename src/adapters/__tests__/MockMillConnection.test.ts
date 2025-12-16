@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MockAdapter } from '../MockAdapter';
-import type { MachineState } from '../../types/machineState';
+import { MockMillConnection } from '../MockMillConnection';
+import type { MillState } from '../../types/millState';
 
-describe('MockAdapter', () => {
-  let adapter: MockAdapter;
+describe('MockMillConnection', () => {
+  let adapter: MockMillConnection;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    adapter = new MockAdapter();
+    adapter = new MockMillConnection();
   });
 
   afterEach(() => {
@@ -27,7 +27,7 @@ describe('MockAdapter', () => {
     });
 
     it('should initialize with custom initial position', () => {
-      const customAdapter = new MockAdapter({
+      const customAdapter = new MockMillConnection({
         initialPosition: { x: 10, y: 20, z: 30 },
       });
 
@@ -138,7 +138,7 @@ describe('MockAdapter', () => {
   describe('emit position updates', () => {
     it('should emit position updates at configured interval', async () => {
       const listener = vi.fn();
-      adapter = new MockAdapter({ updateInterval: 100, simulateMovement: true });
+      adapter = new MockMillConnection({ updateInterval: 100, simulateMovement: true });
 
       await adapter.connect();
       adapter.subscribe(listener);
@@ -156,7 +156,7 @@ describe('MockAdapter', () => {
 
     it('should not emit updates when not simulating movement', async () => {
       const listener = vi.fn();
-      adapter = new MockAdapter({ updateInterval: 100, simulateMovement: false });
+      adapter = new MockMillConnection({ updateInterval: 100, simulateMovement: false });
 
       await adapter.connect();
       adapter.subscribe(listener);
@@ -164,10 +164,10 @@ describe('MockAdapter', () => {
 
       vi.advanceTimersByTime(100);
       // Still emits updates (for connected state), but position doesn't change
-      const firstCall = listener.mock.calls[0][0] as MachineState;
+      const firstCall = listener.mock.calls[0][0] as MillState;
 
       vi.advanceTimersByTime(100);
-      const secondCall = listener.mock.calls[1][0] as MachineState;
+      const secondCall = listener.mock.calls[1][0] as MillState;
 
       expect(firstCall.position).toEqual(secondCall.position);
     });

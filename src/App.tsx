@@ -3,32 +3,32 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
-import { MachineStateProvider } from "./context/MachineStateContext";
+import { MillStateProvider } from "./context/MillStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
 import { CenterFindingProvider } from "./context/CenterFindingContext";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
-import { MockAdapter } from "./adapters/MockAdapter";
-import { CncjsAdapter } from "./adapters/CncjsAdapter";
-import type { MachineConnection } from "./adapters/MachineConnection";
-import type { DataSourceConfig } from "./types/machineState";
+import { MockMillConnection } from "./adapters/MockMillConnection";
+import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
+import type { MillConnection } from "./adapters/MillConnection";
+import type { DataSourceConfig } from "./types/millState";
 
 const queryClient = new QueryClient();
 
 /**
- * Creates an adapter based on URL config.
+ * Creates a connection based on URL config.
  * This is used inside the BrowserRouter context.
  */
-function createAdapter(config: DataSourceConfig): MachineConnection | null {
+function createConnection(config: DataSourceConfig): MillConnection | null {
   switch (config.type) {
     case 'mock':
       // Don't simulate automatic movement for E2E tests
       // Tests can use setPosition() to explicitly control position
-      return new MockAdapter({ simulateMovement: false });
+      return new MockMillConnection({ simulateMovement: false });
     case 'cncjs':
-      return new CncjsAdapter({ host: config.host, port: config.port, sessionId: config.sessionId });
+      return new CncjsMillConnection({ host: config.host, port: config.port, sessionId: config.sessionId });
     case 'linuxcnc':
-      // TODO: implement LinuxCNC adapter
+      // TODO: implement LinuxCNC connection
       return null;
     case 'manual':
     default:
@@ -41,11 +41,11 @@ function createAdapter(config: DataSourceConfig): MachineConnection | null {
  */
 function AppContent() {
   const config = useDataSourceConfig();
-  const adapter = useMemo(() => createAdapter(config), [config]);
+  const connection = useMemo(() => createConnection(config), [config]);
 
   return (
     <NonVolatileMemoryProvider>
-      <MachineStateProvider initialAdapter={adapter}>
+      <MillStateProvider initialConnection={connection}>
         <VolatileMemoryProvider>
           <CenterFindingProvider>
             <Routes>
@@ -55,7 +55,7 @@ function AppContent() {
             </Routes>
           </CenterFindingProvider>
         </VolatileMemoryProvider>
-      </MachineStateProvider>
+      </MillStateProvider>
     </NonVolatileMemoryProvider>
   );
 }
