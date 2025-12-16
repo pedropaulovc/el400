@@ -22,8 +22,8 @@
 describe('US-030: Polar Coordinates', () => {
   test('Convert to polar coordinates on XY plane', async () => {
     // Set position X=3, Y=4 (should be R=5, θ≈53.13°)
-    await dro.simulateEncoderMove('X', 3.0);
-    await dro.simulateEncoderMove('Y', 4.0);
+    await dro.simulateEncoderAbsoluteMove('X', 3.0);
+    await dro.simulateEncoderAbsoluteMove('Y', 4.0);
 
     await dro.pressKey('Fn');
     await dro.selectMenuOption('PoLAr');

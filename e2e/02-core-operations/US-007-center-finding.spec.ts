@@ -37,16 +37,16 @@ test.describe('US-007: Center Finding', () => {
     expect(await dro.isFnModeActive()).toBe(true);
     
     // Point 1 at 0
-    await dro.simulateEncoderMove('X', 0);
-    
+    await dro.simulateEncoderAbsoluteMove('X', 0);
+
     // Verify position is displayed: 0mm = 0 inches
     await dro.waitForAxisValue('X', 0, 1);
-    
+
     // Store Point 1 using key 6 (Right/Store)
     await dro.key6.click();
-    
+
     // Point 2 at 100mm
-    await dro.simulateEncoderMove('X', 100);
+    await dro.simulateEncoderAbsoluteMove('X', 100);
     
     // Verify current position is displayed in inches: 100mm = ~3.937 inches
     await dro.waitForAxisValue('X', 3.937, 1);
@@ -98,24 +98,24 @@ test.describe('US-007: Center Finding', () => {
     expect(await dro.isFnModeActive()).toBe(true);
     
     // Point 1: (10, 0, 0) - Right side of circle with radius 10
-    await dro.simulateEncoderMove('X', 10);
-    await dro.simulateEncoderMove('Y', 0);
-    await dro.simulateEncoderMove('Z', 0);
-    
+    await dro.simulateEncoderAbsoluteMove('X', 10);
+    await dro.simulateEncoderAbsoluteMove('Y', 0);
+    await dro.simulateEncoderAbsoluteMove('Z', 0);
+
     // Store Point 1
     await dro.key6.click();
-    
+
     // Point 2: (0, 10, 0) - Top of circle
-    await dro.simulateEncoderMove('X', 0);
-    await dro.simulateEncoderMove('Y', 10);
-    
+    await dro.simulateEncoderAbsoluteMove('X', 0);
+    await dro.simulateEncoderAbsoluteMove('Y', 10);
+
     // Store Point 2
     await dro.key6.click();
-    
+
     // Point 3: (-10, 0, 0) - Left side of circle
-    // simulateEncoderMove sets absolute position, so X=-10, Y=0 is correct
-    await dro.simulateEncoderMove('X', -10);
-    await dro.simulateEncoderMove('Y', 0);
+    // simulateEncoderAbsoluteMove sets absolute position, so X=-10, Y=0 is correct
+    await dro.simulateEncoderAbsoluteMove('X', -10);
+    await dro.simulateEncoderAbsoluteMove('Y', 0);
     
     // Store Point 3
     await dro.key6.click();

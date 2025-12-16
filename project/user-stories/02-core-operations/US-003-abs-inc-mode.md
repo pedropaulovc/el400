@@ -32,7 +32,7 @@ describe('US-003: ABS/INC Mode', () => {
 
   test('INC mode allows independent zeroing', async () => {
     // In ABS mode, move to 10
-    await dro.simulateEncoderMove('X', 10);
+    await dro.simulateEncoderAbsoluteMove('X', 10);
     await expect(dro.display.xAxis).toHaveValue(10);
 
     // Switch to INC

@@ -39,11 +39,11 @@ describe('US-007: Center Finding', () => {
     await dro.pressKey('ENT');
 
     // Point 1 at 0
-    await dro.simulateEncoderMove('X', 0);
+    await dro.simulateEncoderAbsoluteMove('X', 0);
     await dro.pressKey('Right'); // Store P1
 
     // Point 2 at 100
-    await dro.simulateEncoderMove('X', 100);
+    await dro.simulateEncoderAbsoluteMove('X', 100);
     await dro.pressKey('Right'); // Store P2
 
     // Center should be at 50. Distance to go from 100 is -50
