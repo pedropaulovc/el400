@@ -124,6 +124,15 @@ The simulator behavior is based on official manuals:
 - [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf)
 - [MagXact MX-100M Manual](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf)
 
+## Testing
+
+This project uses a comprehensive testing strategy:
+- **Unit tests** (Vitest): Component and hook testing
+- **Storybook tests** (Vitest + Playwright): Visual component testing with forced-colors emulation
+- **E2E tests** (Playwright): Full application integration testing
+
+See [TESTING.md](TESTING.md) for details on the testing strategy and forced-colors mode testing approach.
+
 ## License
 
 MIT License - see LICENSE file for details

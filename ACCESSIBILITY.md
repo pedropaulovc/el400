@@ -77,8 +77,11 @@ The simulator fully supports Windows Forced Colors mode (High Contrast), ensurin
 ### Automated Testing
 
 - **Unit tests**: ARIA attributes and roles verified via Testing Library
-- **E2E tests**: Playwright tests with `forcedColors: 'active'` context option
-- **Contrast verification**: Automated contrast ratio calculations in E2E tests
+- **Storybook tests**: Visual component testing with CSS-based forced-colors emulation
+- **E2E tests**: Playwright tests with real browser `forcedColors: 'active'` context option
+- **Contrast verification**: Automated contrast ratio calculations in both Storybook and E2E tests
+
+See [TESTING.md](TESTING.md) for detailed information about the dual testing approach for forced-colors mode.
 
 ### Manual Testing Recommended
 
