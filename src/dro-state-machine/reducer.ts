@@ -8,6 +8,8 @@
 import type { DROShape, FeatureReducer } from './types';
 import type { DROEvent } from './droStateMachine';
 import { bootReducer } from './features/boot';
+import { absIncReducer } from './features/abs-inc';
+import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
 
@@ -17,6 +19,8 @@ import { centerFindingReducer } from './features/center-finding';
  */
 const featureReducers: FeatureReducer[] = [
   bootReducer,
+  absIncReducer,
+  inchMmReducer,
   menuReducer,
   centerFindingReducer,
   // Future features:

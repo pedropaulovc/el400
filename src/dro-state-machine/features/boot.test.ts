@@ -1,7 +1,7 @@
 /**
  * Boot Feature Reducer Tests
  *
- * Tests for boot sequence, idle state, and mode toggle states.
+ * Tests for boot sequence and idle state.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,7 +23,7 @@ describe('bootReducer', () => {
     });
 
     it('should handle boot states', () => {
-      const bootStates = ['boot', 'showMessage', 'idle', 'abs-inc-mode', 'inch-mm-mode'] as const;
+      const bootStates = ['boot', 'showMessage', 'idle'] as const;
 
       for (const bootState of bootStates) {
         const state: DROShape = {
@@ -183,54 +183,6 @@ describe('bootReducer', () => {
         const result = bootReducer(state, { type: key });
         expect(result).toBe(state);
       }
-    });
-  });
-
-  describe('abs-inc-mode state', () => {
-    it('should transition to idle on MODE_TOGGLE_COMPLETE', () => {
-      const state: DROShape = {
-        state: 'abs-inc-mode',
-        data: INITIAL_DRO_CONTEXT,
-      };
-
-      const result = bootReducer(state, { type: 'MODE_TOGGLE_COMPLETE' });
-
-      expect(result?.state).toBe('idle');
-      expect(result?.data.type).toBe('none');
-    });
-
-    it('should return current state for unhandled events', () => {
-      const state: DROShape = {
-        state: 'abs-inc-mode',
-        data: INITIAL_DRO_CONTEXT,
-      };
-
-      expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
-      expect(bootReducer(state, { type: 'BTN_ABS_INC' })).toBe(state);
-    });
-  });
-
-  describe('inch-mm-mode state', () => {
-    it('should transition to idle on MODE_TOGGLE_COMPLETE', () => {
-      const state: DROShape = {
-        state: 'inch-mm-mode',
-        data: INITIAL_DRO_CONTEXT,
-      };
-
-      const result = bootReducer(state, { type: 'MODE_TOGGLE_COMPLETE' });
-
-      expect(result?.state).toBe('idle');
-      expect(result?.data.type).toBe('none');
-    });
-
-    it('should return current state for unhandled events', () => {
-      const state: DROShape = {
-        state: 'inch-mm-mode',
-        data: INITIAL_DRO_CONTEXT,
-      };
-
-      expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
-      expect(bootReducer(state, { type: 'BTN_INCH_MM' })).toBe(state);
     });
   });
 

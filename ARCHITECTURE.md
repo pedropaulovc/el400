@@ -7,18 +7,25 @@ Technical documentation for developers working on the EL400 DRO simulator.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     EL400Simulator                              │
-│  (consumes VolatileMemory via useVolatileMemory hook)           │
+│  (consumes DROState, VolatileMemory via hooks)                  │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
           ┌───────────────────┼───────────────────┐
           │                   │                   │
 ┌─────────────────────────────┐   ┌─────────────────────────────┐
-│   VolatileMemoryContext     │   │  NonVolatileMemoryContext   │
-│  - DRO memory (ABS/INC)     │   │  - Persisted settings       │
-│  - activeAxis, workOffsets  │   │  - beepEnabled, defaultUnit │
-│  - Boot sequence state      │   │  - localStorage persistence │
-│  - Consumes MillState       │   │                             │
+│      DROStateContext        │   │  NonVolatileMemoryContext   │
+│  (dro-state-machine)        │   │  - Persisted settings       │
+│  - Operation state machine  │   │  - beepEnabled, defaultUnit │
+│  - Function menu, center    │   │  - localStorage persistence │
+│  - Mode toggles             │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
+          │
+┌─────────────────────────────┐
+│   VolatileMemoryContext     │
+│  - DRO memory (ABS/INC)     │
+│  - activeAxis, workOffsets  │
+│  - Consumes MillState       │
+└─────────────────────────────┘
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -47,7 +54,14 @@ Technical documentation for developers working on the EL400 DRO simulator.
 
 ## Memory Model
 
-The DRO uses two types of memory:
+The DRO uses three types of memory:
+
+### DRO State Machine (`src/dro-state-machine/`)
+Operation state that controls the DRO mode and UI behavior:
+
+- Current operation state (boot, idle, function menus, center finding)
+- Mode toggle states (abs-inc-mode, inch-mm-mode)
+- Feature-specific context data (stored points, results)
 
 ### Volatile Memory
 Runtime state that is lost on refresh. Split across two contexts:
@@ -62,13 +76,178 @@ Runtime state that is lost on refresh. Split across two contexts:
 - DRO display values (ABS/INC modes)
 - Active axis selection
 - Work offsets
-- Boot sequence state
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
 - Default unit (inch/mm)
 - Beep enabled
 - Display precision
+
+## DRO State Machine
+
+The DRO uses a flat state machine pattern to manage operation modes, function menus, and multi-step workflows like center finding. This architecture replaces the previous boot stage state in VolatileMemoryContext and consolidates all operation control into a single reducer.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        DROProvider                              │
+│  (React Context + useReducer)                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ dispatch(DROEvent)
+                              │
+┌─────────────────────────────────────────────────────────────────┐
+│                        droReducer                               │
+│  (composes feature reducers in priority order)                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  bootReducer    │ │  menuReducer    │ │centerFindingRed.│
+│  - boot         │ │  - menu nav     │ │  - point collect│
+│  - showMessage  │ │  - ring wrap    │ │  - calculate    │
+│  - idle         │ │                 │ │                 │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+          │                   │                   │
+┌─────────────────┐ ┌─────────────────┐
+│  absIncReducer  │ │  inchMmReducer  │
+│  - mode toggle  │ │  - unit toggle  │
+└─────────────────┘ └─────────────────┘
+```
+
+### File Structure
+
+```
+src/dro-state-machine/
+├── index.ts              # Public API exports
+├── types.ts              # DROShape, FeatureReducer
+├── droStateMachine.ts    # DROState, DROEvent, DROContext types
+├── reducer.ts            # Root reducer (composes features)
+├── context.tsx           # DROProvider, hooks
+└── features/
+    ├── boot.ts           # Boot sequence: boot → showMessage → idle
+    ├── abs-inc.ts        # ABS/INC toggle: idle ↔ abs-inc-mode
+    ├── inch-mm.ts        # Inch/MM toggle: idle ↔ inch-mm-mode
+    ├── menu.ts           # Function menu navigation ring
+    └── center-finding.ts # Point collection and center calculation
+```
+
+### State Machine Design
+
+**Flat State Union:** All states are simple strings in a discriminated union. No nested substates.
+
+```typescript
+type DROState =
+  // Boot sequence
+  | 'boot' | 'showMessage' | 'idle'
+  // Mode toggles (transitional)
+  | 'abs-inc-mode' | 'inch-mm-mode'
+  // Function menu selection (ring navigation)
+  | 'function-menu-center' | 'function-menu-circle'
+  | 'function-menu-line' | 'function-menu-linear' | 'function-menu-polar'
+  // Center line (2 points)
+  | 'function-menu-center-line-point-1'
+  | 'function-menu-center-line-point-2'
+  | 'function-menu-center-line-result'
+  // Center circle (3 points)
+  | 'function-menu-center-circle-point-1'
+  | 'function-menu-center-circle-point-2'
+  | 'function-menu-center-circle-point-3'
+  | 'function-menu-center-circle-result';
+```
+
+**State Transitions:**
+
+```
+boot → (BOOT_COMPLETE) →
+  skipMessage=true  → idle
+  skipMessage=false → showMessage
+
+showMessage → (TIMEOUT | KEY_CLEAR) → idle
+
+idle →
+  BTN_ABS_INC  → abs-inc-mode → (MODE_TOGGLE_COMPLETE) → idle
+  BTN_INCH_MM  → inch-mm-mode → (MODE_TOGGLE_COMPLETE) → idle
+  BTN_FUNCTION → function-menu-center
+
+function-menu-* →
+  KEY_6_RIGHT → next menu item (wraps)
+  KEY_4_LEFT  → prev menu item (wraps)
+  KEY_ENTER   → start point collection
+  KEY_CLEAR   → idle
+
+center-line-point-1 → (KEY_6_RIGHT + point) → point-2 → result
+center-circle-point-1 → point-2 → point-3 → result
+```
+
+### Feature Reducer Pattern
+
+Feature reducers handle a subset of states and return `null` if they don't handle the current state/event combination. The root reducer tries each in order until one handles the event.
+
+```typescript
+type FeatureReducer = (
+  current: DROShape,
+  event: DROEvent
+) => DROShape | null;
+
+// Example: boot.ts
+export const bootReducer: FeatureReducer = (current, event) => {
+  const { state, data } = current;
+  switch (state) {
+    case 'boot':
+      if (event.type === 'BOOT_COMPLETE') {
+        return {
+          state: event.skipMessage ? 'idle' : 'showMessage',
+          data: INITIAL_DRO_CONTEXT,
+        };
+      }
+      return current;
+    // ... other cases
+    default:
+      return null; // Not handled by this feature
+  }
+};
+```
+
+### Context Data (Discriminated Union)
+
+Each feature can have its own context data type, discriminated by `type`:
+
+```typescript
+type DROContext =
+  | { type: 'none' }
+  | { type: 'center-finding'; storedPoints: StoredPoint[]; centerResult: AxisValues | null }
+  | { type: 'bolt-hole'; holeCount: number; radius: number; /* ... */ }
+  | { type: 'arc'; /* ... */ };
+```
+
+### Hooks
+
+```typescript
+// Get current state string
+const state = useDROState();  // 'idle' | 'function-menu-center' | ...
+
+// Get context data
+const data = useDROContext();  // { type: 'none' } | { type: 'center-finding', ... }
+
+// Dispatch events
+const dispatch = useDRODispatch();
+dispatch({ type: 'BTN_FUNCTION' });
+
+// Convenience hooks
+const result = useCenterResult();      // AxisValues | null
+const count = useStoredPointsCount();  // number
+```
+
+### Rationale
+
+1. **Flat states** - Simple string union, exhaustive switch checking, easy debugging
+2. **Feature reducers** - Each feature is isolated and testable independently
+3. **Raw events** - Components emit blind key/button events; state machine decides meaning
+4. **Discriminated context** - Type-safe feature data without nested state objects
+5. **Single source of truth** - All operation state in one place, not spread across contexts
 
 ## Core Types
 
@@ -108,7 +287,7 @@ interface DataSourceConfig {
 
 ### VolatileMemory (`src/types/volatileMemory.ts`)
 
-Types for DRO runtime state (does not include mill state - use MillStateContext for that):
+Types for DRO runtime state (does not include mill state or operation state):
 
 ```typescript
 interface AxisValues {
@@ -119,7 +298,6 @@ interface AxisValues {
 
 type Axis = 'X' | 'Y' | 'Z';
 type DatumMode = 'abs' | 'inc';
-type BootStage = 'boot' | 'showMessage' | 'run';
 
 interface VolatileMemory {
   displayValues: AxisValues;
@@ -128,7 +306,6 @@ interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
-  bootStage: BootStage;
 }
 
 interface VolatileMemoryActions {
@@ -139,9 +316,10 @@ interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
-  clearKeyPressed: () => void;
 }
 ```
+
+**Note:** Boot sequence state was moved to the DRO State Machine (`src/dro-state-machine/`).
 
 ### NonVolatileMemory (`src/types/nonVolatileMemory.ts`)
 
@@ -222,7 +400,6 @@ const vm = useVolatileMemory();
   mode,
   workOffsets,
   activeAxis,
-  bootStage,
   toggleMode,
   setMode,
   zeroAxis,
@@ -230,11 +407,11 @@ const vm = useVolatileMemory();
   setAxisValue,
   selectAxis,
   halfAxis,
-  clearKeyPressed,
 }
 ```
 
 **Note:** For mill state (position, probe, connected), use `useMillState` instead.
+**Note:** For operation state (boot, menus, center finding), use hooks from `dro-state-machine`.
 
 **ABS Mode Behavior:**
 - Display shows machine position minus work offset
@@ -340,10 +517,10 @@ interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActio
 Responsibilities:
 - DRO memory (ABS/INC mode, work offsets, incremental values)
 - Active axis selection
-- Boot sequence state machine
 - Calculate display values from machine position and offsets
 
-**Note:** Mill state (position, probe, connected, connection) is accessed via MillStateContext, not VolatileMemoryContext.
+**Note:** Mill state (position, probe, connected, connection) is accessed via MillStateContext.
+**Note:** Operation state (boot, menus, center finding) is accessed via DROProvider from `dro-state-machine`.
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
@@ -360,13 +537,16 @@ interface NonVolatileMemoryContextValue {
 **Provider Order:** The contexts must be nested in this order:
 1. NonVolatileMemoryProvider (outer) - no dependencies
 2. MillStateProvider - receives connection, manages connection
-3. VolatileMemoryProvider (inner) - consumes both MillState and NonVolatileMemory
+3. VolatileMemoryProvider - consumes both MillState and NonVolatileMemory
+4. DROProvider (inner) - operation state machine
 
 ```tsx
 <NonVolatileMemoryProvider>
   <MillStateProvider initialConnection={connection}>
     <VolatileMemoryProvider>
-      {children}
+      <DROProvider>
+        {children}
+      </DROProvider>
     </VolatileMemoryProvider>
   </MillStateProvider>
 </NonVolatileMemoryProvider>
@@ -409,6 +589,14 @@ The CncjsMillConnection subscribes to these Socket.IO events:
 src/adapters/__tests__/MockMillConnection.test.ts
 src/adapters/__tests__/CncjsMillConnection.test.ts
 src/utils/__tests__/unitConversion.test.ts
+src/dro-state-machine/reducer.test.ts
+src/dro-state-machine/context.test.tsx
+src/dro-state-machine/type-guards.test.ts
+src/dro-state-machine/features/boot.test.ts
+src/dro-state-machine/features/menu.test.ts
+src/dro-state-machine/features/center-finding.test.ts
+src/dro-state-machine/features/abs-inc.test.ts
+src/dro-state-machine/features/inch-mm.test.ts
 ```
 
 ### Integration Tests
