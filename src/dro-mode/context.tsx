@@ -1,7 +1,7 @@
 /**
- * Operation State Context
+ * DRO Mode Context
  *
- * React context provider and hooks for the operation state machine.
+ * React context provider and hooks for the DRO mode state machine.
  */
 
 import {
@@ -11,64 +11,59 @@ import {
   type ReactNode,
   type Dispatch,
 } from 'react';
-import type { OperationStateShape } from './types';
+import type { DROModeShape } from './types';
 import type {
-  OperationState,
-  OperationContext,
-  OperationEvent,
-} from '../types/operationState';
+  DROModeState,
+  DROModeData,
+  DROModeEvent,
+} from '../types/droMode';
 import {
-  INITIAL_OPERATION_STATE,
-  INITIAL_OPERATION_CONTEXT,
-} from '../types/operationState';
+  INITIAL_DRO_MODE_STATE,
+  INITIAL_DRO_MODE_DATA,
+} from '../types/droMode';
 import type { AxisValues } from '../types/volatileMemory';
-import { operationReducer } from './reducer';
+import { droModeReducer } from './reducer';
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL STATE
 // ─────────────────────────────────────────────────────────────────
 
-const INITIAL_STATE: OperationStateShape = {
-  state: INITIAL_OPERATION_STATE,
-  context: INITIAL_OPERATION_CONTEXT,
+const INITIAL_STATE: DROModeShape = {
+  state: INITIAL_DRO_MODE_STATE,
+  data: INITIAL_DRO_MODE_DATA,
 };
 
 // ─────────────────────────────────────────────────────────────────
 // CONTEXT
 // ─────────────────────────────────────────────────────────────────
 
-interface OperationStateContextValue {
-  state: OperationState;
-  context: OperationContext;
-  dispatch: Dispatch<OperationEvent>;
+interface DROModeContextValue {
+  state: DROModeState;
+  data: DROModeData;
+  dispatch: Dispatch<DROModeEvent>;
 }
 
-const OperationStateContext = createContext<OperationStateContextValue | null>(
-  null
-);
+const DROModeContext = createContext<DROModeContextValue | null>(null);
 
 // ─────────────────────────────────────────────────────────────────
 // PROVIDER
 // ─────────────────────────────────────────────────────────────────
 
-export interface OperationStateProviderProps {
+export interface DROModeProviderProps {
   children: ReactNode;
-  initialState?: OperationStateShape;
+  initialState?: DROModeShape;
 }
 
-export function OperationStateProvider({
+export function DROModeProvider({
   children,
   initialState = INITIAL_STATE,
-}: OperationStateProviderProps) {
-  const [{ state, context }, dispatch] = useReducer(
-    operationReducer,
-    initialState
-  );
+}: DROModeProviderProps) {
+  const [{ state, data }, dispatch] = useReducer(droModeReducer, initialState);
 
   return (
-    <OperationStateContext.Provider value={{ state, context, dispatch }}>
+    <DROModeContext.Provider value={{ state, data, dispatch }}>
       {children}
-    </OperationStateContext.Provider>
+    </DROModeContext.Provider>
   );
 }
 
@@ -76,38 +71,36 @@ export function OperationStateProvider({
 // HOOKS
 // ─────────────────────────────────────────────────────────────────
 
-function useOperationStateContext(): OperationStateContextValue {
-  const context = useContext(OperationStateContext);
+function useDROModeContext(): DROModeContextValue {
+  const context = useContext(DROModeContext);
   if (!context) {
-    throw new Error(
-      'useOperationState must be used within an OperationStateProvider'
-    );
+    throw new Error('useDROModeState must be used within a DROModeProvider');
   }
   return context;
 }
 
-/** Get current operation state */
-export function useOperationState(): OperationState {
-  return useOperationStateContext().state;
+/** Get current DRO mode state */
+export function useDROModeState(): DROModeState {
+  return useDROModeContext().state;
 }
 
-/** Get operation context data (stored points, results, etc.) */
-export function useOperationContext(): OperationContext {
-  return useOperationStateContext().context;
+/** Get DRO mode data (stored points, results, etc.) */
+export function useDROModeData(): DROModeData {
+  return useDROModeContext().data;
 }
 
 /** Get dispatch function for sending events */
-export function useOperationDispatch(): Dispatch<OperationEvent> {
-  return useOperationStateContext().dispatch;
+export function useDROModeDispatch(): Dispatch<DROModeEvent> {
+  return useDROModeContext().dispatch;
 }
 
 /**
  * Get center finding result if in a result state
  */
 export function useCenterResult(): AxisValues | null {
-  const context = useOperationContext();
-  if (context.type === 'center-finding') {
-    return context.centerResult;
+  const data = useDROModeData();
+  if (data.type === 'center-finding') {
+    return data.centerResult;
   }
   return null;
 }
@@ -116,9 +109,9 @@ export function useCenterResult(): AxisValues | null {
  * Get stored points count for center finding
  */
 export function useStoredPointsCount(): number {
-  const context = useOperationContext();
-  if (context.type === 'center-finding') {
-    return context.storedPoints.length;
+  const data = useDROModeData();
+  if (data.type === 'center-finding') {
+    return data.storedPoints.length;
   }
   return 0;
 }

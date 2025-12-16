@@ -3,7 +3,7 @@
  * Manages DRO memory (mode, offsets, incremental values).
  * Consumes mill state from MillStateContext internally for calculations.
  *
- * Note: Boot stage is now managed by OperationStateContext.
+ * Note: Boot stage is now managed by DROModeContext.
  */
 
 import {

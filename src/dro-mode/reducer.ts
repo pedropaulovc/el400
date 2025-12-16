@@ -5,8 +5,8 @@
  * Each feature reducer handles its own subset of states.
  */
 
-import type { OperationStateShape, FeatureReducer } from './types';
-import type { OperationEvent } from '../types/operationState';
+import type { DROModeShape, FeatureReducer } from './types';
+import type { DROModeEvent } from '../types/droMode';
 import { bootReducer } from './features/boot';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
@@ -28,10 +28,10 @@ const featureReducers: FeatureReducer[] = [
 /**
  * Root reducer that delegates to feature reducers.
  */
-export function operationReducer(
-  current: OperationStateShape,
-  event: OperationEvent
-): OperationStateShape {
+export function droModeReducer(
+  current: DROModeShape,
+  event: DROModeEvent
+): DROModeShape {
   for (const reducer of featureReducers) {
     const result = reducer(current, event);
     if (result !== null) {

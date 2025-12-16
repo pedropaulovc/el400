@@ -2,13 +2,13 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useOperationDispatch } from "../state-machine";
+import { useDROModeDispatch } from "../dro-mode";
 
 const noop = () => {};
 
 const SecondaryFunctionSection = () => {
   const vMem = useVolatileMemory();
-  const dispatch = useOperationDispatch();
+  const dispatch = useDROModeDispatch();
 
   const handleHalf = () => {
     if (vMem.activeAxis) {

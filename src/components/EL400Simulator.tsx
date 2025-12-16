@@ -8,13 +8,13 @@ import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import {
-  useOperationState,
-  useOperationDispatch,
-  useOperationContext,
+  useDROModeState,
+  useDROModeDispatch,
+  useDROModeData,
   isFunctionMenuSelectionState,
   isCollectingPoints,
   isResultState,
-} from "../state-machine";
+} from "../dro-mode";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { BOOT_MESSAGE_DURATION_MS } from "../context/VolatileMemoryContext";
 
@@ -32,9 +32,9 @@ const MENU_TEXT_MAP: Record<string, string> = {
 
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
-  const opState = useOperationState();
-  const opContext = useOperationContext();
-  const dispatch = useOperationDispatch();
+  const opState = useDROModeState();
+  const opData = useDROModeData();
+  const dispatch = useDROModeDispatch();
   const { nvMem } = useNonVolatileMemoryContext();
 
   // Boot sequence: Dispatch BOOT_COMPLETE on mount
@@ -68,9 +68,9 @@ const EL400Simulator = () => {
   } else if (isCollectingPoints(opState)) {
     // While collecting points, show current position (normal display)
     axisDisplayValues = vMem.displayValues;
-  } else if (isResultState(opState) && opContext.type === 'center-finding' && opContext.centerResult) {
+  } else if (isResultState(opState) && opData.type === 'center-finding' && opData.centerResult) {
     // Show distance-to-go when center is calculated
-    const center = opContext.centerResult;
+    const center = opData.centerResult;
     const current = vMem.displayValues;
     axisDisplayValues = {
       X: center.X - current.X,

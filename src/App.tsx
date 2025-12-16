@@ -5,7 +5,7 @@ import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
 import { MillStateProvider } from "./context/MillStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
-import { OperationStateProvider } from "./state-machine";
+import { DROModeProvider } from "./dro-mode";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
 import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
@@ -37,13 +37,13 @@ function AppContent() {
     <NonVolatileMemoryProvider>
       <MillStateProvider initialConnection={connection}>
         <VolatileMemoryProvider>
-          <OperationStateProvider>
+          <DROModeProvider>
             <Routes>
               <Route path="/" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </OperationStateProvider>
+          </DROModeProvider>
         </VolatileMemoryProvider>
       </MillStateProvider>
     </NonVolatileMemoryProvider>

@@ -16,7 +16,7 @@ export type DatumMode = 'abs' | 'inc';
 
 /**
  * DRO volatile memory - runtime state managed by VolatileMemoryContext
- * Note: Boot stage is now managed by OperationStateContext
+ * Note: Boot stage is now managed by DROModeContext
  */
 export interface VolatileMemory {
   displayValues: AxisValues;
@@ -29,7 +29,7 @@ export interface VolatileMemory {
 
 /**
  * Actions for modifying volatile memory
- * Note: clearKeyPressed is now handled by OperationStateContext
+ * Note: clearKeyPressed is now handled by DROModeContext
  */
 export interface VolatileMemoryActions {
   toggleMode: () => void;
