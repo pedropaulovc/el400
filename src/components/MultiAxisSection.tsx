@@ -56,7 +56,7 @@ const MultiAxisSection = ({
           }}
         >
           {/* Screen reader accessible table for axis values */}
-          <table className="sr-only" aria-label="Axis positions">
+          <table className="sr-only" role="status" aria-label="Axis positions" aria-live="polite" aria-atomic="true" aria-relevant="text">
             <thead>
               <tr>
                 <th>Axis</th>
@@ -66,19 +66,19 @@ const MultiAxisSection = ({
             <tbody>
               <tr>
                 <th scope="row">X</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
+                <td data-testid="axis-value-x">
                   {formatForScreenReader(displayValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
+                <td data-testid="axis-value-y">
                   {formatForScreenReader(displayValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
+                <td data-testid="axis-value-z">
                   {formatForScreenReader(displayValues.Z)}
                 </td>
               </tr>
