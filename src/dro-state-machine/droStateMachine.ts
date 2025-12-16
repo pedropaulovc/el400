@@ -54,7 +54,6 @@ export type DROContext =
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROContext extends BaseDROContext ? true : never;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _assertContextHasType: _AssertContextHasType = true;
 
 export interface NoneData extends BaseDROContext {

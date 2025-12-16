@@ -3,6 +3,7 @@
  *
  * React context provider and hooks for the DRO state machine.
  */
+/* eslint-disable react-refresh/only-export-components -- Context files commonly export both Provider and hooks */
 
 import {
   createContext,

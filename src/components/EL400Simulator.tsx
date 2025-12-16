@@ -43,7 +43,7 @@ const EL400Simulator = () => {
     const urlBootMode = urlParams.get('bootMessageMode');
     const shouldSkip = nvMem.bootMessageMode === 'skip' || urlBootMode === 'skip';
     dispatch({ type: 'BOOT_COMPLETE', skipMessage: shouldSkip });
-  }, [dispatch]);
+  }, [dispatch, nvMem.bootMessageMode]);
 
   // Boot message timeout: Auto-dismiss after duration
   useEffect(() => {
