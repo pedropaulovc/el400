@@ -7,7 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
-import { MachineStateProvider } from '../../context/MachineStateContext';
+import { MillStateProvider } from '../../context/MillStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { CenterFindingProvider } from '../../context/CenterFindingContext';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
@@ -55,13 +55,13 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <NonVolatileMemoryProvider>
-          <MachineStateProvider>
+          <MillStateProvider>
             <VolatileMemoryProvider>
               <CenterFindingProvider>
                 <EL400Simulator />
               </CenterFindingProvider>
             </VolatileMemoryProvider>
-          </MachineStateProvider>
+          </MillStateProvider>
         </NonVolatileMemoryProvider>
       </BrowserRouter>
     </QueryClientProvider>

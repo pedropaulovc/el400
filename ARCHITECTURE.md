@@ -17,14 +17,14 @@ Technical documentation for developers working on the EL400 DRO simulator.
 │  - DRO memory (ABS/INC)     │   │  - Persisted settings       │
 │  - activeAxis, workOffsets  │   │  - beepEnabled, defaultUnit │
 │  - Boot sequence state      │   │  - localStorage persistence │
-│  - Consumes MachineState    │   │                             │
+│  - Consumes MillState       │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
-│                   MachineStateContext                            │
-│  - Adapter lifecycle (connect/disconnect)                       │
-│  - Machine state from adapter                                   │
+│                   MillStateContext                               │
+│  - Connection lifecycle (connect/disconnect)                    │
+│  - Mill state from connection                                   │
 │  - Connection status (isConnecting, error)                      │
 └─────────────────────────────────────────────────────────────────┘
           ▲
@@ -34,13 +34,13 @@ Technical documentation for developers working on the EL400 DRO simulator.
 │  - connect(): Promise<void>                                     │
 │  - disconnect(): void                                           │
 │  - subscribe(callback): unsubscribe                             │
-│  - getState(): MachineState                                     │
+│  - getState(): MillState                                        │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
           ┌───────────────────┼───────────────────┐
           │                   │                   │
 ┌───────────────────┐ ┌─────────────────┐ ┌───────────────────┐
-│CncjsMillConnection│ │ LinuxCncAdapter │ │MockMillConnection │
+│CncjsMillConnection│ │LinuxCncConnection│ │MockMillConnection │
 │ (WebSocket)       │ │ (future)        │ │ (for testing)     │
 └───────────────────┘ └─────────────────┘ └───────────────────┘
 ```
@@ -52,11 +52,11 @@ The DRO uses two types of memory:
 ### Volatile Memory
 Runtime state that is lost on refresh. Split across two contexts:
 
-**MachineStateContext:**
-- Machine position from external adapter
+**MillStateContext:**
+- Mill position from external connection
 - Probe state
 - Connection state and errors
-- Adapter lifecycle
+- Connection lifecycle
 
 **VolatileMemoryContext:**
 - DRO display values (ABS/INC modes)
@@ -72,12 +72,12 @@ Persisted settings saved to localStorage. Includes:
 
 ## Core Types
 
-### MachineState (`src/types/machineState.ts`)
+### MillState (`src/types/millState.ts`)
 
-Types for machine data from external adapters:
+Types for mill data from external connections:
 
 ```typescript
-interface MachinePosition {
+interface MillPosition {
   x: number;
   y: number;
   z: number;
@@ -90,9 +90,9 @@ interface ProbeState {
 
 type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
 
-interface MachineState {
-  position: MachinePosition;
-  workPosition?: MachinePosition;
+interface MillState {
+  position: MillPosition;
+  workPosition?: MillPosition;
   probe: ProbeState;
   connected: boolean;
   controllerType: ControllerType;
@@ -108,7 +108,7 @@ interface DataSourceConfig {
 
 ### VolatileMemory (`src/types/volatileMemory.ts`)
 
-Types for DRO runtime state (does not include machine state - use MachineStateContext for that):
+Types for DRO runtime state (does not include mill state - use MillStateContext for that):
 
 ```typescript
 interface AxisValues {
@@ -163,8 +163,8 @@ All connections implement this interface:
 interface MillConnection {
   connect(): Promise<void>;
   disconnect(): void;
-  subscribe(listener: MachineStateListener): () => void;
-  getState(): MachineState;
+  subscribe(listener: MillStateListener): () => void;
+  getState(): MillState;
   readonly controllerType: ControllerType;
 }
 ```
@@ -190,14 +190,14 @@ Simulates machine movement for testing and development. Useful for:
 
 ## Hooks
 
-### useMachineState (`src/hooks/useMachineState.ts`)
+### useMillState (`src/hooks/useMillState.ts`)
 
-Convenience hook for accessing machine state from MachineStateContext:
+Convenience hook for accessing mill state from MillStateContext:
 
 ```typescript
-const { machineState } = useMachineState();
+const { millState } = useMillState();
 
-// Returns MachineState:
+// Returns MillState:
 {
   position,      // { x, y, z }
   workPosition,  // { x, y, z } (optional)
@@ -234,7 +234,7 @@ const vm = useVolatileMemory();
 }
 ```
 
-**Note:** For machine state (position, probe, connected), use `useMachineState` instead.
+**Note:** For mill state (position, probe, connected), use `useMillState` instead.
 
 **ABS Mode Behavior:**
 - Display shows machine position minus work offset
@@ -286,13 +286,13 @@ Parses URL parameters for data source configuration:
 
 ## Contexts
 
-### MachineStateContext (`src/context/MachineStateContext.tsx`)
+### MillStateContext (`src/context/MillStateContext.tsx`)
 
-Manages connection lifecycle and machine state from external data sources. This is the single source of truth for machine position, probe state, and connection status.
+Manages connection lifecycle and mill state from external data sources. This is the single source of truth for mill position, probe state, and connection status.
 
 ```typescript
-interface MachineStateContextValue {
-  machineState: MachineState;      // Current machine state (position, probe, connected)
+interface MillStateContextValue {
+  millState: MillState;            // Current mill state (position, probe, connected)
   connection: MillConnection | null; // Current connection instance
   isConnecting: boolean;           // True while connection.connect() is pending
   error: Error | null;             // Connection error, if any
@@ -316,22 +316,22 @@ interface MachineStateContextValue {
 **Usage:**
 ```typescript
 // Direct context access
-const { machineState, connection, setConnection } = useMachineStateContext();
+const { millState, connection, setConnection } = useMillStateContext();
 
 // Convenience hook (recommended)
-const { machineState } = useMachineState();
+const { millState } = useMillState();
 
 // Check connection
-if (machineState.connected) {
-  console.log(`Position: ${machineState.position.x}, ${machineState.position.y}`);
+if (millState.connected) {
+  console.log(`Position: ${millState.position.x}, ${millState.position.y}`);
 }
 ```
 
-**Note:** VolatileMemoryContext consumes MachineStateContext internally for DRO calculations. Components needing machine state should use `useMachineState()` or `useMachineStateContext()` directly.
+**Note:** VolatileMemoryContext consumes MillStateContext internally for DRO calculations. Components needing mill state should use `useMillState()` or `useMillStateContext()` directly.
 
 ### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
 
-Provides DRO memory to the component tree. Consumes machine state from MachineStateContext internally for calculations:
+Provides DRO memory to the component tree. Consumes mill state from MillStateContext internally for calculations:
 
 ```typescript
 interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
@@ -343,7 +343,7 @@ Responsibilities:
 - Boot sequence state machine
 - Calculate display values from machine position and offsets
 
-**Note:** Machine state (position, probe, connected, connection) is accessed via MachineStateContext, not VolatileMemoryContext.
+**Note:** Mill state (position, probe, connected, connection) is accessed via MillStateContext, not VolatileMemoryContext.
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
@@ -359,16 +359,16 @@ interface NonVolatileMemoryContextValue {
 
 **Provider Order:** The contexts must be nested in this order:
 1. NonVolatileMemoryProvider (outer) - no dependencies
-2. MachineStateProvider - receives connection, manages connection
-3. VolatileMemoryProvider (inner) - consumes both MachineState and NonVolatileMemory
+2. MillStateProvider - receives connection, manages connection
+3. VolatileMemoryProvider (inner) - consumes both MillState and NonVolatileMemory
 
 ```tsx
 <NonVolatileMemoryProvider>
-  <MachineStateProvider initialConnection={connection}>
+  <MillStateProvider initialConnection={connection}>
     <VolatileMemoryProvider>
       {children}
     </VolatileMemoryProvider>
-  </MachineStateProvider>
+  </MillStateProvider>
 </NonVolatileMemoryProvider>
 ```
 
@@ -431,7 +431,7 @@ e2e/09-integration/US-036-settings-persistence.spec.ts
 ### Storybook Stories
 
 ```
-src/stories/MachineState.stories.tsx
+src/stories/MillState.stories.tsx
 src/stories/DataSourceDemo.stories.tsx
 ```
 

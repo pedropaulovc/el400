@@ -4,8 +4,8 @@
  */
 
 import type { MillConnection } from './MillConnection';
-import type { ControllerType, MachineState, MachineStateListener } from '../types/machineState';
-import { createDefaultMachineState, createProbeState } from '../types/machineState';
+import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import { createDefaultMillState, createProbeState } from '../types/millState';
 
 export interface MockMillConnectionOptions {
   /** Update interval in milliseconds (default: 100ms) */
@@ -21,8 +21,8 @@ export interface MockMillConnectionOptions {
 export class MockMillConnection implements MillConnection {
   readonly controllerType: ControllerType = 'mock';
 
-  private state: MachineState;
-  private listeners: Set<MachineStateListener> = new Set();
+  private state: MillState;
+  private listeners: Set<MillStateListener> = new Set();
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private options: Required<MockMillConnectionOptions>;
 
@@ -35,7 +35,7 @@ export class MockMillConnection implements MillConnection {
     };
 
     this.state = {
-      ...createDefaultMachineState('mock'),
+      ...createDefaultMillState('mock'),
       position: { ...this.options.initialPosition },
     };
   }
@@ -58,7 +58,7 @@ export class MockMillConnection implements MillConnection {
     this.notifyListeners();
   }
 
-  subscribe(listener: MachineStateListener): () => void {
+  subscribe(listener: MillStateListener): () => void {
     this.listeners.add(listener);
     // Immediately notify with current state
     listener(this.state);
@@ -68,7 +68,7 @@ export class MockMillConnection implements MillConnection {
     };
   }
 
-  getState(): MachineState {
+  getState(): MillState {
     return this.state;
   }
 

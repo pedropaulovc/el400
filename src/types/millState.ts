@@ -1,11 +1,11 @@
 /**
- * Machine state types - data from external machine adapters.
+ * Mill state types - data from external mill connections.
  */
 
 /**
  * 3-axis position coordinates
  */
-export interface MachinePosition {
+export interface MillPosition {
   x: number;
   y: number;
   z: number;
@@ -36,26 +36,26 @@ export interface ProbeState {
 export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
 
 /**
- * Machine state from adapter
+ * Mill state from connection
  */
-export interface MachineState {
+export interface MillState {
   /** Absolute machine coordinates */
-  position: MachinePosition;
+  position: MillPosition;
   /** Work coordinates (if available from controller) */
-  workPosition?: MachinePosition;
+  workPosition?: MillPosition;
   /** Probe input state */
   probe: ProbeState;
-  /** Whether the adapter is connected to the data source */
+  /** Whether the connection is connected to the data source */
   connected: boolean;
   /** Type of controller providing the data */
   controllerType: ControllerType;
 }
 
 /**
- * Callback type for machine state updates
+ * Callback type for mill state updates
  */
-export interface MachineStateListener {
-  (state: MachineState): void;
+export interface MillStateListener {
+  (state: MillState): void;
 }
 
 /**
@@ -79,9 +79,9 @@ export function createProbeState(pinState: string = ''): ProbeState {
 }
 
 /**
- * Creates a default/initial machine state
+ * Creates a default/initial mill state
  */
-export function createDefaultMachineState(controllerType: ControllerType = 'manual'): MachineState {
+export function createDefaultMillState(controllerType: ControllerType = 'manual'): MillState {
   return {
     position: { x: 0, y: 0, z: 0 },
     probe: createProbeState(''),

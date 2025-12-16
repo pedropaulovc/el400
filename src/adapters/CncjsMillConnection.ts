@@ -5,8 +5,8 @@
 
 import { io, Socket } from 'socket.io-client';
 import type { MillConnection } from './MillConnection';
-import type { MachineStateListener, MachineState, MachinePosition } from '../types/machineState';
-import { createProbeState, createDefaultMachineState } from '../types/machineState';
+import type { MillStateListener, MillState, MillPosition } from '../types/millState';
+import { createProbeState, createDefaultMillState } from '../types/millState';
 
 export interface CncjsMillConnectionOptions {
   host: string;
@@ -35,21 +35,21 @@ interface CncjsControllerState {
 }
 
 /**
- * Normalizes GRBL controller state to MachineState.
+ * Normalizes GRBL controller state to MillState.
  * GRBL provides position as [x, y, z] arrays and pin state in 'pn' field.
  */
-function normalizeGrbl(state: CncjsControllerState): Partial<MachineState> {
+function normalizeGrbl(state: CncjsControllerState): Partial<MillState> {
   const mpos = state.status?.mpos || [0, 0, 0];
   const wpos = state.status?.wpos;
   const pn = state.status?.pn || '';
 
-  const position: MachinePosition = {
+  const position: MillPosition = {
     x: mpos[0] ?? 0,
     y: mpos[1] ?? 0,
     z: mpos[2] ?? 0,
   };
 
-  const result: Partial<MachineState> = {
+  const result: Partial<MillState> = {
     position,
     probe: createProbeState(pn),
   };
@@ -66,10 +66,10 @@ function normalizeGrbl(state: CncjsControllerState): Partial<MachineState> {
 }
 
 /**
- * Normalizes GrblHAL controller state to MachineState.
+ * Normalizes GrblHAL controller state to MillState.
  * GrblHAL extends GRBL with substate for detailed pin states.
  */
-function normalizeGrblHAL(state: CncjsControllerState): Partial<MachineState> {
+function normalizeGrblHAL(state: CncjsControllerState): Partial<MillState> {
   const base = normalizeGrbl(state);
 
   // GrblHAL may have substate with probe value (0=open, 1=triggered, 2=latched, 3=alarm)
@@ -83,10 +83,10 @@ function normalizeGrblHAL(state: CncjsControllerState): Partial<MachineState> {
 }
 
 /**
- * Normalizes TinyG/g2core controller state to MachineState.
+ * Normalizes TinyG/g2core controller state to MillState.
  * TinyG uses individual position properties (posx, posy, posz) and prb for probe.
  */
-function normalizeTinyG(state: CncjsControllerState): Partial<MachineState> {
+function normalizeTinyG(state: CncjsControllerState): Partial<MillState> {
   const sr = state.sr || {};
   const prb = sr.prb;
   const pinState = prb ? 'P' : '';
@@ -102,11 +102,11 @@ function normalizeTinyG(state: CncjsControllerState): Partial<MachineState> {
 }
 
 /**
- * Normalizes Smoothie controller state to MachineState.
+ * Normalizes Smoothie controller state to MillState.
  * Smoothie uses pos object with x, y, z properties.
  * Note: Smoothie does NOT expose realtime probe state.
  */
-function normalizeSmoothie(state: CncjsControllerState): Partial<MachineState> {
+function normalizeSmoothie(state: CncjsControllerState): Partial<MillState> {
   const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
 
   return {
@@ -120,11 +120,11 @@ function normalizeSmoothie(state: CncjsControllerState): Partial<MachineState> {
 }
 
 /**
- * Normalizes Marlin controller state to MachineState.
+ * Normalizes Marlin controller state to MillState.
  * Marlin uses pos object with x, y, z properties.
  * Note: Marlin does NOT stream probe state continuously.
  */
-function normalizeMarlin(state: CncjsControllerState): Partial<MachineState> {
+function normalizeMarlin(state: CncjsControllerState): Partial<MillState> {
   const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
 
   return {
@@ -143,7 +143,7 @@ function normalizeMarlin(state: CncjsControllerState): Partial<MachineState> {
 export function normalizeControllerState(
   controllerType: string,
   state: CncjsControllerState
-): Partial<MachineState> {
+): Partial<MillState> {
   const type = controllerType.toLowerCase();
 
   switch (type) {
@@ -168,9 +168,9 @@ export class CncjsMillConnection implements MillConnection {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
-  private listeners: Set<MachineStateListener> = new Set();
-  private state: MachineState = {
-    ...createDefaultMachineState(),
+  private listeners: Set<MillStateListener> = new Set();
+  private state: MillState = {
+    ...createDefaultMillState(),
     controllerType: 'cncjs',
   };
   private options: CncjsMillConnectionOptions;
@@ -247,7 +247,7 @@ export class CncjsMillConnection implements MillConnection {
     this.updateState({ connected: false });
   }
 
-  subscribe(listener: MachineStateListener): () => void {
+  subscribe(listener: MillStateListener): () => void {
     this.listeners.add(listener);
     // Immediately notify with current state
     listener(this.state);
@@ -257,11 +257,11 @@ export class CncjsMillConnection implements MillConnection {
     };
   }
 
-  getState(): MachineState {
+  getState(): MillState {
     return this.state;
   }
 
-  private updateState(partial: Partial<MachineState>): void {
+  private updateState(partial: Partial<MillState>): void {
     this.state = {
       ...this.state,
       ...partial,

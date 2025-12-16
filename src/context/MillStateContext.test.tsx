@@ -2,35 +2,35 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ReactNode } from 'react';
 import {
-  MachineStateProvider,
-  useMachineStateContext,
-} from './MachineStateContext';
+  MillStateProvider,
+  useMillStateContext,
+} from './MillStateContext';
 import { MockMillConnection } from '../adapters/MockMillConnection';
 
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <MachineStateProvider>{children}</MachineStateProvider>;
+    return <MillStateProvider>{children}</MillStateProvider>;
   };
 }
 
 function createWrapperWithConnection(connection: MockMillConnection) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MachineStateProvider initialConnection={connection}>
+      <MillStateProvider initialConnection={connection}>
         {children}
-      </MachineStateProvider>
+      </MillStateProvider>
     );
   };
 }
 
-describe('MachineStateContext', () => {
+describe('MillStateContext', () => {
   describe('Context hook', () => {
     it('throws error when used outside provider', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
-        renderHook(() => useMachineStateContext());
-      }).toThrow('useMachineStateContext must be used within a MachineStateProvider');
+        renderHook(() => useMillStateContext());
+      }).toThrow('useMillStateContext must be used within a MillStateProvider');
 
       consoleSpy.mockRestore();
     });
@@ -38,40 +38,40 @@ describe('MachineStateContext', () => {
 
   describe('Default state (no connection)', () => {
     it('starts disconnected', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.machineState.connected).toBe(false);
+      expect(result.current.millState.connected).toBe(false);
     });
 
     it('starts in manual controller type', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.machineState.controllerType).toBe('manual');
+      expect(result.current.millState.controllerType).toBe('manual');
     });
 
     it('starts with zero position', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.machineState.position).toEqual({ x: 0, y: 0, z: 0 });
+      expect(result.current.millState.position).toEqual({ x: 0, y: 0, z: 0 });
     });
 
     it('starts with probe not triggered', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.machineState.probe.triggered).toBe(false);
-      expect(result.current.machineState.probe.pinState).toBe('');
+      expect(result.current.millState.probe.triggered).toBe(false);
+      expect(result.current.millState.probe.pinState).toBe('');
     });
 
     it('has null connection', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
@@ -79,7 +79,7 @@ describe('MachineStateContext', () => {
     });
 
     it('is not connecting', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
@@ -87,7 +87,7 @@ describe('MachineStateContext', () => {
     });
 
     it('has no error', () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
@@ -103,36 +103,36 @@ describe('MachineStateContext', () => {
     });
 
     it('connects with initial connection', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
-      expect(result.current.machineState.controllerType).toBe('mock');
+      expect(result.current.millState.controllerType).toBe('mock');
     });
 
     it('exposes connection instance', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       expect(result.current.connection).toBe(connection);
     });
 
     it('receives position updates from connection', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       act(() => {
@@ -140,19 +140,19 @@ describe('MachineStateContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.position.x).toBe(10);
-        expect(result.current.machineState.position.y).toBe(20);
-        expect(result.current.machineState.position.z).toBe(30);
+        expect(result.current.millState.position.x).toBe(10);
+        expect(result.current.millState.position.y).toBe(20);
+        expect(result.current.millState.position.z).toBe(30);
       });
     });
 
     it('receives probe state updates from connection', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       act(() => {
@@ -160,18 +160,18 @@ describe('MachineStateContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.probe.triggered).toBe(true);
-        expect(result.current.machineState.probe.pinState).toBe('P');
+        expect(result.current.millState.probe.triggered).toBe(true);
+        expect(result.current.millState.probe.pinState).toBe('P');
       });
     });
 
     it('clears probe state when untriggered', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       act(() => {
@@ -179,7 +179,7 @@ describe('MachineStateContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.probe.triggered).toBe(true);
+        expect(result.current.millState.probe.triggered).toBe(true);
       });
 
       act(() => {
@@ -187,7 +187,7 @@ describe('MachineStateContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.probe.triggered).toBe(false);
+        expect(result.current.millState.probe.triggered).toBe(false);
       });
     });
   });
@@ -200,7 +200,7 @@ describe('MachineStateContext', () => {
     });
 
     it('allows setting connection after mount', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
@@ -215,17 +215,17 @@ describe('MachineStateContext', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
     });
 
     it('allows clearing connection', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       act(() => {
@@ -234,13 +234,13 @@ describe('MachineStateContext', () => {
 
       await waitFor(() => {
         expect(result.current.connection).toBeNull();
-        expect(result.current.machineState.connected).toBe(false);
-        expect(result.current.machineState.controllerType).toBe('manual');
+        expect(result.current.millState.connected).toBe(false);
+        expect(result.current.millState.controllerType).toBe('manual');
       });
     });
 
     it('clears error when setting new connection', async () => {
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
@@ -260,7 +260,7 @@ describe('MachineStateContext', () => {
       const connection = new MockMillConnection();
       const disconnectSpy = vi.spyOn(connection, 'disconnect');
 
-      const { unmount } = renderHook(() => useMachineStateContext(), {
+      const { unmount } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection),
       });
 
@@ -278,12 +278,12 @@ describe('MachineStateContext', () => {
       const connection2 = new MockMillConnection();
       const disconnect1Spy = vi.spyOn(connection1, 'disconnect');
 
-      const { result } = renderHook(() => useMachineStateContext(), {
+      const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapperWithConnection(connection1),
       });
 
       await waitFor(() => {
-        expect(result.current.machineState.connected).toBe(true);
+        expect(result.current.millState.connected).toBe(true);
       });
 
       act(() => {

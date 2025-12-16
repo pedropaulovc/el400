@@ -76,7 +76,7 @@ describe('US-035: External Machine Connection', () => {
 
 ## Implementation Notes
 
-- **Data flow**: Controller -> CNCjs WebSocket -> Adapter -> MachineStateContext -> UI
+- **Data flow**: Controller -> CNCjs WebSocket -> Connection -> MillStateContext -> UI
 - **URL params**: `?source=cncjs&host=localhost&port=8000`
 - **Fallback**: Manual mode when no source specified or connection fails
 - **Iframe context**: Works within CNCjs widget system (same-origin localStorage)

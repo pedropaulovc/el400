@@ -1,6 +1,6 @@
 /**
- * Machine state context for managing connection lifecycle and machine state.
- * Separates machine connection concerns from DRO memory management.
+ * Mill state context for managing connection lifecycle and mill state.
+ * Separates mill connection concerns from DRO memory management.
  */
 
 import {
@@ -12,12 +12,12 @@ import {
   type ReactNode,
 } from 'react';
 import type { MillConnection } from '../adapters/MillConnection';
-import type { MachineState } from '../types/machineState';
-import { createDefaultMachineState } from '../types/machineState';
+import type { MillState } from '../types/millState';
+import { createDefaultMillState } from '../types/millState';
 
-export interface MachineStateContextValue {
-  /** Current machine state from connection */
-  machineState: MachineState;
+export interface MillStateContextValue {
+  /** Current mill state from connection */
+  millState: MillState;
   /** Currently active connection (or null if none) */
   connection: MillConnection | null;
   /** Whether the connection is currently connecting */
@@ -28,28 +28,28 @@ export interface MachineStateContextValue {
   setConnection: (connection: MillConnection | null) => void;
 }
 
-const MachineStateContext = createContext<MachineStateContextValue | null>(null);
+const MillStateContext = createContext<MillStateContextValue | null>(null);
 
-export interface MachineStateProviderProps {
+export interface MillStateProviderProps {
   children: ReactNode;
   /** Optional initial connection */
   initialConnection?: MillConnection | null;
 }
 
 /**
- * Provider component for machine state and connection lifecycle management.
+ * Provider component for mill state and connection lifecycle management.
  * Handles connection, disconnection, and state subscription.
  */
-export function MachineStateProvider({
+export function MillStateProvider({
   children,
   initialConnection,
-}: MachineStateProviderProps) {
+}: MillStateProviderProps) {
   // Connection state
   const [connection, setConnectionState] = useState<MillConnection | null>(
     initialConnection ?? null
   );
-  const [machineState, setMachineState] = useState<MachineState>(
-    connection?.getState() ?? createDefaultMachineState('manual')
+  const [millState, setMillState] = useState<MillState>(
+    connection?.getState() ?? createDefaultMillState('manual')
   );
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -57,7 +57,7 @@ export function MachineStateProvider({
   // Handle connection changes
   useEffect(() => {
     if (!connection) {
-      setMachineState(createDefaultMachineState('manual'));
+      setMillState(createDefaultMillState('manual'));
       return;
     }
 
@@ -66,7 +66,7 @@ export function MachineStateProvider({
     // Subscribe to state updates
     const unsubscribe = connection.subscribe((newState) => {
       if (mounted) {
-        setMachineState(newState);
+        setMillState(newState);
       }
     });
 
@@ -103,8 +103,8 @@ export function MachineStateProvider({
     setError(null);
   }, []);
 
-  const contextValue: MachineStateContextValue = {
-    machineState,
+  const contextValue: MillStateContextValue = {
+    millState,
     connection,
     isConnecting,
     error,
@@ -112,22 +112,22 @@ export function MachineStateProvider({
   };
 
   return (
-    <MachineStateContext.Provider value={contextValue}>
+    <MillStateContext.Provider value={contextValue}>
       {children}
-    </MachineStateContext.Provider>
+    </MillStateContext.Provider>
   );
 }
 
 /**
- * Hook to access the machine state context.
- * Must be used within a MachineStateProvider.
+ * Hook to access the mill state context.
+ * Must be used within a MillStateProvider.
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMachineStateContext(): MachineStateContextValue {
-  const context = useContext(MachineStateContext);
+export function useMillStateContext(): MillStateContextValue {
+  const context = useContext(MillStateContext);
 
   if (context === null) {
-    throw new Error('useMachineStateContext must be used within a MachineStateProvider');
+    throw new Error('useMillStateContext must be used within a MillStateProvider');
   }
 
   return context;
