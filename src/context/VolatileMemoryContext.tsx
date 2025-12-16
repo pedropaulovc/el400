@@ -1,14 +1,15 @@
 /**
  * Volatile memory context for DRO state throughout the app.
- * Manages DRO memory (mode, offsets, incremental values, boot stage).
+ * Manages DRO memory (mode, offsets, incremental values).
  * Consumes mill state from MillStateContext internally for calculations.
+ *
+ * Note: Boot stage is now managed by DROModeContext.
  */
 
 import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   useMemo,
   type ReactNode,
@@ -19,7 +20,6 @@ import type {
   AxisValues,
   Axis,
   DatumMode,
-  BootStage,
 } from '../types/volatileMemory';
 import { ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { fromAnyUnitToMm } from '../utils/unitConversion';
@@ -59,41 +59,6 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
-
-  /**
-   * Boot Sequence State Machine
-   *
-   * States: showMessage | run
-   *
-   * Initial state determined by settings:
-   *   - 'run' if nvMem.bootMessageMode === 'skip' or URL param bootMessageMode === 'skip'
-   *   - 'showMessage' otherwise
-   *
-   * Transitions:
-   *   showMessage → run   (when BOOT_MESSAGE_DURATION_MS timeout expires)
-   *   showMessage → run   (when C key pressed)
-   */
-  const [bootStage, setBootStage] = useState<BootStage>(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlBootMode = urlParams.get('bootMessageMode');
-    const shouldSkip = nvMemory.bootMessageMode === 'skip' || urlBootMode === 'skip';
-    return shouldSkip ? 'run' : 'showMessage';
-  });
-
-  // Timer for auto-dismiss from showMessage
-  useEffect(() => {
-    if (bootStage === 'showMessage') {
-      const timer = setTimeout(() => setBootStage('run'), BOOT_MESSAGE_DURATION_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [bootStage]);
-
-  // Boot stage action: C key dismisses showMessage → run
-  const clearKeyPressed = useCallback(() => {
-    if (bootStage === 'showMessage') {
-      setBootStage('run');
-    }
-  }, [bootStage]);
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
@@ -212,7 +177,6 @@ export function VolatileMemoryProvider({
     mode,
     workOffsets,
     activeAxis,
-    bootStage,
 
     // DRO actions
     toggleMode,
@@ -222,7 +186,6 @@ export function VolatileMemoryProvider({
     setAxisValue,
     selectAxis,
     halfAxis,
-    clearKeyPressed,
   };
 
   return (

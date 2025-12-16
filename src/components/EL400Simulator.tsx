@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import MultiAxisSection from "./MultiAxisSection";
@@ -6,32 +7,70 @@ import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useCenterFinding } from "../context/CenterFindingContext";
+import {
+  useDROState,
+  useDRODispatch,
+  useDROContext,
+  isFunctionMenuSelectionState,
+  isCollectingPoints,
+  isResultState,
+} from "../dro-state-machine";
+import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { BOOT_MESSAGE_DURATION_MS } from "../context/VolatileMemoryContext";
 
 export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 
+/** Menu text displayed for each function menu state */
+const MENU_TEXT_MAP: Record<string, string> = {
+  'function-menu-center': 'CEntrE',
+  'function-menu-circle': 'CirCLE',
+  'function-menu-line': 'LinE',
+  'function-menu-linear': 'LinEAr',
+  'function-menu-polar': 'PoLAr',
+};
+
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
-  const centerFinding = useCenterFinding();
+  const droState = useDROState();
+  const droCtx = useDROContext();
+  const dispatch = useDRODispatch();
+  const { nvMem } = useNonVolatileMemoryContext();
 
-  const showBootMessage = vMem.bootStage === 'showMessage';
-  const centerFindingMode = centerFinding.mode;
+  // Boot sequence: Dispatch BOOT_STARTED on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlBootMode = urlParams.get('bootMessageMode');
+    const shouldSkipBootMessage = nvMem.bootMessageMode === 'skip' || urlBootMode === 'skip';
+    dispatch({ eventName: 'BOOT_STARTED', skipBootMessage: shouldSkipBootMessage });
+  }, [dispatch, nvMem.bootMessageMode]);
+
+  // Boot message timeout: Auto-dismiss after duration
+  useEffect(() => {
+    if (droState === 'showMessage') {
+      const timer = setTimeout(() => {
+        dispatch({ eventName: 'BOOT_MESSAGE_TIMEOUT' });
+      }, BOOT_MESSAGE_DURATION_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [droState, dispatch]);
 
   // Determine what to show on the display
   let axisDisplayValues;
-  
-  if (showBootMessage) {
+
+  if (droState === 'showMessage') {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
-  } else if (centerFindingMode === 'menu') {
+  } else if (isFunctionMenuSelectionState(droState)) {
     // Show menu option text
-    const menuTextMap: Record<string, string> = { center: 'CEntrE', line: 'LinE', circle: 'CirCLE' };
-    const menuText = menuTextMap[centerFinding.menuOption];
+    const menuText = MENU_TEXT_MAP[droState] ?? '';
     axisDisplayValues = { X: menuText, Y: '', Z: '' };
-  } else if ((centerFindingMode === 'line' || centerFindingMode === 'circle') && centerFinding.centerResult) {
+  } else if (isCollectingPoints(droState)) {
+    // While collecting points, show current position (normal display)
+    axisDisplayValues = vMem.displayValues;
+  } else if (isResultState(droState) && droCtx.stateDataType === 'center-finding' && droCtx.centerResult) {
     // Show distance-to-go when center is calculated
-    const center = centerFinding.centerResult;
+    const center = droCtx.centerResult;
     const current = vMem.displayValues;
     axisDisplayValues = {
       X: center.X - current.X,
@@ -39,7 +78,7 @@ const EL400Simulator = () => {
       Z: center.Z - current.Z,
     };
   } else {
-    // Normal operation (including while collecting points in line/circle mode)
+    // Normal operation (idle, boot, transitional states)
     axisDisplayValues = vMem.displayValues;
   }
 

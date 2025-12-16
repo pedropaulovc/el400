@@ -1,0 +1,165 @@
+/**
+ * DRO State Machine Types
+ *
+ * Defines the unified DRO state machine that manages boot sequence,
+ * mode toggles, and function menu states.
+ */
+
+import type { AxisValues } from '../types/volatileMemory';
+
+// ─────────────────────────────────────────────────────────────────
+// DRO STATE - Flat string union, no nested substates
+// ─────────────────────────────────────────────────────────────────
+
+export type DROStateName =
+  // Boot sequence
+  | 'boot'
+  | 'showMessage'
+  // Normal operation
+  | 'idle'
+  // Transitional toggle states
+  | 'abs-inc-mode'
+  | 'inch-mm-mode'
+  // Function menu selection states
+  | 'function-menu-center'
+  | 'function-menu-circle'
+  | 'function-menu-line'
+  | 'function-menu-linear'
+  | 'function-menu-polar'
+  // Center line states (2 points)
+  | 'function-menu-center-line-point-1'
+  | 'function-menu-center-line-point-2'
+  | 'function-menu-center-line-result'
+  // Center circle states (3 points)
+  | 'function-menu-center-circle-point-1'
+  | 'function-menu-center-circle-point-2'
+  | 'function-menu-center-circle-point-3'
+  | 'function-menu-center-circle-result';
+
+// ─────────────────────────────────────────────────────────────────
+// DRO CONTEXT - Discriminated union for feature-specific data
+// ─────────────────────────────────────────────────────────────────
+
+/** Base interface ensures all context types have a discriminator */
+interface BaseDROStateData {
+  readonly stateDataType: string;
+}
+
+/** Discriminated union - each feature has its own state data type */
+export type DROStateData =
+  | EmptyData
+  | CenterFindingData
+  | BoltHoleData
+  | ArcData;
+
+/** Compile-time assertion: all context types must extend BaseDROContext */
+type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
+const _assertContextHasType: _AssertContextHasType = true;
+
+export interface EmptyData extends BaseDROStateData {
+  readonly stateDataType: 'none';
+}
+
+export interface CenterFindingData extends BaseDROStateData {
+  readonly stateDataType: 'center-finding';
+  storedPoints: StoredPoint[];
+  centerResult: AxisValues | null;
+}
+
+export interface BoltHoleData extends BaseDROStateData {
+  readonly stateDataType: 'bolt-hole';
+  holeCount: number;
+  radius: number;
+  startAngle: number;
+  currentHole: number;
+}
+
+export interface ArcData extends BaseDROStateData {
+  readonly stateDataType: 'arc';
+  // TODO: define arc-specific fields when implementing arc feature
+}
+
+/** Stored point for center finding operations */
+export interface StoredPoint {
+  X: number;
+  Y: number;
+  Z: number;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DRO EVENTS - Raw key/button events, state machine interprets
+// ─────────────────────────────────────────────────────────────────
+
+export type DROEventPayload =
+  // System events
+  | { eventName: 'BOOT_STARTED'; skipBootMessage: boolean }
+  | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
+  | { eventName: 'MODE_TOGGLE_COMPLETE' }
+  // Raw key presses - keypad emits these without knowing current state
+  | { eventName: 'KEY_0' }
+  | { eventName: 'KEY_1' }
+  | { eventName: 'KEY_2_DOWN' }
+  | { eventName: 'KEY_3' }
+  | { eventName: 'KEY_4_LEFT' }
+  | { eventName: 'KEY_5' }
+  | { eventName: 'KEY_6_RIGHT' }
+  | { eventName: 'KEY_7' }
+  | { eventName: 'KEY_8_UP' }
+  | { eventName: 'KEY_9' }
+  | { eventName: 'KEY_DECIMAL' }
+  | { eventName: 'KEY_SIGN' }
+  | { eventName: 'KEY_CLEAR' }
+  | { eventName: 'KEY_ENTER' }
+  // Button presses
+  | { eventName: 'BTN_ABS_INC' }
+  | { eventName: 'BTN_INCH_MM' }
+  | { eventName: 'BTN_FUNCTION' }
+  | { eventName: 'BTN_ZERO_X' }
+  | { eventName: 'BTN_ZERO_Y' }
+  | { eventName: 'BTN_ZERO_Z' }
+  | { eventName: 'BTN_ZERO_ALL' }
+  // Data payload for point storage
+  | { eventName: 'POINT_DATA'; point: StoredPoint };
+
+// ─────────────────────────────────────────────────────────────────
+// STATE HELPER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────
+
+/** Check if state is a function menu selection state (not collecting points) */
+export const isFunctionMenuSelectionState = (s: DROStateName): boolean =>
+  s.startsWith('function-menu-') &&
+  !s.includes('-point-') &&
+  !s.includes('-result');
+
+/** Check if state is in center line workflow */
+export const isCenterLineState = (s: DROStateName): boolean =>
+  s.includes('center-line-');
+
+/** Check if state is in center circle workflow */
+export const isCenterCircleState = (s: DROStateName): boolean =>
+  s.includes('center-circle-');
+
+/** Check if state is collecting points (any point-N state) */
+export const isCollectingPoints = (s: DROStateName): boolean =>
+  s.endsWith('-point-1') || s.endsWith('-point-2') || s.endsWith('-point-3');
+
+/** Check if state is showing a result */
+export const isResultState = (s: DROStateName): boolean => s.endsWith('-result');
+
+/** Check if function menu is active (any function-menu-* state) */
+export const isFunctionActive = (s: DROStateName): boolean =>
+  s.startsWith('function-menu-');
+
+// ─────────────────────────────────────────────────────────────────
+// INITIAL VALUES
+// ─────────────────────────────────────────────────────────────────
+
+export const INITIAL_DRO_STATE: DROStateName = 'boot';
+
+export const INITIAL_DRO_STATE_DATA: DROStateData = { stateDataType: 'none' };
+
+export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
+  stateDataType: 'center-finding',
+  storedPoints: [],
+  centerResult: null,
+};
