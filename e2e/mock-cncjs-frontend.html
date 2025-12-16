@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock CNCjs Machine Control</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      padding: 12px 16px;
+      background: #2d2d2d;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .status-indicator.connected {
+      background: #10b981;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .panel {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #404040;
+    }
+
+    .panel h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #60a5fa;
+    }
+
+    /* 3D Machine Visualization */
+    .machine-view {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 400px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .machine-canvas {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+    }
+
+    /* Jog Controls */
+    .jog-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .axis-control {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .axis-label {
+      font-weight: 600;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .axis-label.x { color: #ef4444; }
+    .axis-label.y { color: #eab308; }
+    .axis-label.z { color: #3b82f6; }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .jog-button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .jog-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .jog-button:active {
+      transform: translateY(0);
+    }
+
+    .jog-button.increment {
+      background: #10b981;
+      color: white;
+    }
+
+    .jog-button.increment:hover {
+      background: #059669;
+    }
+
+    .jog-button.decrement {
+      background: #ef4444;
+      color: white;
+    }
+
+    .jog-button.decrement:hover {
+      background: #dc2626;
+    }
+
+    .jog-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .step-control {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .step-control label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #888;
+      min-width: 50px;
+    }
+
+    .step-input {
+      padding: 6px 10px;
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 14px;
+      width: 80px;
+    }
+
+    /* Position Display */
+    .position-display {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .position-item {
+      background: #1a1a1a;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 3px solid;
+    }
+
+    .position-item.x { border-left-color: #ef4444; }
+    .position-item.y { border-left-color: #eab308; }
+    .position-item.z { border-left-color: #3b82f6; }
+
+    .position-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .position-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'Monaco', 'Courier New', monospace;
+      letter-spacing: 1px;
+    }
+
+    .position-item.x .position-value { color: #ef4444; }
+    .position-item.y .position-value { color: #eab308; }
+    .position-item.z .position-value { color: #3b82f6; }
+
+    /* Control Buttons */
+    .control-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .control-button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .control-button.reset {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .control-button.reset:hover {
+      background: #d97706;
+    }
+
+    .control-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Debug Panel */
+    .debug-section {
+      grid-column: 1 / -1;
+    }
+
+    .debug-log {
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 8px;
+      padding: 12px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      color: #888;
+    }
+
+    .log-entry.success { color: #10b981; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.info { color: #60a5fa; }
+
+    .state-display {
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .state-display pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Mock CNCjs Machine Controller</h1>
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-indicator" id="connectionStatus"></span>
+          <span id="connectionText">Disconnected</span>
+        </div>
+        <div class="status-item">
+          Session ID: <code id="sessionId" style="color: #60a5fa; margin-left: 8px;">—</code>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <!-- Machine Visualization -->
+      <div class="panel">
+        <h2>Machine View</h2>
+        <div class="machine-view">
+          <canvas id="machineCanvas" class="machine-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Position Display & Machine State -->
+      <div class="panel" style="display: flex; flex-direction: column;">
+        <h2>Position & Machine State (mm)</h2>
+        <div class="position-display">
+          <div class="position-item x">
+            <div class="position-label">X Axis</div>
+            <div class="position-value" id="posX">0.00</div>
+          </div>
+          <div class="position-item y">
+            <div class="position-label">Y Axis</div>
+            <div class="position-value" id="posY">0.00</div>
+          </div>
+          <div class="position-item z">
+            <div class="position-label">Z Axis</div>
+            <div class="position-value" id="posZ">0.00</div>
+          </div>
+        </div>
+        <div style="margin-top: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #60a5fa; margin-bottom: 12px; flex-shrink: 0;">Machine State</div>
+          <div class="state-display" id="stateDisplay" style="flex: 1; overflow-y: auto;">
+            <pre>Waiting for connection...</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jog Controls -->
+      <div class="panel">
+        <h2>Jog Controls</h2>
+        <div class="jog-controls">
+          <!-- X Axis -->
+          <div class="axis-control">
+            <div class="axis-label x">X Axis</div>
+            <div class="step-control">
+              <label for="stepX">Step:</label>
+              <input type="number" id="stepX" class="step-input" value="10" min="0.1" step="0.1">
+            </div>
+            <div class="button-group">
+              <button class="jog-button decrement" data-axis="X" data-direction="-">← Left</button>
+              <button class="jog-button increment" data-axis="X" data-direction="+">Right →</button>
+            </div>
+          </div>
+
+          <!-- Y Axis -->
+          <div class="axis-control">
+            <div class="axis-label y">Y Axis</div>
+            <div class="step-control">
+              <label for="stepY">Step:</label>
+              <input type="number" id="stepY" class="step-input" value="10" min="0.1" step="0.1">
+            </div>
+            <div class="button-group">
+              <button class="jog-button decrement" data-axis="Y" data-direction="-">↓ Backward</button>
+              <button class="jog-button increment" data-axis="Y" data-direction="+">Forward ↑</button>
+            </div>
+          </div>
+
+          <!-- Z Axis -->
+          <div class="axis-control">
+            <div class="axis-label z">Z Axis</div>
+            <div class="step-control">
+              <label for="stepZ">Step:</label>
+              <input type="number" id="stepZ" class="step-input" value="5" min="0.1" step="0.1">
+            </div>
+            <div class="button-group">
+              <button class="jog-button decrement" data-axis="Z" data-direction="-">⊗ Down</button>
+              <button class="jog-button increment" data-axis="Z" data-direction="+">⊙ Up</button>
+            </div>
+          </div>
+        </div>
+        <div class="control-buttons" style="margin-top: 20px;">
+          <button class="control-button reset" id="resetBtn">Reset All</button>
+          <button class="control-button reset" id="probeBtn" style="background: #8b5cf6;" data-probe-active="false">Probe: OFF</button>
+        </div>
+        <div id="probeStatus" style="margin-top: 12px; padding: 12px; background: #1a1a1a; border-radius: 6px; border-left: 3px solid #8b5cf6; display: none;">
+          <div style="font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 4px;">Probe Status</div>
+          <div style="font-size: 14px; color: #e0e0e0;">pinState: <span id="probePinState" style="color: #8b5cf6; font-weight: 600; font-family: monospace;">—</span></div>
+        </div>
+      </div>
+
+      <!-- Last Event to DRO -->
+      <div class="panel">
+        <h2>Last Event to DRO</h2>
+        <div class="state-display" id="lastEventDisplay" style="max-height: 200px;">
+          <pre>Waiting for events...</pre>
+        </div>
+      </div>
+
+      <!-- Debug Log -->
+      <div class="panel debug-section">
+        <h2>Event Log</h2>
+        <div class="debug-log" id="debugLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const SERVER_URL = 'http://localhost:8765';
+    const SESSION_ID = 'frontend-' + Math.random().toString(36).substr(2, 9);
+
+    // State
+    let socket = null;
+    let currentPosition = { x: 0, y: 0, z: 0 };
+    let machineState = {};
+    let probeActive = false;
+    let lastEvent = null;
+
+    // Initialize Socket.io
+    function connectToServer() {
+      socket = io(SERVER_URL, {
+        query: { sessionId: SESSION_ID },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        reconnectionAttempts: Infinity,
+        transports: ['websocket', 'polling'],
+      });
+
+      socket.on('connect', () => {
+        logEvent('Connected to mock CNCjs server', 'success');
+        updateConnectionStatus(true);
+      });
+
+      socket.on('disconnect', (reason) => {
+        logEvent(`Disconnected: ${reason}`, 'error');
+        updateConnectionStatus(false);
+      });
+
+      const stateHandler = (controller, state) => {
+        console.log('[Frontend] controller:state received:', { controller, mpos: state.status?.mpos });
+        machineState = state;
+        lastEvent = state;
+        if (state.status?.mpos) {
+          const [x, y, z] = state.status.mpos;
+          currentPosition = { x, y, z };
+          logEvent(`Socket update: pos=[${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}]`, 'info');
+          updatePositionDisplay();
+          drawMachine();
+        }
+        updateStateDisplay();
+        updateLastEventDisplay();
+      };
+
+      socket.on('controller:state', stateHandler);
+      console.log('[Frontend] Registered controller:state handler');
+
+      socket.on('error', (error) => {
+        logEvent(`Socket error: ${error}`, 'error');
+      });
+
+      document.getElementById('sessionId').textContent = SESSION_ID;
+    }
+
+    // Update position display
+    function updatePositionDisplay() {
+      document.getElementById('posX').textContent = currentPosition.x.toFixed(2);
+      document.getElementById('posY').textContent = currentPosition.y.toFixed(2);
+      document.getElementById('posZ').textContent = currentPosition.z.toFixed(2);
+    }
+
+    // Update state display
+    function updateStateDisplay() {
+      const stateDisplay = document.getElementById('stateDisplay');
+      stateDisplay.innerHTML = '<pre>' + JSON.stringify(machineState, null, 2) + '</pre>';
+    }
+
+    // Update last event display
+    function updateLastEventDisplay() {
+      const eventDisplay = document.getElementById('lastEventDisplay');
+      if (lastEvent) {
+        eventDisplay.innerHTML = '<pre>' + JSON.stringify(lastEvent, null, 2) + '</pre>';
+      }
+    }
+
+    // Update connection status indicator
+    function updateConnectionStatus(connected) {
+      const indicator = document.getElementById('connectionStatus');
+      const text = document.getElementById('connectionText');
+      if (connected) {
+        indicator.classList.add('connected');
+        text.textContent = 'Connected';
+      } else {
+        indicator.classList.remove('connected');
+        text.textContent = 'Disconnected';
+      }
+    }
+
+    // Jog machine
+    async function jogAxis(axis, value) {
+      if (!socket?.connected) {
+        logEvent('Not connected to server', 'error');
+        return;
+      }
+
+      const step = parseFloat(document.getElementById(`step${axis}`).value);
+      const currentValue = axis === 'X' ? currentPosition.x : axis === 'Y' ? currentPosition.y : currentPosition.z;
+      const newValue = currentValue + (value > 0 ? step : -step);
+
+      logEvent(`Jog ${axis}: current=${currentValue.toFixed(2)}, step=${step}, new=${newValue.toFixed(2)}`, 'info');
+
+      try {
+        const response = await fetch(`${SERVER_URL}/api/encoder-move?sessionId=${SESSION_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ axis, value: newValue }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          logEvent(`Jog failed: ${error.error}`, 'error');
+          return;
+        }
+
+        const result = await response.json();
+        logEvent(`${axis} → sent to server`, 'success');
+      } catch (error) {
+        logEvent(`Jog error: ${error.message}`, 'error');
+      }
+    }
+
+    // Reset position
+    async function resetPosition() {
+      if (!socket?.connected) {
+        logEvent('Not connected to server', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${SERVER_URL}/api/reset?sessionId=${SESSION_ID}`, {
+          method: 'POST',
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          logEvent(`Reset failed: ${error.error}`, 'error');
+          return;
+        }
+
+        logEvent('Position reset to 0,0,0', 'success');
+        currentPosition = { x: 0, y: 0, z: 0 };
+        updatePositionDisplay();
+        drawMachine();
+      } catch (error) {
+        logEvent(`Reset error: ${error.message}`, 'error');
+      }
+    }
+
+    // Draw machine visualization
+    function drawMachine() {
+      const canvas = document.getElementById('machineCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // Set canvas size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      // Clear canvas
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw grid
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < width; i += 20) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, height);
+        ctx.stroke();
+      }
+      for (let i = 0; i < height; i += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(width, i);
+        ctx.stroke();
+      }
+
+      // Draw origin
+      ctx.fillStyle = '#666';
+      ctx.fillRect(centerX - 3, centerY - 3, 6, 6);
+
+      // Scale for visualization (1 unit = 1 pixel, adjust as needed)
+      const scale = 2;
+      const toolX = centerX + currentPosition.x * scale;
+      const toolY = centerY - currentPosition.y * scale;
+
+      // Draw tool position
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(toolX, toolY, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw axes lines from origin
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(toolX, centerY);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#eab308';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX, toolY);
+      ctx.stroke();
+
+      // Draw axis labels
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('X', toolX, centerY - 15);
+
+      ctx.fillStyle = '#eab308';
+      ctx.textAlign = 'right';
+      ctx.fillText('Y', centerX - 15, toolY);
+
+      // Draw Z indicator (height above surface)
+      ctx.fillStyle = '#3b82f6';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Z: ${currentPosition.z.toFixed(2)}mm`, 20, 30);
+    }
+
+    // Logging
+    const logEntries = [];
+    function logEvent(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logEntries.unshift({ message, type, timestamp });
+      if (logEntries.length > 50) logEntries.pop();
+
+      const debugLog = document.getElementById('debugLog');
+      debugLog.innerHTML = logEntries
+        .map(
+          (entry) =>
+            `<div class="log-entry ${entry.type}">[${entry.timestamp}] ${entry.message}</div>`
+        )
+        .join('');
+      debugLog.scrollTop = 0;
+    }
+
+    // Event listeners
+    // Toggle probe
+    async function toggleProbe() {
+      probeActive = !probeActive;
+      const probeBtn = document.getElementById('probeBtn');
+      probeBtn.textContent = probeActive ? 'Probe: ON' : 'Probe: OFF';
+      probeBtn.dataset.probeActive = probeActive;
+
+      if (!socket?.connected) {
+        logEvent('Not connected to server', 'error');
+        probeActive = !probeActive;
+        probeBtn.textContent = probeActive ? 'Probe: ON' : 'Probe: OFF';
+        probeBtn.dataset.probeActive = probeActive;
+        return;
+      }
+
+      try {
+        if (probeActive) {
+          // Trigger probe
+          const response = await fetch(`${SERVER_URL}/api/probe-trigger?sessionId=${SESSION_ID}`, {
+            method: 'POST',
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            logEvent(`Probe trigger failed: ${error.error}`, 'error');
+            probeActive = false;
+            probeBtn.textContent = 'Probe: OFF';
+            probeBtn.dataset.probeActive = false;
+            return;
+          }
+
+          const result = await response.json();
+          logEvent(`Probe triggered (pinState: '${result.probe.pinState}')`, 'success');
+
+          // Update probe status display
+          document.getElementById('probePinState').textContent = result.probe.pinState || '(empty)';
+          document.getElementById('probeStatus').style.display = 'block';
+        } else {
+          // Clear probe
+          const response = await fetch(`${SERVER_URL}/api/probe-clear?sessionId=${SESSION_ID}`, {
+            method: 'POST',
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            logEvent(`Probe clear failed: ${error.error}`, 'error');
+            probeActive = true;
+            probeBtn.textContent = 'Probe: ON';
+            probeBtn.dataset.probeActive = true;
+            return;
+          }
+
+          logEvent('Probe cleared (triggered: false)', 'success');
+          document.getElementById('probeStatus').style.display = 'none';
+        }
+      } catch (error) {
+        logEvent(`Probe error: ${error.message}`, 'error');
+        probeActive = !probeActive;
+        probeBtn.textContent = probeActive ? 'Probe: ON' : 'Probe: OFF';
+        probeBtn.dataset.probeActive = probeActive;
+      }
+    }
+
+    document.querySelectorAll('.jog-button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const axis = btn.dataset.axis;
+        const direction = btn.dataset.direction === '+' ? 1 : -1;
+        logEvent(`Button clicked: ${axis} ${direction > 0 ? '+' : '-'}`, 'info');
+        jogAxis(axis, direction);
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', resetPosition);
+    document.getElementById('probeBtn').addEventListener('click', toggleProbe);
+
+    // Initialize
+    connectToServer();
+    logEvent('Initializing machine controller...', 'info');
+    setInterval(drawMachine, 100); // Redraw periodically
+  </script>
+</body>
+</html>
