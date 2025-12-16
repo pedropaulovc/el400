@@ -128,8 +128,15 @@ jobs:
 
       - name: Install Playwright browsers
         timeout-minutes: 1
-        run: npx playwright install --with-deps chromium-headless-shell
+        run: npx playwright install --with-deps chromium
 
-      - name: Run storybook tests
-        timeout-minutes: 1
-        run: npm run test:storybook
+      - name: Build Storybook
+        timeout-minutes: 2
+        run: npm run build-storybook
+
+      - name: Run Storybook test-runner
+        timeout-minutes: 2
+        run: |
+          npx concurrently -k -s first -n "SB,TEST" -c "magenta,blue" \
+            "npx http-server storybook-static --port 6006 --silent" \
+            "npx wait-on tcp:127.0.0.1:6006 && npm run test:storybook:runner"
