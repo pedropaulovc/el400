@@ -281,7 +281,7 @@ describe('centerFindingReducer', () => {
       };
 
       expect(centerFindingReducer(current, { type: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { type: 'KEY_6' })).toBe(current);
+      expect(centerFindingReducer(current, { type: 'KEY_6_RIGHT' })).toBe(current);
       expect(centerFindingReducer(current, { type: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } })).toBe(current);
     });
   });
@@ -434,7 +434,7 @@ describe('centerFindingReducer', () => {
       };
 
       expect(centerFindingReducer(current, { type: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { type: 'KEY_6' })).toBe(current);
+      expect(centerFindingReducer(current, { type: 'KEY_6_RIGHT' })).toBe(current);
     });
   });
 
@@ -446,7 +446,7 @@ describe('centerFindingReducer', () => {
       };
 
       expect(centerFindingReducer(current, { type: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { type: 'KEY_6' })).toBe(current);
+      expect(centerFindingReducer(current, { type: 'KEY_6_RIGHT' })).toBe(current);
       expect(centerFindingReducer(current, { type: 'BTN_ABS_INC' })).toBe(current);
     });
 

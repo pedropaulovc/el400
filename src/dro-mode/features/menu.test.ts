@@ -29,7 +29,7 @@ describe('menuReducer', () => {
           data: INITIAL_DRO_MODE_DATA,
         };
 
-        const result = menuReducer(state, { type: 'KEY_6' });
+        const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
         expect(result).toBeNull();
       }
     });
@@ -49,20 +49,20 @@ describe('menuReducer', () => {
           data: INITIAL_DRO_MODE_DATA,
         };
 
-        const result = menuReducer(state, { type: 'KEY_6' });
+        const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
         expect(result).not.toBeNull();
       }
     });
   });
 
-  describe('forward navigation (KEY_6)', () => {
+  describe('forward navigation (KEY_6_RIGHT)', () => {
     it('should navigate from center to circle', () => {
       const state: DROModeShape = {
         state: 'function-menu-center',
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.state).toBe('function-menu-circle');
     });
@@ -73,7 +73,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.state).toBe('function-menu-line');
     });
@@ -84,7 +84,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.state).toBe('function-menu-linear');
     });
@@ -95,7 +95,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.state).toBe('function-menu-polar');
     });
@@ -106,7 +106,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.state).toBe('function-menu-center');
     });
@@ -118,20 +118,20 @@ describe('menuReducer', () => {
         data,
       };
 
-      const result = menuReducer(state, { type: 'KEY_6' });
+      const result = menuReducer(state, { type: 'KEY_6_RIGHT' });
 
       expect(result?.data).toBe(data);
     });
   });
 
-  describe('backward navigation (KEY_4)', () => {
+  describe('backward navigation (KEY_4_LEFT)', () => {
     it('should navigate from circle to center', () => {
       const state: DROModeShape = {
         state: 'function-menu-circle',
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_4' });
+      const result = menuReducer(state, { type: 'KEY_4_LEFT' });
 
       expect(result?.state).toBe('function-menu-center');
     });
@@ -142,7 +142,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_4' });
+      const result = menuReducer(state, { type: 'KEY_4_LEFT' });
 
       expect(result?.state).toBe('function-menu-circle');
     });
@@ -153,7 +153,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_4' });
+      const result = menuReducer(state, { type: 'KEY_4_LEFT' });
 
       expect(result?.state).toBe('function-menu-line');
     });
@@ -164,7 +164,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_4' });
+      const result = menuReducer(state, { type: 'KEY_4_LEFT' });
 
       expect(result?.state).toBe('function-menu-linear');
     });
@@ -175,7 +175,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = menuReducer(state, { type: 'KEY_4' });
+      const result = menuReducer(state, { type: 'KEY_4_LEFT' });
 
       expect(result?.state).toBe('function-menu-polar');
     });
@@ -198,7 +198,7 @@ describe('menuReducer', () => {
 
       for (let i = 0; i < menuStates.length; i++) {
         const expectedNext = menuStates[(i + 1) % menuStates.length];
-        state = menuReducer(state, { type: 'KEY_6' })!;
+        state = menuReducer(state, { type: 'KEY_6_RIGHT' })!;
         expect(state.state).toBe(expectedNext);
       }
 
@@ -222,7 +222,7 @@ describe('menuReducer', () => {
 
       for (let i = 0; i < menuStates.length; i++) {
         const expectedPrev = menuStates[(menuStates.length - 1 - i + menuStates.length) % menuStates.length];
-        state = menuReducer(state, { type: 'KEY_4' })!;
+        state = menuReducer(state, { type: 'KEY_4_LEFT' })!;
         expect(state.state).toBe(expectedPrev);
       }
 
@@ -341,7 +341,7 @@ describe('menuReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const keysToIgnore = ['KEY_0', 'KEY_1', 'KEY_2', 'KEY_3', 'KEY_5', 'KEY_7', 'KEY_8', 'KEY_9'] as const;
+      const keysToIgnore = ['KEY_0', 'KEY_1', 'KEY_2_DOWN', 'KEY_3', 'KEY_5', 'KEY_7', 'KEY_8_UP', 'KEY_9'] as const;
 
       for (const key of keysToIgnore) {
         const result = menuReducer(state, { type: key });

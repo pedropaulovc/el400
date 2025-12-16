@@ -24,7 +24,7 @@ const KeypadSection = () => {
     if (num === '4') {
       // Key 4: In function menu, navigate left; otherwise digit entry
       if (isFunctionMenuSelectionState(opState)) {
-        dispatch({ type: 'KEY_4' });
+        dispatch({ type: 'KEY_4_LEFT' });
         return;
       }
     }
@@ -32,7 +32,7 @@ const KeypadSection = () => {
     if (num === '6') {
       // Key 6: In function menu, navigate right; in collecting mode, store point
       if (isFunctionMenuSelectionState(opState)) {
-        dispatch({ type: 'KEY_6' });
+        dispatch({ type: 'KEY_6_RIGHT' });
         return;
       }
       if (isCollectingPoints(opState)) {
