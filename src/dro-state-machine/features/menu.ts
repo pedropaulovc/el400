@@ -4,18 +4,18 @@
  * Handles function menu navigation (center, circle, line, linear, polar).
  */
 
-import type { DROModeShape, FeatureReducer } from '../types';
-import type { DROModeState } from '../../types/droMode';
+import type { DROShape, FeatureReducer } from '../types';
+import type { DROState } from '../../types/droStateMachine';
 import {
-  INITIAL_DRO_MODE_DATA,
+  INITIAL_DRO_CONTEXT,
   INITIAL_CENTER_FINDING_DATA,
   isFunctionMenuSelectionState,
-} from '../../types/droMode';
+} from '../../types/droStateMachine';
 
 /**
  * Menu navigation ring - bidirectional, wraps around.
  */
-const MENU_RING: DROModeState[] = [
+const MENU_RING: DROState[] = [
   'function-menu-center',
   'function-menu-circle',
   'function-menu-line',
@@ -23,19 +23,19 @@ const MENU_RING: DROModeState[] = [
   'function-menu-polar',
 ];
 
-function getNextMenuState(current: DROModeState): DROModeState {
+function getNextMenuState(current: DROState): DROState {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
   return MENU_RING[(idx + 1) % MENU_RING.length];
 }
 
-function getPrevMenuState(current: DROModeState): DROModeState {
+function getPrevMenuState(current: DROState): DROState {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
   return MENU_RING[(idx - 1 + MENU_RING.length) % MENU_RING.length];
 }
 
-function handleMenuEnter(menuState: DROModeState): DROModeShape {
+function handleMenuEnter(menuState: DROState): DROShape {
   switch (menuState) {
     case 'function-menu-center':
     case 'function-menu-line':
@@ -52,9 +52,9 @@ function handleMenuEnter(menuState: DROModeState): DROModeShape {
     case 'function-menu-linear':
     case 'function-menu-polar':
       // TODO: implement linear and polar
-      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+      return { state: 'idle', data: INITIAL_DRO_CONTEXT };
     default:
-      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+      return { state: 'idle', data: INITIAL_DRO_CONTEXT };
   }
 }
 
@@ -65,7 +65,7 @@ export const menuReducer: FeatureReducer = (current, event) => {
 
   switch (event.type) {
     case 'KEY_CLEAR':
-      return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
+      return { state: 'idle', data: INITIAL_DRO_CONTEXT };
     case 'KEY_6_RIGHT':
       return { state: getNextMenuState(state), data };
     case 'KEY_4_LEFT':

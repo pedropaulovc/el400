@@ -5,17 +5,17 @@ import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
 import {
-  useDROModeState,
-  useDROModeDispatch,
+  useDROState,
+  useDRODispatch,
   isFunctionMenuSelectionState,
   isCollectingPoints,
-} from "../dro-mode";
+} from "../dro-state-machine";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
-  const opState = useDROModeState();
-  const dispatch = useDROModeDispatch();
+  const droState = useDROState();
+  const dispatch = useDRODispatch();
 
   const handleNumber = useCallback((num: string) => {
     // Dispatch raw key events to the operation state machine
@@ -23,7 +23,7 @@ const KeypadSection = () => {
 
     if (num === '4') {
       // Key 4: In function menu, navigate left; otherwise digit entry
-      if (isFunctionMenuSelectionState(opState)) {
+      if (isFunctionMenuSelectionState(droState)) {
         dispatch({ type: 'KEY_4_LEFT' });
         return;
       }
@@ -31,11 +31,11 @@ const KeypadSection = () => {
 
     if (num === '6') {
       // Key 6: In function menu, navigate right; in collecting mode, store point
-      if (isFunctionMenuSelectionState(opState)) {
+      if (isFunctionMenuSelectionState(droState)) {
         dispatch({ type: 'KEY_6_RIGHT' });
         return;
       }
-      if (isCollectingPoints(opState)) {
+      if (isCollectingPoints(droState)) {
         // Attach current position data for point storage
         dispatch({
           type: 'POINT_DATA',
@@ -54,7 +54,7 @@ const KeypadSection = () => {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [opState, dispatch, vMem, inputBuffer]);
+  }, [droState, dispatch, vMem, inputBuffer]);
 
   const handleDecimal = useCallback(() => {
     if (!vMem.activeAxis) {
@@ -78,7 +78,7 @@ const KeypadSection = () => {
 
   const handleEnter = useCallback(() => {
     // In function menu, ENT confirms the selection
-    if (isFunctionMenuSelectionState(opState)) {
+    if (isFunctionMenuSelectionState(droState)) {
       dispatch({ type: 'KEY_ENTER' });
       return;
     }
@@ -92,7 +92,7 @@ const KeypadSection = () => {
       vMem.setAxisValue(vMem.activeAxis, value);
       inputBuffer.clear();
     }
-  }, [opState, dispatch, vMem, inputBuffer]);
+  }, [droState, dispatch, vMem, inputBuffer]);
 
   return (
     <BeveledFrame>

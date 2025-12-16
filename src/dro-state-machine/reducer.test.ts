@@ -5,19 +5,19 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { droModeReducer } from './reducer';
-import type { DROModeShape } from './types';
-import { INITIAL_DRO_MODE_DATA } from '../types/droMode';
+import { droReducer } from './reducer';
+import type { DROShape } from './types';
+import { INITIAL_DRO_CONTEXT } from '../types/droStateMachine';
 
-describe('droModeReducer', () => {
+describe('droReducer', () => {
   describe('reducer composition', () => {
     it('should delegate to boot reducer for boot states', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
-      const result = droModeReducer(initial, {
+      const result = droReducer(initial, {
         type: 'BOOT_COMPLETE',
         skipMessage: true,
       });
@@ -26,23 +26,23 @@ describe('droModeReducer', () => {
     });
 
     it('should delegate to menu reducer for menu states', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'function-menu-center',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
-      const result = droModeReducer(initial, { type: 'KEY_6_RIGHT' });
+      const result = droReducer(initial, { type: 'KEY_6_RIGHT' });
 
       expect(result.state).toBe('function-menu-circle');
     });
 
     it('should delegate to center-finding reducer for point collection states', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'function-menu-center-line-point-1',
         data: { type: 'center-finding', storedPoints: [], centerResult: null },
       };
 
-      const result = droModeReducer(initial, {
+      const result = droReducer(initial, {
         type: 'POINT_DATA',
         point: { X: 10, Y: 20, Z: 30 },
       });
@@ -53,25 +53,25 @@ describe('droModeReducer', () => {
 
   describe('unhandled events', () => {
     it('should return current state when no reducer handles the event', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       // KEY_5 is not handled by any reducer in idle state
-      const result = droModeReducer(initial, { type: 'KEY_5' });
+      const result = droReducer(initial, { type: 'KEY_5' });
 
       expect(result).toBe(initial);
     });
 
     it('should return current state for unrecognized events in boot state', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       // BTN_FUNCTION is not handled during boot
-      const result = droModeReducer(initial, { type: 'BTN_FUNCTION' });
+      const result = droReducer(initial, { type: 'BTN_FUNCTION' });
 
       expect(result).toBe(initial);
     });
@@ -81,25 +81,25 @@ describe('droModeReducer', () => {
     it('should process boot reducer before menu reducer', () => {
       // Boot reducer has priority, so even if menu could handle a key,
       // boot reducer should handle boot states first
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'idle',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       // From idle, BTN_FUNCTION opens menu (handled by boot reducer)
-      const result = droModeReducer(initial, { type: 'BTN_FUNCTION' });
+      const result = droReducer(initial, { type: 'BTN_FUNCTION' });
 
       expect(result.state).toBe('function-menu-center');
     });
 
     it('should allow later reducers to handle when earlier ones return null', () => {
-      const initial: DROModeShape = {
+      const initial: DROShape = {
         state: 'function-menu-center',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       // Menu reducer handles function-menu states
-      const result = droModeReducer(initial, { type: 'KEY_CLEAR' });
+      const result = droReducer(initial, { type: 'KEY_CLEAR' });
 
       expect(result.state).toBe('idle');
     });
@@ -107,39 +107,39 @@ describe('droModeReducer', () => {
 
   describe('state transitions chain', () => {
     it('should support full workflow: boot -> idle -> menu -> point collection -> result', () => {
-      let state: DROModeShape = {
+      let state: DROShape = {
         state: 'boot',
-        data: INITIAL_DRO_MODE_DATA,
+        data: INITIAL_DRO_CONTEXT,
       };
 
       // Boot complete
-      state = droModeReducer(state, { type: 'BOOT_COMPLETE', skipMessage: true });
+      state = droReducer(state, { type: 'BOOT_COMPLETE', skipMessage: true });
       expect(state.state).toBe('idle');
 
       // Open function menu
-      state = droModeReducer(state, { type: 'BTN_FUNCTION' });
+      state = droReducer(state, { type: 'BTN_FUNCTION' });
       expect(state.state).toBe('function-menu-center');
 
       // Enter center finding
-      state = droModeReducer(state, { type: 'KEY_ENTER' });
+      state = droReducer(state, { type: 'KEY_ENTER' });
       expect(state.state).toBe('function-menu-center-line-point-1');
 
       // Store first point
-      state = droModeReducer(state, {
+      state = droReducer(state, {
         type: 'POINT_DATA',
         point: { X: 0, Y: 0, Z: 0 },
       });
       expect(state.state).toBe('function-menu-center-line-point-2');
 
       // Store second point
-      state = droModeReducer(state, {
+      state = droReducer(state, {
         type: 'POINT_DATA',
         point: { X: 100, Y: 0, Z: 0 },
       });
       expect(state.state).toBe('function-menu-center-line-result');
 
       // Exit to idle
-      state = droModeReducer(state, { type: 'KEY_CLEAR' });
+      state = droReducer(state, { type: 'KEY_CLEAR' });
       expect(state.state).toBe('idle');
     });
   });

@@ -8,13 +8,13 @@ import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import {
-  useDROModeState,
-  useDROModeDispatch,
-  useDROModeData,
+  useDROState,
+  useDRODispatch,
+  useDROContext,
   isFunctionMenuSelectionState,
   isCollectingPoints,
   isResultState,
-} from "../dro-mode";
+} from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { BOOT_MESSAGE_DURATION_MS } from "../context/VolatileMemoryContext";
 
@@ -32,9 +32,9 @@ const MENU_TEXT_MAP: Record<string, string> = {
 
 const EL400Simulator = () => {
   const vMem = useVolatileMemory();
-  const opState = useDROModeState();
-  const opData = useDROModeData();
-  const dispatch = useDROModeDispatch();
+  const droState = useDROState();
+  const droCtx = useDROContext();
+  const dispatch = useDRODispatch();
   const { nvMem } = useNonVolatileMemoryContext();
 
   // Boot sequence: Dispatch BOOT_COMPLETE on mount
@@ -47,30 +47,30 @@ const EL400Simulator = () => {
 
   // Boot message timeout: Auto-dismiss after duration
   useEffect(() => {
-    if (opState === 'showMessage') {
+    if (droState === 'showMessage') {
       const timer = setTimeout(() => {
         dispatch({ type: 'BOOT_MESSAGE_TIMEOUT' });
       }, BOOT_MESSAGE_DURATION_MS);
       return () => clearTimeout(timer);
     }
-  }, [opState, dispatch]);
+  }, [droState, dispatch]);
 
   // Determine what to show on the display
   let axisDisplayValues;
 
-  if (opState === 'showMessage') {
+  if (droState === 'showMessage') {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
-  } else if (isFunctionMenuSelectionState(opState)) {
+  } else if (isFunctionMenuSelectionState(droState)) {
     // Show menu option text
-    const menuText = MENU_TEXT_MAP[opState] ?? '';
+    const menuText = MENU_TEXT_MAP[droState] ?? '';
     axisDisplayValues = { X: menuText, Y: '', Z: '' };
-  } else if (isCollectingPoints(opState)) {
+  } else if (isCollectingPoints(droState)) {
     // While collecting points, show current position (normal display)
     axisDisplayValues = vMem.displayValues;
-  } else if (isResultState(opState) && opData.type === 'center-finding' && opData.centerResult) {
+  } else if (isResultState(droState) && droCtx.type === 'center-finding' && droCtx.centerResult) {
     // Show distance-to-go when center is calculated
-    const center = opData.centerResult;
+    const center = droCtx.centerResult;
     const current = vMem.displayValues;
     axisDisplayValues = {
       X: center.X - current.X,

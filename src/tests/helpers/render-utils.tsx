@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { MillStateProvider } from '../../context/MillStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
-import { DROModeProvider } from '../../dro-mode';
+import { DROProvider } from '../../dro-state-machine';
 
 /**
  * Custom render function that includes all necessary providers
@@ -49,9 +49,9 @@ export function renderWithProviders(
         <NonVolatileMemoryProvider>
           <MillStateProvider>
             <VolatileMemoryProvider>
-              <DROModeProvider>
+              <DROProvider>
                 {children}
-              </DROModeProvider>
+              </DROProvider>
             </VolatileMemoryProvider>
           </MillStateProvider>
         </NonVolatileMemoryProvider>

@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useDROModeState, isFunctionActive } from "../dro-mode";
+import { useDROState, isFunctionActive } from "../dro-state-machine";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -23,7 +23,7 @@ const MultiAxisSection = ({
 }: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
   const { nvMem } = useNonVolatileMemoryContext();
-  const opState = useDROModeState();
+  const droState = useDROState();
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';
@@ -133,7 +133,7 @@ const MultiAxisSection = ({
               <LEDIndicator
                 label="fn"
                 name="status"
-                isOn={isFunctionActive(opState)}
+                isOn={isFunctionActive(droState)}
                 data-testid="led-fn"
               />
             </fieldset>
