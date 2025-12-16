@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import DROButton from "./DROButton";
-import { parseColor, getLuminance, getContrastRatio } from "@/tests/helpers/color-utils";
+import { parseColor, getContrastRatio, CONTRAST_RATIOS } from "@/tests/helpers/color-utils";
 
 const meta = {
   title: "Components/DROButton",
@@ -204,8 +204,8 @@ export const ForcedColorsButtonContrast: Story = {
       if (fgColor && bgColor) {
         const contrast = getContrastRatio(fgColor, bgColor);
         
-        // Should meet or exceed 17:1 contrast ratio
-        await expect(contrast).toBeGreaterThanOrEqual(17);
+        // Should meet or exceed forced-colors button contrast requirement (17:1)
+        await expect(contrast).toBeGreaterThanOrEqual(CONTRAST_RATIOS.FORCED_COLORS_BUTTON);
       }
     }
   },
