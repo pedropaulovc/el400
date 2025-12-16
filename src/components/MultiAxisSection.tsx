@@ -40,8 +40,13 @@ const MultiAxisSection = ({
     Z: convertValue(axisValues.Z),
   };
 
-  const formatForScreenReader = (value: AxisDisplayValue) =>
-    typeof value === 'number' ? value.toFixed(4) : value;
+  const formatForScreenReader = (value: AxisDisplayValue) => {
+    if (typeof value === 'number') {
+      const unitSuffix = isInch ? 'in' : 'mm';
+      return `${value.toFixed(4)} ${unitSuffix}`;
+    }
+    return value;
+  };
 
   return (
     <div className="flex flex-col">
@@ -56,7 +61,7 @@ const MultiAxisSection = ({
           }}
         >
           {/* Screen reader accessible table for axis values */}
-          <table className="sr-only" role="status" aria-label="Axis positions" aria-live="polite" aria-atomic="true" aria-relevant="text">
+          <table className="sr-only" aria-label="Axis positions" aria-live="polite" aria-atomic="true" aria-relevant="text">
             <thead>
               <tr>
                 <th>Axis</th>
