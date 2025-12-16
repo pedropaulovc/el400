@@ -4,11 +4,11 @@
  */
 
 import { io, Socket } from 'socket.io-client';
-import type { MachineConnection } from './MachineConnection';
+import type { MillConnection } from './MillConnection';
 import type { MachineStateListener, MachineState, MachinePosition } from '../types/machineState';
 import { createProbeState, createDefaultMachineState } from '../types/machineState';
 
-export interface CncjsAdapterOptions {
+export interface CncjsMillConnectionOptions {
   host: string;
   port: number;
   token?: string;
@@ -164,7 +164,7 @@ export function normalizeControllerState(
   }
 }
 
-export class CncjsAdapter implements MachineConnection {
+export class CncjsMillConnection implements MillConnection {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
@@ -173,10 +173,10 @@ export class CncjsAdapter implements MachineConnection {
     ...createDefaultMachineState(),
     controllerType: 'cncjs',
   };
-  private options: CncjsAdapterOptions;
+  private options: CncjsMillConnectionOptions;
   private currentControllerType: string = 'grbl';
 
-  constructor(options: CncjsAdapterOptions) {
+  constructor(options: CncjsMillConnectionOptions) {
     this.options = options;
   }
 

@@ -5,7 +5,7 @@ import {
   MachineStateProvider,
   useMachineStateContext,
 } from './MachineStateContext';
-import { MockAdapter } from '../adapters/MockAdapter';
+import { MockMillConnection } from '../adapters/MockMillConnection';
 
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -13,10 +13,10 @@ function createWrapper() {
   };
 }
 
-function createWrapperWithAdapter(adapter: MockAdapter) {
+function createWrapperWithConnection(connection: MockMillConnection) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MachineStateProvider initialAdapter={adapter}>
+      <MachineStateProvider initialConnection={connection}>
         {children}
       </MachineStateProvider>
     );
@@ -36,7 +36,7 @@ describe('MachineStateContext', () => {
     });
   });
 
-  describe('Default state (no adapter)', () => {
+  describe('Default state (no connection)', () => {
     it('starts disconnected', () => {
       const { result } = renderHook(() => useMachineStateContext(), {
         wrapper: createWrapper(),
@@ -70,12 +70,12 @@ describe('MachineStateContext', () => {
       expect(result.current.machineState.probe.pinState).toBe('');
     });
 
-    it('has null adapter', () => {
+    it('has null connection', () => {
       const { result } = renderHook(() => useMachineStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.adapter).toBeNull();
+      expect(result.current.connection).toBeNull();
     });
 
     it('is not connecting', () => {
@@ -95,16 +95,16 @@ describe('MachineStateContext', () => {
     });
   });
 
-  describe('Adapter connection', () => {
-    let adapter: MockAdapter;
+  describe('Connection lifecycle', () => {
+    let connection: MockMillConnection;
 
     beforeEach(() => {
-      adapter = new MockAdapter();
+      connection = new MockMillConnection();
     });
 
-    it('connects with initial adapter', async () => {
+    it('connects with initial connection', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -114,21 +114,21 @@ describe('MachineStateContext', () => {
       expect(result.current.machineState.controllerType).toBe('mock');
     });
 
-    it('exposes adapter instance', async () => {
+    it('exposes connection instance', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
         expect(result.current.machineState.connected).toBe(true);
       });
 
-      expect(result.current.adapter).toBe(adapter);
+      expect(result.current.connection).toBe(connection);
     });
 
-    it('receives position updates from adapter', async () => {
+    it('receives position updates from connection', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -136,7 +136,7 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        adapter.setPosition(10, 20, 30);
+        connection.setPosition(10, 20, 30);
       });
 
       await waitFor(() => {
@@ -146,9 +146,9 @@ describe('MachineStateContext', () => {
       });
     });
 
-    it('receives probe state updates from adapter', async () => {
+    it('receives probe state updates from connection', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -156,7 +156,7 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        adapter.setProbeState('P');
+        connection.setProbeState('P');
       });
 
       await waitFor(() => {
@@ -167,7 +167,7 @@ describe('MachineStateContext', () => {
 
     it('clears probe state when untriggered', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -175,7 +175,7 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        adapter.setProbeState('P');
+        connection.setProbeState('P');
       });
 
       await waitFor(() => {
@@ -183,7 +183,7 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        adapter.setProbeState('');
+        connection.setProbeState('');
       });
 
       await waitFor(() => {
@@ -192,26 +192,26 @@ describe('MachineStateContext', () => {
     });
   });
 
-  describe('setAdapter', () => {
-    let adapter: MockAdapter;
+  describe('setConnection', () => {
+    let connection: MockMillConnection;
 
     beforeEach(() => {
-      adapter = new MockAdapter();
+      connection = new MockMillConnection();
     });
 
-    it('allows setting adapter after mount', async () => {
+    it('allows setting connection after mount', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.adapter).toBeNull();
+      expect(result.current.connection).toBeNull();
 
       act(() => {
-        result.current.setAdapter(adapter);
+        result.current.setConnection(connection);
       });
 
       await waitFor(() => {
-        expect(result.current.adapter).toBe(adapter);
+        expect(result.current.connection).toBe(connection);
       });
 
       await waitFor(() => {
@@ -219,9 +219,9 @@ describe('MachineStateContext', () => {
       });
     });
 
-    it('allows clearing adapter', async () => {
+    it('allows clearing connection', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -229,24 +229,24 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        result.current.setAdapter(null);
+        result.current.setConnection(null);
       });
 
       await waitFor(() => {
-        expect(result.current.adapter).toBeNull();
+        expect(result.current.connection).toBeNull();
         expect(result.current.machineState.connected).toBe(false);
         expect(result.current.machineState.controllerType).toBe('manual');
       });
     });
 
-    it('clears error when setting new adapter', async () => {
+    it('clears error when setting new connection', async () => {
       const { result } = renderHook(() => useMachineStateContext(), {
         wrapper: createWrapper(),
       });
 
-      // Manually set error state by setting adapter to null (simulates cleared state)
+      // Manually set error state by setting connection to null (simulates cleared state)
       act(() => {
-        result.current.setAdapter(adapter);
+        result.current.setConnection(connection);
       });
 
       await waitFor(() => {
@@ -255,17 +255,17 @@ describe('MachineStateContext', () => {
     });
   });
 
-  describe('Adapter lifecycle', () => {
-    it('disconnects adapter on unmount', async () => {
-      const adapter = new MockAdapter();
-      const disconnectSpy = vi.spyOn(adapter, 'disconnect');
+  describe('Connection cleanup', () => {
+    it('disconnects connection on unmount', async () => {
+      const connection = new MockMillConnection();
+      const disconnectSpy = vi.spyOn(connection, 'disconnect');
 
       const { unmount } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
-        expect(adapter.getState().connected).toBe(true);
+        expect(connection.getState().connected).toBe(true);
       });
 
       unmount();
@@ -273,13 +273,13 @@ describe('MachineStateContext', () => {
       expect(disconnectSpy).toHaveBeenCalled();
     });
 
-    it('disconnects old adapter when setting new one', async () => {
-      const adapter1 = new MockAdapter();
-      const adapter2 = new MockAdapter();
-      const disconnect1Spy = vi.spyOn(adapter1, 'disconnect');
+    it('disconnects old connection when setting new one', async () => {
+      const connection1 = new MockMillConnection();
+      const connection2 = new MockMillConnection();
+      const disconnect1Spy = vi.spyOn(connection1, 'disconnect');
 
       const { result } = renderHook(() => useMachineStateContext(), {
-        wrapper: createWrapperWithAdapter(adapter1),
+        wrapper: createWrapperWithConnection(connection1),
       });
 
       await waitFor(() => {
@@ -287,13 +287,13 @@ describe('MachineStateContext', () => {
       });
 
       act(() => {
-        result.current.setAdapter(adapter2);
+        result.current.setConnection(connection2);
       });
 
       expect(disconnect1Spy).toHaveBeenCalled();
 
       await waitFor(() => {
-        expect(result.current.adapter).toBe(adapter2);
+        expect(result.current.connection).toBe(connection2);
       });
     });
   });
