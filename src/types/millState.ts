@@ -33,7 +33,7 @@ export interface ProbeState {
 /**
  * Supported controller types
  */
-export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'manual';
+export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
 
 /**
  * Mill state from connection
@@ -81,7 +81,7 @@ export function createProbeState(pinState: string = ''): ProbeState {
 /**
  * Creates a default/initial mill state
  */
-export function createDefaultMillState(controllerType: ControllerType = 'manual'): MillState {
+export function createDefaultMillState(controllerType: ControllerType = 'noop'): MillState {
   return {
     position: { x: 0, y: 0, z: 0 },
     probe: createProbeState(''),
