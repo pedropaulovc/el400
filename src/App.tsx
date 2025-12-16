@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
-import { MachineStateProvider } from "./context/MachineStateContext";
+import { MillStateProvider } from "./context/MillStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
 import { CenterFindingProvider } from "./context/CenterFindingContext";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import { MockMillConnection } from "./adapters/MockMillConnection";
 import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
 import type { MillConnection } from "./adapters/MillConnection";
-import type { DataSourceConfig } from "./types/machineState";
+import type { DataSourceConfig } from "./types/millState";
 
 const queryClient = new QueryClient();
 
@@ -45,7 +45,7 @@ function AppContent() {
 
   return (
     <NonVolatileMemoryProvider>
-      <MachineStateProvider initialConnection={connection}>
+      <MillStateProvider initialConnection={connection}>
         <VolatileMemoryProvider>
           <CenterFindingProvider>
             <Routes>
@@ -55,7 +55,7 @@ function AppContent() {
             </Routes>
           </CenterFindingProvider>
         </VolatileMemoryProvider>
-      </MachineStateProvider>
+      </MillStateProvider>
     </NonVolatileMemoryProvider>
   );
 }

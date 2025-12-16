@@ -1,7 +1,7 @@
 /**
  * Volatile memory context for DRO state throughout the app.
  * Manages DRO memory (mode, offsets, incremental values, boot stage).
- * Consumes machine state from MachineStateContext internally for calculations.
+ * Consumes mill state from MillStateContext internally for calculations.
  */
 
 import {
@@ -24,7 +24,7 @@ import type {
 import { ZERO_AXIS_VALUES } from '../types/volatileMemory';
 import { fromAnyUnitToMm } from '../utils/unitConversion';
 import { useNonVolatileMemoryContext } from './NonVolatileMemoryContext';
-import { useMachineStateContext } from './MachineStateContext';
+import { useMillStateContext } from './MillStateContext';
 
 export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
 
@@ -42,13 +42,13 @@ export interface VolatileMemoryProviderProps {
 
 /**
  * Provider component for volatile memory (DRO memory).
- * Consumes machine state from MachineStateContext internally for calculations.
+ * Consumes mill state from MillStateContext internally for calculations.
  */
 export function VolatileMemoryProvider({
   children,
 }: VolatileMemoryProviderProps) {
-  // Get machine state from MachineStateContext (used internally for calculations)
-  const { machineState } = useMachineStateContext();
+  // Get mill state from MillStateContext (used internally for calculations)
+  const { millState } = useMillStateContext();
 
   // Non-volatile memory for unit conversion
   const { nvMem: nvMemory } = useNonVolatileMemoryContext();
@@ -97,17 +97,17 @@ export function VolatileMemoryProvider({
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
-    if (machineState?.connected) {
+    if (millState?.connected) {
       // Use external machine position with work offsets applied
       return {
-        X: machineState.position.x - workOffsets.X,
-        Y: machineState.position.y - workOffsets.Y,
-        Z: machineState.position.z - workOffsets.Z,
+        X: millState.position.x - workOffsets.X,
+        Y: millState.position.y - workOffsets.Y,
+        Z: millState.position.z - workOffsets.Z,
       };
     }
     // Manual mode: use manual values directly
     return manualAbsoluteValues;
-  }, [machineState, workOffsets, manualAbsoluteValues]);
+  }, [millState, workOffsets, manualAbsoluteValues]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {
@@ -130,10 +130,10 @@ export function VolatileMemoryProvider({
   const zeroAxis = useCallback((axis: Axis) => {
     if (mode === 'abs') {
       // In ABS mode: set work offset to current machine position
-      if (machineState?.connected) {
-        const machinePos = axis === 'X' ? machineState.position.x :
-                          axis === 'Y' ? machineState.position.y :
-                          machineState.position.z;
+      if (millState?.connected) {
+        const machinePos = axis === 'X' ? millState.position.x :
+                          axis === 'Y' ? millState.position.y :
+                          millState.position.z;
         setWorkOffsets((prev) => ({ ...prev, [axis]: machinePos }));
       } else {
         // Manual mode: just set the value to zero
@@ -143,16 +143,16 @@ export function VolatileMemoryProvider({
       // In INC mode: zero the incremental counter
       setIncrementalValues((prev) => ({ ...prev, [axis]: 0 }));
     }
-  }, [mode, machineState]);
+  }, [mode, millState]);
 
   const zeroAll = useCallback(() => {
     if (mode === 'abs') {
-      if (machineState?.connected) {
+      if (millState?.connected) {
         // Set all work offsets to current machine positions
         setWorkOffsets({
-          X: machineState.position.x,
-          Y: machineState.position.y,
-          Z: machineState.position.z,
+          X: millState.position.x,
+          Y: millState.position.y,
+          Z: millState.position.z,
         });
       } else {
         setManualAbsoluteValues(ZERO_AXIS_VALUES);
@@ -160,18 +160,18 @@ export function VolatileMemoryProvider({
     } else {
       setIncrementalValues(ZERO_AXIS_VALUES);
     }
-  }, [mode, machineState]);
+  }, [mode, millState]);
 
   const setAxisValue = useCallback((axis: Axis, value: number) => {
     // Convert from display unit to mm for internal storage
     const valueMm = fromAnyUnitToMm(value, nvMemory.defaultUnit);
 
     if (mode === 'abs') {
-      if (machineState?.connected) {
+      if (millState?.connected) {
         // In connected mode, setting a value adjusts the work offset
-        const machinePos = axis === 'X' ? machineState.position.x :
-                          axis === 'Y' ? machineState.position.y :
-                          machineState.position.z;
+        const machinePos = axis === 'X' ? millState.position.x :
+                          axis === 'Y' ? millState.position.y :
+                          millState.position.z;
         // offset = machinePos - desiredValue
         setWorkOffsets((prev) => ({ ...prev, [axis]: machinePos - valueMm }));
       } else {
@@ -180,7 +180,7 @@ export function VolatileMemoryProvider({
     } else {
       setIncrementalValues((prev) => ({ ...prev, [axis]: valueMm }));
     }
-  }, [mode, machineState, nvMemory.defaultUnit]);
+  }, [mode, millState, nvMemory.defaultUnit]);
 
   const halfAxis = useCallback((axis: Axis) => {
     // Get current display value (in mm internally)
@@ -189,11 +189,11 @@ export function VolatileMemoryProvider({
     const halfValue = currentValue / 2;
 
     if (mode === 'abs') {
-      if (machineState?.connected) {
+      if (millState?.connected) {
         // In connected mode, adjust work offset to show half the current value
-        const machinePos = axis === 'X' ? machineState.position.x :
-                          axis === 'Y' ? machineState.position.y :
-                          machineState.position.z;
+        const machinePos = axis === 'X' ? millState.position.x :
+                          axis === 'Y' ? millState.position.y :
+                          millState.position.z;
         // New offset so that machinePos - newOffset = halfValue
         setWorkOffsets((prev) => ({ ...prev, [axis]: machinePos - halfValue }));
       } else {
@@ -202,7 +202,7 @@ export function VolatileMemoryProvider({
     } else {
       setIncrementalValues((prev) => ({ ...prev, [axis]: halfValue }));
     }
-  }, [mode, machineState, displayValues]);
+  }, [mode, millState, displayValues]);
 
   const contextValue: VolatileMemoryContextValue = {
     // DRO memory state
@@ -236,7 +236,7 @@ export function VolatileMemoryProvider({
  * Hook to access the volatile memory context (DRO memory).
  * Must be used within a VolatileMemoryProvider.
  *
- * For machine state (position, probe, connected), use useMachineStateContext instead.
+ * For mill state (position, probe, connected), use useMillStateContext instead.
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useVolatileMemoryContext(): VolatileMemoryContextValue {
