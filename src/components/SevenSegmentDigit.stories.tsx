@@ -1,33 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
+import {
+  APPROX_EQUAL_CONTRAST_RATIO,
+  MIN_HIGH_CONTRAST_RATIO,
+  getContrastRatio,
+  isTransparentColor,
+  parseColor,
+} from "../tests/contrast-utils";
 import SevenSegmentDigit from "./SevenSegmentDigit";
-
-const parseColor = (color: string): [number, number, number] => {
-  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (rgbMatch) {
-    return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
-  }
-  if (color === "none" || color === "transparent") {
-    return [0, 0, 0];
-  }
-  throw new Error(`Cannot parse color: ${color}`);
-};
-
-const getLuminance = (r: number, g: number, b: number): number => {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
-    const sRGB = c / 255;
-    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-};
-
-const getContrastRatio = (rgb1: [number, number, number], rgb2: [number, number, number]): number => {
-  const l1 = getLuminance(...rgb1);
-  const l2 = getLuminance(...rgb2);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-};
 
 const meta = {
   title: "Components/SevenSegmentDigit",
@@ -166,7 +146,10 @@ export const ForcedColorsContrast: Story = {
     docs: { disable: true },
   },
   render: (args) => (
-    <div data-testid="forced-colors-digit" style={{ width: "60px", height: "80px" }}>
+    <div
+      data-testid="forced-colors-digit"
+      style={{ width: "60px", height: "80px", backgroundColor: "Canvas", color: "CanvasText" }}
+    >
       <SevenSegmentDigit {...args} />
     </div>
   ),
@@ -184,30 +167,31 @@ export const ForcedColorsContrast: Story = {
 
     const segments = Array.from(digit!.querySelectorAll("span")) as HTMLElement[];
     const parentBg = getComputedStyle(digit!.parentElement ?? digit!).backgroundColor;
+    const effectiveParentBg = isTransparentColor(parentBg) ? "rgb(255, 255, 255)" : parentBg;
 
     const litSegment = segments.find((segment) => {
       const bg = getComputedStyle(segment).backgroundColor;
-      return bg !== "transparent" && !/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(bg);
+      return !isTransparentColor(bg);
     }) ?? segments[0];
 
     const offSegment = segments.find((segment) => {
       const bg = getComputedStyle(segment).backgroundColor;
-      return bg === "transparent" || /rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(bg);
+      return isTransparentColor(bg);
     }) ?? segments[segments.length - 1];
 
     const litBg = getComputedStyle(litSegment).backgroundColor;
     const offBg = getComputedStyle(offSegment).backgroundColor;
-    const isTransparent = offBg === "none" || offBg === "transparent" || /rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(offBg);
+    const isTransparent = isTransparentColor(offBg);
 
     const litRgb = parseColor(litBg);
-    const offRgb = parseColor(isTransparent ? parentBg : offBg);
-    const bgRgb = parseColor(parentBg);
+    const offRgb = parseColor(isTransparent ? effectiveParentBg : offBg);
+    const bgRgb = parseColor(effectiveParentBg);
 
     const litContrast = getContrastRatio(litRgb, bgRgb);
-    expect(litContrast).toBeGreaterThanOrEqual(20);
+    expect(litContrast).toBeGreaterThanOrEqual(MIN_HIGH_CONTRAST_RATIO);
 
     const offContrast = getContrastRatio(offRgb, bgRgb);
-    expect(offContrast).toBeLessThan(1.5);
+    expect(offContrast).toBeLessThan(APPROX_EQUAL_CONTRAST_RATIO);
   },
 };
 

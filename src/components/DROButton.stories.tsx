@@ -1,33 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { MIN_ACCESSIBLE_CONTRAST_RATIO, getContrastRatio, parseColor } from "../tests/contrast-utils";
 import DROButton from "./DROButton";
-
-const parseColor = (color: string): [number, number, number] => {
-  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (rgbMatch) {
-    return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
-  }
-  if (color === "none" || color === "transparent") {
-    return [0, 0, 0];
-  }
-  throw new Error(`Cannot parse color: ${color}`);
-};
-
-const getLuminance = (r: number, g: number, b: number): number => {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
-    const sRGB = c / 255;
-    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-};
-
-const getContrastRatio = (rgb1: [number, number, number], rgb2: [number, number, number]): number => {
-  const l1 = getLuminance(...rgb1);
-  const l2 = getLuminance(...rgb2);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-};
 
 const meta = {
   title: "Components/DROButton",
@@ -174,6 +148,6 @@ export const ForcedColorsHighContrast: Story = {
     const bgRgb = parseColor(style.backgroundColor);
     const contrastRatio = getContrastRatio(fgRgb, bgRgb);
 
-    expect(contrastRatio).toBeGreaterThanOrEqual(17);
+    expect(contrastRatio).toBeGreaterThanOrEqual(MIN_ACCESSIBLE_CONTRAST_RATIO);
   },
 };
