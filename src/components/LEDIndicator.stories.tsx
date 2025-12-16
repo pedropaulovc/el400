@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import LEDIndicator from "./LEDIndicator";
+import { isTransparent } from "@/tests/helpers/color-utils";
 
 const meta = {
   title: "Components/LEDIndicator",
@@ -106,10 +107,8 @@ export const ForcedColorsLEDs: Story = {
     if (inactiveIndicator) {
       const inactiveStyle = window.getComputedStyle(inactiveIndicator);
       // Inactive indicator should be transparent to blend with background
-      // Browsers may return 'transparent' or 'rgba(0, 0, 0, 0)'
-      const isTransparent = inactiveStyle.color === 'transparent' || 
-                           inactiveStyle.color === 'rgba(0, 0, 0, 0)';
-      await expect(isTransparent).toBe(true);
+      // Use utility function to handle different browser representations
+      await expect(isTransparent(inactiveStyle.color)).toBe(true);
     }
   },
 };

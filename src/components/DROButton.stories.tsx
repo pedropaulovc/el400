@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import DROButton from "./DROButton";
+import { parseColor, getLuminance, getContrastRatio } from "@/tests/helpers/color-utils";
 
 const meta = {
   title: "Components/DROButton",
@@ -196,31 +197,7 @@ export const ForcedColorsButtonContrast: Story = {
     if (button) {
       const style = window.getComputedStyle(button);
       
-      // Parse colors
-      const parseColor = (colorStr: string): [number, number, number] | null => {
-        const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-        if (rgbMatch) {
-          return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
-        }
-        return null;
-      };
-      
-      const getLuminance = (r: number, g: number, b: number): number => {
-        const [rs, gs, bs] = [r, g, b].map((c) => {
-          const sRGB = c / 255;
-          return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-        });
-        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-      };
-      
-      const getContrastRatio = (rgb1: [number, number, number], rgb2: [number, number, number]): number => {
-        const l1 = getLuminance(...rgb1);
-        const l2 = getLuminance(...rgb2);
-        const lighter = Math.max(l1, l2);
-        const darker = Math.min(l1, l2);
-        return (lighter + 0.05) / (darker + 0.05);
-      };
-      
+      // Parse colors using shared utility
       const fgColor = parseColor(style.color);
       const bgColor = parseColor(style.backgroundColor);
       
