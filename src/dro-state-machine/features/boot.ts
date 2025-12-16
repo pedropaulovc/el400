@@ -1,29 +1,14 @@
 /**
  * Boot Feature Reducer
  *
- * Handles boot sequence, idle state, and transitional mode toggle states.
+ * Handles boot sequence and idle state.
  */
 
-import type { DROShape, FeatureReducer } from '../types';
-import type { DROState } from '../droStateMachine';
+import type { FeatureReducer } from '../types';
 import { INITIAL_DRO_CONTEXT } from '../droStateMachine';
-
-const BOOT_STATES: DROState[] = [
-  'boot',
-  'showMessage',
-  'idle',
-  'abs-inc-mode',
-  'inch-mm-mode',
-];
-
-function isBootState(state: DROState): boolean {
-  return BOOT_STATES.includes(state);
-}
 
 export const bootReducer: FeatureReducer = (current, event) => {
   const { state, data } = current;
-
-  if (!isBootState(state)) return null;
 
   switch (state) {
     case 'boot':
@@ -52,13 +37,6 @@ export const bootReducer: FeatureReducer = (current, event) => {
         default:
           return current;
       }
-
-    case 'abs-inc-mode':
-    case 'inch-mm-mode':
-      if (event.type === 'MODE_TOGGLE_COMPLETE') {
-        return { state: 'idle', data: INITIAL_DRO_CONTEXT };
-      }
-      return current;
 
     default:
       return null;
