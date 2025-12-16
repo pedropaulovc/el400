@@ -9,7 +9,7 @@ import {
   useOperationDispatch,
   isFunctionMenuSelectionState,
   isCollectingPoints,
-} from "../context/OperationStateContext";
+} from "../state-machine";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();

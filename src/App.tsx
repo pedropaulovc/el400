@@ -5,7 +5,7 @@ import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
 import { MillStateProvider } from "./context/MillStateContext";
 import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
-import { OperationStateProvider } from "./context/OperationStateContext";
+import { OperationStateProvider } from "./state-machine";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
 import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
