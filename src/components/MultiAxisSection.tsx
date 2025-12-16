@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useCenterFinding } from "../context/CenterFindingContext";
+import { useOperationState, isFunctionActive } from "../context/OperationStateContext";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -23,7 +23,7 @@ const MultiAxisSection = ({
 }: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
   const { nvMem } = useNonVolatileMemoryContext();
-  const centerFinding = useCenterFinding();
+  const opState = useOperationState();
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';
@@ -133,7 +133,7 @@ const MultiAxisSection = ({
               <LEDIndicator
                 label="fn"
                 name="status"
-                isOn={centerFinding.mode !== 'inactive'}
+                isOn={isFunctionActive(opState)}
                 data-testid="led-fn"
               />
             </fieldset>

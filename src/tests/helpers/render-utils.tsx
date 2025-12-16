@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { MillStateProvider } from '../../context/MillStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
-import { CenterFindingProvider } from '../../context/CenterFindingContext';
+import { OperationStateProvider } from '../../context/OperationStateContext';
 
 /**
  * Custom render function that includes all necessary providers
@@ -49,9 +49,9 @@ export function renderWithProviders(
         <NonVolatileMemoryProvider>
           <MillStateProvider>
             <VolatileMemoryProvider>
-              <CenterFindingProvider>
+              <OperationStateProvider>
                 {children}
-              </CenterFindingProvider>
+              </OperationStateProvider>
             </VolatileMemoryProvider>
           </MillStateProvider>
         </NonVolatileMemoryProvider>

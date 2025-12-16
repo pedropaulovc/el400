@@ -4,39 +4,57 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useInputBuffer } from "../hooks/useInputBuffer";
-import { useCenterFinding } from "../context/CenterFindingContext";
+import {
+  useOperationState,
+  useOperationDispatch,
+  isFunctionMenuSelectionState,
+  isCollectingPoints,
+} from "../context/OperationStateContext";
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
   const inputBuffer = useInputBuffer();
-  const centerFinding = useCenterFinding();
+  const opState = useOperationState();
+  const dispatch = useOperationDispatch();
 
   const handleNumber = useCallback((num: string) => {
-    // Special handling for key 6 (Right arrow) in center finding mode
-    if (num === '6') {
-      const centerMode = centerFinding.mode;
-      if (centerMode === 'menu') {
-        // Navigate through menu options
-        centerFinding.cycleMenuOption();
-        return;
-      } else if (centerMode === 'line' || centerMode === 'circle') {
-        // Store current point
-        const point = {
-          X: vMem.displayValues.X,
-          Y: vMem.displayValues.Y,
-          Z: vMem.displayValues.Z,
-        };
-        centerFinding.storePoint(point);
+    // Dispatch raw key events to the operation state machine
+    // The reducer interprets them based on current state
+
+    if (num === '4') {
+      // Key 4: In function menu, navigate left; otherwise digit entry
+      if (isFunctionMenuSelectionState(opState)) {
+        dispatch({ type: 'KEY_4' });
         return;
       }
     }
-    
-    // Normal mode: append digit
+
+    if (num === '6') {
+      // Key 6: In function menu, navigate right; in collecting mode, store point
+      if (isFunctionMenuSelectionState(opState)) {
+        dispatch({ type: 'KEY_6' });
+        return;
+      }
+      if (isCollectingPoints(opState)) {
+        // Attach current position data for point storage
+        dispatch({
+          type: 'POINT_DATA',
+          point: {
+            X: vMem.displayValues.X,
+            Y: vMem.displayValues.Y,
+            Z: vMem.displayValues.Z,
+          },
+        });
+        return;
+      }
+    }
+
+    // Normal mode: append digit if axis selected
     if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDigit(num);
-  }, [vMem, inputBuffer, centerFinding]);
+  }, [opState, dispatch, vMem, inputBuffer]);
 
   const handleDecimal = useCallback(() => {
     if (!vMem.activeAxis) {
@@ -54,30 +72,17 @@ const KeypadSection = () => {
 
   const handleClear = useCallback(() => {
     inputBuffer.clear();
-    vMem.clearKeyPressed();
-    // Also exit center finding mode if active
-    if (centerFinding.mode !== 'inactive') {
-      centerFinding.exit();
-    }
-  }, [inputBuffer, vMem, centerFinding]);
+    // Dispatch KEY_CLEAR to state machine - handles boot dismiss and menu exit
+    dispatch({ type: 'KEY_CLEAR' });
+  }, [inputBuffer, dispatch]);
 
   const handleEnter = useCallback(() => {
-    const centerMode = centerFinding.mode;
-    
-    // Handle center finding menu navigation
-    if (centerMode === 'menu') {
-      // In menu, ENT confirms the selected option
-      if (centerFinding.menuOption === 'line') {
-        centerFinding.selectLine();
-      } else if (centerFinding.menuOption === 'circle') {
-        centerFinding.selectCircle();
-      } else if (centerFinding.menuOption === 'center') {
-        // From initial "CEntrE" text, ENT selects default option (line)
-        centerFinding.selectLine();
-      }
+    // In function menu, ENT confirms the selection
+    if (isFunctionMenuSelectionState(opState)) {
+      dispatch({ type: 'KEY_ENTER' });
       return;
     }
-    
+
     // Normal mode: handle numeric entry
     if (!vMem.activeAxis) {
       return;
@@ -87,7 +92,7 @@ const KeypadSection = () => {
       vMem.setAxisValue(vMem.activeAxis, value);
       inputBuffer.clear();
     }
-  }, [vMem, inputBuffer, centerFinding]);
+  }, [opState, dispatch, vMem, inputBuffer]);
 
   return (
     <BeveledFrame>
