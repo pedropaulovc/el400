@@ -6,6 +6,6 @@ const project = setProjectAnnotations([projectAnnotations]);
 
 beforeAll(project.beforeAll);
 
-// Note: page.emulateMedia() for forced-colors is now handled per-story
-// in the play functions of forced-colors stories, using the page object
-// available through Vitest browser mode with Playwright provider
+// Note: page.emulateMedia() for forced-colors is handled in the preVisit hook
+// of test-runner.ts (for Storybook test-runner), not in the play functions of stories
+// or in this vitest setup file. The vitest tests do not have forced-colors emulation.

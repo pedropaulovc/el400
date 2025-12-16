@@ -4,9 +4,10 @@ import "../src/index.css";
 /**
  * Storybook preview configuration
  * 
- * Note: Forced-colors mode emulation is now handled using browser's native
- * page.emulateMedia({ forcedColors: 'active' }) API in story play functions.
- * This provides true browser-level forced-colors emulation instead of CSS simulation.
+ * Note: Forced-colors mode emulation is now handled using the browser's native
+ * page.emulateMedia({ forcedColors: 'active' }) API in the test-runner.ts `preVisit` hook
+ * before the story is visited. This provides true browser-level forced-colors emulation
+ * instead of CSS simulation.
  */
 
 const preview: Preview = {

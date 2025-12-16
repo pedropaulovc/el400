@@ -50,14 +50,15 @@ The application supports Windows High Contrast mode (forced-colors media query).
 
 ### Component-Level Testing (Storybook)
 
-**Approach:** CSS-based emulation using Storybook decorators
+**Approach:** Browser-native forced-colors emulation using Playwright's `page.emulateMedia({ forcedColors: 'active' })` in the test runner
 
 **Location:** `src/components/*.stories.tsx`
 
 **How it works:**
-1. Stories set `parameters.forcedColors: 'active'`
-2. Storybook decorator applies forced-colors CSS styles
-3. Automated tests verify styling and contrast ratios
+1. Stories with "forced-colors" in their ID are automatically detected by `.storybook/test-runner.ts`
+2. Test runner calls `page.emulateMedia({ forcedColors: 'active' })` in the `preVisit` hook before rendering
+3. Browser applies native forced-colors mode to the story
+4. Automated tests verify styling and contrast ratios
 
 **Example stories:**
 - `SevenSegmentDigit.stories.tsx`: `ForcedColorsEight`, `ForcedColorsDisplay`
@@ -69,15 +70,15 @@ The application supports Windows High Contrast mode (forced-colors media query).
 - ✅ Easy to visualize in Storybook UI
 - ✅ Automated test validation
 - ✅ Visual regression prevention
-- ⚠️ CSS emulation (not true browser forced-colors)
+- ✅ Browser-native forced-colors emulation via Playwright (`page.emulateMedia()`), not just CSS overrides
 
 **Testing:**
 ```typescript
 // Example from DROButton.stories.tsx
+// Story naming with "ForcedColors" triggers automatic emulation in test-runner
 export const ForcedColorsButtons: Story = {
   parameters: {
-    forcedColors: 'active',
-    backgrounds: { default: 'forced-colors' },
+    backgrounds: { default: 'dark' },
   },
   play: async ({ canvasElement }) => {
     const buttons = canvasElement.querySelectorAll("button");
@@ -177,9 +178,9 @@ When adding or modifying components:
 npm run test:all
 
 # Individual test suites
-npm run test              # Unit tests
-npm run test:storybook    # Storybook tests
-npm run test:e2e          # E2E tests
+npm run test                    # Unit tests
+npm run test:storybook:runner   # Storybook test-runner (with forced-colors support)
+npm run test:e2e                # E2E tests
 
 # With UI/debugging
 npm run test:ui           # Unit tests with UI
@@ -187,11 +188,21 @@ npm run test:e2e:ui       # E2E tests with UI
 npm run storybook         # View stories in browser
 ```
 
+## Known Issues
+
+### npm Install Warnings
+
+When installing dependencies, you may see deprecation warnings from `@storybook/test-runner`:
+- `jest-process-manager`, `expect-playwright`, `inflight`, `rimraf@3`, and `glob@7` are deprecated
+- These are transitive dependencies of `@storybook/test-runner` (v0.24.2)
+- The warnings are harmless and do not affect functionality
+- They will be resolved when Storybook updates to newer versions of these packages
+
 ## Continuous Integration
 
 All three test types run in CI:
 1. Unit tests (fastest)
-2. Storybook tests
+2. Storybook test-runner tests (with forced-colors emulation)
 3. E2E tests (slowest)
 
 Failed tests block merging to main branch.
