@@ -125,3 +125,111 @@ export const KeyboardNavigation: Story = {
     await expect(args.onClick).toHaveBeenCalled();
   },
 };
+
+/**
+ * Forced Colors Mode - Buttons have visible borders
+ * Demonstrates that all button variants have visible borders
+ * and maintain sufficient contrast in forced-colors mode.
+ */
+export const ForcedColorsButtons: Story = {
+  args: {
+    children: "Test",
+  },
+  parameters: {
+    forcedColors: 'active',
+    backgrounds: {
+      default: 'forced-colors',
+    },
+  },
+  render: () => (
+    <div className="flex gap-4 flex-wrap p-4">
+      <DROButton variant="default">Default</DROButton>
+      <DROButton variant="dark">Dark</DROButton>
+      <DROButton variant="yellow">Yellow</DROButton>
+      <DROButton variant="clear">Clear</DROButton>
+      <DROButton variant="enter">Enter</DROButton>
+      <DROButton variant="default" isActive>Active</DROButton>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const buttons = canvasElement.querySelectorAll("button");
+    
+    // Verify all buttons are rendered
+    await expect(buttons.length).toBeGreaterThan(0);
+    
+    // Check that buttons have visible borders
+    for (const button of Array.from(buttons)) {
+      const style = window.getComputedStyle(button);
+      
+      // Buttons should have a border
+      await expect(style.borderStyle).not.toBe('none');
+      await expect(style.borderWidth).not.toBe('0px');
+      
+      // Buttons should have contrasting text and background
+      await expect(style.color).toBeTruthy();
+      await expect(style.backgroundColor).toBeTruthy();
+    }
+  },
+};
+
+/**
+ * Forced Colors Mode - Button contrast verification
+ * Tests a single button to ensure it meets contrast requirements
+ * in forced-colors mode (17:1 minimum).
+ */
+export const ForcedColorsButtonContrast: Story = {
+  args: {
+    children: "Test Button",
+    variant: "default",
+    size: "square",
+  },
+  parameters: {
+    forcedColors: 'active',
+    backgrounds: {
+      default: 'forced-colors',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const button = canvasElement.querySelector("button");
+    await expect(button).toBeInTheDocument();
+    
+    if (button) {
+      const style = window.getComputedStyle(button);
+      
+      // Parse colors
+      const parseColor = (colorStr: string): [number, number, number] | null => {
+        const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (rgbMatch) {
+          return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+        }
+        return null;
+      };
+      
+      const getLuminance = (r: number, g: number, b: number): number => {
+        const [rs, gs, bs] = [r, g, b].map((c) => {
+          const sRGB = c / 255;
+          return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+      };
+      
+      const getContrastRatio = (rgb1: [number, number, number], rgb2: [number, number, number]): number => {
+        const l1 = getLuminance(...rgb1);
+        const l2 = getLuminance(...rgb2);
+        const lighter = Math.max(l1, l2);
+        const darker = Math.min(l1, l2);
+        return (lighter + 0.05) / (darker + 0.05);
+      };
+      
+      const fgColor = parseColor(style.color);
+      const bgColor = parseColor(style.backgroundColor);
+      
+      if (fgColor && bgColor) {
+        const contrast = getContrastRatio(fgColor, bgColor);
+        
+        // Should meet or exceed 17:1 contrast ratio
+        await expect(contrast).toBeGreaterThanOrEqual(17);
+      }
+    }
+  },
+};

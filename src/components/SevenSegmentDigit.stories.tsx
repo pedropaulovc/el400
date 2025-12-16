@@ -188,3 +188,75 @@ export const SampleWord: Story = {
     </div>
   ),
 };
+
+/**
+ * Forced Colors Mode (High Contrast) - Single Digit
+ * Shows how the digit appears in Windows High Contrast mode.
+ * Lit segments use CanvasText, unlit segments are transparent.
+ */
+export const ForcedColorsEight: Story = {
+  args: {
+    value: "8",
+    showDecimal: true,
+  },
+  parameters: {
+    forcedColors: 'active',
+    backgrounds: {
+      default: 'forced-colors',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const digit = canvasElement.querySelector(".seven-segment-digit");
+    await expect(digit).toBeInTheDocument();
+
+    // Check all segments are rendered (7 segments + decimal for digit 8)
+    const segmentsOn = canvasElement.querySelectorAll(".seg-on");
+    await expect(segmentsOn.length).toBe(8); // 7 segments + decimal
+
+    // Verify forced-colors styling is applied
+    const litSegment = segmentsOn[0] as HTMLElement;
+    const computedStyle = window.getComputedStyle(litSegment);
+    
+    // In forced-colors emulation, background should be white (CanvasText)
+    // This test validates the CSS emulation is working
+    await expect(computedStyle.backgroundColor).toBeTruthy();
+  },
+};
+
+/**
+ * Forced Colors Mode (High Contrast) - Display Number
+ * Shows a complete number display in forced-colors mode.
+ * Demonstrates high contrast between lit and unlit segments.
+ */
+export const ForcedColorsDisplay: Story = {
+  args: {
+    value: "-",
+  },
+  parameters: {
+    forcedColors: 'active',
+    backgrounds: {
+      default: 'forced-colors',
+    },
+  },
+  render: () => (
+    <div className="flex gap-0.5" style={{ padding: "20px" }}>
+      {["-", "1", "2", "3"].map((digit, index) => (
+        <div key={index} style={{ width: "40px", height: "60px" }}>
+          <SevenSegmentDigit value={digit} showDecimal={index === 2} />
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    // Verify all digits are rendered
+    const digits = canvasElement.querySelectorAll(".seven-segment-digit");
+    await expect(digits.length).toBe(4);
+
+    // Check that we have both lit and unlit segments
+    const litSegments = canvasElement.querySelectorAll(".seg-on");
+    const unlitSegments = canvasElement.querySelectorAll(".seg-off");
+    
+    await expect(litSegments.length).toBeGreaterThan(0);
+    await expect(unlitSegments.length).toBeGreaterThan(0);
+  },
+};

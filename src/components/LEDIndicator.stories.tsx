@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect } from "storybook/test";
 import LEDIndicator from "./LEDIndicator";
 
 const meta = {
@@ -55,4 +56,60 @@ export const AllStates: Story = {
       <LEDIndicator label="ON" isOn={true} />
     </div>
   ),
+};
+
+/**
+ * Forced Colors Mode - LED Indicators
+ * Shows how LED indicators appear in Windows High Contrast mode.
+ * Active indicators are clearly visible, inactive ones blend with background.
+ */
+export const ForcedColorsLEDs: Story = {
+  args: {
+    label: "TEST",
+    isOn: false,
+  },
+  parameters: {
+    forcedColors: 'active',
+    backgrounds: {
+      default: 'forced-colors',
+    },
+  },
+  render: () => (
+    <div className="flex gap-4 items-center p-4" style={{ background: '#000' }}>
+      <div>
+        <div className="text-white mb-2 text-xs">Active (visible):</div>
+        <LEDIndicator label="ABS" isOn={true} />
+      </div>
+      <div>
+        <div className="text-white mb-2 text-xs">Inactive (transparent):</div>
+        <LEDIndicator label="INC" isOn={false} />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    // Find active and inactive indicators
+    const activeIndicator = canvasElement.querySelector('.mode-indicator-active');
+    const inactiveIndicator = canvasElement.querySelector('.mode-indicator-inactive');
+    
+    // Verify they exist
+    await expect(activeIndicator).toBeInTheDocument();
+    await expect(inactiveIndicator).toBeInTheDocument();
+    
+    if (activeIndicator) {
+      const activeStyle = window.getComputedStyle(activeIndicator);
+      // Active indicator should have visible color (not transparent)
+      await expect(activeStyle.color).not.toBe('transparent');
+      // Active indicator should not have glow effect (text-shadow)
+      await expect(activeStyle.textShadow).toBe('none');
+    }
+    
+    if (inactiveIndicator) {
+      const inactiveStyle = window.getComputedStyle(inactiveIndicator);
+      // Inactive indicator should be transparent to blend with background
+      // Browsers may return 'transparent' or 'rgba(0, 0, 0, 0)'
+      const isTransparent = inactiveStyle.color === 'transparent' || 
+                           inactiveStyle.color === 'rgba(0, 0, 0, 0)';
+      await expect(isTransparent).toBe(true);
+    }
+  },
 };
