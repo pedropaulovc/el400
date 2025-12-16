@@ -66,9 +66,9 @@ export const menuReducer: FeatureReducer = (current, event) => {
   switch (event.type) {
     case 'KEY_CLEAR':
       return { state: 'idle', data: INITIAL_DRO_MODE_DATA };
-    case 'KEY_6':
+    case 'KEY_6_RIGHT':
       return { state: getNextMenuState(state), data };
-    case 'KEY_4':
+    case 'KEY_4_LEFT':
       return { state: getPrevMenuState(state), data };
     case 'KEY_ENTER':
       return handleMenuEnter(state);

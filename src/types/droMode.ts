@@ -99,13 +99,13 @@ export type DROModeEvent =
   // Raw key presses - keypad emits these without knowing current state
   | { type: 'KEY_0' }
   | { type: 'KEY_1' }
-  | { type: 'KEY_2' }
+  | { type: 'KEY_2_DOWN' }
   | { type: 'KEY_3' }
-  | { type: 'KEY_4' } // Also left navigation
+  | { type: 'KEY_4_LEFT' }
   | { type: 'KEY_5' }
-  | { type: 'KEY_6' } // Also right navigation
+  | { type: 'KEY_6_RIGHT' }
   | { type: 'KEY_7' }
-  | { type: 'KEY_8' }
+  | { type: 'KEY_8_UP' }
   | { type: 'KEY_9' }
   | { type: 'KEY_DECIMAL' }
   | { type: 'KEY_SIGN' }

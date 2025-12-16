@@ -31,7 +31,7 @@ describe('droModeReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const result = droModeReducer(initial, { type: 'KEY_6' });
+      const result = droModeReducer(initial, { type: 'KEY_6_RIGHT' });
 
       expect(result.state).toBe('function-menu-circle');
     });

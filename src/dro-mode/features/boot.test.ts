@@ -166,8 +166,8 @@ describe('bootReducer', () => {
       };
 
       expect(bootReducer(state, { type: 'KEY_ENTER' })).toBe(state);
-      expect(bootReducer(state, { type: 'KEY_4' })).toBe(state);
-      expect(bootReducer(state, { type: 'KEY_6' })).toBe(state);
+      expect(bootReducer(state, { type: 'KEY_4_LEFT' })).toBe(state);
+      expect(bootReducer(state, { type: 'KEY_6_RIGHT' })).toBe(state);
       expect(bootReducer(state, { type: 'KEY_CLEAR' })).toBe(state);
     });
 
@@ -177,7 +177,7 @@ describe('bootReducer', () => {
         data: INITIAL_DRO_MODE_DATA,
       };
 
-      const numericKeys = ['KEY_0', 'KEY_1', 'KEY_2', 'KEY_3', 'KEY_4', 'KEY_5', 'KEY_6', 'KEY_7', 'KEY_8', 'KEY_9'] as const;
+      const numericKeys = ['KEY_0', 'KEY_1', 'KEY_2_DOWN', 'KEY_3', 'KEY_4_LEFT', 'KEY_5', 'KEY_6_RIGHT', 'KEY_7', 'KEY_8_UP', 'KEY_9'] as const;
 
       for (const key of numericKeys) {
         const result = bootReducer(state, { type: key });
