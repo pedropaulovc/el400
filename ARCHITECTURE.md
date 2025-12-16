@@ -161,7 +161,7 @@ type DROState =
 **State Transitions:**
 
 ```
-boot → (BOOT_COMPLETE) →
+boot → (BOOT_STARTED) →
   skipMessage=true  → idle
   skipMessage=false → showMessage
 
@@ -197,7 +197,7 @@ export const bootReducer: FeatureReducer = (current, event) => {
   const { state, data } = current;
   switch (state) {
     case 'boot':
-      if (event.type === 'BOOT_COMPLETE') {
+      if (event.type === 'BOOT_STARTED') {
         return {
           state: event.skipMessage ? 'idle' : 'showMessage',
           data: INITIAL_DRO_CONTEXT,

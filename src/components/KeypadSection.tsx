@@ -24,7 +24,7 @@ const KeypadSection = () => {
     if (num === '4') {
       // Key 4: In function menu, navigate left; otherwise digit entry
       if (isFunctionMenuSelectionState(droState)) {
-        dispatch({ type: 'KEY_4_LEFT' });
+        dispatch({ eventName: 'KEY_4_LEFT' });
         return;
       }
     }
@@ -32,13 +32,13 @@ const KeypadSection = () => {
     if (num === '6') {
       // Key 6: In function menu, navigate right; in collecting mode, store point
       if (isFunctionMenuSelectionState(droState)) {
-        dispatch({ type: 'KEY_6_RIGHT' });
+        dispatch({ eventName: 'KEY_6_RIGHT' });
         return;
       }
       if (isCollectingPoints(droState)) {
         // Attach current position data for point storage
         dispatch({
-          type: 'POINT_DATA',
+          eventName: 'POINT_DATA',
           point: {
             X: vMem.displayValues.X,
             Y: vMem.displayValues.Y,
@@ -73,13 +73,13 @@ const KeypadSection = () => {
   const handleClear = useCallback(() => {
     inputBuffer.clear();
     // Dispatch KEY_CLEAR to state machine - handles boot dismiss and menu exit
-    dispatch({ type: 'KEY_CLEAR' });
+    dispatch({ eventName: 'KEY_CLEAR' });
   }, [inputBuffer, dispatch]);
 
   const handleEnter = useCallback(() => {
     // In function menu, ENT confirms the selection
     if (isFunctionMenuSelectionState(droState)) {
-      dispatch({ type: 'KEY_ENTER' });
+      dispatch({ eventName: 'KEY_ENTER' });
       return;
     }
 

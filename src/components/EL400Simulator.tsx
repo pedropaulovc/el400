@@ -37,19 +37,19 @@ const EL400Simulator = () => {
   const dispatch = useDRODispatch();
   const { nvMem } = useNonVolatileMemoryContext();
 
-  // Boot sequence: Dispatch BOOT_COMPLETE on mount
+  // Boot sequence: Dispatch BOOT_STARTED on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlBootMode = urlParams.get('bootMessageMode');
-    const shouldSkip = nvMem.bootMessageMode === 'skip' || urlBootMode === 'skip';
-    dispatch({ type: 'BOOT_COMPLETE', skipMessage: shouldSkip });
+    const shouldSkipBootMessage = nvMem.bootMessageMode === 'skip' || urlBootMode === 'skip';
+    dispatch({ eventName: 'BOOT_STARTED', skipBootMessage: shouldSkipBootMessage });
   }, [dispatch, nvMem.bootMessageMode]);
 
   // Boot message timeout: Auto-dismiss after duration
   useEffect(() => {
     if (droState === 'showMessage') {
       const timer = setTimeout(() => {
-        dispatch({ type: 'BOOT_MESSAGE_TIMEOUT' });
+        dispatch({ eventName: 'BOOT_MESSAGE_TIMEOUT' });
       }, BOOT_MESSAGE_DURATION_MS);
       return () => clearTimeout(timer);
     }
@@ -68,7 +68,7 @@ const EL400Simulator = () => {
   } else if (isCollectingPoints(droState)) {
     // While collecting points, show current position (normal display)
     axisDisplayValues = vMem.displayValues;
-  } else if (isResultState(droState) && droCtx.type === 'center-finding' && droCtx.centerResult) {
+  } else if (isResultState(droState) && droCtx.stateDataType === 'center-finding' && droCtx.centerResult) {
     // Show distance-to-go when center is calculated
     const center = droCtx.centerResult;
     const current = vMem.displayValues;

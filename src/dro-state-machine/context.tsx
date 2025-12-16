@@ -12,15 +12,15 @@ import {
   type ReactNode,
   type Dispatch,
 } from 'react';
-import type { DROShape } from './types';
+import type { DROStatePayload } from './types';
 import type {
-  DROState,
-  DROContext as DROContextType,
-  DROEvent,
+  DROStateName,
+  DROStateData as DROContextType,
+  DROEventPayload,
 } from './droStateMachine';
 import {
   INITIAL_DRO_STATE,
-  INITIAL_DRO_CONTEXT,
+  INITIAL_DRO_STATE_DATA,
 } from './droStateMachine';
 import type { AxisValues } from '../types/volatileMemory';
 import { droReducer } from './reducer';
@@ -29,9 +29,9 @@ import { droReducer } from './reducer';
 // INITIAL STATE
 // ─────────────────────────────────────────────────────────────────
 
-const INITIAL_SHAPE: DROShape = {
-  state: INITIAL_DRO_STATE,
-  data: INITIAL_DRO_CONTEXT,
+const INITIAL_SHAPE: DROStatePayload = {
+  stateName: INITIAL_DRO_STATE,
+  stateData: INITIAL_DRO_STATE_DATA,
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -39,9 +39,9 @@ const INITIAL_SHAPE: DROShape = {
 // ─────────────────────────────────────────────────────────────────
 
 interface DROContextValue {
-  state: DROState;
+  state: DROStateName;
   data: DROContextType;
-  dispatch: Dispatch<DROEvent>;
+  dispatch: Dispatch<DROEventPayload>;
 }
 
 const DROReactContext = createContext<DROContextValue | null>(null);
@@ -52,14 +52,14 @@ const DROReactContext = createContext<DROContextValue | null>(null);
 
 export interface DROProviderProps {
   children: ReactNode;
-  initialState?: DROShape;
+  initialState?: DROStatePayload;
 }
 
 export function DROProvider({
   children,
   initialState = INITIAL_SHAPE,
 }: DROProviderProps) {
-  const [{ state, data }, dispatch] = useReducer(droReducer, initialState);
+  const [{ stateName: state, stateData: data }, dispatch] = useReducer(droReducer, initialState);
 
   return (
     <DROReactContext.Provider value={{ state, data, dispatch }}>
@@ -81,7 +81,7 @@ function useDROContextInternal(): DROContextValue {
 }
 
 /** Get current DRO state */
-export function useDROState(): DROState {
+export function useDROState(): DROStateName {
   return useDROContextInternal().state;
 }
 
@@ -91,7 +91,7 @@ export function useDROContext(): DROContextType {
 }
 
 /** Get dispatch function for sending events */
-export function useDRODispatch(): Dispatch<DROEvent> {
+export function useDRODispatch(): Dispatch<DROEventPayload> {
   return useDROContextInternal().dispatch;
 }
 
@@ -100,7 +100,7 @@ export function useDRODispatch(): Dispatch<DROEvent> {
  */
 export function useCenterResult(): AxisValues | null {
   const data = useDROContext();
-  if (data.type === 'center-finding') {
+  if (data.stateDataType === 'center-finding') {
     return data.centerResult;
   }
   return null;
@@ -111,7 +111,7 @@ export function useCenterResult(): AxisValues | null {
  */
 export function useStoredPointsCount(): number {
   const data = useDROContext();
-  if (data.type === 'center-finding') {
+  if (data.stateDataType === 'center-finding') {
     return data.storedPoints.length;
   }
   return 0;

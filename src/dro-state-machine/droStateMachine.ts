@@ -11,7 +11,7 @@ import type { AxisValues } from '../types/volatileMemory';
 // DRO STATE - Flat string union, no nested substates
 // ─────────────────────────────────────────────────────────────────
 
-export type DROState =
+export type DROStateName =
   // Boot sequence
   | 'boot'
   | 'showMessage'
@@ -41,41 +41,41 @@ export type DROState =
 // ─────────────────────────────────────────────────────────────────
 
 /** Base interface ensures all context types have a discriminator */
-interface BaseDROContext {
-  readonly type: string;
+interface BaseDROStateData {
+  readonly stateDataType: string;
 }
 
-/** Context is a discriminated union - each feature has its own context type */
-export type DROContext =
-  | NoneData
+/** Discriminated union - each feature has its own state data type */
+export type DROStateData =
+  | EmptyData
   | CenterFindingData
   | BoltHoleData
   | ArcData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
-type _AssertContextHasType = DROContext extends BaseDROContext ? true : never;
+type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
 const _assertContextHasType: _AssertContextHasType = true;
 
-export interface NoneData extends BaseDROContext {
-  readonly type: 'none';
+export interface EmptyData extends BaseDROStateData {
+  readonly stateDataType: 'none';
 }
 
-export interface CenterFindingData extends BaseDROContext {
-  readonly type: 'center-finding';
+export interface CenterFindingData extends BaseDROStateData {
+  readonly stateDataType: 'center-finding';
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
 }
 
-export interface BoltHoleData extends BaseDROContext {
-  readonly type: 'bolt-hole';
+export interface BoltHoleData extends BaseDROStateData {
+  readonly stateDataType: 'bolt-hole';
   holeCount: number;
   radius: number;
   startAngle: number;
   currentHole: number;
 }
 
-export interface ArcData extends BaseDROContext {
-  readonly type: 'arc';
+export interface ArcData extends BaseDROStateData {
+  readonly stateDataType: 'arc';
   // TODO: define arc-specific fields when implementing arc feature
 }
 
@@ -90,76 +90,76 @@ export interface StoredPoint {
 // DRO EVENTS - Raw key/button events, state machine interprets
 // ─────────────────────────────────────────────────────────────────
 
-export type DROEvent =
+export type DROEventPayload =
   // System events
-  | { type: 'BOOT_COMPLETE'; skipMessage: boolean }
-  | { type: 'BOOT_MESSAGE_TIMEOUT' }
-  | { type: 'MODE_TOGGLE_COMPLETE' }
+  | { eventName: 'BOOT_STARTED'; skipBootMessage: boolean }
+  | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
+  | { eventName: 'MODE_TOGGLE_COMPLETE' }
   // Raw key presses - keypad emits these without knowing current state
-  | { type: 'KEY_0' }
-  | { type: 'KEY_1' }
-  | { type: 'KEY_2_DOWN' }
-  | { type: 'KEY_3' }
-  | { type: 'KEY_4_LEFT' }
-  | { type: 'KEY_5' }
-  | { type: 'KEY_6_RIGHT' }
-  | { type: 'KEY_7' }
-  | { type: 'KEY_8_UP' }
-  | { type: 'KEY_9' }
-  | { type: 'KEY_DECIMAL' }
-  | { type: 'KEY_SIGN' }
-  | { type: 'KEY_CLEAR' }
-  | { type: 'KEY_ENTER' }
+  | { eventName: 'KEY_0' }
+  | { eventName: 'KEY_1' }
+  | { eventName: 'KEY_2_DOWN' }
+  | { eventName: 'KEY_3' }
+  | { eventName: 'KEY_4_LEFT' }
+  | { eventName: 'KEY_5' }
+  | { eventName: 'KEY_6_RIGHT' }
+  | { eventName: 'KEY_7' }
+  | { eventName: 'KEY_8_UP' }
+  | { eventName: 'KEY_9' }
+  | { eventName: 'KEY_DECIMAL' }
+  | { eventName: 'KEY_SIGN' }
+  | { eventName: 'KEY_CLEAR' }
+  | { eventName: 'KEY_ENTER' }
   // Button presses
-  | { type: 'BTN_ABS_INC' }
-  | { type: 'BTN_INCH_MM' }
-  | { type: 'BTN_FUNCTION' }
-  | { type: 'BTN_ZERO_X' }
-  | { type: 'BTN_ZERO_Y' }
-  | { type: 'BTN_ZERO_Z' }
-  | { type: 'BTN_ZERO_ALL' }
+  | { eventName: 'BTN_ABS_INC' }
+  | { eventName: 'BTN_INCH_MM' }
+  | { eventName: 'BTN_FUNCTION' }
+  | { eventName: 'BTN_ZERO_X' }
+  | { eventName: 'BTN_ZERO_Y' }
+  | { eventName: 'BTN_ZERO_Z' }
+  | { eventName: 'BTN_ZERO_ALL' }
   // Data payload for point storage
-  | { type: 'POINT_DATA'; point: StoredPoint };
+  | { eventName: 'POINT_DATA'; point: StoredPoint };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
 // ─────────────────────────────────────────────────────────────────
 
 /** Check if state is a function menu selection state (not collecting points) */
-export const isFunctionMenuSelectionState = (s: DROState): boolean =>
+export const isFunctionMenuSelectionState = (s: DROStateName): boolean =>
   s.startsWith('function-menu-') &&
   !s.includes('-point-') &&
   !s.includes('-result');
 
 /** Check if state is in center line workflow */
-export const isCenterLineState = (s: DROState): boolean =>
+export const isCenterLineState = (s: DROStateName): boolean =>
   s.includes('center-line-');
 
 /** Check if state is in center circle workflow */
-export const isCenterCircleState = (s: DROState): boolean =>
+export const isCenterCircleState = (s: DROStateName): boolean =>
   s.includes('center-circle-');
 
 /** Check if state is collecting points (any point-N state) */
-export const isCollectingPoints = (s: DROState): boolean =>
+export const isCollectingPoints = (s: DROStateName): boolean =>
   s.endsWith('-point-1') || s.endsWith('-point-2') || s.endsWith('-point-3');
 
 /** Check if state is showing a result */
-export const isResultState = (s: DROState): boolean => s.endsWith('-result');
+export const isResultState = (s: DROStateName): boolean => s.endsWith('-result');
 
 /** Check if function menu is active (any function-menu-* state) */
-export const isFunctionActive = (s: DROState): boolean =>
+export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
 
-export const INITIAL_DRO_STATE: DROState = 'boot';
+export const INITIAL_DRO_STATE: DROStateName = 'boot';
 
-export const INITIAL_DRO_CONTEXT: DROContext = { type: 'none' };
+export const INITIAL_DRO_STATE_DATA: DROStateData = { stateDataType: 'none' };
 
 export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
-  type: 'center-finding',
+  stateDataType: 'center-finding',
   storedPoints: [],
   centerResult: null,
 };
