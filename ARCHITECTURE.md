@@ -293,10 +293,10 @@ Manages connection lifecycle and mill state from external data sources. This is 
 ```typescript
 interface MillStateContextValue {
   millState: MillState;            // Current mill state (position, probe, connected)
-  connection: MillConnection | null; // Current connection instance
+  connection: MillConnection;      // Current connection instance (defaults to NoOpMillConnection)
   isConnecting: boolean;           // True while connection.connect() is pending
   error: Error | null;             // Connection error, if any
-  setConnection: (connection: MillConnection | null) => void; // Switch connections
+  setConnection: (connection: MillConnection) => void; // Switch connections
 }
 ```
 

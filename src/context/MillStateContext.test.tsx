@@ -6,6 +6,7 @@ import {
   useMillStateContext,
 } from './MillStateContext';
 import { MockMillConnection } from '../adapters/MockMillConnection';
+import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
 
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -36,21 +37,22 @@ describe('MillStateContext', () => {
     });
   });
 
-  describe('Default state (no connection)', () => {
-    it('starts disconnected', () => {
+  describe('Default state (no initialConnection)', () => {
+    it('uses NoOpMillConnection by default', () => {
       const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.millState.connected).toBe(false);
+      expect(result.current.connection).toBeInstanceOf(NoOpMillConnection);
     });
 
-    it('starts in manual controller type', () => {
+    it('starts connected with noop controller', () => {
       const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.millState.controllerType).toBe('manual');
+      expect(result.current.millState.connected).toBe(true);
+      expect(result.current.millState.controllerType).toBe('noop');
     });
 
     it('starts with zero position', () => {
@@ -68,14 +70,6 @@ describe('MillStateContext', () => {
 
       expect(result.current.millState.probe.triggered).toBe(false);
       expect(result.current.millState.probe.pinState).toBe('');
-    });
-
-    it('has null connection', () => {
-      const { result } = renderHook(() => useMillStateContext(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current.connection).toBeNull();
     });
 
     it('is not connecting', () => {
@@ -199,12 +193,12 @@ describe('MillStateContext', () => {
       connection = new MockMillConnection();
     });
 
-    it('allows setting connection after mount', async () => {
+    it('allows replacing connection after mount', async () => {
       const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      expect(result.current.connection).toBeNull();
+      expect(result.current.connection).toBeInstanceOf(NoOpMillConnection);
 
       act(() => {
         result.current.setConnection(connection);
@@ -219,32 +213,11 @@ describe('MillStateContext', () => {
       });
     });
 
-    it('allows clearing connection', async () => {
-      const { result } = renderHook(() => useMillStateContext(), {
-        wrapper: createWrapperWithConnection(connection),
-      });
-
-      await waitFor(() => {
-        expect(result.current.millState.connected).toBe(true);
-      });
-
-      act(() => {
-        result.current.setConnection(null);
-      });
-
-      await waitFor(() => {
-        expect(result.current.connection).toBeNull();
-        expect(result.current.millState.connected).toBe(false);
-        expect(result.current.millState.controllerType).toBe('manual');
-      });
-    });
-
     it('clears error when setting new connection', async () => {
       const { result } = renderHook(() => useMillStateContext(), {
         wrapper: createWrapper(),
       });
 
-      // Manually set error state by setting connection to null (simulates cleared state)
       act(() => {
         result.current.setConnection(connection);
       });

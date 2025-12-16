@@ -86,7 +86,7 @@ function StoryWrapper({
   connection,
   children,
 }: {
-  connection: MockMillConnection | null;
+  connection?: MockMillConnection;
   children: React.ReactNode;
 }) {
   return (
@@ -106,7 +106,7 @@ const meta = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <StoryWrapper connection={null}>
+      <StoryWrapper>
         <Story />
       </StoryWrapper>
     ),
@@ -117,10 +117,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Manual mode - no external data source connected.
- * Default state when no connection is provided.
+ * NoOp mode - no external data source connected.
+ * Default state when no connection is provided (uses NoOpMillConnection).
  */
-export const ManualMode: Story = {};
+export const NoOpMode: Story = {};
 
 /**
  * Mock connection with default position at origin.
