@@ -1,5 +1,5 @@
 /**
- * Machine state context for managing adapter lifecycle and machine state.
+ * Machine state context for managing connection lifecycle and machine state.
  * Separates machine connection concerns from DRO memory management.
  */
 
@@ -11,52 +11,52 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { MachineConnection } from '../adapters/MachineConnection';
+import type { MillConnection } from '../adapters/MillConnection';
 import type { MachineState } from '../types/machineState';
 import { createDefaultMachineState } from '../types/machineState';
 
 export interface MachineStateContextValue {
-  /** Current machine state from adapter */
+  /** Current machine state from connection */
   machineState: MachineState;
-  /** Currently active adapter (or null if none) */
-  adapter: MachineConnection | null;
-  /** Whether the adapter is currently connecting */
+  /** Currently active connection (or null if none) */
+  connection: MillConnection | null;
+  /** Whether the connection is currently connecting */
   isConnecting: boolean;
   /** Error from last connection attempt */
   error: Error | null;
-  /** Set or replace the active adapter */
-  setAdapter: (adapter: MachineConnection | null) => void;
+  /** Set or replace the active connection */
+  setConnection: (connection: MillConnection | null) => void;
 }
 
 const MachineStateContext = createContext<MachineStateContextValue | null>(null);
 
 export interface MachineStateProviderProps {
   children: ReactNode;
-  /** Optional initial adapter */
-  initialAdapter?: MachineConnection | null;
+  /** Optional initial connection */
+  initialConnection?: MillConnection | null;
 }
 
 /**
- * Provider component for machine state and adapter lifecycle management.
- * Handles adapter connection, disconnection, and state subscription.
+ * Provider component for machine state and connection lifecycle management.
+ * Handles connection, disconnection, and state subscription.
  */
 export function MachineStateProvider({
   children,
-  initialAdapter,
+  initialConnection,
 }: MachineStateProviderProps) {
-  // Adapter state
-  const [adapter, setAdapterState] = useState<MachineConnection | null>(
-    initialAdapter ?? null
+  // Connection state
+  const [connection, setConnectionState] = useState<MillConnection | null>(
+    initialConnection ?? null
   );
   const [machineState, setMachineState] = useState<MachineState>(
-    adapter?.getState() ?? createDefaultMachineState('manual')
+    connection?.getState() ?? createDefaultMachineState('manual')
   );
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Handle adapter changes and connection
+  // Handle connection changes
   useEffect(() => {
-    if (!adapter) {
+    if (!connection) {
       setMachineState(createDefaultMachineState('manual'));
       return;
     }
@@ -64,7 +64,7 @@ export function MachineStateProvider({
     let mounted = true;
 
     // Subscribe to state updates
-    const unsubscribe = adapter.subscribe((newState) => {
+    const unsubscribe = connection.subscribe((newState) => {
       if (mounted) {
         setMachineState(newState);
       }
@@ -72,11 +72,11 @@ export function MachineStateProvider({
 
     // Connect if not already connected
     const connect = async () => {
-      if (!adapter.getState().connected) {
+      if (!connection.getState().connected) {
         setIsConnecting(true);
         setError(null);
         try {
-          await adapter.connect();
+          await connection.connect();
         } catch (err) {
           if (mounted) {
             setError(err instanceof Error ? err : new Error(String(err)));
@@ -94,21 +94,21 @@ export function MachineStateProvider({
     return () => {
       mounted = false;
       unsubscribe();
-      adapter.disconnect();
+      connection.disconnect();
     };
-  }, [adapter]);
+  }, [connection]);
 
-  const setAdapter = useCallback((newAdapter: MachineConnection | null) => {
-    setAdapterState(newAdapter);
+  const setConnection = useCallback((newConnection: MillConnection | null) => {
+    setConnectionState(newConnection);
     setError(null);
   }, []);
 
   const contextValue: MachineStateContextValue = {
     machineState,
-    adapter,
+    connection,
     isConnecting,
     error,
-    setAdapter,
+    setConnection,
   };
 
   return (

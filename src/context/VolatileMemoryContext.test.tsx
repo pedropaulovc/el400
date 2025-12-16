@@ -8,7 +8,7 @@ import {
 } from './VolatileMemoryContext';
 import { MachineStateProvider, useMachineStateContext } from './MachineStateContext';
 import { NonVolatileMemoryProvider } from './NonVolatileMemoryContext';
-import { MockAdapter } from '../adapters/MockAdapter';
+import { MockMillConnection } from '../adapters/MockMillConnection';
 
 // Combined hook for tests that need both contexts
 function useBothContexts() {
@@ -30,11 +30,11 @@ function createWrapper() {
   };
 }
 
-function createWrapperWithAdapter(adapter: MockAdapter) {
+function createWrapperWithConnection(connection: MockMillConnection) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <NonVolatileMemoryProvider>
-        <MachineStateProvider initialAdapter={adapter}>
+        <MachineStateProvider initialConnection={connection}>
           <VolatileMemoryProvider>
             {children}
           </VolatileMemoryProvider>
@@ -505,16 +505,16 @@ describe('VolatileMemoryContext', () => {
     });
   });
 
-  describe('Connected mode (with adapter)', () => {
-    let adapter: MockAdapter;
+  describe('Connected mode (with connection)', () => {
+    let connection: MockMillConnection;
 
     beforeEach(() => {
-      adapter = new MockAdapter();
+      connection = new MockMillConnection();
     });
 
     it('calculates absolute values with work offsets', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -523,7 +523,7 @@ describe('VolatileMemoryContext', () => {
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 100, 100);
+        connection.setPosition(100, 100, 100);
       });
 
       await waitFor(() => {
@@ -541,7 +541,7 @@ describe('VolatileMemoryContext', () => {
 
       // Move machine to 150
       act(() => {
-        adapter.setPosition(150, 100, 100);
+        connection.setPosition(150, 100, 100);
       });
 
       await waitFor(() => {
@@ -554,7 +554,7 @@ describe('VolatileMemoryContext', () => {
 
     it('setAxisValue adjusts work offset when connected', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -563,7 +563,7 @@ describe('VolatileMemoryContext', () => {
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 200, 300);
+        connection.setPosition(100, 200, 300);
       });
 
       await waitFor(() => {
@@ -595,7 +595,7 @@ describe('VolatileMemoryContext', () => {
 
     it('halfAxis adjusts work offset when connected', async () => {
       const { result } = renderHook(() => useBothContexts(), {
-        wrapper: createWrapperWithAdapter(adapter),
+        wrapper: createWrapperWithConnection(connection),
       });
 
       await waitFor(() => {
@@ -604,7 +604,7 @@ describe('VolatileMemoryContext', () => {
 
       // Set machine to position 100
       act(() => {
-        adapter.setPosition(100, 200, 300);
+        connection.setPosition(100, 200, 300);
       });
 
       await waitFor(() => {

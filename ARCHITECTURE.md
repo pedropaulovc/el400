@@ -30,7 +30,7 @@ Technical documentation for developers working on the EL400 DRO simulator.
           ▲
           │
 ┌─────────────────────────────────────────────────────────────────┐
-│                   MachineConnection (Interface)                  │
+│                   MillConnection (Interface)                     │
 │  - connect(): Promise<void>                                     │
 │  - disconnect(): void                                           │
 │  - subscribe(callback): unsubscribe                             │
@@ -39,10 +39,10 @@ Technical documentation for developers working on the EL400 DRO simulator.
                               ▲
           ┌───────────────────┼───────────────────┐
           │                   │                   │
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ CncjsAdapter    │ │ LinuxCncAdapter │ │ MockAdapter     │
-│ (WebSocket)     │ │ (future)        │ │ (for testing)   │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
+┌───────────────────┐ ┌─────────────────┐ ┌───────────────────┐
+│CncjsMillConnection│ │ LinuxCncAdapter │ │MockMillConnection │
+│ (WebSocket)       │ │ (future)        │ │ (for testing)     │
+└───────────────────┘ └─────────────────┘ └───────────────────┘
 ```
 
 ## Memory Model
@@ -155,12 +155,12 @@ interface NonVolatileMemory {
 
 ## Adapters
 
-### MachineConnection Interface (`src/adapters/MachineConnection.ts`)
+### MillConnection Interface (`src/adapters/MillConnection.ts`)
 
-All adapters implement this interface:
+All connections implement this interface:
 
 ```typescript
-interface MachineConnection {
+interface MillConnection {
   connect(): Promise<void>;
   disconnect(): void;
   subscribe(listener: MachineStateListener): () => void;
@@ -169,7 +169,7 @@ interface MachineConnection {
 }
 ```
 
-### CncjsAdapter (`src/adapters/CncjsAdapter.ts`)
+### CncjsMillConnection (`src/adapters/CncjsMillConnection.ts`)
 
 Connects to CNCjs via Socket.IO and normalizes data from multiple controllers:
 
@@ -181,7 +181,7 @@ Connects to CNCjs via Socket.IO and normalizes data from multiple controllers:
 | Smoothie | `status.pos{}` object | Not available |
 | Marlin | `status.pos{}` object | Not available |
 
-### MockAdapter (`src/adapters/MockAdapter.ts`)
+### MockMillConnection (`src/adapters/MockMillConnection.ts`)
 
 Simulates machine movement for testing and development. Useful for:
 - Unit tests
@@ -288,35 +288,35 @@ Parses URL parameters for data source configuration:
 
 ### MachineStateContext (`src/context/MachineStateContext.tsx`)
 
-Manages adapter lifecycle and machine state from external data sources. This is the single source of truth for machine position, probe state, and connection status.
+Manages connection lifecycle and machine state from external data sources. This is the single source of truth for machine position, probe state, and connection status.
 
 ```typescript
 interface MachineStateContextValue {
   machineState: MachineState;      // Current machine state (position, probe, connected)
-  adapter: MachineConnection | null; // Current adapter instance
-  isConnecting: boolean;           // True while adapter.connect() is pending
+  connection: MillConnection | null; // Current connection instance
+  isConnecting: boolean;           // True while connection.connect() is pending
   error: Error | null;             // Connection error, if any
-  setAdapter: (adapter: MachineConnection | null) => void; // Switch adapters
+  setConnection: (connection: MillConnection | null) => void; // Switch connections
 }
 ```
 
 **Responsibilities:**
-- Adapter connect/disconnect lifecycle management
-- Subscribe to adapter state updates and propagate to consumers
+- Connection connect/disconnect lifecycle management
+- Subscribe to connection state updates and propagate to consumers
 - Track connection status (connecting, connected, error)
-- Clean up subscriptions when adapter changes or unmounts
+- Clean up subscriptions when connection changes or unmounts
 
 **Lifecycle:**
-1. When `initialAdapter` prop is provided or `setAdapter` is called with a new adapter
-2. Context calls `adapter.connect()` and sets `isConnecting: true`
-3. On success: subscribes to adapter updates, sets `isConnecting: false`
+1. When `initialConnection` prop is provided or `setConnection` is called with a new connection
+2. Context calls `connection.connect()` and sets `isConnecting: true`
+3. On success: subscribes to connection updates, sets `isConnecting: false`
 4. On failure: sets `error` with the connection error
-5. On unmount or adapter change: calls `adapter.disconnect()` and unsubscribes
+5. On unmount or connection change: calls `connection.disconnect()` and unsubscribes
 
 **Usage:**
 ```typescript
 // Direct context access
-const { machineState, adapter, setAdapter } = useMachineStateContext();
+const { machineState, connection, setConnection } = useMachineStateContext();
 
 // Convenience hook (recommended)
 const { machineState } = useMachineState();
@@ -343,7 +343,7 @@ Responsibilities:
 - Boot sequence state machine
 - Calculate display values from machine position and offsets
 
-**Note:** Machine state (position, probe, connected, adapter) is accessed via MachineStateContext, not VolatileMemoryContext.
+**Note:** Machine state (position, probe, connected, connection) is accessed via MachineStateContext, not VolatileMemoryContext.
 
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
@@ -359,12 +359,12 @@ interface NonVolatileMemoryContextValue {
 
 **Provider Order:** The contexts must be nested in this order:
 1. NonVolatileMemoryProvider (outer) - no dependencies
-2. MachineStateProvider - receives adapter, manages connection
+2. MachineStateProvider - receives connection, manages connection
 3. VolatileMemoryProvider (inner) - consumes both MachineState and NonVolatileMemory
 
 ```tsx
 <NonVolatileMemoryProvider>
-  <MachineStateProvider initialAdapter={adapter}>
+  <MachineStateProvider initialConnection={connection}>
     <VolatileMemoryProvider>
       {children}
     </VolatileMemoryProvider>
@@ -391,7 +391,7 @@ http://localhost:5173/?source=cncjs&host=192.168.1.100&port=8000
 
 ## CNCjs WebSocket Events
 
-The CncjsAdapter subscribes to these Socket.IO events:
+The CncjsMillConnection subscribes to these Socket.IO events:
 
 | Event | Purpose |
 |-------|---------|
@@ -406,8 +406,8 @@ The CncjsAdapter subscribes to these Socket.IO events:
 ### Unit Tests
 
 ```
-src/adapters/__tests__/MockAdapter.test.ts
-src/adapters/__tests__/CncjsAdapter.test.ts
+src/adapters/__tests__/MockMillConnection.test.ts
+src/adapters/__tests__/CncjsMillConnection.test.ts
 src/utils/__tests__/unitConversion.test.ts
 ```
 

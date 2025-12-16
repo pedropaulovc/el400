@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { MachineStateProvider, useMachineStateContext } from "../context/MachineStateContext";
-import { MockAdapter } from "../adapters/MockAdapter";
+import { MockMillConnection } from "../adapters/MockMillConnection";
 
 /**
  * Display component to show current machine state.
@@ -80,17 +80,17 @@ function MachineStateDisplay() {
 }
 
 /**
- * Story wrapper component that provides context and adapter.
+ * Story wrapper component that provides context and connection.
  */
 function StoryWrapper({
-  adapter,
+  connection,
   children,
 }: {
-  adapter: MockAdapter | null;
+  connection: MockMillConnection | null;
   children: React.ReactNode;
 }) {
   return (
-    <MachineStateProvider initialAdapter={adapter}>
+    <MachineStateProvider initialConnection={connection}>
       {children}
     </MachineStateProvider>
   );
@@ -106,7 +106,7 @@ const meta = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <StoryWrapper adapter={null}>
+      <StoryWrapper connection={null}>
         <Story />
       </StoryWrapper>
     ),
@@ -118,19 +118,19 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * Manual mode - no external data source connected.
- * Default state when no adapter is provided.
+ * Default state when no connection is provided.
  */
 export const ManualMode: Story = {};
 
 /**
- * Mock adapter connected with default position at origin.
+ * Mock connection with default position at origin.
  */
 export const MockConnected: Story = {
   decorators: [
     (Story) => {
-      const adapter = new MockAdapter();
+      const connection = new MockMillConnection();
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -139,21 +139,21 @@ export const MockConnected: Story = {
 };
 
 /**
- * Mock adapter with position updates.
+ * Mock connection with position updates.
  * Demonstrates live position data.
  */
 export const MockWithPosition: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(() => new MockAdapter());
+      const [connection] = useState(() => new MockMillConnection());
 
       useEffect(() => {
-        adapter.setPosition(12.3456, -45.6789, 100.0001);
-        return () => adapter.disconnect();
-      }, [adapter]);
+        connection.setPosition(12.3456, -45.6789, 100.0001);
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -162,22 +162,22 @@ export const MockWithPosition: Story = {
 };
 
 /**
- * Mock adapter with probe triggered.
+ * Mock connection with probe triggered.
  * Shows how probe state is displayed.
  */
 export const ProbeTriggered: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(() => new MockAdapter());
+      const [connection] = useState(() => new MockMillConnection());
 
       useEffect(() => {
-        adapter.setPosition(50, 50, 25);
-        adapter.setProbeState("P");
-        return () => adapter.disconnect();
-      }, [adapter]);
+        connection.setPosition(50, 50, 25);
+        connection.setProbeState("P");
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -186,22 +186,22 @@ export const ProbeTriggered: Story = {
 };
 
 /**
- * Mock adapter with probe and limit switch triggered.
+ * Mock connection with probe and limit switch triggered.
  * Shows combined pin state like "XP" (X limit + probe).
  */
 export const ProbePlusLimitSwitch: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(() => new MockAdapter());
+      const [connection] = useState(() => new MockMillConnection());
 
       useEffect(() => {
-        adapter.setPosition(-100, 0, 0);
-        adapter.setProbeState("XP");
-        return () => adapter.disconnect();
-      }, [adapter]);
+        connection.setPosition(-100, 0, 0);
+        connection.setProbeState("XP");
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
@@ -210,22 +210,22 @@ export const ProbePlusLimitSwitch: Story = {
 };
 
 /**
- * Mock adapter with simulated movement.
+ * Mock connection with simulated movement.
  * Position changes over time to demonstrate live updates.
  */
 export const LiveMovement: Story = {
   decorators: [
     (Story) => {
-      const [adapter] = useState(
-        () => new MockAdapter({ simulateMovement: true, updateInterval: 100 })
+      const [connection] = useState(
+        () => new MockMillConnection({ simulateMovement: true, updateInterval: 100 })
       );
 
       useEffect(() => {
-        return () => adapter.disconnect();
-      }, [adapter]);
+        return () => connection.disconnect();
+      }, [connection]);
 
       return (
-        <StoryWrapper adapter={adapter}>
+        <StoryWrapper connection={connection}>
           <Story />
         </StoryWrapper>
       );
