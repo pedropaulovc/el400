@@ -28,3 +28,7 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci
+
+      - name: Install Playwright browsers
+        timeout-minutes: 1
+        run: npx playwright install --with-deps chromium-headless-shell
