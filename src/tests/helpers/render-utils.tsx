@@ -37,7 +37,7 @@ export function renderWithProviders(
     },
   });
 
-  const client = queryClient || defaultQueryClient;
+  const client = queryClient ?? defaultQueryClient;
 
   if (initialRoute !== '/') {
     window.history.pushState({}, 'Test page', initialRoute);

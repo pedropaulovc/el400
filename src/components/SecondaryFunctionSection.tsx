@@ -4,6 +4,7 @@ import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useDRODispatch } from "../dro-state-machine";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 const SecondaryFunctionSection = () => {

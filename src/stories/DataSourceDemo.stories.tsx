@@ -43,7 +43,7 @@ function VolatileMemoryDemo() {
       {/* Mode Toggle */}
       <div className="flex gap-4">
         <button
-          onClick={() => vMem.setMode("abs")}
+          onClick={() => { vMem.setMode("abs"); }}
           className={`px-4 py-2 rounded ${
             vMem.mode === "abs"
               ? "bg-green-600 text-white"
@@ -53,7 +53,7 @@ function VolatileMemoryDemo() {
           ABS
         </button>
         <button
-          onClick={() => vMem.setMode("inc")}
+          onClick={() => { vMem.setMode("inc"); }}
           className={`px-4 py-2 rounded ${
             vMem.mode === "inc"
               ? "bg-green-600 text-white"
@@ -64,9 +64,9 @@ function VolatileMemoryDemo() {
         </button>
         <button
           onClick={() =>
-            updateNvMem({
+            { updateNvMem({
               defaultUnit: nvMem.defaultUnit === "inch" ? "mm" : "inch",
-            })
+            }); }
           }
           className="px-4 py-2 rounded bg-blue-600 text-white ml-auto"
         >
@@ -93,7 +93,7 @@ function VolatileMemoryDemo() {
               {vMem.displayValues[axis].toFixed(nvMem.precision)}
             </span>
             <button
-              onClick={() => handleZeroAxis(axis)}
+              onClick={() => { handleZeroAxis(axis); }}
               className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs"
             >
               Zero
@@ -104,7 +104,7 @@ function VolatileMemoryDemo() {
 
       {/* Zero All Button */}
       <button
-        onClick={() => vMem.zeroAll()}
+        onClick={() => { vMem.zeroAll(); }}
         className="w-full px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
       >
         Zero All ({vMem.mode.toUpperCase()})
@@ -152,7 +152,7 @@ function StoryWrapper({
 }) {
   return (
     <NonVolatileMemoryProvider>
-      <MillStateProvider initialConnection={connection || new MockMillConnection()}>
+      <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
         <VolatileMemoryProvider>
           {children}
         </VolatileMemoryProvider>
@@ -199,7 +199,7 @@ export const MockWithMovement: Story = {
       );
 
       useEffect(() => {
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -222,7 +222,7 @@ export const MockFixedPosition: Story = {
 
       useEffect(() => {
         connection.setPosition(123.4567, 89.1234, -45.6789);
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -248,7 +248,7 @@ export const InteractiveDemo: Story = {
 
       useEffect(() => {
         connection.setPosition(50.0, 100.0, 25.0);
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (

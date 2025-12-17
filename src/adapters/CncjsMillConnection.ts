@@ -39,9 +39,9 @@ interface CncjsControllerState {
  * GRBL provides position as [x, y, z] arrays and pin state in 'pn' field.
  */
 function normalizeGrbl(state: CncjsControllerState): Partial<MillState> {
-  const mpos = state.status?.mpos || [0, 0, 0];
+  const mpos = state.status?.mpos ?? [0, 0, 0];
   const wpos = state.status?.wpos;
-  const pn = state.status?.pn || '';
+  const pn = state.status?.pn ?? '';
 
   const position: MillPosition = {
     x: mpos[0] ?? 0,
@@ -87,7 +87,7 @@ function normalizeGrblHAL(state: CncjsControllerState): Partial<MillState> {
  * TinyG uses individual position properties (posx, posy, posz) and prb for probe.
  */
 function normalizeTinyG(state: CncjsControllerState): Partial<MillState> {
-  const sr = state.sr || {};
+  const sr = state.sr ?? {};
   const prb = sr.prb;
   const pinState = prb ? 'P' : '';
 
@@ -107,7 +107,7 @@ function normalizeTinyG(state: CncjsControllerState): Partial<MillState> {
  * Note: Smoothie does NOT expose realtime probe state.
  */
 function normalizeSmoothie(state: CncjsControllerState): Partial<MillState> {
-  const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
+  const pos = state.status?.pos ?? { x: 0, y: 0, z: 0 };
 
   return {
     position: {
@@ -125,7 +125,7 @@ function normalizeSmoothie(state: CncjsControllerState): Partial<MillState> {
  * Note: Marlin does NOT stream probe state continuously.
  */
 function normalizeMarlin(state: CncjsControllerState): Partial<MillState> {
-  const pos = state.status?.pos || { x: 0, y: 0, z: 0 };
+  const pos = state.status?.pos ?? { x: 0, y: 0, z: 0 };
 
   return {
     position: {
@@ -168,7 +168,7 @@ export class CncjsMillConnection implements MillConnection {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
-  private listeners: Set<MillStateListener> = new Set();
+  private listeners = new Set<MillStateListener>();
   private state: MillState = {
     ...createDefaultMillState(),
     controllerType: 'cncjs',
@@ -182,7 +182,7 @@ export class CncjsMillConnection implements MillConnection {
 
   async connect(): Promise<void> {
     const { host, port, token, sessionId } = this.options;
-    const url = `http://${host}:${port}`;
+    const url = `http://${host}:${String(port)}`;
 
     return new Promise((resolve, reject) => {
       const query: Record<string, string> = {};

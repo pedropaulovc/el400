@@ -84,7 +84,7 @@ export function MillStateProvider({
       }
     };
 
-    connect();
+    void connect();
 
     return () => {
       mounted = false;

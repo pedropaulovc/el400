@@ -63,7 +63,7 @@ const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] 
 const Axis = ({ value, axis }: AxisProps) => {
   const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
     ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
-    : formatTextValue(value as string);
+    : formatTextValue(value);
 
   return (
     <div

@@ -39,7 +39,7 @@ const AxisSelectionSection = () => {
               <DROButton
                 variant="dark"
                 size="axis"
-                onClick={() => handleAxisSelect(axis)}
+                onClick={() => { handleAxisSelect(axis); }}
                 isActive={vMem.activeAxis === axis}
                 aria-pressed={vMem.activeAxis === axis}
                 data-testid={`axis-select-${axis.toLowerCase()}`}
@@ -52,7 +52,7 @@ const AxisSelectionSection = () => {
               <DROButton
                 variant="dark"
                 size="square"
-                onClick={() => vMem.zeroAxis(axis)}
+                onClick={() => { vMem.zeroAxis(axis); }}
                 data-testid={`axis-zero-${axis.toLowerCase()}`}
               >
                 <span className="sr-only">Zero {axis} axis</span>

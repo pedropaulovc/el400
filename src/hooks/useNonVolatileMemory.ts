@@ -14,7 +14,7 @@ function loadMemory(): NonVolatileMemory {
   try {
     const stored = localStorage.getItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as NonVolatileMemory;
       // Merge with defaults to handle new fields added in updates
       return { ...DEFAULT_NON_VOLATILE_MEMORY, ...parsed };
     }
