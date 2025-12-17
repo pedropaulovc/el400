@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayValue,
-} from '../tests/helpers/integration-test-utils';
+} from '../../tests/helpers/integration-test-utils';
 
 describe('Calculator Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
