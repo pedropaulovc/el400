@@ -33,7 +33,7 @@ describe('isFunctionMenuSelectionState', () => {
   it('should return false for non-menu states', () => {
     const nonMenuStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'abs-inc-mode',
       'inch-mm-mode',
@@ -88,7 +88,7 @@ describe('isCollectingPoints', () => {
   it('should return false for non-point states', () => {
     const nonPointStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'abs-inc-mode',
       'inch-mm-mode',
@@ -133,7 +133,7 @@ describe('isCenterLineState', () => {
   it('should return false for non-center-finding states', () => {
     const otherStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'function-menu-center',
       'function-menu-circle',
@@ -174,7 +174,7 @@ describe('isCenterCircleState', () => {
   it('should return false for non-center-finding states', () => {
     const otherStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'function-menu-center',
       'function-menu-circle',
@@ -215,7 +215,7 @@ describe('isResultState', () => {
   it('should return false for menu and other states', () => {
     const otherStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'function-menu-center',
       'function-menu-circle',
@@ -252,7 +252,7 @@ describe('isFunctionActive', () => {
   it('should return false for non-function states', () => {
     const nonFunctionStates: DROStateName[] = [
       'boot',
-      'showMessage',
+      'boot-show-message',
       'idle',
       'abs-inc-mode',
       'inch-mm-mode',

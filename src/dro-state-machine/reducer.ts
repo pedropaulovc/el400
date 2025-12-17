@@ -8,6 +8,7 @@
 import type { DROStatePayload, FeatureReducer } from './types';
 import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
+import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
@@ -19,6 +20,7 @@ import { centerFindingReducer } from './features/center-finding';
  */
 const featureReducers: FeatureReducer[] = [
   bootReducer,
+  idleReducer,
   absIncReducer,
   inchMmReducer,
   menuReducer,
