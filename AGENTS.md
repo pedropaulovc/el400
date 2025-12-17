@@ -50,7 +50,7 @@ npm run build-storybook
 - **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys. Dedicated to acceptance testing and critical user flows, usually 1 or 2 per feature. Use unit or integration tests for in-depth testing coverage.
 - **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
 - **Coverage:** Min 70% enforced. Run `npm run test:coverage`.
-- **Exit criteria** Successful `npm run test:all`
+- **IMPORTANT: Exit criteria** 1 or 2 E2E tests plus several integration tests and unit tests (new features), successful `npm run test:all` (all changes)
 
 ## Project Management
 
