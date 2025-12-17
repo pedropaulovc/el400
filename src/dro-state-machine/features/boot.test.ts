@@ -1,7 +1,7 @@
 /**
  * Boot Feature Reducer Tests
  *
- * Tests for boot sequence states: 'boot' and 'show-boot-message'.
+ * Tests for boot sequence states: 'boot' and 'boot-show-message'.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -34,7 +34,7 @@ describe('bootReducer', () => {
     });
 
     it('should handle boot states', () => {
-      const bootStates = ['boot', 'show-boot-message'] as const;
+      const bootStates = ['boot', 'boot-show-message'] as const;
 
       for (const bootState of bootStates) {
         const state: DROStatePayload = {
@@ -50,7 +50,7 @@ describe('bootReducer', () => {
   });
 
   describe('boot state', () => {
-    it('should transition to show-boot-message on BOOT_STARTED with skipMessage=false', () => {
+    it('should transition to boot-show-message on BOOT_STARTED with skipMessage=false', () => {
       const state: DROStatePayload = {
         stateName: 'boot',
         stateData: INITIAL_DRO_STATE_DATA,
@@ -58,7 +58,7 @@ describe('bootReducer', () => {
 
       const result = bootReducer(state, { eventName: 'BOOT_STARTED', skipBootMessage: false });
 
-      expect(result?.stateName).toBe('show-boot-message');
+      expect(result?.stateName).toBe('boot-show-message');
       expect(result?.stateData.stateDataType).toBe('none');
     });
 
@@ -96,7 +96,7 @@ describe('bootReducer', () => {
     });
   });
 
-  describe('show-boot-message state', () => {
+  describe('boot-show-message state', () => {
     it('should transition to idle on BOOT_MESSAGE_TIMEOUT', () => {
       const state: DROStatePayload = {
         stateName: 'boot-show-message',
