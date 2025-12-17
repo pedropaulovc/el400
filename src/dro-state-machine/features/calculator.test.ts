@@ -163,7 +163,7 @@ describe('calculatorReducer', () => {
       expect(calcData.currentValue).toBe(6.5);
     });
 
-    it('should calculate MULTI: 2.5 × 4 = 10', () => {
+    it('should calculate MULTI: 2.5 * 4 = 10', () => {
       const state: DROStatePayload = {
         stateName: 'calculator-multi',
         stateData: {
@@ -181,7 +181,7 @@ describe('calculatorReducer', () => {
       expect(calcData.currentValue).toBe(10);
     });
 
-    it('should calculate DIV: 10 ÷ 4 = 2.5', () => {
+    it('should calculate DIV: 10 / 4 = 2.5', () => {
       const state: DROStatePayload = {
         stateName: 'calculator-div',
         stateData: {
@@ -199,7 +199,7 @@ describe('calculatorReducer', () => {
       expect(calcData.currentValue).toBe(2.5);
     });
 
-    it('should handle division by zero: 10 ÷ 0 = 0', () => {
+    it('should handle division by zero: 10 / 0 = 0', () => {
       const state: DROStatePayload = {
         stateName: 'calculator-div',
         stateData: {
