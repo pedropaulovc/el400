@@ -76,7 +76,7 @@ describe('calculatorReducer', () => {
         stateData: INITIAL_CALCULATOR_DATA,
       };
 
-      const result = calculatorReducer(state, { eventName: 'CALC_Y_CYCLE' });
+      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
 
       expect(result?.stateName).toBe('calculator-add');
       expect((result?.stateData as CalculatorData).operation).toBe('ADD');
@@ -101,7 +101,7 @@ describe('calculatorReducer', () => {
           },
         };
 
-        const result = calculatorReducer(state, { eventName: 'CALC_Y_CYCLE' });
+        const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
 
         expect(result?.stateName).toBe(`calculator-${to.toLowerCase()}`);
         expect((result?.stateData as CalculatorData).operation).toBe(to);
@@ -199,7 +199,7 @@ describe('calculatorReducer', () => {
       expect(calcData.currentValue).toBe(2.5);
     });
 
-    it('should handle division by zero: 10 / 0 = 0', () => {
+    it('should handle division by zero: 10 / 0 = "inF vAL"', () => {
       const state: DROStatePayload = {
         stateName: 'calculator-div',
         stateData: {
@@ -214,7 +214,7 @@ describe('calculatorReducer', () => {
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
-      expect(calcData.currentValue).toBe(0);
+      expect(calcData.currentValue).toBe('inF vAL');
     });
   });
 

@@ -139,12 +139,6 @@ const MultiAxisSection = ({
                 isOn={isFunctionActive(droState)}
                 data-testid="led-fn"
               />
-              <LEDIndicator
-                label="calc"
-                name="status"
-                isOn={isCalculatorActive(droState)}
-                data-testid="calculator-indicator"
-              />
             </fieldset>
           </div>
         </div>

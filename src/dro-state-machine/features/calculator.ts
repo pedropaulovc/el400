@@ -25,7 +25,7 @@ function getNextOperation(current: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null): 'ADD
   return OPERATION_CYCLE[nextIdx] ?? 'ADD';
 }
 
-function performCalculation(first: number, second: number, operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV'): number {
+function performCalculation(first: number, second: number, operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV'): number | string {
   switch (operation) {
     case 'ADD':
       return first + second;
@@ -34,7 +34,7 @@ function performCalculation(first: number, second: number, operation: 'ADD' | 'S
     case 'MULTI':
       return first * second;
     case 'DIV':
-      return second !== 0 ? first / second : 0; // Division by zero returns 0
+      return second !== 0 ? first / second : 'inF vAL'; // Division by zero shows error
     default:
       return 0;
   }
@@ -69,8 +69,8 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
         stateData: INITIAL_CALCULATOR_DATA 
       };
 
-    case 'CALC_Y_CYCLE':
-      // Cycle through operations
+    case 'KEY_6_RIGHT':
+      // Cycle through operations (reusing navigation key)
       const nextOp = getNextOperation(calcData.operation);
       const nextState: CalculatorData = {
         ...calcData,

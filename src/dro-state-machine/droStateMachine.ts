@@ -91,7 +91,7 @@ export interface CalculatorData extends BaseDROStateData {
   readonly stateDataType: 'calculator';
   firstValue: number | null;
   operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
-  currentValue: number;
+  currentValue: number | string;
 }
 
 /** Stored point for center finding operations */
@@ -134,8 +134,6 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
   | { eventName: 'BTN_ZERO_ALL' }
-  // Calculator events
-  | { eventName: 'CALC_Y_CYCLE' }
   // Data payload for point storage
   | { eventName: 'POINT_DATA'; point: StoredPoint };
 

@@ -13,7 +13,7 @@ const AxisSelectionSection = () => {
   const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
     // In calculator mode, Y button cycles through operations
     if (axis === 'Y' && isCalculatorActive(droState)) {
-      dispatch({ eventName: 'CALC_Y_CYCLE' });
+      dispatch({ eventName: 'KEY_6_RIGHT' });
       return;
     }
     vMem.selectAxis(axis);
