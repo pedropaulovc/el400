@@ -44,6 +44,7 @@ npm run build-storybook
 
 ## Testing Strategy
 
+- **TypeScript** Strictest rules enabled
 - **Vitest** (`src/**/*.test.tsx`) - Component behavior, logic, interactions, accessibility. Primary test infrastructure.
 - **Integration** (`*.integration.test.tsx`) - Use helpers from `src/tests/helpers/integration-test-utils.tsx`. Use `data-testid`, not roles/labels.
 - **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys.
