@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor } from "storybook/test";
-import {
-  APPROX_EQUAL_CONTRAST_RATIO,
-  MIN_HIGH_CONTRAST_RATIO,
-  getContrastRatio,
-  isTransparentColor,
-  parseColor,
-} from "../tests/contrast-utils";
+import { expect } from "storybook/test";
 import SevenSegmentDigit from "./SevenSegmentDigit";
 
 const meta = {

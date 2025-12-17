@@ -1,12 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { MIN_ACCESSIBLE_CONTRAST_RATIO, getContrastRatio, parseColor } from "../tests/contrast-utils";
+import {
+  MIN_ACCESSIBLE_CONTRAST_RATIO,
+  getContrastRatio,
+  getEffectiveBackgroundColor,
+  parseColor,
+} from "../tests/contrast-utils";
 import DROButton from "./DROButton";
 
 const meta = {
   title: "Components/DROButton/ForcedColors",
   component: DROButton,
   parameters: {
+    // Disabled in docs as these are test-only stories for forced-colors mode validation
     docs: { disable: true },
   },
 } satisfies Meta<typeof DROButton>;
@@ -28,9 +34,11 @@ export const ForcedColorsHighContrast: Story = {
 
     const style = getComputedStyle(button);
 
+    // Verify button has visible 2px border
     expect(style.borderStyle).not.toBe("none");
-    expect(style.borderWidth).not.toBe("0px");
+    expect(style.borderWidth).toBe("2px");
 
+    // Verify text-to-background contrast
     const fgRgb = parseColor(style.color);
     const bgRgb = parseColor(style.backgroundColor);
 
@@ -38,9 +46,21 @@ export const ForcedColorsHighContrast: Story = {
       throw new Error("Unable to resolve colors for contrast check");
     }
 
-    const contrastRatio = getContrastRatio(fgRgb, bgRgb);
+    const textContrastRatio = getContrastRatio(fgRgb, bgRgb);
+    expect(textContrastRatio).toBeGreaterThanOrEqual(MIN_ACCESSIBLE_CONTRAST_RATIO);
 
-    expect(contrastRatio).toBeGreaterThanOrEqual(MIN_ACCESSIBLE_CONTRAST_RATIO);
+    // Verify border-to-background contrast (17:1 or better)
+    const borderColor = style.borderColor;
+    const borderRgb = parseColor(borderColor);
+    const effectiveBg = getEffectiveBackgroundColor(button);
+    const effectiveBgRgb = parseColor(effectiveBg);
+
+    if (!borderRgb || !effectiveBgRgb) {
+      throw new Error(`Unable to resolve border (${borderColor}) or background (${effectiveBg}) for contrast check`);
+    }
+
+    const borderContrastRatio = getContrastRatio(borderRgb, effectiveBgRgb);
+    expect(borderContrastRatio).toBeGreaterThanOrEqual(MIN_ACCESSIBLE_CONTRAST_RATIO);
   },
 };
 

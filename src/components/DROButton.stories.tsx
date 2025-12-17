@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { MIN_ACCESSIBLE_CONTRAST_RATIO, getContrastRatio, parseColor } from "../tests/contrast-utils";
 import DROButton from "./DROButton";
 
 const meta = {

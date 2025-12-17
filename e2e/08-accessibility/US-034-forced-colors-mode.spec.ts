@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { getContrastRatio, parseColor } from '../../src/tests/contrast-utils';
+import { getContrastRatio, isTransparentColor, parseColor } from '../../src/tests/contrast-utils';
 
 /**
  * Minimal E2E smoke for forced-colors while Storybook handles detailed checks.
@@ -26,7 +26,7 @@ test.describe('US-034: Forced Colors Mode', () => {
     });
 
     let effectiveParent = parentBg;
-    if (!effectiveParent || effectiveParent === 'transparent' || /rgba\(\d+,\s*\d+,\s*\d+,\s*0/.test(effectiveParent)) {
+    if (!effectiveParent || isTransparentColor(effectiveParent)) {
       const canvasColor = await page.evaluate(() => {
         const temp = document.createElement('div');
         temp.style.backgroundColor = 'Canvas';
@@ -39,10 +39,20 @@ test.describe('US-034: Forced Colors Mode', () => {
       effectiveParent = canvasColor;
     }
 
-    const litRgb = parseColor(litBg) ?? parseColor(effectiveParent)!;
-    const offRgb = parseColor(offBg === 'transparent' || offBg === 'none' || /rgba\(\d+,\s*\d+,\s*\d+,\s*0/.test(offBg) ? effectiveParent : offBg)!;
+    const litRgb = parseColor(litBg);
+    const effectiveParentRgb = parseColor(effectiveParent);
+    if (!litRgb && !effectiveParentRgb) {
+      throw new Error(`Unable to parse lit segment color: ${litBg} or fallback: ${effectiveParent}`);
+    }
+    const resolvedLitRgb = litRgb ?? effectiveParentRgb!;
 
-    const contrast = getContrastRatio(litRgb, offRgb);
+    const offRgbSource = isTransparentColor(offBg) ? effectiveParent : offBg;
+    const offRgb = parseColor(offRgbSource);
+    if (!offRgb) {
+      throw new Error(`Unable to parse off segment color: ${offRgbSource}`);
+    }
+
+    const contrast = getContrastRatio(resolvedLitRgb, offRgb);
     expect(contrast).toBeGreaterThanOrEqual(10);
 
     await context.close();

@@ -4,6 +4,7 @@ import {
   APPROX_EQUAL_CONTRAST_RATIO,
   MIN_HIGH_CONTRAST_RATIO,
   getContrastRatio,
+  getEffectiveBackgroundColor,
   isTransparentColor,
   parseColor,
 } from "../tests/contrast-utils";
@@ -13,6 +14,7 @@ const meta = {
   title: "Components/SevenSegmentDigit/ForcedColors",
   component: SevenSegmentDigit,
   parameters: {
+    // Disabled in docs as these are test-only stories for forced-colors mode validation
     docs: { disable: true },
   },
 } satisfies Meta<typeof SevenSegmentDigit>;
@@ -44,19 +46,7 @@ export const ForcedColorsContrast: Story = {
       });
 
       const segments = Array.from(digit!.querySelectorAll("span")) as HTMLElement[];
-      const parentBg = getComputedStyle(digit!.parentElement ?? digit!).backgroundColor;
-      let effectiveParentBg = parentBg;
-      if (isTransparentColor(parentBg)) {
-        const temp = document.createElement("div");
-        temp.style.backgroundColor = "Canvas";
-        temp.style.display = "none";
-        document.body.appendChild(temp);
-        const canvasColor = getComputedStyle(temp).backgroundColor;
-        document.body.removeChild(temp);
-        effectiveParentBg = isTransparentColor(canvasColor)
-          ? getComputedStyle(document.body).backgroundColor
-          : canvasColor;
-      }
+      const effectiveParentBg = getEffectiveBackgroundColor(digit!);
 
       const litSegment = segments.find((segment) => {
         const bg = getComputedStyle(segment).backgroundColor;
