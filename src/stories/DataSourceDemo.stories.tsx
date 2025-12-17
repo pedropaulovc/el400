@@ -152,7 +152,7 @@ function StoryWrapper({
 }) {
   return (
     <NonVolatileMemoryProvider>
-      <MillStateProvider initialConnection={connection}>
+      <MillStateProvider initialConnection={connection || new MockMillConnection()}>
         <VolatileMemoryProvider>
           {children}
         </VolatileMemoryProvider>
