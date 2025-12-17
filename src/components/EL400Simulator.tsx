@@ -39,7 +39,7 @@ const EL400Simulator = () => {
   // Determine what to show on the display
   let axisDisplayValues;
 
-  if (droState === 'showMessage') {
+  if (droState === 'boot-show-message') {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
   } else if (isFunctionMenuSelectionState(droState)) {
