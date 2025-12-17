@@ -30,3 +30,11 @@ export {
   type DROEventPayload as DROEvent,
   type StoredPoint,
 } from './droStateMachine';
+
+// Re-export boot feature
+export {
+  useBootSequence,
+  MODEL_NUMBER,
+  SOFTWARE_VERSION,
+  BOOT_MESSAGE_DURATION_MS,
+} from './features/boot';
