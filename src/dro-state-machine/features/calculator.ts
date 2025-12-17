@@ -84,7 +84,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
 
     case 'KEY_ENTER':
       // Handle value entry and calculation
-      if (eventPayload.eventName === 'KEY_ENTER' && eventPayload.value !== undefined) {
+      if (eventPayload.value !== undefined) {
         const newValue = eventPayload.value;
         if (calcData.operation === null) {
           // First value - store as first value and current value
