@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { act, screen } from '@testing-library/react';
-import { BOOT_MESSAGE_DURATION_MS } from './boot';
+import { BOOT_MESSAGE_DURATION_MS } from '../index';
 import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,

@@ -15,7 +15,7 @@ import {
   isResultState,
 } from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useBootSequence, MODEL_NUMBER, SOFTWARE_VERSION } from "../dro-state-machine/features/boot";
+import { useBootSequence, MODEL_NUMBER, SOFTWARE_VERSION } from "../dro-state-machine";
 
 /** Menu text displayed for each function menu state */
 const MENU_TEXT_MAP: Record<string, string> = {
