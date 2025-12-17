@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useDROState, isFunctionActive } from "../dro-state-machine";
+import { useDROState, isFunctionActive, isCalculatorActive } from "../dro-state-machine";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -135,6 +135,12 @@ const MultiAxisSection = ({
                 name="status"
                 isOn={isFunctionActive(droState)}
                 data-testid="led-fn"
+              />
+              <LEDIndicator
+                label="calc"
+                name="status"
+                isOn={isCalculatorActive(droState)}
+                data-testid="calculator-indicator"
               />
             </fieldset>
           </div>

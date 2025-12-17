@@ -13,6 +13,7 @@ import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
+import { calculatorReducer } from './features/calculator';
 
 /**
  * All feature reducers in priority order.
@@ -20,6 +21,7 @@ import { centerFindingReducer } from './features/center-finding';
  */
 const featureReducers: FeatureReducer[] = [
   bootReducer,
+  calculatorReducer,
   idleReducer,
   absIncReducer,
   inchMmReducer,
