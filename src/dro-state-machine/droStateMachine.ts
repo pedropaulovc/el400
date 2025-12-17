@@ -14,7 +14,7 @@ import type { AxisValues } from '../types/volatileMemory';
 export type DROStateName =
   // Boot sequence
   | 'boot'
-  | 'showMessage'
+  | 'boot-show-message'
   // Normal operation
   | 'idle'
   // Transitional toggle states

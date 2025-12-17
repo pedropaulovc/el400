@@ -15,7 +15,7 @@ describe('menuReducer', () => {
     it('should return null for non-menu states', () => {
       const nonMenuStates: DROStateName[] = [
         'boot',
-        'showMessage',
+        'boot-show-message',
         'idle',
         'abs-inc-mode',
         'inch-mm-mode',

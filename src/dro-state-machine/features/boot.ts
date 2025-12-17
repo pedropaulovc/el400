@@ -1,7 +1,7 @@
 /**
  * Boot Feature Reducer
  *
- * Handles boot sequence and idle state.
+ * Handles boot sequence states: 'boot' and 'boot-show-message'.
  */
 
 import { useEffect, type Dispatch } from 'react';
@@ -26,36 +26,24 @@ export const MODEL_NUMBER = 'EL400';
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 
 export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
-  const { stateName: state, stateData: data } = statePayload;
+  const { stateName: state } = statePayload;
   const { eventName } = eventPayload;
 
   switch (state) {
     case 'boot':
       if (eventName === 'BOOT_STARTED') {
         return {
-          stateName: eventPayload.skipBootMessage ? 'idle' : 'showMessage',
+          stateName: eventPayload.skipBootMessage ? 'idle' : 'boot-show-message',
           stateData: INITIAL_DRO_STATE_DATA,
         };
       }
       return statePayload;
 
-    case 'showMessage':
+    case 'boot-show-message':
       if (eventName === 'BOOT_MESSAGE_TIMEOUT' || eventName === 'KEY_CLEAR') {
         return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
       }
       return statePayload;
-
-    case 'idle':
-      switch (eventName) {
-        case 'BTN_ABS_INC':
-          return { stateName: 'abs-inc-mode', stateData: data };
-        case 'BTN_INCH_MM':
-          return { stateName: 'inch-mm-mode', stateData: data };
-        case 'BTN_FUNCTION':
-          return { stateName: 'function-menu-center', stateData: INITIAL_DRO_STATE_DATA };
-        default:
-          return statePayload;
-      }
 
     default:
       return null;
@@ -84,7 +72,7 @@ export function useBootSequence(
 
   // Boot message timeout: Auto-dismiss after duration
   useEffect(() => {
-    if (droState === 'showMessage') {
+    if (droState === 'boot-show-message') {
       const timer = setTimeout(() => {
         dispatch({ eventName: 'BOOT_MESSAGE_TIMEOUT' });
       }, BOOT_MESSAGE_DURATION_MS);

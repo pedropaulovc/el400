@@ -18,7 +18,7 @@ describe('centerFindingReducer', () => {
     it('should return null for non-center-finding states', () => {
       const nonCenterStates: DROStateName[] = [
         'boot',
-        'showMessage',
+        'boot-show-message',
         'idle',
         'abs-inc-mode',
         'inch-mm-mode',
