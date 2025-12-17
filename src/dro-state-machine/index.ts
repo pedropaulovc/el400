@@ -24,11 +24,13 @@ export {
   isCenterCircleState,
   isResultState,
   isFunctionActive,
+  isCalculatorActive,
   INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT,
   type DROStateName as DROState,
   type DROStateData as DROContext,
   type DROEventPayload as DROEvent,
   type StoredPoint,
+  type CalculatorData,
 } from './droStateMachine';
 
 // Re-export boot feature

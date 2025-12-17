@@ -13,6 +13,7 @@ import {
   isFunctionMenuSelectionState,
   isCollectingPoints,
   isResultState,
+  isCalculatorActive,
 } from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { useBootSequence, MODEL_NUMBER, SOFTWARE_VERSION } from "../dro-state-machine";
@@ -24,6 +25,15 @@ const MENU_TEXT_MAP: Record<string, string> = {
   'function-menu-line': 'LinE',
   'function-menu-linear': 'LinEAr',
   'function-menu-polar': 'PoLAr',
+};
+
+/** Calculator operation text displayed in Y window */
+const CALC_OPERATION_MAP: Record<string, string> = {
+  'calculator-idle': '',
+  'calculator-add': 'ADD',
+  'calculator-sub': 'SUB',
+  'calculator-multi': 'MULTI',
+  'calculator-div': 'DIV',
 };
 
 const EL400Simulator = () => {
@@ -42,6 +52,15 @@ const EL400Simulator = () => {
   if (droState === 'boot-show-message') {
     // Boot message
     axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
+  } else if (isCalculatorActive(droState)) {
+    // Calculator mode
+    const calcData = droCtx.stateDataType === 'calculator' ? droCtx : null;
+    const operation = CALC_OPERATION_MAP[droState] ?? '';
+    axisDisplayValues = {
+      X: calcData?.currentValue ?? 0,
+      Y: operation,
+      Z: '',
+    };
   } else if (isFunctionMenuSelectionState(droState)) {
     // Show menu option text
     const menuText = MENU_TEXT_MAP[droState] ?? '';

@@ -2,10 +2,22 @@ import { Fragment } from "react";
 import DROButton from "./DROButton";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useDROState, useDRODispatch, isCalculatorActive } from "../dro-state-machine";
 
 const AxisSelectionSection = () => {
   const vMem = useVolatileMemory();
+  const droState = useDROState();
+  const dispatch = useDRODispatch();
   const axes: ('X' | 'Y' | 'Z')[] = ['X', 'Y', 'Z'];
+
+  const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
+    // In calculator mode, Y button cycles through operations
+    if (axis === 'Y' && isCalculatorActive(droState)) {
+      dispatch({ eventName: 'CALC_Y_CYCLE' });
+      return;
+    }
+    vMem.selectAxis(axis);
+  };
 
   return (
     <>
@@ -27,7 +39,7 @@ const AxisSelectionSection = () => {
               <DROButton
                 variant="dark"
                 size="axis"
-                onClick={() => vMem.selectAxis(axis)}
+                onClick={() => handleAxisSelect(axis)}
                 isActive={vMem.activeAxis === axis}
                 aria-pressed={vMem.activeAxis === axis}
                 data-testid={`axis-select-${axis.toLowerCase()}`}
