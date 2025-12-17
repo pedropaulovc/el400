@@ -23,6 +23,26 @@ export default defineConfig({
           setupFiles: ['./.storybook/vitest.setup.ts'],
         },
       },
+      {
+        extends: true,
+        plugins: [
+          storybookTest({ configDir: path.join(__dirname, '.storybook-forced-colors') }),
+        ],
+        test: {
+          name: 'storybook-forced-colors',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({
+              contextOptions: {
+                forcedColors: 'active',
+              },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+          setupFiles: ['./.storybook/vitest.setup.ts'],
+        },
+      },
     ],
   },
   resolve: {
