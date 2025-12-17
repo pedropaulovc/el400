@@ -1,14 +1,20 @@
+/**
+ * Boot Feature Integration Tests
+ *
+ * Integration tests for boot sequence behavior.
+ */
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { act, screen } from '@testing-library/react';
+import { BOOT_MESSAGE_DURATION_MS } from '../index';
 import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
   renderSimulator,
-} from '../tests/helpers/integration-test-utils';
-import { BOOT_MESSAGE_DURATION_MS } from '../context/VolatileMemoryContext';
+} from '../../tests/helpers/integration-test-utils';
 
-describe('EL400Simulator power-on sequence', () => {
+describe('Boot sequence integration tests', () => {
   beforeEach(() => {
     localStorage.clear();
   });

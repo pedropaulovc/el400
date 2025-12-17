@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import MultiAxisSection from "./MultiAxisSection";
@@ -16,10 +15,7 @@ import {
   isResultState,
 } from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { BOOT_MESSAGE_DURATION_MS } from "../context/VolatileMemoryContext";
-
-export const MODEL_NUMBER = 'EL400';
-export const SOFTWARE_VERSION = 'vEr 1.0.0';
+import { useBootSequence, MODEL_NUMBER, SOFTWARE_VERSION } from "../dro-state-machine";
 
 /** Menu text displayed for each function menu state */
 const MENU_TEXT_MAP: Record<string, string> = {
@@ -37,24 +33,8 @@ const EL400Simulator = () => {
   const dispatch = useDRODispatch();
   const { nvMem } = useNonVolatileMemoryContext();
 
-  // Boot sequence: Dispatch BOOT_STARTED on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlBootMode = urlParams.get('bootMessageMode');
-    const shouldSkipBootMessage = nvMem.bootMessageMode === 'skip' || urlBootMode === 'skip';
-    dispatch({ eventName: 'BOOT_STARTED', skipBootMessage: shouldSkipBootMessage });
-  }, [dispatch, nvMem.bootMessageMode]);
-
-  // Boot message timeout: Auto-dismiss after duration
-  useEffect(() => {
-    if (droState === 'showMessage') {
-      const timer = setTimeout(() => {
-        dispatch({ eventName: 'BOOT_MESSAGE_TIMEOUT' });
-      }, BOOT_MESSAGE_DURATION_MS);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [droState, dispatch]);
+  // Boot sequence logic
+  useBootSequence(dispatch, droState, nvMem);
 
   // Determine what to show on the display
   let axisDisplayValues;
