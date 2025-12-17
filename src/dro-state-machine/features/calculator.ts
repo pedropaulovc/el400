@@ -73,40 +73,43 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
         ...calcData,
         operation: nextOp,
       };
+      const nextStateName = `calculator-${nextOp.toLowerCase()}` as 'calculator-add' | 'calculator-sub' | 'calculator-multi' | 'calculator-div';
       return {
-        stateName: `calculator-${nextOp.toLowerCase()}` as any,
+        stateName: nextStateName,
         stateData: nextState,
       };
 
     case 'CALC_VALUE':
       // Store a value
-      if (eventPayload.eventName === 'CALC_VALUE') {
-        const newValue = eventPayload.value;
-        if (calcData.operation === null) {
-          // First value - store as first value and current value
-          return {
-            stateName: state,
-            stateData: {
-              ...calcData,
-              firstValue: newValue,
-              currentValue: newValue,
-            },
-          };
-        } else {
-          // Second value - store and immediately calculate
-          const result = performCalculation(calcData.firstValue!, newValue, calcData.operation);
-          return {
-            stateName: 'calculator-idle',
-            stateData: {
-              ...calcData,
-              firstValue: null,
-              operation: null,
-              currentValue: result,
-            },
-          };
+      const newValue = eventPayload.value;
+      if (calcData.operation === null) {
+        // First value - store as first value and current value
+        return {
+          stateName: state,
+          stateData: {
+            ...calcData,
+            firstValue: newValue,
+            currentValue: newValue,
+          },
+        };
+      } else {
+        // Second value - store and immediately calculate
+        // firstValue is guaranteed to be non-null here since operation is not null
+        if (calcData.firstValue === null) {
+          console.warn('Calculator firstValue is null despite operation being set');
+          return statePayload;
         }
+        const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+        return {
+          stateName: 'calculator-idle',
+          stateData: {
+            ...calcData,
+            firstValue: null,
+            operation: null,
+            currentValue: result,
+          },
+        };
       }
-      return statePayload;
 
     case 'CALC_ENTER':
       // Calculate result (when ENT pressed without new value)
