@@ -46,7 +46,7 @@ export const parseColor = (color: string): [number, number, number] | null => {
   }
 
   const rgbMatch = color.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\s*\)/);
-  if (rgbMatch) {
+  if (rgbMatch && rgbMatch[1] !== undefined && rgbMatch[2] !== undefined && rgbMatch[3] !== undefined) {
     return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
   }
 
@@ -62,10 +62,13 @@ export const parseColor = (color: string): [number, number, number] | null => {
  * @see https://www.w3.org/WAI/GL/wiki/Relative_luminance
  */
 export const getLuminance = (r: number, g: number, b: number): number => {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
+  const adjusted = [r, g, b].map((c) => {
     const sRGB = c / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
   });
+  const rs = adjusted[0] ?? 0;
+  const gs = adjusted[1] ?? 0;
+  const bs = adjusted[2] ?? 0;
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 };
 

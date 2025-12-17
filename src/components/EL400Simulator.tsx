@@ -53,6 +53,7 @@ const EL400Simulator = () => {
       }, BOOT_MESSAGE_DURATION_MS);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [droState, dispatch]);
 
   // Determine what to show on the display

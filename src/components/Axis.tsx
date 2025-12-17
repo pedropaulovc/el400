@@ -19,12 +19,14 @@ const formatNumberValue = (num: number): { char: string; hasDecimal: boolean }[]
 
   result.push({ char: isNegative ? '-' : ' ', hasDecimal: false });
 
-  const [intPart, decPart] = formatted.split('.');
+  const parts = formatted.split('.');
+  const intPart = parts[0] ?? '';
+  const decPart = parts[1] ?? '';
   const paddedInt = intPart.padStart(3, ' ');
 
   for (let i = 0; i < paddedInt.length; i++) {
     result.push({
-      char: paddedInt[i],
+      char: paddedInt[i] ?? ' ',
       hasDecimal: i === paddedInt.length - 1,
     });
   }
@@ -42,7 +44,10 @@ const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] 
   for (const char of text) {
     if (char === '.') {
       if (raw.length > 0) {
-        raw[raw.length - 1].hasDecimal = true;
+        const lastChar = raw[raw.length - 1];
+        if (lastChar) {
+          lastChar.hasDecimal = true;
+        }
       }
       continue;
     }

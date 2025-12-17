@@ -164,10 +164,10 @@ describe('MockMillConnection', () => {
 
       vi.advanceTimersByTime(100);
       // Still emits updates (for connected state), but position doesn't change
-      const firstCall = listener.mock.calls[0][0] as MillState;
+      const firstCall = listener.mock.calls[0]?.[0] as MillState;
 
       vi.advanceTimersByTime(100);
-      const secondCall = listener.mock.calls[1][0] as MillState;
+      const secondCall = listener.mock.calls[1]?.[0] as MillState;
 
       expect(firstCall.position).toEqual(secondCall.position);
     });

@@ -65,7 +65,7 @@ export interface DataSourceConfig {
   type: ControllerType;
   host: string;
   port: number;
-  sessionId?: string;
+  sessionId?: string | undefined;
 }
 
 /**
