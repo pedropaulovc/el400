@@ -30,10 +30,10 @@ const MENU_TEXT_MAP: Record<string, string> = {
 /** Calculator operation text displayed in Y window */
 const CALC_OPERATION_MAP: Record<string, string> = {
   'calculator-idle': '',
-  'calculator-add': 'ADD',
-  'calculator-sub': 'SUB',
-  'calculator-multi': 'MULTI',
-  'calculator-div': 'DIV',
+  'calculator-add': 'Add',
+  'calculator-sub': 'SUb',
+  'calculator-multi': 'nULtI',
+  'calculator-div': 'dIv',
 };
 
 const EL400Simulator = () => {
