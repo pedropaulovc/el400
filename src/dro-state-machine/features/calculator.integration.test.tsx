@@ -114,7 +114,7 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayPureTextValue('Y')).toBe('nULtI');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('mULtI');
 
       // Enter second value: 4
       await user.click(screen.getByTestId('key-4'));
@@ -222,7 +222,7 @@ describe('Calculator Integration', () => {
       expect(getAxisDisplayPureTextValue('Y')).toBe('SUb');
 
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayPureTextValue('Y')).toBe('nULtI');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('mULtI');
 
       await user.click(screen.getByTestId('axis-select-y'));
       expect(getAxisDisplayPureTextValue('Y')).toBe('dIv');

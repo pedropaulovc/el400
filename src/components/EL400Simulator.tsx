@@ -32,7 +32,7 @@ const CALC_OPERATION_MAP: Record<string, string> = {
   'calculator-idle': '',
   'calculator-add': 'Add',
   'calculator-sub': 'SUb',
-  'calculator-multi': 'nULtI',
+  'calculator-multi': 'mULtI',
   'calculator-div': 'dIv',
 };
 
