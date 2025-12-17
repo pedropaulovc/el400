@@ -6,13 +6,11 @@
 
 // Context and hooks
 export {
-  DROProvider,
-  useDROState,
-  useDROContext,
-  useDRODispatch,
-  useCenterResult,
-  useStoredPointsCount,
-  type DROProviderProps,
+  DROStateMachineProvider as DROProvider,
+  useDROStateName as useDROState,
+  useDROStateData as useDROContext,
+  useDROEventDispatch as useDRODispatch,
+  type DROStateMachineProviderProps as DROProviderProps,
 } from './context';
 
 // Types

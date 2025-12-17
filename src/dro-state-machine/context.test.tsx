@@ -12,8 +12,6 @@ import {
   useDROState,
   useDRODispatch,
   useDROContext,
-  useCenterResult,
-  useStoredPointsCount,
   type DROShape,
 } from './index';
 import { INITIAL_DRO_STATE, INITIAL_DRO_STATE_DATA } from './droStateMachine';
@@ -165,116 +163,12 @@ describe('useDRODispatch', () => {
   });
 });
 
-describe('useCenterResult', () => {
-  it('should return null when not in center-finding data', () => {
-    const { result } = renderHook(() => useCenterResult(), {
-      wrapper: createWrapper({ stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA }),
-    });
-
-    expect(result.current).toBeNull();
-  });
-
-  it('should return null when in center-finding but no result yet', () => {
-    const { result } = renderHook(() => useCenterResult(), {
-      wrapper: createWrapper({
-        stateName: 'function-menu-center-line-point-1',
-        stateData: { stateDataType: 'center-finding', storedPoints: [], centerResult: null },
-      }),
-    });
-
-    expect(result.current).toBeNull();
-  });
-
-  it('should return center result when available', () => {
-    const centerResult = { X: 50, Y: 100, Z: 0 };
-    const { result } = renderHook(() => useCenterResult(), {
-      wrapper: createWrapper({
-        stateName: 'function-menu-center-line-result',
-        stateData: {
-          stateDataType: 'center-finding',
-          storedPoints: [
-            { X: 0, Y: 0, Z: 0 },
-            { X: 100, Y: 200, Z: 0 },
-          ],
-          centerResult,
-        },
-      }),
-    });
-
-    expect(result.current).toEqual(centerResult);
-  });
-});
-
-describe('useStoredPointsCount', () => {
-  it('should return 0 when not in center-finding data', () => {
-    const { result } = renderHook(() => useStoredPointsCount(), {
-      wrapper: createWrapper({ stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA }),
-    });
-
-    expect(result.current).toBe(0);
-  });
-
-  it('should return 0 when in center-finding with no points', () => {
-    const { result } = renderHook(() => useStoredPointsCount(), {
-      wrapper: createWrapper({
-        stateName: 'function-menu-center-line-point-1',
-        stateData: { stateDataType: 'center-finding', storedPoints: [], centerResult: null },
-      }),
-    });
-
-    expect(result.current).toBe(0);
-  });
-
-  it('should return correct count of stored points', () => {
-    const { result } = renderHook(() => useStoredPointsCount(), {
-      wrapper: createWrapper({
-        stateName: 'function-menu-center-line-point-2',
-        stateData: {
-          stateDataType: 'center-finding',
-          storedPoints: [{ X: 10, Y: 20, Z: 30 }],
-          centerResult: null,
-        },
-      }),
-    });
-
-    expect(result.current).toBe(1);
-  });
-
-  it('should update when points are added', () => {
-    const { result } = renderHook(
-      () => ({
-        count: useStoredPointsCount(),
-        dispatch: useDRODispatch(),
-      }),
-      {
-        wrapper: createWrapper({
-          stateName: 'function-menu-center-line-point-1',
-          stateData: { stateDataType: 'center-finding', storedPoints: [], centerResult: null },
-        }),
-      }
-    );
-
-    expect(result.current.count).toBe(0);
-
-    act(() => {
-      result.current.dispatch({
-        eventName: 'POINT_DATA',
-        point: { X: 10, Y: 20, Z: 30 },
-      });
-    });
-
-    expect(result.current.count).toBe(1);
-  });
-});
-
 describe('Provider integration', () => {
   it('should support full center-line workflow through hooks', () => {
     const { result } = renderHook(
       () => ({
         state: useDROState(),
         data: useDROContext(),
-        centerResult: useCenterResult(),
-        pointsCount: useStoredPointsCount(),
         dispatch: useDRODispatch(),
       }),
       { wrapper: createWrapper() }
@@ -298,7 +192,6 @@ describe('Provider integration', () => {
     });
     expect(result.current.state).toBe('function-menu-center-line-point-1');
     expect(result.current.data.stateDataType).toBe('center-finding');
-    expect(result.current.pointsCount).toBe(0);
 
     // First point
     act(() => {
@@ -308,7 +201,6 @@ describe('Provider integration', () => {
       });
     });
     expect(result.current.state).toBe('function-menu-center-line-point-2');
-    expect(result.current.pointsCount).toBe(1);
 
     // Second point
     act(() => {
@@ -318,8 +210,6 @@ describe('Provider integration', () => {
       });
     });
     expect(result.current.state).toBe('function-menu-center-line-result');
-    expect(result.current.pointsCount).toBe(2);
-    expect(result.current.centerResult).toEqual({ X: 50, Y: 0, Z: 0 });
 
     // Exit to idle
     act(() => {
@@ -327,6 +217,5 @@ describe('Provider integration', () => {
     });
     expect(result.current.state).toBe('idle');
     expect(result.current.data.stateDataType).toBe('none');
-    expect(result.current.centerResult).toBeNull();
   });
 });
