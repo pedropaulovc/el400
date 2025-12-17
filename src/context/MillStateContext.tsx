@@ -33,7 +33,7 @@ const MillStateContext = createContext<MillStateContextValue | null>(null);
 export interface MillStateProviderProps {
   children: ReactNode;
   /** Optional initial connection (defaults to NoOpMillConnection) */
-  initialConnection?: MillConnection | undefined;
+  initialConnection?: MillConnection;
 }
 
 /**

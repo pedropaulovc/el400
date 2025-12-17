@@ -90,7 +90,7 @@ function StoryWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <MillStateProvider initialConnection={connection}>
+    <MillStateProvider initialConnection={connection || new MockMillConnection()}>
       {children}
     </MillStateProvider>
   );
