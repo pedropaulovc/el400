@@ -52,7 +52,7 @@ const DROReactContext = createContext<DROContextValue | null>(null);
 
 export interface DROProviderProps {
   children: ReactNode;
-  initialState?: DROStatePayload | undefined;
+  initialState?: DROStatePayload;
 }
 
 export function DROProvider({

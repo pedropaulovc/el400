@@ -16,12 +16,19 @@ import {
   useStoredPointsCount,
   type DROShape,
 } from './index';
-import { INITIAL_DRO_STATE_DATA } from './droStateMachine';
+import { INITIAL_DRO_STATE, INITIAL_DRO_STATE_DATA } from './droStateMachine';
+
+const DEFAULT_INITIAL_SHAPE: DROShape = {
+  stateName: INITIAL_DRO_STATE,
+  stateData: INITIAL_DRO_STATE_DATA,
+};
 
 function createWrapper(initialState?: DROShape) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <DROProvider initialState={initialState}>{children}</DROProvider>
+      <DROProvider initialState={initialState ?? DEFAULT_INITIAL_SHAPE}>
+        {children}
+      </DROProvider>
     );
   };
 }
