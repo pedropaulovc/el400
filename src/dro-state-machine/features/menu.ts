@@ -26,13 +26,17 @@ const MENU_RING: DROStateName[] = [
 function getNextMenuState(current: DROStateName): DROStateName {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
-  return MENU_RING[(idx + 1) % MENU_RING.length];
+  const nextIdx = (idx + 1) % MENU_RING.length;
+  const nextState = MENU_RING[nextIdx];
+  return nextState ?? current;
 }
 
 function getPrevMenuState(current: DROStateName): DROStateName {
   const idx = MENU_RING.indexOf(current);
   if (idx === -1) return current;
-  return MENU_RING[(idx - 1 + MENU_RING.length) % MENU_RING.length];
+  const prevIdx = (idx - 1 + MENU_RING.length) % MENU_RING.length;
+  const prevState = MENU_RING[prevIdx];
+  return prevState ?? current;
 }
 
 function handleMenuEnter(menuState: DROStateName): DROStatePayload {

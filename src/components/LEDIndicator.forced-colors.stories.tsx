@@ -22,6 +22,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ForcedColorsStates: Story = {
+  args: {
+    label: "ON",
+    isOn: true,
+  },
   render: () => (
     <div className="flex gap-4 items-center">
       <LEDIndicator label="ON" isOn />
