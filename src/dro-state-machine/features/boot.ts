@@ -4,9 +4,9 @@
  * Handles boot sequence and idle state.
  */
 
-import { useEffect } from 'react';
+import { useEffect, type Dispatch } from 'react';
 import type { FeatureReducer } from '../types';
-import type { DRODispatch, DROStateName } from '../droStateMachine';
+import type { DROStateName, DROEventPayload } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
 
@@ -70,7 +70,7 @@ export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
  * @param nvMem - Non-volatile memory containing boot preferences
  */
 export function useBootSequence(
-  dispatch: DRODispatch,
+  dispatch: Dispatch<DROEventPayload>,
   droState: DROStateName,
   nvMem: NonVolatileMemory
 ) {
