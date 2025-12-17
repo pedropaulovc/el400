@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import HousingEdge from "./HousingEdge";
 import BrandLogo from "./BrandLogo";
 import MultiAxisSection from "./MultiAxisSection";
@@ -6,6 +7,7 @@ import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
   useDROState,
   useDRODispatch,
@@ -37,6 +39,7 @@ const CALC_OPERATION_MAP: Record<string, string> = {
 };
 
 const EL400Simulator = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const vMem = useVolatileMemory();
   const droState = useDROState();
   const droCtx = useDROContext();
@@ -45,6 +48,9 @@ const EL400Simulator = () => {
 
   // Boot sequence logic
   useBootSequence(dispatch, droState, nvMem);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts(containerRef);
 
   // Determine what to show on the display
   let axisDisplayValues;
@@ -84,7 +90,9 @@ const EL400Simulator = () => {
 
   return (
     <div
-      className="relative rounded-2xl select-none overflow-hidden"
+      ref={containerRef}
+      tabIndex={0}
+      className="relative rounded-2xl select-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-400"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
         border: '2px solid transparent',
@@ -96,6 +104,7 @@ const EL400Simulator = () => {
         `,
         minWidth: '780px',
       }}
+      aria-label="EL400 DRO Simulator - Press Tab to navigate, use keyboard shortcuts when focused"
     >
       {/* Top raised edge */}
       <HousingEdge position="top">

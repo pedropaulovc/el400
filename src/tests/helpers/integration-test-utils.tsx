@@ -9,6 +9,7 @@ import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { MillStateProvider } from '../../context/MillStateContext';
 import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
+import { InputBufferProvider } from '../../context/InputBufferContext';
 import { DROProvider } from '../../dro-state-machine';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
@@ -57,9 +58,11 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
         <NonVolatileMemoryProvider>
           <MillStateProvider>
             <VolatileMemoryProvider>
-              <DROProvider>
-                <EL400Simulator />
-              </DROProvider>
+              <InputBufferProvider>
+                <DROProvider>
+                  <EL400Simulator />
+                </DROProvider>
+              </InputBufferProvider>
             </VolatileMemoryProvider>
           </MillStateProvider>
         </NonVolatileMemoryProvider>

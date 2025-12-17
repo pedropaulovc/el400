@@ -1,47 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ReactNode, ButtonHTMLAttributes, useCallback } from "react";
-
-// Audio context for reliable playback
-let audioContext: AudioContext | null = null;
-let audioBuffer: AudioBuffer | null = null;
-let initPromise: Promise<void> | null = null;
-
-const initAudio = async (): Promise<void> => {
-  if (audioBuffer) return;
-  
-  audioContext ??= new AudioContext();
-  
-  try {
-    const response = await fetch('/sounds/button-click.wav');
-    const arrayBuffer = await response.arrayBuffer();
-    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  } catch (e) {
-    console.warn('Failed to load button click sound');
-  }
-};
-
-const playClickSound = async () => {
-  // If not initialized, start initialization and wait for it
-  if (!audioBuffer) {
-    initPromise ??= initAudio();
-    await initPromise;
-  }
-  
-  if (!audioContext || !audioBuffer) return;
-  
-  // Resume context if suspended (browser autoplay policy)
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
-  
-  const source = audioContext.createBufferSource();
-  const gainNode = audioContext.createGain();
-  gainNode.gain.value = 0.5;
-  source.buffer = audioBuffer;
-  source.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  source.start(0);
-};
+import { playClickSound } from "@/utils/audio";
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;

@@ -3,7 +3,7 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useInputBuffer } from "../hooks/useInputBuffer";
+import { useInputBufferContext } from "../context/InputBufferContext";
 import {
   useDROState,
   useDRODispatch,
@@ -14,7 +14,7 @@ import {
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
-  const inputBuffer = useInputBuffer();
+  const inputBuffer = useInputBufferContext();
   const droState = useDROState();
   const dispatch = useDRODispatch();
 
