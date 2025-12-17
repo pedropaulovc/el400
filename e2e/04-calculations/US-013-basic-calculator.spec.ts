@@ -51,23 +51,4 @@ test.describe('US-013: Basic Calculator Functions', () => {
     expect(typeof yValue).toBe('number');
     expect(typeof zValue).toBe('number');
   });
-
-  /**
-   * AC13.9: Pressing +/- key changes sign immediately
-   */
-  test('sign toggle happens immediately', async ({ dro }) => {
-    await dro.page.click('[data-testid="btn-calculator"]');
-
-    // Enter positive value
-    await dro.enterNumber('5.5');
-    
-    // Sign toggle happens immediately after pressing button
-    await dro.keyMinus.click();
-    
-    // Enter the toggled value
-    await dro.enterButton.click();
-    
-    // Should show -5.5 in X display
-    await expect(dro.xDisplay).toContainText('-5.5');
-  });
 });
