@@ -26,7 +26,7 @@ export default defineConfig({
       {
         extends: true,
         plugins: [
-          storybookTest({ configDir: path.join(__dirname, '.storybook-forced') }),
+          storybookTest({ configDir: path.join(__dirname, '.storybook-forced-colors') }),
         ],
         test: {
           name: 'storybook-forced-colors',
