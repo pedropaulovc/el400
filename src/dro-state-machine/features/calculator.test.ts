@@ -92,7 +92,7 @@ describe('calculatorReducer', () => {
 
       for (const { from, to } of operations) {
         const state: DROStatePayload = {
-          stateName: `calculator-${from.toLowerCase()}` as any,
+          stateName: `calculator-${from.toLowerCase()}` as 'calculator-add' | 'calculator-sub' | 'calculator-multi' | 'calculator-div',
           stateData: {
             stateDataType: 'calculator',
             firstValue: 5,

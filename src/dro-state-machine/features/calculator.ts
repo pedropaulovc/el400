@@ -69,7 +69,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
         stateData: INITIAL_CALCULATOR_DATA 
       };
 
-    case 'KEY_6_RIGHT':
+    case 'KEY_6_RIGHT': {
       // Cycle through operations (reusing navigation key)
       const nextOp = getNextOperation(calcData.operation);
       const nextState: CalculatorData = {
@@ -81,6 +81,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
         stateName: nextStateName,
         stateData: nextState,
       };
+    }
 
     case 'KEY_ENTER':
       // Handle value entry and calculation
