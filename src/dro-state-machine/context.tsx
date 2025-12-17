@@ -15,21 +15,20 @@ import {
 import type { DROStatePayload } from './types';
 import type {
   DROStateName,
-  DROStateData as DROContextType,
+  DROStateData as DROStateData,
   DROEventPayload,
 } from './droStateMachine';
 import {
   INITIAL_DRO_STATE,
   INITIAL_DRO_STATE_DATA,
 } from './droStateMachine';
-import type { AxisValues } from '../types/volatileMemory';
 import { droReducer } from './reducer';
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL STATE
 // ─────────────────────────────────────────────────────────────────
 
-const INITIAL_SHAPE: DROStatePayload = {
+const INITIAL_DRO_STATE_PAYLOAD: DROStatePayload = {
   stateName: INITIAL_DRO_STATE,
   stateData: INITIAL_DRO_STATE_DATA,
 };
@@ -40,7 +39,7 @@ const INITIAL_SHAPE: DROStatePayload = {
 
 interface DROContextValue {
   state: DROStateName;
-  data: DROContextType;
+  data: DROStateData;
   dispatch: Dispatch<DROEventPayload>;
 }
 
@@ -50,15 +49,15 @@ const DROReactContext = createContext<DROContextValue | null>(null);
 // PROVIDER
 // ─────────────────────────────────────────────────────────────────
 
-export interface DROProviderProps {
+export interface DROStateMachineProviderProps {
   children: ReactNode;
   initialState?: DROStatePayload;
 }
 
-export function DROProvider({
+export function DROStateMachineProvider({
   children,
-  initialState = INITIAL_SHAPE,
-}: DROProviderProps) {
+  initialState = INITIAL_DRO_STATE_PAYLOAD,
+}: DROStateMachineProviderProps) {
   const [{ stateName: state, stateData: data }, dispatch] = useReducer(droReducer, initialState);
 
   return (
@@ -81,38 +80,16 @@ function useDROContextInternal(): DROContextValue {
 }
 
 /** Get current DRO state */
-export function useDROState(): DROStateName {
+export function useDROStateName(): DROStateName {
   return useDROContextInternal().state;
 }
 
 /** Get DRO context data (stored points, results, etc.) */
-export function useDROContext(): DROContextType {
+export function useDROStateData(): DROStateData {
   return useDROContextInternal().data;
 }
 
 /** Get dispatch function for sending events */
-export function useDRODispatch(): Dispatch<DROEventPayload> {
+export function useDROEventDispatch(): Dispatch<DROEventPayload> {
   return useDROContextInternal().dispatch;
-}
-
-/**
- * Get center finding result if in a result state
- */
-export function useCenterResult(): AxisValues | null {
-  const data = useDROContext();
-  if (data.stateDataType === 'center-finding') {
-    return data.centerResult;
-  }
-  return null;
-}
-
-/**
- * Get stored points count for center finding
- */
-export function useStoredPointsCount(): number {
-  const data = useDROContext();
-  if (data.stateDataType === 'center-finding') {
-    return data.storedPoints.length;
-  }
-  return 0;
 }
