@@ -56,7 +56,7 @@ export function VolatileMemoryProvider({
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
-    if (millState?.connected) {
+    if (millState.connected) {
       // Use external machine position with work offsets applied
       return {
         X: millState.position.x - workOffsets.X,
@@ -89,7 +89,7 @@ export function VolatileMemoryProvider({
   const zeroAxis = useCallback((axis: Axis) => {
     if (mode === 'abs') {
       // In ABS mode: set work offset to current machine position
-      if (millState?.connected) {
+      if (millState.connected) {
         const machinePos = axis === 'X' ? millState.position.x :
                           axis === 'Y' ? millState.position.y :
                           millState.position.z;
@@ -106,7 +106,7 @@ export function VolatileMemoryProvider({
 
   const zeroAll = useCallback(() => {
     if (mode === 'abs') {
-      if (millState?.connected) {
+      if (millState.connected) {
         // Set all work offsets to current machine positions
         setWorkOffsets({
           X: millState.position.x,
@@ -126,7 +126,7 @@ export function VolatileMemoryProvider({
     const valueMm = fromAnyUnitToMm(value, nvMemory.defaultUnit);
 
     if (mode === 'abs') {
-      if (millState?.connected) {
+      if (millState.connected) {
         // In connected mode, setting a value adjusts the work offset
         const machinePos = axis === 'X' ? millState.position.x :
                           axis === 'Y' ? millState.position.y :
@@ -148,7 +148,7 @@ export function VolatileMemoryProvider({
     const halfValue = currentValue / 2;
 
     if (mode === 'abs') {
-      if (millState?.connected) {
+      if (millState.connected) {
         // In connected mode, adjust work offset to show half the current value
         const machinePos = axis === 'X' ? millState.position.x :
                           axis === 'Y' ? millState.position.y :

@@ -45,8 +45,8 @@ export const parseColor = (color: string): [number, number, number] | null => {
     return null;
   }
 
-  const rgbMatch = color.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\s*\)/);
-  if (rgbMatch && rgbMatch[1] !== undefined && rgbMatch[2] !== undefined && rgbMatch[3] !== undefined) {
+  const rgbMatch = /rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\s*\)/.exec(color);
+  if (rgbMatch?.[1] !== undefined && rgbMatch[2] !== undefined && rgbMatch[3] !== undefined) {
     return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
   }
 

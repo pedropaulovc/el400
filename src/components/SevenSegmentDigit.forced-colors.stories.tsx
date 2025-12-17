@@ -36,7 +36,7 @@ export const ForcedColorsContrast: Story = {
     await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
 
     await step("locate digit", async () => {
-      const wrapper = canvasElement.querySelector("[data-testid='forced-colors-digit']") as HTMLElement | null;
+      const wrapper = canvasElement.querySelector("[data-testid='forced-colors-digit']");
       await expect(wrapper).toBeInTheDocument();
 
       const digit = wrapper?.querySelector(".seven-segment-digit") as HTMLElement | null;

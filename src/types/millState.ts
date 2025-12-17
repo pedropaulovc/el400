@@ -54,9 +54,7 @@ export interface MillState {
 /**
  * Callback type for mill state updates
  */
-export interface MillStateListener {
-  (state: MillState): void;
-}
+export type MillStateListener = (state: MillState) => void;
 
 /**
  * Configuration for data source connection
@@ -71,7 +69,7 @@ export interface DataSourceConfig {
 /**
  * Helper to create a ProbeState from a pin state string
  */
-export function createProbeState(pinState: string = ''): ProbeState {
+export function createProbeState(pinState = ''): ProbeState {
   return {
     pinState,
     triggered: pinState.includes('P'),

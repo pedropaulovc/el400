@@ -22,7 +22,7 @@ export class MockMillConnection implements MillConnection {
   readonly controllerType: ControllerType = 'mock';
 
   private state: MillState;
-  private listeners: Set<MillStateListener> = new Set();
+  private listeners = new Set<MillStateListener>();
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private options: Required<MockMillConnectionOptions>;
 
@@ -40,13 +40,14 @@ export class MockMillConnection implements MillConnection {
     };
   }
 
-  async connect(): Promise<void> {
+  connect(): Promise<void> {
     this.state = {
       ...this.state,
       connected: true,
     };
     this.notifyListeners();
     this.startUpdates();
+    return Promise.resolve();
   }
 
   disconnect(): void {

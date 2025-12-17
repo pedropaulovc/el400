@@ -38,10 +38,10 @@ export function useDataSourceConfig(): DataSourceConfig {
 
   return useMemo(() => {
     const type = parseControllerType(searchParams.get('source'));
-    const host = searchParams.get('host') || DEFAULT_CONFIG.host;
+    const host = searchParams.get('host') ?? DEFAULT_CONFIG.host;
     const portStr = searchParams.get('port');
     const port = portStr ? parseInt(portStr, 10) : DEFAULT_CONFIG.port;
-    const sessionId = searchParams.get('sessionId') || undefined;
+    const sessionId = searchParams.get('sessionId') ?? undefined;
 
     return {
       type,

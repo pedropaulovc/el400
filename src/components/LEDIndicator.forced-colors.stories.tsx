@@ -35,8 +35,8 @@ export const ForcedColorsStates: Story = {
   play: async ({ canvasElement }) => {
     await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
 
-    const active = canvasElement.querySelector(".mode-indicator-active") as HTMLElement | null;
-    const inactive = canvasElement.querySelector(".mode-indicator-inactive") as HTMLElement | null;
+    const active = canvasElement.querySelector(".mode-indicator-active");
+    const inactive = canvasElement.querySelector(".mode-indicator-inactive");
 
     await expect(active).toBeInTheDocument();
     await expect(inactive).toBeInTheDocument();
@@ -49,7 +49,7 @@ export const ForcedColorsStates: Story = {
     const isTransparent = isTransparentColor(inactiveStyle.color);
     expect(isTransparent).toBe(true);
 
-    const effectiveBg = getEffectiveBackgroundColor(active!);
+    const effectiveBg = getEffectiveBackgroundColor(active as HTMLElement);
 
     const fgRgb = parseColor(activeStyle.color);
     const bgRgb = parseColor(effectiveBg);

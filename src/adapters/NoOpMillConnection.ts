@@ -33,6 +33,7 @@ export class NoOpMillConnection implements MillConnection {
   subscribe(listener: MillStateListener): () => void {
     // Emit initial state once, then never again
     listener(this.state);
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     return () => {};
   }
 

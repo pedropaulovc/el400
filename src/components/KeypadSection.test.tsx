@@ -41,9 +41,9 @@ describe('KeypadSection', () => {
       };
 
       for (let i = 0; i <= 9; i++) {
-        const button = screen.getByTestId(`key-${i}`);
+        const button = screen.getByTestId(`key-${String(i)}`);
         const expectedLabel = expectedLabels[i];
-        expect(button.querySelector('.sr-only') as HTMLElement).toHaveTextContent(expectedLabel ?? '');
+        expect(button.querySelector('.sr-only')!).toHaveTextContent(expectedLabel ?? '');
       }
     });
 
