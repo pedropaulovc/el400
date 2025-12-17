@@ -104,7 +104,7 @@ const EL400Simulator = () => {
         `,
         minWidth: '780px',
       }}
-      aria-label="EL400 DRO Simulator - Press Tab to navigate, use keyboard shortcuts when focused"
+      aria-label="EL400 DRO Simulator"
     >
       {/* Top raised edge */}
       <HousingEdge position="top">

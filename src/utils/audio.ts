@@ -13,7 +13,7 @@ const initAudio = async (): Promise<void> => {
     const arrayBuffer = await response.arrayBuffer();
     audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   } catch (e) {
-    console.warn('Failed to load button click sound');
+    console.warn('Failed to load button click sound:', e);
   }
 };
 

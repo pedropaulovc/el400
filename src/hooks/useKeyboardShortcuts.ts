@@ -205,7 +205,11 @@ export function useKeyboardShortcuts(containerRef: RefObject<HTMLElement | null>
     }
 
     // Check if focus is within the container
-    if (!container.contains(document.activeElement) && document.activeElement !== container) {
+    const activeElement = document.activeElement;
+    if (!activeElement) {
+      return;
+    }
+    if (!container.contains(activeElement) && activeElement !== container) {
       return;
     }
 
@@ -294,16 +298,6 @@ export function useKeyboardShortcuts(containerRef: RefObject<HTMLElement | null>
       handled = true;
     }
 
-    if (event.code === 'KeyR' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Reference button - currently noop
-      handled = true;
-    }
-
-    if (event.code === 'KeyW' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Settings button - currently noop
-      handled = true;
-    }
-
     // Secondary Functions
     if (event.code === 'KeyF' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
       dispatch({ eventName: 'BTN_FUNCTION' });
@@ -320,30 +314,8 @@ export function useKeyboardShortcuts(containerRef: RefObject<HTMLElement | null>
       handled = true;
     }
 
-    if (event.code === 'KeyS' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // SDM button - currently noop
-      handled = true;
-    }
-
-    if (event.code === 'KeyB' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Bolt circle button - currently noop
-      handled = true;
-    }
-
-    if (event.code === 'KeyO' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Arc contour button - currently noop
-      handled = true;
-    }
-
-    if (event.code === 'KeyG' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Angle hole button - currently noop
-      handled = true;
-    }
-
-    if (event.code === 'KeyD' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      // Grid hole button - currently noop
-      handled = true;
-    }
+    // Note: Shortcuts for unimplemented features (W, R, S, B, O, G, D) are intentionally
+    // not registered to avoid blocking browser shortcuts until features are implemented.
 
     if (handled) {
       event.preventDefault();

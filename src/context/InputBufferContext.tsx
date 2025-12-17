@@ -65,7 +65,7 @@ export function InputBufferProvider({ children }: InputBufferProviderProps) {
   }, []);
 
   const getValue = useCallback(() => {
-    if (!buffer || buffer === '-' || buffer === '.') {
+    if (!buffer || buffer === '-' || buffer === '.' || buffer === '-.') {
       return null;
     }
     const value = parseFloat(buffer);
