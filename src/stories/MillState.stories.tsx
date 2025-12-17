@@ -90,7 +90,7 @@ function StoryWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <MillStateProvider initialConnection={connection || new MockMillConnection()}>
+    <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
       {children}
     </MillStateProvider>
   );
@@ -149,7 +149,7 @@ export const MockWithPosition: Story = {
 
       useEffect(() => {
         connection.setPosition(12.3456, -45.6789, 100.0001);
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -173,7 +173,7 @@ export const ProbeTriggered: Story = {
       useEffect(() => {
         connection.setPosition(50, 50, 25);
         connection.setProbeState("P");
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -197,7 +197,7 @@ export const ProbePlusLimitSwitch: Story = {
       useEffect(() => {
         connection.setPosition(-100, 0, 0);
         connection.setProbeState("XP");
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -221,7 +221,7 @@ export const LiveMovement: Story = {
       );
 
       useEffect(() => {
-        return () => connection.disconnect();
+        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (

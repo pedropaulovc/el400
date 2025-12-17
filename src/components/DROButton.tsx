@@ -9,9 +9,7 @@ let initPromise: Promise<void> | null = null;
 const initAudio = async (): Promise<void> => {
   if (audioBuffer) return;
   
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
+  audioContext ??= new AudioContext();
   
   try {
     const response = await fetch('/sounds/button-click.wav');
@@ -25,9 +23,7 @@ const initAudio = async (): Promise<void> => {
 const playClickSound = async () => {
   // If not initialized, start initialization and wait for it
   if (!audioBuffer) {
-    if (!initPromise) {
-      initPromise = initAudio();
-    }
+    initPromise ??= initAudio();
     await initPromise;
   }
   
@@ -82,7 +78,7 @@ const DROButton = ({
   };
 
   const handleClick = useCallback(() => {
-    playClickSound();
+    void playClickSound();
     onClick?.();
   }, [onClick]);
 

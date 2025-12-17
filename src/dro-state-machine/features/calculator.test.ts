@@ -83,7 +83,7 @@ describe('calculatorReducer', () => {
     });
 
     it('should cycle ADD -> SUB -> MULTI -> DIV -> ADD', () => {
-      const operations: Array<{ from: 'ADD' | 'SUB' | 'MULTI' | 'DIV', to: 'SUB' | 'MULTI' | 'DIV' | 'ADD' }> = [
+      const operations: { from: 'ADD' | 'SUB' | 'MULTI' | 'DIV', to: 'SUB' | 'MULTI' | 'DIV' | 'ADD' }[] = [
         { from: 'ADD', to: 'SUB' },
         { from: 'SUB', to: 'MULTI' },
         { from: 'MULTI', to: 'DIV' },

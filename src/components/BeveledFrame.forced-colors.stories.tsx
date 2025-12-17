@@ -27,7 +27,7 @@ export const ForcedColorsBorderContrast: Story = {
   play: async ({ canvasElement }) => {
     await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
 
-    const frame = canvasElement.querySelector("div > div") as HTMLElement | null;
+    const frame = canvasElement.querySelector("div > div");
     await expect(frame).toBeInTheDocument();
 
     const style = getComputedStyle(frame!);
@@ -44,7 +44,7 @@ export const ForcedColorsBorderContrast: Story = {
     }
 
     // Get effective background color
-    const effectiveBg = getEffectiveBackgroundColor(frame!);
+    const effectiveBg = getEffectiveBackgroundColor(frame as HTMLElement);
     const bgRgb = parseColor(effectiveBg);
     if (!bgRgb) {
       throw new Error(`Unable to parse background color: ${effectiveBg}`);

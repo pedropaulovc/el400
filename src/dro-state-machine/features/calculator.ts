@@ -16,7 +16,7 @@ import {
 /**
  * Calculator operations cycle: ADD -> SUB -> MULTI -> DIV -> ADD
  */
-const OPERATION_CYCLE: Array<'ADD' | 'SUB' | 'MULTI' | 'DIV'> = ['ADD', 'SUB', 'MULTI', 'DIV'];
+const OPERATION_CYCLE: ('ADD' | 'SUB' | 'MULTI' | 'DIV')[] = ['ADD', 'SUB', 'MULTI', 'DIV'];
 
 function getNextOperation(current: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null): 'ADD' | 'SUB' | 'MULTI' | 'DIV' {
   if (current === null) return 'ADD';

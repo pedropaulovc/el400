@@ -76,7 +76,7 @@ export function useBootSequence(
       const timer = setTimeout(() => {
         dispatch({ eventName: 'BOOT_MESSAGE_TIMEOUT' });
       }, BOOT_MESSAGE_DURATION_MS);
-      return () => clearTimeout(timer);
+      return () => { clearTimeout(timer); };
     }
     return undefined;
   }, [droState, dispatch]);
