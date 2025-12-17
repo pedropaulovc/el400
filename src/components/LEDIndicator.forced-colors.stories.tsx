@@ -3,6 +3,7 @@ import { expect } from "storybook/test";
 import {
   MIN_ACCESSIBLE_CONTRAST_RATIO,
   getContrastRatio,
+  getEffectiveBackgroundColor,
   isTransparentColor,
   parseColor,
 } from "../tests/contrast-utils";
@@ -12,6 +13,7 @@ const meta = {
   title: "Components/LEDIndicator/ForcedColors",
   component: LEDIndicator,
   parameters: {
+    // Disabled in docs as these are test-only stories for forced-colors mode validation
     docs: { disable: true },
   },
 } satisfies Meta<typeof LEDIndicator>;
@@ -43,19 +45,7 @@ export const ForcedColorsStates: Story = {
     const isTransparent = isTransparentColor(inactiveStyle.color);
     expect(isTransparent).toBe(true);
 
-    const bgColor = getComputedStyle(active!.parentElement ?? active!).backgroundColor;
-    let effectiveBg = bgColor;
-    if (isTransparentColor(bgColor)) {
-      const temp = document.createElement("div");
-      temp.style.backgroundColor = "Canvas";
-      temp.style.display = "none";
-      document.body.appendChild(temp);
-      const canvasColor = getComputedStyle(temp).backgroundColor;
-      document.body.removeChild(temp);
-      effectiveBg = isTransparentColor(canvasColor)
-        ? getComputedStyle(document.body).backgroundColor
-        : canvasColor;
-    }
+    const effectiveBg = getEffectiveBackgroundColor(active!);
 
     const fgRgb = parseColor(activeStyle.color);
     const bgRgb = parseColor(effectiveBg);

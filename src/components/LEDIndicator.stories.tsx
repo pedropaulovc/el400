@@ -1,11 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
-import {
-  MIN_ACCESSIBLE_CONTRAST_RATIO,
-  getContrastRatio,
-  isTransparentColor,
-  parseColor,
-} from "../tests/contrast-utils";
 import LEDIndicator from "./LEDIndicator";
 
 const meta = {
