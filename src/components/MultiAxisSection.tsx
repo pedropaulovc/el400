@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useDROState, isFunctionActive } from "../dro-state-machine";
+import { useDROState, isFunctionActive, isCalculatorActive } from "../dro-state-machine";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -27,10 +27,13 @@ const MultiAxisSection = ({
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';
+  const inCalculatorMode = isCalculatorActive(droState);
 
   // Convert values from mm (internal storage) to display unit (only for numeric values)
+  // Skip conversion in calculator mode as values are raw numbers, not positions
   const unit = isInch ? 'inch' : 'mm';
   const convertValue = (value: AxisDisplayValue): AxisDisplayValue => {
+    if (inCalculatorMode) return value; // No conversion in calculator mode
     return typeof value === 'number' ? fromMmToAnyUnit(value, unit) : value;
   };
   

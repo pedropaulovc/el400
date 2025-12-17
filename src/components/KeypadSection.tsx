@@ -9,6 +9,7 @@ import {
   useDRODispatch,
   isFunctionMenuSelectionState,
   isCollectingPoints,
+  isCalculatorActive,
 } from "../dro-state-machine";
 
 const KeypadSection = () => {
@@ -49,6 +50,12 @@ const KeypadSection = () => {
       }
     }
 
+    // Calculator mode: accumulate digits
+    if (isCalculatorActive(droState)) {
+      inputBuffer.appendDigit(num);
+      return;
+    }
+
     // Normal mode: append digit if axis selected
     if (!vMem.activeAxis) {
       return;
@@ -57,18 +64,27 @@ const KeypadSection = () => {
   }, [droState, dispatch, vMem, inputBuffer]);
 
   const handleDecimal = useCallback(() => {
+    if (isCalculatorActive(droState)) {
+      inputBuffer.appendDecimal();
+      return;
+    }
     if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.appendDecimal();
-  }, [vMem.activeAxis, inputBuffer]);
+  }, [droState, vMem.activeAxis, inputBuffer]);
 
   const handleSign = useCallback(() => {
+    if (isCalculatorActive(droState)) {
+      // In calculator mode, toggle sign in buffer
+      inputBuffer.toggleSign();
+      return;
+    }
     if (!vMem.activeAxis) {
       return;
     }
     inputBuffer.toggleSign();
-  }, [vMem.activeAxis, inputBuffer]);
+  }, [droState, vMem.activeAxis, inputBuffer]);
 
   const handleClear = useCallback(() => {
     inputBuffer.clear();
@@ -80,6 +96,17 @@ const KeypadSection = () => {
     // In function menu, ENT confirms the selection
     if (isFunctionMenuSelectionState(droState)) {
       dispatch({ eventName: 'KEY_ENTER' });
+      return;
+    }
+
+    // Calculator mode: handle value entry or calculation
+    if (isCalculatorActive(droState)) {
+      const value = inputBuffer.getValue();
+      if (value !== null) {
+        // Pass value with KEY_ENTER event for calculator
+        dispatch({ eventName: 'KEY_ENTER', value });
+        inputBuffer.clear();
+      }
       return;
     }
 

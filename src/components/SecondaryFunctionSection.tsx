@@ -20,6 +20,10 @@ const SecondaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_FUNCTION' });
   };
 
+  const handleCalculator = () => {
+    dispatch({ eventName: 'BTN_CALCULATOR' });
+  };
+
   return (
     <>
       <h2 className="sr-only">Secondary functions</h2>
@@ -44,7 +48,7 @@ const SecondaryFunctionSection = () => {
 
           {/* Bottom row */}
           <div className="flex gap-4 justify-between">
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-calculator">
+            <DROButton onClick={handleCalculator} variant="dark" size="secondary" className="p-0" data-testid="btn-calculator">
               <Icon name="calculator" /><span className="sr-only">Calculator</span>
             </DROButton>
             <DROButton onClick={handleHalf} variant="dark" size="secondary" className="p-0" data-testid="btn-half">

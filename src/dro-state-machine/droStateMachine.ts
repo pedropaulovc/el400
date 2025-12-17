@@ -34,7 +34,13 @@ export type DROStateName =
   | 'function-menu-center-circle-point-1'
   | 'function-menu-center-circle-point-2'
   | 'function-menu-center-circle-point-3'
-  | 'function-menu-center-circle-result';
+  | 'function-menu-center-circle-result'
+  // Calculator states
+  | 'calculator-idle'
+  | 'calculator-add'
+  | 'calculator-sub'
+  | 'calculator-multi'
+  | 'calculator-div';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -50,7 +56,8 @@ export type DROStateData =
   | EmptyData
   | CenterFindingData
   | BoltHoleData
-  | ArcData;
+  | ArcData
+  | CalculatorData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -78,6 +85,13 @@ export interface BoltHoleData extends BaseDROStateData {
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
   // TODO: define arc-specific fields when implementing arc feature
+}
+
+export interface CalculatorData extends BaseDROStateData {
+  readonly stateDataType: 'calculator';
+  firstValue: number | null;
+  operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
+  currentValue: number | string;
 }
 
 /** Stored point for center finding operations */
@@ -110,11 +124,12 @@ export type DROEventPayload =
   | { eventName: 'KEY_DECIMAL' }
   | { eventName: 'KEY_SIGN' }
   | { eventName: 'KEY_CLEAR' }
-  | { eventName: 'KEY_ENTER' }
+  | { eventName: 'KEY_ENTER'; value?: number }
   // Button presses
   | { eventName: 'BTN_ABS_INC' }
   | { eventName: 'BTN_INCH_MM' }
   | { eventName: 'BTN_FUNCTION' }
+  | { eventName: 'BTN_CALCULATOR' }
   | { eventName: 'BTN_ZERO_X' }
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
@@ -151,6 +166,10 @@ export const isResultState = (s: DROStateName): boolean => s.endsWith('-result')
 export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
+/** Check if calculator mode is active */
+export const isCalculatorActive = (s: DROStateName): boolean =>
+  s.startsWith('calculator-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -163,4 +182,11 @@ export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
   stateDataType: 'center-finding',
   storedPoints: [],
   centerResult: null,
+};
+
+export const INITIAL_CALCULATOR_DATA: CalculatorData = {
+  stateDataType: 'calculator',
+  firstValue: null,
+  operation: null,
+  currentValue: 0,
 };
