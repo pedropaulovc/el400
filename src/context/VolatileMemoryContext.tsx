@@ -30,12 +30,6 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
 
 const VolatileMemoryContext = createContext<VolatileMemoryContextValue | null>(null);
 
-/**
- * Duration in milliseconds for the boot message to be displayed before auto-dismissing.
- * Used in the boot sequence state machine.
- */
-export const BOOT_MESSAGE_DURATION_MS = 1000;
-
 export interface VolatileMemoryProviderProps {
   children: ReactNode;
 }
