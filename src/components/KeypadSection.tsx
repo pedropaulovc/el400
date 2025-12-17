@@ -103,7 +103,8 @@ const KeypadSection = () => {
     if (isCalculatorActive(droState)) {
       const value = inputBuffer.getValue();
       if (value !== null) {
-        dispatch({ eventName: 'CALC_VALUE', value });
+        // Pass value with KEY_ENTER event for calculator
+        dispatch({ eventName: 'KEY_ENTER', value });
         inputBuffer.clear();
       }
       return;

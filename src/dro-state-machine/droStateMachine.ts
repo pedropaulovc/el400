@@ -124,7 +124,7 @@ export type DROEventPayload =
   | { eventName: 'KEY_DECIMAL' }
   | { eventName: 'KEY_SIGN' }
   | { eventName: 'KEY_CLEAR' }
-  | { eventName: 'KEY_ENTER' }
+  | { eventName: 'KEY_ENTER'; value?: number }
   // Button presses
   | { eventName: 'BTN_ABS_INC' }
   | { eventName: 'BTN_INCH_MM' }
@@ -136,8 +136,6 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_ALL' }
   // Calculator events
   | { eventName: 'CALC_Y_CYCLE' }
-  | { eventName: 'CALC_ENTER' }
-  | { eventName: 'CALC_VALUE'; value: number }
   // Data payload for point storage
   | { eventName: 'POINT_DATA'; point: StoredPoint };
 

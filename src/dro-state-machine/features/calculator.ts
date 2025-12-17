@@ -63,8 +63,11 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
       return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
 
     case 'KEY_CLEAR':
-      // Clear calculator and exit
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+      // Clear calculator but stay in calculator mode
+      return { 
+        stateName: 'calculator-idle', 
+        stateData: INITIAL_CALCULATOR_DATA 
+      };
 
     case 'CALC_Y_CYCLE':
       // Cycle through operations
@@ -79,51 +82,43 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
         stateData: nextState,
       };
 
-    case 'CALC_VALUE':
-      // Store a value
-      const newValue = eventPayload.value;
-      if (calcData.operation === null) {
-        // First value - store as first value and current value
-        return {
-          stateName: state,
-          stateData: {
-            ...calcData,
-            firstValue: newValue,
-            currentValue: newValue,
-          },
-        };
-      } else {
-        // Second value - store and immediately calculate
-        // firstValue is guaranteed to be non-null here since operation is not null
-        if (calcData.firstValue === null) {
-          console.warn('Calculator firstValue is null despite operation being set');
-          return statePayload;
+    case 'KEY_ENTER':
+      // Handle value entry and calculation
+      if (eventPayload.eventName === 'KEY_ENTER' && eventPayload.value !== undefined) {
+        const newValue = eventPayload.value;
+        if (calcData.operation === null) {
+          // First value - store as first value and current value
+          return {
+            stateName: state,
+            stateData: {
+              ...calcData,
+              firstValue: newValue,
+              currentValue: newValue,
+            },
+          };
+        } else {
+          // Second value - store and immediately calculate
+          if (calcData.firstValue === null) {
+            // Reset to idle with the new value if invariant violated
+            return {
+              stateName: 'calculator-idle',
+              stateData: {
+                ...INITIAL_CALCULATOR_DATA,
+                currentValue: newValue,
+              },
+            };
+          }
+          const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+          return {
+            stateName: 'calculator-idle',
+            stateData: {
+              ...calcData,
+              firstValue: null,
+              operation: null,
+              currentValue: result,
+            },
+          };
         }
-        const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
-        return {
-          stateName: 'calculator-idle',
-          stateData: {
-            ...calcData,
-            firstValue: null,
-            operation: null,
-            currentValue: result,
-          },
-        };
-      }
-
-    case 'CALC_ENTER':
-      // Calculate result (when ENT pressed without new value)
-      if (calcData.firstValue !== null && calcData.operation !== null) {
-        const result = performCalculation(calcData.firstValue, calcData.currentValue, calcData.operation);
-        return {
-          stateName: 'calculator-idle',
-          stateData: {
-            ...calcData,
-            firstValue: null,
-            operation: null,
-            currentValue: result,
-          },
-        };
       }
       return statePayload;
 
