@@ -47,9 +47,10 @@ npm run build-storybook
 - **TypeScript** Strictest rules enabled
 - **Vitest** (`src/**/*.test.tsx`) - Component behavior, logic, interactions, accessibility. Primary test infrastructure.
 - **Integration** (`*.integration.test.tsx`) - Use helpers from `src/tests/helpers/integration-test-utils.tsx`. Use `data-testid`, not roles/labels.
-- **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys.
+- **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys. Dedicated to acceptance testing and critical user flows, usually 1 or 2 per feature. Use unit or integration tests for in-depth testing coverage.
 - **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
 - **Coverage:** Min 70% enforced. Run `npm run test:coverage`.
+- **Exit criteria** Successful `npm run test:all`
 
 ## Project Management
 
