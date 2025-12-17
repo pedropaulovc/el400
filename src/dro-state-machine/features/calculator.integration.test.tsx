@@ -3,7 +3,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  getAxisDisplayValue,
+  getAxisDisplayPureTextValue,
+  getAxisDisplayPureNumberValue,
 } from '../../tests/helpers/integration-test-utils';
 
 describe('Calculator Integration', () => {
@@ -32,14 +33,13 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('key-5'));
 
       // Toggle sign
-      await user.click(screen.getByTestId('key-minus'));
+      await user.click(screen.getByTestId('key-sign'));
 
       // Enter the toggled value
       await user.click(screen.getByTestId('key-enter'));
 
       // Should show -5.5 in X display
-      const xValue = getAxisDisplayValue('X');
-      expect(xValue).toBe('-5.5');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-5.5, 4);
     });
 
     it('can toggle sign multiple times', async () => {
@@ -52,22 +52,22 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('key-3'));
 
       // Toggle to negative
-      await user.click(screen.getByTestId('key-minus'));
+      await user.click(screen.getByTestId('key-sign'));
       await user.click(screen.getByTestId('key-enter'));
-      expect(getAxisDisplayValue('X')).toBe('-3');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-3, 4);
 
       // Clear and enter new value
       await user.click(screen.getByTestId('key-clear'));
       await user.click(screen.getByTestId('key-7'));
 
       // Toggle to negative
-      await user.click(screen.getByTestId('key-minus'));
+      await user.click(screen.getByTestId('key-sign'));
 
       // Toggle back to positive
-      await user.click(screen.getByTestId('key-minus'));
+      await user.click(screen.getByTestId('key-sign'));
 
       await user.click(screen.getByTestId('key-enter'));
-      expect(getAxisDisplayValue('X')).toBe('7');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(7, 4);
     });
   });
 
@@ -86,7 +86,7 @@ describe('Calculator Integration', () => {
       // Cycle to SUB
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('SUB');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('SUb');
 
       // Enter second value: 3.5
       await user.click(screen.getByTestId('key-3'));
@@ -95,7 +95,7 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('key-enter'));
 
       // Result should be 6.5
-      expect(getAxisDisplayValue('X')).toBe('6.5');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(6.5, 4);
     });
 
     it('performs multiplication correctly', async () => {
@@ -114,14 +114,14 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('MULTI');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('nULtI');
 
       // Enter second value: 4
       await user.click(screen.getByTestId('key-4'));
       await user.click(screen.getByTestId('key-enter'));
 
       // Result should be 10
-      expect(getAxisDisplayValue('X')).toBe('10');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
     });
 
     it('performs division correctly', async () => {
@@ -140,14 +140,14 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('DIV');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('dIv');
 
       // Enter second value: 4
       await user.click(screen.getByTestId('key-4'));
       await user.click(screen.getByTestId('key-enter'));
 
       // Result should be 2.5
-      expect(getAxisDisplayValue('X')).toBe('2.5');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(2.5, 4);
     });
 
     it('shows "inF vAL" for division by zero', async () => {
@@ -172,7 +172,7 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('key-enter'));
 
       // Should show error message
-      expect(getAxisDisplayValue('X')).toBe('inF vAL');
+      expect(getAxisDisplayPureTextValue('X')).toBe('inF vAL');
     });
   });
 
@@ -187,19 +187,19 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('key-5'));
       await user.click(screen.getByTestId('key-enter'));
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('ADD');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
 
       // Clear
       await user.click(screen.getByTestId('key-clear'));
 
       // Should still be in calculator mode (Y and Z blank)
-      expect(getAxisDisplayValue('Y')).toBe('');
-      expect(getAxisDisplayValue('Z')).toBe('');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('');
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Should be able to continue using calculator
       await user.click(screen.getByTestId('key-3'));
       await user.click(screen.getByTestId('key-enter'));
-      expect(getAxisDisplayValue('X')).toBe('3');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(3, 4);
     });
   });
 
@@ -216,20 +216,20 @@ describe('Calculator Integration', () => {
 
       // Cycle through operations
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('ADD');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
 
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('SUB');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('SUb');
 
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('MULTI');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('nULtI');
 
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('DIV');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('dIv');
 
       // Should wrap around
       await user.click(screen.getByTestId('axis-select-y'));
-      expect(getAxisDisplayValue('Y')).toBe('ADD');
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
     });
   });
 });

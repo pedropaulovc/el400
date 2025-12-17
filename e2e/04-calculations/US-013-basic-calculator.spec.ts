@@ -33,7 +33,7 @@ test.describe('US-013: Basic Calculator Functions', () => {
 
     // Select ADD function by cycling Y
     await dro.yButton.click();
-    await expect(dro.yDisplay).toContainText('ADD');
+    await expect(dro.yDisplay).toContainText('Add');
 
     // Enter second value 3.75
     await dro.enterNumber('3.75');

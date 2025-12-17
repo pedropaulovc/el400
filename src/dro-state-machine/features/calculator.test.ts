@@ -274,7 +274,7 @@ describe('calculatorReducer', () => {
         },
       };
 
-      const result = calculatorReducer(state, { eventName: 'CALC_Y_CYCLE' });
+      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
 
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.currentValue).toBe(10);
