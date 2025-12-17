@@ -78,6 +78,9 @@ const SevenSegmentDigit = ({
   }
 
   const segments = segmentMap[value];
+  if (!segments) {
+    throw new Error(`Internal error: segments should be defined for value "${value}"`);
+  }
   const segmentNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as const;
 
   return (

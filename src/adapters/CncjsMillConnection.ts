@@ -11,8 +11,8 @@ import { createProbeState, createDefaultMillState } from '../types/millState';
 export interface CncjsMillConnectionOptions {
   host: string;
   port: number;
-  token?: string;
-  sessionId?: string;
+  token?: string | undefined;
+  sessionId?: string | undefined;
 }
 
 export type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
@@ -186,8 +186,8 @@ export class CncjsMillConnection implements MillConnection {
 
     return new Promise((resolve, reject) => {
       const query: Record<string, string> = {};
-      if (token) query.token = token;
-      if (sessionId) query.sessionId = sessionId;
+      if (token) query['token'] = token;
+      if (sessionId) query['sessionId'] = sessionId;
 
       this.socket = io(url, {
         query,

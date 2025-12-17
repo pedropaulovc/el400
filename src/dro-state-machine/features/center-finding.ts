@@ -51,14 +51,17 @@ function addPointToData(
  */
 function calculateLineCenterResult(points: StoredPoint[]): AxisValues | null {
   if (points.length < 2) return null;
+  const p0 = points[0];
+  const p1 = points[1];
+  if (!p0 || !p1) return null;
   const center = findLineCenter(
-    { x: points[0].X, y: points[0].Y },
-    { x: points[1].X, y: points[1].Y }
+    { x: p0.X, y: p0.Y },
+    { x: p1.X, y: p1.Y }
   );
   return {
     X: center.x,
     Y: center.y,
-    Z: (points[0].Z + points[1].Z) / 2,
+    Z: (p0.Z + p1.Z) / 2,
   };
 }
 
@@ -67,16 +70,20 @@ function calculateLineCenterResult(points: StoredPoint[]): AxisValues | null {
  */
 function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
   if (points.length < 3) return null;
+  const p0 = points[0];
+  const p1 = points[1];
+  const p2 = points[2];
+  if (!p0 || !p1 || !p2) return null;
   const center = findCircleCenter(
-    { x: points[0].X, y: points[0].Y },
-    { x: points[1].X, y: points[1].Y },
-    { x: points[2].X, y: points[2].Y }
+    { x: p0.X, y: p0.Y },
+    { x: p1.X, y: p1.Y },
+    { x: p2.X, y: p2.Y }
   );
   if (!center) return null;
   return {
     X: center.x,
     Y: center.y,
-    Z: (points[0].Z + points[1].Z + points[2].Z) / 3,
+    Z: (p0.Z + p1.Z + p2.Z) / 3,
   };
 }
 
