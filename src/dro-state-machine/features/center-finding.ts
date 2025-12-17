@@ -4,7 +4,7 @@
  * Handles center-line (2 points) and center-circle (3 points) operations.
  */
 
-import type { DROStatePayload, FeatureReducer } from '../types';
+import type { FeatureReducer } from '../types';
 import type {
   DROStateName,
   DROStateData,

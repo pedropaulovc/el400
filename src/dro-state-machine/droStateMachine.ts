@@ -54,6 +54,7 @@ export type DROStateData =
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
+// @ts-expect-error - Type is used only for compile-time assertion, not at runtime
 const _assertContextHasType: _AssertContextHasType = true;
 
 export interface EmptyData extends BaseDROStateData {
