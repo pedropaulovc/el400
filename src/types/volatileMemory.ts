@@ -25,6 +25,8 @@ export interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
+  /** Input buffer for keypad digit accumulation */
+  inputBuffer: string;
 }
 
 /**
@@ -39,6 +41,16 @@ export interface VolatileMemoryActions {
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
+  /** Append a digit (0-9) to the input buffer */
+  appendDigit: (digit: string) => void;
+  /** Append a decimal point (if not already present) */
+  appendDecimal: () => void;
+  /** Toggle the sign (positive/negative) of the input buffer */
+  toggleSign: () => void;
+  /** Clear the input buffer */
+  clearBuffer: () => void;
+  /** Get the buffer value as a number (or null if empty/invalid) */
+  getBufferValue: () => number | null;
 }
 
 export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };

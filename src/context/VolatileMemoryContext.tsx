@@ -53,6 +53,7 @@ export function VolatileMemoryProvider({
   const [workOffsets, setWorkOffsets] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [incrementalValues, setIncrementalValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
   const [manualAbsoluteValues, setManualAbsoluteValues] = useState<AxisValues>(ZERO_AXIS_VALUES);
+  const [inputBuffer, setInputBuffer] = useState<string>('');
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
@@ -163,6 +164,41 @@ export function VolatileMemoryProvider({
     }
   }, [mode, millState, displayValues]);
 
+  // Input buffer actions
+  const appendDigit = useCallback((digit: string) => {
+    setInputBuffer((prev) => prev + digit);
+  }, []);
+
+  const appendDecimal = useCallback(() => {
+    setInputBuffer((prev) => {
+      if (prev.includes('.')) {
+        return prev; // Already has a decimal point
+      }
+      return prev + '.';
+    });
+  }, []);
+
+  const toggleSign = useCallback(() => {
+    setInputBuffer((prev) => {
+      if (prev.startsWith('-')) {
+        return prev.slice(1);
+      }
+      return '-' + prev;
+    });
+  }, []);
+
+  const clearBuffer = useCallback(() => {
+    setInputBuffer('');
+  }, []);
+
+  const getBufferValue = useCallback(() => {
+    if (!inputBuffer || inputBuffer === '-' || inputBuffer === '.') {
+      return null;
+    }
+    const value = parseFloat(inputBuffer);
+    return isNaN(value) ? null : value;
+  }, [inputBuffer]);
+
   const contextValue: VolatileMemoryContextValue = {
     // DRO memory state
     displayValues,
@@ -171,6 +207,7 @@ export function VolatileMemoryProvider({
     mode,
     workOffsets,
     activeAxis,
+    inputBuffer,
 
     // DRO actions
     toggleMode,
@@ -180,6 +217,13 @@ export function VolatileMemoryProvider({
     setAxisValue,
     selectAxis,
     halfAxis,
+
+    // Input buffer actions
+    appendDigit,
+    appendDecimal,
+    toggleSign,
+    clearBuffer,
+    getBufferValue,
   };
 
   return (

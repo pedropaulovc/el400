@@ -637,4 +637,191 @@ describe('VolatileMemoryContext', () => {
   });
 
   // Boot sequence state machine tests moved to OperationStateContext.test.tsx
+
+  describe('Input buffer', () => {
+    it('starts with empty buffer', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.inputBuffer).toBe('');
+    });
+
+    it('appends digits to buffer', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('1');
+        result.current.appendDigit('2');
+        result.current.appendDigit('3');
+      });
+
+      expect(result.current.inputBuffer).toBe('123');
+    });
+
+    it('appends decimal point', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('1');
+        result.current.appendDecimal();
+        result.current.appendDigit('5');
+      });
+
+      expect(result.current.inputBuffer).toBe('1.5');
+    });
+
+    it('does not append second decimal point', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('1');
+        result.current.appendDecimal();
+        result.current.appendDigit('2');
+        result.current.appendDecimal();
+        result.current.appendDigit('3');
+      });
+
+      expect(result.current.inputBuffer).toBe('1.23');
+    });
+
+    it('toggles sign to negative', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('5');
+        result.current.toggleSign();
+      });
+
+      expect(result.current.inputBuffer).toBe('-5');
+    });
+
+    it('toggles sign back to positive', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('5');
+        result.current.toggleSign();
+        result.current.toggleSign();
+      });
+
+      expect(result.current.inputBuffer).toBe('5');
+    });
+
+    it('clears the buffer', () => {
+      const { result } = renderHook(() => useVolatileMemoryContext(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.appendDigit('1');
+        result.current.appendDigit('2');
+        result.current.appendDigit('3');
+        result.current.clearBuffer();
+      });
+
+      expect(result.current.inputBuffer).toBe('');
+    });
+
+    describe('getBufferValue', () => {
+      it('returns null for empty buffer', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        expect(result.current.getBufferValue()).toBeNull();
+      });
+
+      it('returns null for just minus sign', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.toggleSign();
+        });
+
+        expect(result.current.getBufferValue()).toBeNull();
+      });
+
+      it('returns null for just decimal point', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.appendDecimal();
+        });
+
+        expect(result.current.getBufferValue()).toBeNull();
+      });
+
+      it('returns positive integer', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.appendDigit('1');
+          result.current.appendDigit('2');
+          result.current.appendDigit('3');
+        });
+
+        expect(result.current.getBufferValue()).toBe(123);
+      });
+
+      it('returns negative integer', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.appendDigit('4');
+          result.current.appendDigit('5');
+          result.current.toggleSign();
+        });
+
+        expect(result.current.getBufferValue()).toBe(-45);
+      });
+
+      it('returns decimal number', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.appendDigit('1');
+          result.current.appendDecimal();
+          result.current.appendDigit('5');
+        });
+
+        expect(result.current.getBufferValue()).toBe(1.5);
+      });
+
+      it('returns negative decimal number', () => {
+        const { result } = renderHook(() => useVolatileMemoryContext(), {
+          wrapper: createWrapper(),
+        });
+
+        act(() => {
+          result.current.appendDigit('2');
+          result.current.appendDecimal();
+          result.current.appendDigit('5');
+          result.current.toggleSign();
+        });
+
+        expect(result.current.getBufferValue()).toBe(-2.5);
+      });
+    });
+  });
 });

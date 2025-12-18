@@ -3,7 +3,6 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useInputBuffer } from "../hooks/useInputBuffer";
 import {
   useDROState,
   useDRODispatch,
@@ -14,7 +13,6 @@ import {
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
-  const inputBuffer = useInputBuffer();
   const droState = useDROState();
   const dispatch = useDRODispatch();
 
@@ -52,7 +50,7 @@ const KeypadSection = () => {
 
     // Calculator mode: accumulate digits
     if (isCalculatorActive(droState)) {
-      inputBuffer.appendDigit(num);
+      vMem.appendDigit(num);
       return;
     }
 
@@ -60,37 +58,37 @@ const KeypadSection = () => {
     if (!vMem.activeAxis) {
       return;
     }
-    inputBuffer.appendDigit(num);
-  }, [droState, dispatch, vMem, inputBuffer]);
+    vMem.appendDigit(num);
+  }, [droState, dispatch, vMem]);
 
   const handleDecimal = useCallback(() => {
     if (isCalculatorActive(droState)) {
-      inputBuffer.appendDecimal();
+      vMem.appendDecimal();
       return;
     }
     if (!vMem.activeAxis) {
       return;
     }
-    inputBuffer.appendDecimal();
-  }, [droState, vMem.activeAxis, inputBuffer]);
+    vMem.appendDecimal();
+  }, [droState, vMem]);
 
   const handleSign = useCallback(() => {
     if (isCalculatorActive(droState)) {
       // In calculator mode, toggle sign in buffer
-      inputBuffer.toggleSign();
+      vMem.toggleSign();
       return;
     }
     if (!vMem.activeAxis) {
       return;
     }
-    inputBuffer.toggleSign();
-  }, [droState, vMem.activeAxis, inputBuffer]);
+    vMem.toggleSign();
+  }, [droState, vMem]);
 
   const handleClear = useCallback(() => {
-    inputBuffer.clear();
+    vMem.clearBuffer();
     // Dispatch KEY_CLEAR to state machine - handles boot dismiss and menu exit
     dispatch({ eventName: 'KEY_CLEAR' });
-  }, [inputBuffer, dispatch]);
+  }, [vMem, dispatch]);
 
   const handleEnter = useCallback(() => {
     // In function menu, ENT confirms the selection
@@ -101,11 +99,11 @@ const KeypadSection = () => {
 
     // Calculator mode: handle value entry or calculation
     if (isCalculatorActive(droState)) {
-      const value = inputBuffer.getValue();
+      const value = vMem.getBufferValue();
       if (value !== null) {
         // Pass value with KEY_ENTER event for calculator
         dispatch({ eventName: 'KEY_ENTER', value });
-        inputBuffer.clear();
+        vMem.clearBuffer();
       }
       return;
     }
@@ -114,12 +112,12 @@ const KeypadSection = () => {
     if (!vMem.activeAxis) {
       return;
     }
-    const value = inputBuffer.getValue();
+    const value = vMem.getBufferValue();
     if (value !== null) {
       vMem.setAxisValue(vMem.activeAxis, value);
-      inputBuffer.clear();
+      vMem.clearBuffer();
     }
-  }, [droState, dispatch, vMem, inputBuffer]);
+  }, [droState, dispatch, vMem]);
 
   return (
     <BeveledFrame>
