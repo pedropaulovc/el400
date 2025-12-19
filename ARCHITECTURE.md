@@ -6,7 +6,22 @@
 * **Adapters:** `src/adapters/` - `CncjsMillConnection`, `NoopMillConnection`
 * **Types:** `src/types/` - `MillState`, `VolatileMemory`, `NonVolatileMemory`
 
-## Core State Structure
+## State Management (Zustand)
+
+Three stores with granular selectors:
+
+```typescript
+// src/stores/droStore.ts - DRO state machine
+useDROStore: { stateName, stateData, vMem, dispatch }
+
+// src/stores/millStore.ts - Connection lifecycle
+useMillStore: { millState, connection, isConnecting, error }
+
+// src/stores/settingsStore.ts - Persisted settings (localStorage)
+useSettingsStore: { nvMem, updateNvMem, resetMemory }
+```
+
+## Core Types
 
 ```typescript
 // DRO reducer state (src/dro-state-machine/types.ts)
@@ -16,19 +31,9 @@ interface DROStatePayload {
   vMem: VolatileMemoryState;   // Runtime memory
 }
 
-interface VolatileMemoryState {
-  mode: 'abs' | 'inc';
-  activeAxis: 'X' | 'Y' | 'Z' | null;
-  workOffsets: { X: number; Y: number; Z: number };
-  incrementalValues: { X: number; Y: number; Z: number };
-  manualAbsoluteValues: { X: number; Y: number; Z: number };
-  inputBuffer: string;
-}
-
 // Mill state from adapters (src/types/millState.ts)
 interface MillState {
   position: { x: number; y: number; z: number };
-  workPosition?: { x: number; y: number; z: number };  // Optional
   probe: { pinState: string; triggered: boolean };
   connected: boolean;
   controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
@@ -52,46 +57,43 @@ interface NonVolatileMemory {
 * Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
 * Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
 
-## Provider Order (Required)
-
-```tsx
-<NonVolatileMemoryProvider>
-  <MillStateProvider initialConnection={connection}>
-    <DROProvider>
-      {children}
-    </DROProvider>
-  </MillStateProvider>
-</NonVolatileMemoryProvider>
-```
-
 ## Hooks
 
 ```typescript
-// DRO state machine (src/dro-state-machine/context.tsx)
+// DRO state (src/stores/droStore.ts, re-exported from src/dro-state-machine/index.ts)
 useDROState()      // → DROStateName
 useDROContext()    // → DROStateData
 useDROVMem()       // → VolatileMemoryState
 useDRODispatch()   // → dispatch({ eventName: 'KEY_5' })
 
-// Mill state (src/hooks/useMillState.ts)
-useMillState()     // → { millState, connection, isConnecting, error }
+// Mill state (src/stores/millStore.ts)
+useMillState()     // → MillState
+useConnection()    // → MillConnection
+useIsConnecting()  // → boolean
+
+// Settings (src/stores/settingsStore.ts)
+useNvMem()         // → NonVolatileMemory
+useDefaultUnit()   // → 'inch' | 'mm'
+useUpdateNvMem()   // → (partial) => void
 
 // Volatile memory with actions (src/hooks/useVolatileMemory.ts)
 useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis, ... }
-
-// Non-volatile memory (src/hooks/useNonVolatileMemory.ts)
-useNonVolatileMemory() // → { memory, updateMemory, resetMemory }
 ```
 
 ## File Structure
 
 ```
+src/stores/
+├── index.ts              # Re-exports
+├── droStore.ts           # DRO state machine store
+├── millStore.ts          # Mill connection lifecycle
+└── settingsStore.ts      # Persisted settings (localStorage)
+
 src/dro-state-machine/
-├── index.ts              # Public exports
+├── index.ts              # Public exports (re-exports from stores)
 ├── types.ts              # DROStatePayload, FeatureReducer, DROReducerContext
 ├── droStateMachine.ts    # DROStateName, DROEventPayload, DROStateData
 ├── reducer.ts            # Root reducer (composes features)
-├── context.tsx           # DROProvider, hooks
 ├── test-utils.ts         # Test helpers (createTestState, DEFAULT_TEST_CONTEXT)
 └── features/
     ├── boot.ts           # boot → showMessage → idle
@@ -111,10 +113,6 @@ src/adapters/
 ├── CncjsMillConnection.ts # WebSocket to CNCjs
 ├── MockMillConnection.ts  # Test/dev simulation
 └── NoOpMillConnection.ts  # Default fallback (manual mode)
-
-src/context/
-├── MillStateContext.tsx  # Connection lifecycle, mill state
-└── NonVolatileMemoryContext.tsx # Settings persistence
 ```
 
 ## Feature Reducer Pattern
@@ -147,16 +145,19 @@ type DROStateData =
 ### Data Flow
 
 ```
-EL400Simulator (consumes DROState, vMem via hooks)
+EL400Simulator (consumes via hooks)
         ↑
-   DROProvider (state machine + vMem)  ←──  NonVolatileMemoryContext
-        ↑ context: { millState, nvMem }
-   MillStateContext (connection lifecycle)
+   Zustand Stores (granular selectors)
+   ├── droStore ←── reads millStore, settingsStore on dispatch
+   ├── millStore ←── connection.subscribe()
+   └── settingsStore (persist middleware → localStorage)
         ↑
    MillConnection interface
         ↑
-   CncjsMillConnection | MockMillConnection | ManualConnection
+   CncjsMillConnection | MockMillConnection | NoOpMillConnection
 ```
+
+Initialization in `App.tsx`: `initializeMillStore(connection)` connects store to adapter.
 
 ### MillConnection Interface
 
