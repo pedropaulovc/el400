@@ -2,17 +2,16 @@
  * DRO State Machine Module
  *
  * Re-exports all public API for the DRO state machine.
+ * Hooks now use Zustand stores instead of React Context.
  */
 
-// Context and hooks
+// Hooks from Zustand stores
 export {
-  DROStateMachineProvider as DROProvider,
-  useDROStateName as useDROState,
-  useDROStateData as useDROContext,
-  useDROVolatileMemory as useDROVMem,
-  useDROEventDispatch as useDRODispatch,
-  type DROStateMachineProviderProps as DROProviderProps,
-} from './context';
+  useStateName as useDROState,
+  useStateData as useDROContext,
+  useDROVMem,
+  useDRODispatch,
+} from '../stores/droStore';
 
 // Types
 export type { DROStatePayload as DROShape, FeatureReducer } from './types';

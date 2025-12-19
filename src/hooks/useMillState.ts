@@ -1,8 +1,6 @@
 /**
  * Convenience hook for accessing mill state.
- * Re-exports useMillStateContext for cleaner imports.
+ * Re-exports useMillState from Zustand store for cleaner imports.
  */
 
-import { useMillStateContext } from '../context/MillStateContext';
-
-export const useMillState = useMillStateContext;
+export { useMillState } from '../stores';

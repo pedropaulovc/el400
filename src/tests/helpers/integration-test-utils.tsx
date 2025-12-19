@@ -6,12 +6,17 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
-import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
-import { MillStateProvider } from '../../context/MillStateContext';
-import { DROProvider } from '../../dro-state-machine';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
 import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { useMillStore } from '../../stores/millStore';
+import { useDROStore } from '../../stores/droStore';
+import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { INITIAL_DRO_STATE_PAYLOAD } from '../../dro-state-machine/droStateMachine';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { createDefaultMillState } from '../../types/millState';
+
 /**
  * Sets non-volatile memory in localStorage
  * Can set partial values - merges with existing data
@@ -23,6 +28,48 @@ export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
     ...current,
     ...values,
   }));
+}
+
+/**
+ * Resets all Zustand stores to their initial state.
+ * Call this in beforeEach/afterEach to ensure test isolation.
+ */
+export function resetStores(): void {
+  // Reset settings store
+  useSettingsStore.setState({
+    nvMem: {
+      beepEnabled: true,
+      defaultUnit: 'inch',
+      precision: 4,
+      bootMessageMode: 'skip', // Skip boot for faster tests
+    },
+  });
+
+  // Reset mill store
+  useMillStore.setState({
+    millState: createDefaultMillState('noop'),
+    connection: new NoOpMillConnection(),
+    isConnecting: false,
+    error: null,
+  });
+
+  // Reset DRO store
+  useDROStore.setState({
+    stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
+    stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
+    vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  });
+}
+
+/**
+ * Sets DRO store to idle state for tests that skip boot.
+ */
+export function setIdleState(): void {
+  useDROStore.setState({
+    stateName: 'idle',
+    stateData: { stateDataType: 'none' },
+    vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  });
 }
 
 interface RenderSimulatorOptions {
@@ -37,7 +84,21 @@ interface RenderSimulatorOptions {
 export function renderSimulator(options?: RenderSimulatorOptions) {
   const { bootMessageMode = 'skip' } = options ?? {};
 
-  setNonVolatileMemory({ bootMessageMode });
+  // Reset stores first
+  resetStores();
+
+  // Set boot message mode
+  useSettingsStore.getState().updateNvMem({ bootMessageMode });
+
+  // If skipping boot, start in idle state
+  if (bootMessageMode === 'skip') {
+    setIdleState();
+  }
+
+  // Initialize mill store with NoOp connection
+  const connection = new NoOpMillConnection();
+  useMillStore.getState().setConnection(connection);
+  useMillStore.getState()._setMillState(connection.getState());
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -46,13 +107,7 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <NonVolatileMemoryProvider>
-          <MillStateProvider>
-            <DROProvider>
-              <EL400Simulator />
-            </DROProvider>
-          </MillStateProvider>
-        </NonVolatileMemoryProvider>
+        <EL400Simulator />
       </BrowserRouter>
     </QueryClientProvider>
   );
@@ -65,13 +120,13 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
 export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
-  
+
   const trimmedContent = textContent.trim();
-  
+
   if (VALID_NUMBER_PATTERN.test(trimmedContent)) {
     throw new Error(`Expected text value for axis ${axis}, but got numeric value: ${trimmedContent}`);
   }
-  
+
   return trimmedContent;
 }
 
@@ -82,20 +137,20 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
 export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
-  
+
   const trimmedContent = textContent.trim();
   const match = trimmedContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
-  
+
   if (!match) {
     throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
   }
-  
+
   const parsedValue = parseFloat(match[0]);
-  
+
   if (isNaN(parsedValue)) {
     throw new Error(`Expected numeric value for axis ${axis}, but parsing resulted in NaN from: ${match[0]}`);
   }
-  
+
   return parsedValue;
 }
 

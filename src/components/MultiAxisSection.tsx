@@ -2,7 +2,7 @@ import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { useDefaultUnit } from "../stores/settingsStore";
 import { useDROState, isFunctionActive } from "../dro-state-machine";
 
 export interface AxisValues {
@@ -29,11 +29,11 @@ const MultiAxisSection = ({
   axisValues,
 }: MultiAxisSectionProps) => {
   const vMem = useVolatileMemory();
-  const { nvMem } = useNonVolatileMemoryContext();
+  const defaultUnit = useDefaultUnit();
   const droState = useDROState();
 
   const isAbs = vMem.mode === 'abs';
-  const isInch = nvMem.defaultUnit === 'inch';
+  const isInch = defaultUnit === 'inch';
 
   const formatForScreenReader = (value: AxisDisplayValue) =>
     typeof value === 'number' ? value.toFixed(4) : value;

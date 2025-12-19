@@ -2,10 +2,13 @@ import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
-import { MillStateProvider } from '../../context/MillStateContext';
-import { DROProvider, INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_CONTEXT } from '../../dro-state-machine';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { useMillStore } from '../../stores/millStore';
+import { useDROStore } from '../../stores/droStore';
+import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from '../../dro-state-machine/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { createDefaultMillState } from '../../types/millState';
 
 /**
  * Custom render function that includes all necessary providers
@@ -20,6 +23,37 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
    * Custom QueryClient instance
    */
   queryClient?: QueryClient;
+}
+
+/**
+ * Resets all Zustand stores to their initial state for testing.
+ * Sets DRO to idle state (skip boot sequence).
+ */
+function resetStoresForTest(): void {
+  // Reset settings store
+  useSettingsStore.setState({
+    nvMem: {
+      beepEnabled: true,
+      defaultUnit: 'inch',
+      precision: 4,
+      bootMessageMode: 'skip',
+    },
+  });
+
+  // Reset mill store
+  useMillStore.setState({
+    millState: createDefaultMillState('noop'),
+    connection: new NoOpMillConnection(),
+    isConnecting: false,
+    error: null,
+  });
+
+  // Reset DRO store - start in idle state for unit tests (skip boot sequence)
+  useDROStore.setState({
+    stateName: 'idle',
+    stateData: INITIAL_DRO_CONTEXT,
+    vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  });
 }
 
 /**
@@ -43,24 +77,13 @@ export function renderWithProviders(
     window.history.pushState({}, 'Test page', initialRoute);
   }
 
-  // Start in idle state for unit tests (skip boot sequence)
-  const idleInitialState = {
-    ...INITIAL_DRO_STATE_PAYLOAD,
-    stateName: 'idle' as const,
-    stateData: INITIAL_DRO_CONTEXT,
-    vMem: INITIAL_VOLATILE_MEMORY_STATE,
-  };
+  // Reset stores to initial state for testing
+  resetStoresForTest();
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
       <BrowserRouter>
-        <NonVolatileMemoryProvider>
-          <MillStateProvider>
-            <DROProvider initialState={idleInitialState}>
-              {children}
-            </DROProvider>
-          </MillStateProvider>
-        </NonVolatileMemoryProvider>
+        {children}
       </BrowserRouter>
     </QueryClientProvider>
   );

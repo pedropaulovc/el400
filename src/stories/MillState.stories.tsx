@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect, useState } from "react";
-import { MillStateProvider, useMillStateContext } from "../context/MillStateContext";
+import { useEffect, useMemo, useState } from "react";
+import { useMillStore } from "../stores/millStore";
 import { MockMillConnection } from "../adapters/MockMillConnection";
 
 /**
@@ -8,7 +8,7 @@ import { MockMillConnection } from "../adapters/MockMillConnection";
  * Used in stories to visualize the data contract.
  */
 function MillStateDisplay() {
-  const { millState } = useMillStateContext();
+  const millState = useMillStore((s) => s.millState);
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-lg font-mono text-sm space-y-4 min-w-[400px]">
@@ -80,7 +80,25 @@ function MillStateDisplay() {
 }
 
 /**
- * Story wrapper component that provides context and connection.
+ * Initialize stores for storybook - uses provided connection.
+ */
+function initializeStoresForStory(connection: MockMillConnection) {
+  // Set up mill store with connection
+  useMillStore.setState({
+    millState: connection.getState(),
+    connection: connection,
+    isConnecting: false,
+    error: null,
+  });
+
+  // Subscribe to connection updates
+  connection.subscribe((state) => {
+    useMillStore.getState()._setMillState(state);
+  });
+}
+
+/**
+ * Story wrapper component that initializes stores.
  */
 function StoryWrapper({
   connection,
@@ -89,11 +107,23 @@ function StoryWrapper({
   connection?: MockMillConnection;
   children: React.ReactNode;
 }) {
-  return (
-    <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
-      {children}
-    </MillStateProvider>
-  );
+  // Use useMemo to ensure stable connection reference
+  const conn = useMemo(() => connection ?? new MockMillConnection(), [connection]);
+
+  // Initialize stores synchronously before first render
+  // This is safe for Zustand stores which are external to React
+  useMemo(() => {
+    initializeStoresForStory(conn);
+  }, [conn]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      conn.disconnect();
+    };
+  }, [conn]);
+
+  return <>{children}</>;
 }
 
 const meta = {

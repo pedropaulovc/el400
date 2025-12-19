@@ -1,12 +1,48 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect, useState } from "react";
-import { MillStateProvider, useMillStateContext } from "../context/MillStateContext";
-import { NonVolatileMemoryProvider, useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { DROProvider, INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_CONTEXT } from "../dro-state-machine";
+import { useEffect, useState, useMemo } from "react";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useMillStore } from "../stores/millStore";
+import { useDROStore } from "../stores/droStore";
+import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../dro-state-machine/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillConnection } from "../adapters/MockMillConnection";
 import type { Axis } from "../types/volatileMemory";
+
+/**
+ * Initialize stores for storybook - starts in idle state (skip boot)
+ */
+function initializeStoresForStory(connection: MockMillConnection) {
+  // Reset settings store
+  useSettingsStore.setState({
+    nvMem: {
+      beepEnabled: true,
+      defaultUnit: 'inch',
+      precision: 4,
+      bootMessageMode: 'skip',
+    },
+  });
+
+  // Set up mill store with connection
+  useMillStore.setState({
+    millState: connection.getState(),
+    connection: connection,
+    isConnecting: false,
+    error: null,
+  });
+
+  // Subscribe to connection updates
+  connection.subscribe((state) => {
+    useMillStore.getState()._setMillState(state);
+  });
+
+  // Reset DRO store to idle state
+  useDROStore.setState({
+    stateName: 'idle',
+    stateData: INITIAL_DRO_CONTEXT,
+    vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  });
+}
 
 /**
  * Interactive volatile memory demo component.
@@ -14,8 +50,9 @@ import type { Axis } from "../types/volatileMemory";
  */
 function VolatileMemoryDemo() {
   const vMem = useVolatileMemory();
-  const { millState } = useMillStateContext();
-  const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
+  const millState = useMillStore((s) => s.millState);
+  const nvMem = useSettingsStore((s) => s.nvMem);
+  const updateNvMem = useSettingsStore((s) => s.updateNvMem);
 
   const handleZeroAxis = (axis: Axis) => {
     vMem.zeroAxis(axis);
@@ -141,16 +178,8 @@ function VolatileMemoryDemo() {
   );
 }
 
-// Start in idle state for storybook (skip boot sequence)
-const idleInitialState = {
-  ...INITIAL_DRO_STATE_PAYLOAD,
-  stateName: 'idle' as const,
-  stateData: INITIAL_DRO_CONTEXT,
-  vMem: INITIAL_VOLATILE_MEMORY_STATE,
-};
-
 /**
- * Story wrapper with providers.
+ * Story wrapper that initializes stores with connection.
  */
 function StoryWrapper({
   connection,
@@ -159,15 +188,23 @@ function StoryWrapper({
   connection?: MockMillConnection;
   children: React.ReactNode;
 }) {
-  return (
-    <NonVolatileMemoryProvider>
-      <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
-        <DROProvider initialState={idleInitialState}>
-          {children}
-        </DROProvider>
-      </MillStateProvider>
-    </NonVolatileMemoryProvider>
-  );
+  // Use useMemo to ensure stable connection reference
+  const conn = useMemo(() => connection ?? new MockMillConnection(), [connection]);
+
+  // Initialize stores synchronously before first render
+  // This is safe for Zustand stores which are external to React
+  useMemo(() => {
+    initializeStoresForStory(conn);
+  }, [conn]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      conn.disconnect();
+    };
+  }, [conn]);
+
+  return <>{children}</>;
 }
 
 const meta = {
@@ -207,10 +244,6 @@ export const MockWithMovement: Story = {
         () => new MockMillConnection({ simulateMovement: true, updateInterval: 200 })
       );
 
-      useEffect(() => {
-        return () => { connection.disconnect(); };
-      }, [connection]);
-
       return (
         <StoryWrapper connection={connection}>
           <Story />
@@ -231,7 +264,6 @@ export const MockFixedPosition: Story = {
 
       useEffect(() => {
         connection.setPosition(123.4567, 89.1234, -45.6789);
-        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
@@ -257,7 +289,6 @@ export const InteractiveDemo: Story = {
 
       useEffect(() => {
         connection.setPosition(50.0, 100.0, 25.0);
-        return () => { connection.disconnect(); };
       }, [connection]);
 
       return (
