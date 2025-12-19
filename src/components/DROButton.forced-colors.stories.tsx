@@ -25,6 +25,7 @@ export const ForcedColorsHighContrast: Story = {
     children: "Forced Colors",
     variant: "default",
     size: "square",
+    title: "Forced Colors Button",
   },
   play: async ({ canvasElement }) => {
     await expect(window.matchMedia("(forced-colors: active)").matches).toBe(true);
