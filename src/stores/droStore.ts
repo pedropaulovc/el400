@@ -85,10 +85,16 @@ export const useDROStore = create<DROStore>()((set, get) => ({
 // CONNECT MILL STORE TO DRO DISPATCH
 // ─────────────────────────────────────────────────────────────────
 
-// Set up the dispatch function for MILL_STATE_CHANGED events
-setDRODispatch((event) => {
-  useDROStore.getState().dispatch(event as DROEventPayload);
-});
+/**
+ * Initialize the connection between mill store and DRO dispatch.
+ * This should be called after both stores are created (e.g., in stores/index.ts).
+ * Extracted to an explicit function to avoid side effects at module import time.
+ */
+export function initializeDROMillConnection(): void {
+  setDRODispatch((event) => {
+    useDROStore.getState().dispatch(event as DROEventPayload);
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────
 // SELECTORS - Granular subscriptions for performance

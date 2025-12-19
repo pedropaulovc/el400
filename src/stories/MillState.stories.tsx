@@ -110,13 +110,14 @@ function StoryWrapper({
   // Use useMemo to ensure stable connection reference
   const conn = useMemo(() => connection ?? new MockMillConnection(), [connection]);
 
-  // Initialize stores synchronously before first render
-  // This is safe for Zustand stores which are external to React
+  // Initialize Zustand stores during render.
+  // This is acceptable because Zustand stores are external to React's state management.
+  // The useMemo ensures this runs once per connection change, not on every render.
   useMemo(() => {
     initializeStoresForStory(conn);
   }, [conn]);
 
-  // Clean up on unmount
+  // Clean up connection on unmount
   useEffect(() => {
     return () => {
       conn.disconnect();
