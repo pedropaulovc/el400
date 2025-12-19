@@ -139,6 +139,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_Z' }
   | { eventName: 'BTN_ZERO_ALL' }
   // Axis selection buttons (select without zeroing)
+  // In calculator mode, BTN_SELECT_Y cycles operations
   | { eventName: 'BTN_SELECT_X' }
   | { eventName: 'BTN_SELECT_Y' }
   | { eventName: 'BTN_SELECT_Z' }

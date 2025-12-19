@@ -4,6 +4,7 @@
  * Handles basic calculator functions (ADD, SUB, MULTI, DIV).
  * Supports sign toggle and result display.
  * Parses values from vMem.inputBuffer on KEY_ENTER.
+ * Owns all input buffer operations in calculator state to support operation cycling.
  */
 
 import type { FeatureReducer } from '../types';
@@ -13,7 +14,7 @@ import {
   INITIAL_CALCULATOR_DATA,
   isCalculatorActive,
 } from '../droStateMachine';
-import { getBufferValue } from './keypad';
+import { appendDigit, appendDecimal, toggleSign, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
 
 /**
  * Calculator operations cycle: ADD -> SUB -> MULTI -> DIV -> ADD
@@ -60,21 +61,26 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
 
   const calcData = data.stateDataType === 'calculator' ? data : INITIAL_CALCULATOR_DATA;
 
+  // Handle digit keys - calculatorReducer owns all digit input in calculator state
+  const digit = KEY_TO_DIGIT[eventName];
+  if (digit !== undefined) {
+    // All digits append to buffer
+    return {
+      ...statePayload,
+      vMem: {
+        ...vMem,
+        inputBuffer: appendDigit(vMem.inputBuffer, digit),
+      },
+    };
+  }
+
   switch (eventName) {
     case 'BTN_CALCULATOR':
       // Exit calculator mode
       return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
 
-    case 'KEY_CLEAR':
-      // Clear calculator and input buffer but stay in calculator mode
-      return {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-        vMem: { ...vMem, inputBuffer: '' },
-      };
-
-    case 'KEY_6_RIGHT': {
-      // Cycle through operations (reusing navigation key)
+    case 'BTN_SELECT_Y': {
+      // Y button in calculator mode cycles through operations
       const nextOp = getNextOperation(calcData.operation);
       const nextState: CalculatorData = {
         ...calcData,
@@ -87,6 +93,37 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
         vMem,
       };
     }
+
+    case 'BTN_SELECT_X':
+    case 'BTN_SELECT_Z':
+      // X and Z buttons don't do anything in calculator mode
+      return null;
+
+    case 'KEY_DECIMAL':
+      return {
+        ...statePayload,
+        vMem: {
+          ...vMem,
+          inputBuffer: appendDecimal(vMem.inputBuffer),
+        },
+      };
+
+    case 'KEY_SIGN':
+      return {
+        ...statePayload,
+        vMem: {
+          ...vMem,
+          inputBuffer: toggleSign(vMem.inputBuffer),
+        },
+      };
+
+    case 'KEY_CLEAR':
+      // Clear calculator and input buffer but stay in calculator mode
+      return {
+        stateName: 'calculator-idle',
+        stateData: INITIAL_CALCULATOR_DATA,
+        vMem: { ...vMem, inputBuffer: '' },
+      };
 
     case 'KEY_ENTER': {
       // Parse value from input buffer
@@ -134,7 +171,6 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
     }
 
     default:
-      // Return null for unhandled events to let keypadReducer handle digit input
       return null;
   }
 };
