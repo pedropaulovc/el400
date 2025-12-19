@@ -1,10 +1,9 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { fromMmToAnyUnit } from "../utils/unitConversion";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useDROState, isFunctionActive, isCalculatorActive } from "../dro-state-machine";
+import { useDROState, isFunctionActive } from "../dro-state-machine";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -15,9 +14,17 @@ export interface AxisValues {
 export type { AxisDisplayValue };
 
 interface MultiAxisSectionProps {
+  /** Pre-computed display values (already unit-converted where appropriate) */
   axisValues: AxisValues;
 }
 
+/**
+ * Displays the three-axis DRO readout with LED mode indicators.
+ *
+ * This component is a pure renderer - it displays whatever values are passed
+ * and has no knowledge of calculator mode or unit conversion. Those concerns
+ * are handled by the useDisplayValues hook upstream.
+ */
 const MultiAxisSection = ({
   axisValues,
 }: MultiAxisSectionProps) => {
@@ -27,21 +34,6 @@ const MultiAxisSection = ({
 
   const isAbs = vMem.mode === 'abs';
   const isInch = nvMem.defaultUnit === 'inch';
-  const inCalculatorMode = isCalculatorActive(droState);
-
-  // Convert values from mm (internal storage) to display unit (only for numeric values)
-  // Skip conversion in calculator mode as values are raw numbers, not positions
-  const unit = isInch ? 'inch' : 'mm';
-  const convertValue = (value: AxisDisplayValue): AxisDisplayValue => {
-    if (inCalculatorMode) return value; // No conversion in calculator mode
-    return typeof value === 'number' ? fromMmToAnyUnit(value, unit) : value;
-  };
-  
-  const displayValues = {
-    X: convertValue(axisValues.X),
-    Y: convertValue(axisValues.Y),
-    Z: convertValue(axisValues.Z),
-  };
 
   const formatForScreenReader = (value: AxisDisplayValue) =>
     typeof value === 'number' ? value.toFixed(4) : value;
@@ -70,28 +62,28 @@ const MultiAxisSection = ({
               <tr>
                 <th scope="row">X</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {formatForScreenReader(displayValues.X)}
+                  {formatForScreenReader(axisValues.X)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Y</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {formatForScreenReader(displayValues.Y)}
+                  {formatForScreenReader(axisValues.Y)}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Z</th>
                 <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {formatForScreenReader(displayValues.Z)}
+                  {formatForScreenReader(axisValues.Z)}
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <Axis value={displayValues.X} axis="X" />
-            <Axis value={displayValues.Y} axis="Y" />
-            <Axis value={displayValues.Z} axis="Z" />
+            <Axis value={axisValues.X} axis="X" />
+            <Axis value={axisValues.Y} axis="Y" />
+            <Axis value={axisValues.Z} axis="Z" />
           </div>
 
           {/* LED Indicators */}

@@ -5,7 +5,8 @@
  * mode toggles, and function menu states.
  */
 
-import type { AxisValues } from '../types/volatileMemory';
+import type { AxisValues, VolatileMemoryState } from '../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates
@@ -124,7 +125,9 @@ export type DROEventPayload =
   | { eventName: 'KEY_DECIMAL' }
   | { eventName: 'KEY_SIGN' }
   | { eventName: 'KEY_CLEAR' }
-  | { eventName: 'KEY_ENTER'; value?: number }
+  | { eventName: 'KEY_ENTER' }
+  // Programmatic buffer manipulation (for API use, not keypad)
+  | { eventName: 'SET_INPUT_BUFFER'; value: string }
   // Button presses
   | { eventName: 'BTN_ABS_INC' }
   | { eventName: 'BTN_INCH_MM' }
@@ -134,8 +137,12 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
   | { eventName: 'BTN_ZERO_ALL' }
-  // Data payload for point storage
-  | { eventName: 'POINT_DATA'; point: StoredPoint };
+  // Axis selection buttons (select without zeroing)
+  | { eventName: 'BTN_SELECT_X' }
+  | { eventName: 'BTN_SELECT_Y' }
+  | { eventName: 'BTN_SELECT_Z' }
+  // Secondary function buttons
+  | { eventName: 'BTN_HALF' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -189,4 +196,20 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
   firstValue: null,
   operation: null,
   currentValue: 0,
+};
+
+/**
+ * Initial DRO state payload including vMem.
+ * Used by context to initialize the reducer.
+ */
+export interface DROStatePayloadInit {
+  stateName: DROStateName;
+  stateData: DROStateData;
+  vMem: VolatileMemoryState;
+}
+
+export const INITIAL_DRO_STATE_PAYLOAD: DROStatePayloadInit = {
+  stateName: INITIAL_DRO_STATE,
+  stateData: INITIAL_DRO_STATE_DATA,
+  vMem: INITIAL_VOLATILE_MEMORY_STATE,
 };

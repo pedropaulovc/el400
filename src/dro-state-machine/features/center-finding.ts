@@ -2,9 +2,11 @@
  * Center Finding Feature Reducer
  *
  * Handles center-line (2 points) and center-circle (3 points) operations.
+ * When KEY_6_RIGHT is pressed in point collection state, computes the current
+ * display position from context and stores it as a point.
  */
 
-import type { FeatureReducer } from '../types';
+import type { FeatureReducer, DROReducerContext } from '../types';
 import type {
   DROStateName,
   DROStateData,
@@ -17,7 +19,7 @@ import {
   isCenterLineState,
   isCenterCircleState,
 } from '../droStateMachine';
-import type { AxisValues } from '../../types/volatileMemory';
+import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
 
 /**
@@ -25,6 +27,37 @@ import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
  */
 function isCenterFindingState(state: DROStateName): boolean {
   return isCenterLineState(state) || isCenterCircleState(state);
+}
+
+/**
+ * Compute current display position from vMem and context.
+ * This is the position that gets stored when collecting points.
+ */
+function computeDisplayPosition(
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): StoredPoint {
+  if (vMem.mode === 'abs') {
+    // ABS mode: machine position - work offset (or manual values if disconnected)
+    if (context.millState.connected) {
+      return {
+        X: context.millState.position.x - vMem.workOffsets.X,
+        Y: context.millState.position.y - vMem.workOffsets.Y,
+        Z: context.millState.position.z - vMem.workOffsets.Z,
+      };
+    }
+    return {
+      X: vMem.manualAbsoluteValues.X,
+      Y: vMem.manualAbsoluteValues.Y,
+      Z: vMem.manualAbsoluteValues.Z,
+    };
+  }
+  // INC mode: incremental values
+  return {
+    X: vMem.incrementalValues.X,
+    Y: vMem.incrementalValues.Y,
+    Z: vMem.incrementalValues.Z,
+  };
 }
 
 /**
@@ -87,81 +120,74 @@ function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
   };
 }
 
-export const centerFindingReducer: FeatureReducer = (current, event) => {
-  const { stateName: state, stateData: data } = current;
+export const centerFindingReducer: FeatureReducer = (current, event, context) => {
+  const { stateName: state, stateData: data, vMem } = current;
 
   if (!isCenterFindingState(state)) return null;
 
   // All center finding states can be cancelled with KEY_CLEAR
   if (event.eventName === 'KEY_CLEAR') {
-    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
   }
 
-  switch (state) {
-    // ─────────────────────────────────────────────────────────────
-    // CENTER LINE POINT COLLECTION
-    // ─────────────────────────────────────────────────────────────
-    case 'function-menu-center-line-point-1':
-      if (event.eventName === 'POINT_DATA') {
+  // KEY_6_RIGHT stores the current position as a point during collection
+  if (event.eventName === 'KEY_6_RIGHT') {
+    const point = computeDisplayPosition(vMem, context);
+
+    switch (state) {
+      // ─────────────────────────────────────────────────────────────
+      // CENTER LINE POINT COLLECTION
+      // ─────────────────────────────────────────────────────────────
+      case 'function-menu-center-line-point-1':
         return {
           stateName: 'function-menu-center-line-point-2',
-          stateData: addPointToData(data, event.point),
+          stateData: addPointToData(data, point),
+          vMem,
         };
-      }
-      return current;
 
-    case 'function-menu-center-line-point-2':
-      if (event.eventName === 'POINT_DATA') {
-        const newData = addPointToData(data, event.point);
+      case 'function-menu-center-line-point-2': {
+        const newData = addPointToData(data, point);
         const centerResult = calculateLineCenterResult(newData.storedPoints);
         return {
           stateName: 'function-menu-center-line-result',
           stateData: { ...newData, centerResult },
+          vMem,
         };
       }
-      return current;
 
-    case 'function-menu-center-line-result':
-      // Result state only exits via KEY_CLEAR (handled above)
-      return current;
-
-    // ─────────────────────────────────────────────────────────────
-    // CENTER CIRCLE POINT COLLECTION
-    // ─────────────────────────────────────────────────────────────
-    case 'function-menu-center-circle-point-1':
-      if (event.eventName === 'POINT_DATA') {
+      // ─────────────────────────────────────────────────────────────
+      // CENTER CIRCLE POINT COLLECTION
+      // ─────────────────────────────────────────────────────────────
+      case 'function-menu-center-circle-point-1':
         return {
           stateName: 'function-menu-center-circle-point-2',
-          stateData: addPointToData(data, event.point),
+          stateData: addPointToData(data, point),
+          vMem,
         };
-      }
-      return current;
 
-    case 'function-menu-center-circle-point-2':
-      if (event.eventName === 'POINT_DATA') {
+      case 'function-menu-center-circle-point-2':
         return {
           stateName: 'function-menu-center-circle-point-3',
-          stateData: addPointToData(data, event.point),
+          stateData: addPointToData(data, point),
+          vMem,
         };
-      }
-      return current;
 
-    case 'function-menu-center-circle-point-3':
-      if (event.eventName === 'POINT_DATA') {
-        const newData = addPointToData(data, event.point);
+      case 'function-menu-center-circle-point-3': {
+        const newData = addPointToData(data, point);
         const centerResult = calculateCircleCenterResult(newData.storedPoints);
         return {
           stateName: 'function-menu-center-circle-result',
           stateData: { ...newData, centerResult },
+          vMem,
         };
       }
-      return current;
 
-    case 'function-menu-center-circle-result':
-      // Result state only exits via KEY_CLEAR (handled above)
-      return current;
-
-    default:
-      return null;
+      default:
+        // Result states don't handle KEY_6_RIGHT
+        return current;
+    }
   }
+
+  // Result states only exit via KEY_CLEAR (handled above)
+  return current;
 };
