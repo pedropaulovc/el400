@@ -7,7 +7,7 @@ Technical documentation for developers working on the EL400 DRO simulator.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     EL400Simulator                              │
-│  (consumes DROState, VolatileMemory via hooks)                  │
+│  (consumes DROState, vMem via hooks)                            │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
           ┌───────────────────┼───────────────────┐
@@ -16,17 +16,11 @@ Technical documentation for developers working on the EL400 DRO simulator.
 │      DROStateContext        │   │  NonVolatileMemoryContext   │
 │  (dro-state-machine)        │   │  - Persisted settings       │
 │  - Operation state machine  │   │  - beepEnabled, defaultUnit │
-│  - Function menu, center    │   │  - localStorage persistence │
-│  - Mode toggles             │   │                             │
+│  - vMem (volatile memory)   │   │  - localStorage persistence │
+│  - Input buffer, axis ops   │   │                             │
 └─────────────────────────────┘   └─────────────────────────────┘
-          │
-┌─────────────────────────────┐
-│   VolatileMemoryContext     │
-│  - DRO memory (ABS/INC)     │
-│  - activeAxis, workOffsets  │
-│  - Consumes MillState       │
-└─────────────────────────────┘
           ▲
+          │ context: { millState, nvMem }
           │
 ┌─────────────────────────────────────────────────────────────────┐
 │                   MillStateContext                               │
@@ -57,35 +51,30 @@ Technical documentation for developers working on the EL400 DRO simulator.
 The DRO uses three types of memory:
 
 ### DRO State Machine (`src/dro-state-machine/`)
-Operation state that controls the DRO mode and UI behavior:
+Unified state that controls DRO behavior, including:
 
-- Current operation state (boot, idle, function menus, center finding)
-- Mode toggle states (abs-inc-mode, inch-mm-mode)
-- Feature-specific context data (stored points, results)
+- **Operation state:** boot, idle, function menus, center finding, calculator
+- **Volatile memory (vMem):** mode, activeAxis, workOffsets, incrementalValues, inputBuffer
+- **Feature-specific context data:** stored points, calculation results
 
-### Volatile Memory
-Runtime state that is lost on refresh. Split across two contexts:
+### Mill State
+Runtime state from external connections (managed by MillStateContext):
 
-**MillStateContext:**
 - Mill position from external connection
 - Probe state
 - Connection state and errors
 - Connection lifecycle
-
-**VolatileMemoryContext:**
-- DRO display values (ABS/INC modes)
-- Active axis selection
-- Work offsets
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
 - Default unit (inch/mm)
 - Beep enabled
 - Display precision
+- Boot message mode
 
 ## DRO State Machine
 
-The DRO uses a flat state machine pattern to manage operation modes, function menus, and multi-step workflows like center finding. This architecture replaces the previous boot stage state in VolatileMemoryContext and consolidates all operation control into a single reducer.
+The DRO uses a flat state machine pattern with integrated volatile memory. Components emit raw events (KEY_*, BTN_*) and feature reducers handle all state transitions.
 
 ### Architecture Overview
 
@@ -93,6 +82,7 @@ The DRO uses a flat state machine pattern to manage operation modes, function me
 ┌─────────────────────────────────────────────────────────────────┐
 │                        DROProvider                              │
 │  (React Context + useReducer)                                   │
+│  Injects context: { millState, nvMem }                          │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
                               │ dispatch(DROEvent)
@@ -100,21 +90,26 @@ The DRO uses a flat state machine pattern to manage operation modes, function me
 ┌─────────────────────────────────────────────────────────────────┐
 │                        droReducer                               │
 │  (composes feature reducers in priority order)                  │
+│  State: { stateName, stateData, vMem }                          │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
-          ┌───────────────────┼───────────────────┐
-          │                   │                   │
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│  bootReducer    │ │  menuReducer    │ │centerFindingRed.│
-│  - boot         │ │  - menu nav     │ │  - point collect│
-│  - showMessage  │ │  - ring wrap    │ │  - calculate    │
-│  - idle         │ │                 │ │                 │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-          │                   │                   │
-┌─────────────────┐ ┌─────────────────┐
-│  absIncReducer  │ │  inchMmReducer  │
-│  - mode toggle  │ │  - unit toggle  │
-└─────────────────┘ └─────────────────┘
+    ┌─────────────┬───────────┼───────────┬─────────────┐
+    │             │           │           │             │
+┌────────┐ ┌───────────┐ ┌─────────┐ ┌─────────┐ ┌───────────┐
+│  boot  │ │  keypad   │ │  menu   │ │  half   │ │calculator │
+│        │ │           │ │         │ │         │ │           │
+│ - boot │ │ - digits  │ │ - nav   │ │ - half  │ │ - +/-/×/÷ │
+│ - msg  │ │ - buffer  │ │ - ring  │ │ - axis  │ │ - result  │
+│ - idle │ │ - decimal │ │         │ │         │ │           │
+└────────┘ └───────────┘ └─────────┘ └─────────┘ └───────────┘
+    │             │           │           │             │
+┌────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│mode-toggle │ │axis-operati.│ │centerFinding│ │  abs-inc    │
+│            │ │             │ │             │ │  inch-mm    │
+│ - ABS/INC  │ │ - select    │ │ - points    │ │             │
+│ - preserve │ │ - zero      │ │ - calculate │ │             │
+│   axis     │ │ - set value │ │             │ │             │
+└────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
 ### File Structure
@@ -122,64 +117,89 @@ The DRO uses a flat state machine pattern to manage operation modes, function me
 ```
 src/dro-state-machine/
 ├── index.ts              # Public API exports
-├── types.ts              # DROStatePayload, FeatureReducer
+├── types.ts              # DROStatePayload, FeatureReducer, DROReducerContext
 ├── droStateMachine.ts    # DROStateName, DROEventPayload, DROStateData types
 ├── reducer.ts            # Root reducer (composes features)
-├── context.tsx           # DROProvider, hooks
+├── context.tsx           # DROProvider, hooks (injects millState, nvMem)
+├── test-utils.ts         # Test helpers (createTestState, DEFAULT_TEST_CONTEXT)
 └── features/
     ├── boot.ts           # Boot sequence: boot → showMessage → idle
-    ├── abs-inc.ts        # ABS/INC toggle: idle ↔ abs-inc-mode
+    ├── idle.ts           # Idle state event handling
+    ├── keypad.ts         # Digit input, buffer management (KEY_0-9, KEY_DECIMAL, KEY_SIGN)
+    ├── axis-operations.ts # Axis selection, zeroing, value entry (BTN_SELECT_*, BTN_ZERO_*)
+    ├── mode-toggle.ts    # ABS/INC toggle (BTN_ABS_INC)
+    ├── half.ts           # Half axis value (BTN_HALF)
+    ├── abs-inc.ts        # Legacy ABS/INC state transitions
     ├── inch-mm.ts        # Inch/MM toggle: idle ↔ inch-mm-mode
     ├── menu.ts           # Function menu navigation ring
-    └── center-finding.ts # Point collection and center calculation
+    ├── center-finding.ts # Point collection and center calculation
+    └── calculator.ts     # Basic calculator operations
 ```
 
-### State Machine Design
+### State Payload Structure
 
-**Flat State Union:** All states are simple strings in a discriminated union. No nested substates.
+The reducer manages a unified state payload:
 
 ```typescript
-type DROStateName =
-  // Boot sequence
-  | 'boot' | 'showMessage' | 'idle'
-  // Mode toggles (transitional)
-  | 'abs-inc-mode' | 'inch-mm-mode'
-  // Function menu selection (ring navigation)
-  | 'function-menu-center' | 'function-menu-circle'
-  | 'function-menu-line' | 'function-menu-linear' | 'function-menu-polar'
-  // Center line (2 points)
-  | 'function-menu-center-line-point-1'
-  | 'function-menu-center-line-point-2'
-  | 'function-menu-center-line-result'
-  // Center circle (3 points)
-  | 'function-menu-center-circle-point-1'
-  | 'function-menu-center-circle-point-2'
-  | 'function-menu-center-circle-point-3'
-  | 'function-menu-center-circle-result';
+interface DROStatePayload {
+  stateName: DROStateName;     // Current operation state
+  stateData: DROStateData;     // Feature-specific context data
+  vMem: VolatileMemoryState;   // Volatile memory (mode, axis, buffer, etc.)
+}
+
+interface VolatileMemoryState {
+  mode: DatumMode;                    // 'abs' | 'inc'
+  activeAxis: Axis | null;            // Currently selected axis
+  workOffsets: AxisValues;            // Work coordinate offsets
+  incrementalValues: AxisValues;      // Incremental mode values
+  manualAbsoluteValues: AxisValues;   // Manual mode absolute values
+  inputBuffer: string;                // Keypad input accumulator
+}
 ```
 
-**State Transitions:**
+### Reducer Context
 
+Feature reducers receive external dependencies via context:
+
+```typescript
+interface DROReducerContext {
+  millState: MillState;        // Machine position, connection status
+  nvMem: NonVolatileMemory;    // Persisted settings (unit, precision)
+}
+
+type FeatureReducer = (
+  statePayload: DROStatePayload,
+  eventPayload: DROEventPayload,
+  context: DROReducerContext
+) => DROStatePayload | null;
 ```
-boot → (BOOT_STARTED) →
-  skipMessage=true  → idle
-  skipMessage=false → showMessage
 
-showMessage → (TIMEOUT | KEY_CLEAR) → idle
+### Raw Events
 
-idle →
-  BTN_ABS_INC  → abs-inc-mode → (MODE_TOGGLE_COMPLETE) → idle
-  BTN_INCH_MM  → inch-mm-mode → (MODE_TOGGLE_COMPLETE) → idle
-  BTN_FUNCTION → function-menu-center
+Components emit raw events; the state machine interprets their meaning:
 
-function-menu-* →
-  KEY_6_RIGHT → next menu item (wraps)
-  KEY_4_LEFT  → prev menu item (wraps)
-  KEY_ENTER   → start point collection
-  KEY_CLEAR   → idle
-
-center-line-point-1 → (KEY_6_RIGHT + point) → point-2 → result
-center-circle-point-1 → point-2 → point-3 → result
+```typescript
+type DROEventPayload =
+  // Keypad events
+  | { eventName: 'KEY_0' } | { eventName: 'KEY_1' } | ... | { eventName: 'KEY_9' }
+  | { eventName: 'KEY_2_DOWN' } | { eventName: 'KEY_4_LEFT' }
+  | { eventName: 'KEY_6_RIGHT' } | { eventName: 'KEY_8_UP' }
+  | { eventName: 'KEY_DECIMAL' }
+  | { eventName: 'KEY_SIGN' }
+  | { eventName: 'KEY_CLEAR' }
+  | { eventName: 'KEY_ENTER'; value?: number }
+  // Axis selection/zero buttons
+  | { eventName: 'BTN_SELECT_X' } | { eventName: 'BTN_SELECT_Y' } | { eventName: 'BTN_SELECT_Z' }
+  | { eventName: 'BTN_ZERO_X' } | { eventName: 'BTN_ZERO_Y' } | { eventName: 'BTN_ZERO_Z' }
+  | { eventName: 'BTN_ZERO_ALL' }
+  // Mode buttons
+  | { eventName: 'BTN_ABS_INC' }
+  | { eventName: 'BTN_INCH_MM' }
+  // Function buttons
+  | { eventName: 'BTN_HALF' }
+  | { eventName: 'BTN_FUNCTION' }
+  | { eventName: 'BTN_CALCULATOR' }
+  // ... other events
 ```
 
 ### Feature Reducer Pattern
@@ -187,27 +207,29 @@ center-circle-point-1 → point-2 → point-3 → result
 Feature reducers handle a subset of states and return `null` if they don't handle the current state/event combination. The root reducer tries each in order until one handles the event.
 
 ```typescript
-type FeatureReducer = (
-  statePayload: DROStatePayload,
-  eventPayload: DROEventPayload
-) => DROStatePayload | null;
+// Example: keypad.ts
+export const keypadReducer: FeatureReducer = (state, event, _context) => {
+  // Only handle idle state and calculator states
+  if (state.stateName !== 'idle' && !state.stateName.startsWith('calculator-')) {
+    return null;
+  }
 
-// Example: boot.ts
-export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
-  const { stateName, stateData } = statePayload;
-  const { eventName } = eventPayload;
-  switch (stateName) {
-    case 'boot':
-      if (eventName === 'BOOT_STARTED') {
-        return {
-          stateName: eventPayload.skipBootMessage ? 'idle' : 'showMessage',
-          stateData: INITIAL_DRO_STATE_DATA,
-        };
+  const { vMem } = state;
+
+  switch (event.eventName) {
+    case 'KEY_5': {
+      // Append digit to buffer (only if axis selected or in calculator)
+      if (vMem.activeAxis === null && state.stateName === 'idle') {
+        return null;
       }
-      return statePayload;
-    // ... other cases
+      return {
+        ...state,
+        vMem: { ...vMem, inputBuffer: vMem.inputBuffer + '5' },
+      };
+    }
+    // ... other digit/buffer events
     default:
-      return null; // Not handled by this feature
+      return null;
   }
 };
 ```
@@ -220,35 +242,42 @@ Each feature can have its own context data type, discriminated by `stateDataType
 type DROStateData =
   | { stateDataType: 'none' }
   | { stateDataType: 'center-finding'; storedPoints: StoredPoint[]; centerResult: AxisValues | null }
-  | { stateDataType: 'bolt-hole'; holeCount: number; radius: number; /* ... */ }
-  | { stateDataType: 'arc'; /* ... */ };
+  | { stateDataType: 'calculator'; firstValue: number | null; operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null; currentValue: number | string }
+  | { stateDataType: 'bolt-hole'; holeCount: number; radius: number; /* ... */ };
 ```
 
 ### Hooks
 
 ```typescript
 // Get current state string
-const state = useDROState();  // 'idle' | 'function-menu-center' | ...
+const state = useDROState();  // 'idle' | 'function-menu-center' | 'calculator-add' | ...
 
 // Get context data
-const data = useDROContext();  // { stateDataType: 'none' } | { stateDataType: 'center-finding', ... }
+const data = useDROContext();  // { stateDataType: 'none' } | { stateDataType: 'calculator', ... }
+
+// Get volatile memory
+const vMem = useDROVMem();  // { mode, activeAxis, inputBuffer, ... }
 
 // Dispatch events
 const dispatch = useDRODispatch();
-dispatch({ eventName: 'BTN_FUNCTION' });
+dispatch({ eventName: 'KEY_5' });
+dispatch({ eventName: 'BTN_SELECT_X' });
 
 // Convenience hooks
 const result = useCenterResult();      // AxisValues | null
 const count = useStoredPointsCount();  // number
+
+// Helper functions
+const value = getBufferValue(vMem.inputBuffer);  // number | null
 ```
 
 ### Rationale
 
-1. **Flat states** - Simple string union, exhaustive switch checking, easy debugging
-2. **Feature reducers** - Each feature is isolated and testable independently
-3. **Raw events** - Components emit blind key/button events; state machine decides meaning
-4. **Discriminated context** - Type-safe feature data without nested state objects
-5. **Single source of truth** - All operation state in one place, not spread across contexts
+1. **Unified state** - Operation state and volatile memory in one reducer, no separate contexts
+2. **Raw events** - Components emit blind key/button events; state machine decides meaning
+3. **Context injection** - Reducers receive millState and nvMem as read-only context
+4. **Feature reducers** - Each feature is isolated and testable independently
+5. **Discriminated context** - Type-safe feature data without nested state objects
 
 ## Core Types
 
@@ -288,7 +317,7 @@ interface DataSourceConfig {
 
 ### VolatileMemory (`src/types/volatileMemory.ts`)
 
-Types for DRO runtime state (does not include mill state or operation state):
+Types for DRO runtime state (managed by DRO reducer):
 
 ```typescript
 interface AxisValues {
@@ -300,9 +329,20 @@ interface AxisValues {
 type Axis = 'X' | 'Y' | 'Z';
 type DatumMode = 'abs' | 'inc';
 
+// State stored in DRO reducer
+interface VolatileMemoryState {
+  mode: DatumMode;
+  activeAxis: Axis | null;
+  workOffsets: AxisValues;
+  incrementalValues: AxisValues;
+  manualAbsoluteValues: AxisValues;
+  inputBuffer: string;
+}
+
+// Computed values + state for consumers
 interface VolatileMemory {
-  displayValues: AxisValues;
-  absolute: AxisValues;
+  displayValues: AxisValues;   // Computed from mode + millState
+  absolute: AxisValues;        // Computed from millState - workOffsets
   incremental: AxisValues;
   mode: DatumMode;
   workOffsets: AxisValues;
@@ -320,8 +360,6 @@ interface VolatileMemoryActions {
 }
 ```
 
-**Note:** Boot sequence state was moved to the DRO State Machine (`src/dro-state-machine/`).
-
 ### NonVolatileMemory (`src/types/nonVolatileMemory.ts`)
 
 ```typescript
@@ -329,6 +367,7 @@ interface NonVolatileMemory {
   beepEnabled: boolean;        // Audio feedback on button press
   defaultUnit: 'inch' | 'mm';  // Display unit
   precision: number;           // Decimal places (e.g., 4 for 0.0001)
+  bootMessageMode: 'show' | 'skip';  // Boot sequence behavior
 }
 ```
 
@@ -388,31 +427,30 @@ const { millState } = useMillState();
 
 ### useVolatileMemory (`src/hooks/useVolatileMemory.ts`)
 
-Convenience hook that returns DRO memory state and actions:
+Hook that reads from DRO vMem and dispatches events for actions:
 
 ```typescript
 const vm = useVolatileMemory();
 
-// Returns VolatileMemory & VolatileMemoryActions:
+// Returns computed values + action dispatchers:
 {
-  displayValues,
-  absolute,
-  incremental,
-  mode,
-  workOffsets,
-  activeAxis,
-  toggleMode,
-  setMode,
-  zeroAxis,
-  zeroAll,
-  setAxisValue,
-  selectAxis,
-  halfAxis,
+  displayValues,   // Computed: mode === 'abs' ? absolute : incremental
+  absolute,        // Computed: millState.position - workOffsets (or manualAbsoluteValues)
+  incremental,     // From vMem.incrementalValues
+  mode,            // From vMem.mode
+  workOffsets,     // From vMem.workOffsets
+  activeAxis,      // From vMem.activeAxis
+  toggleMode,      // Dispatches BTN_ABS_INC
+  setMode,         // Dispatches BTN_ABS_INC if different
+  zeroAxis,        // Dispatches BTN_ZERO_X/Y/Z
+  zeroAll,         // Dispatches BTN_ZERO_ALL
+  setAxisValue,    // Dispatches BTN_SELECT_* + KEY_ENTER with value
+  selectAxis,      // Dispatches BTN_SELECT_* or KEY_CLEAR
+  halfAxis,        // Dispatches BTN_SELECT_* + BTN_HALF
 }
 ```
 
-**Note:** For mill state (position, probe, connected), use `useMillState` instead.
-**Note:** For operation state (boot, menus, center finding), use hooks from `dro-state-machine`.
+**Note:** This hook reads from `useDROVMem()` and dispatches raw events to the DRO reducer.
 
 **ABS Mode Behavior:**
 - Display shows machine position minus work offset
@@ -435,22 +473,6 @@ const { memory, updateMemory, resetMemory } = useNonVolatileMemory();
 - Loads from `localStorage['el400-dro-non-volatile-memory']` on mount
 - Debounces writes (300ms) to reduce I/O
 - Works in both standalone and iframe contexts
-
-### usePowerOnSequence (`src/hooks/usePowerOnSequence.ts`)
-
-Manages the power-on display sequence:
-
-```typescript
-const { showPowerOnMessage, dismissPowerOnMessage } = usePowerOnSequence(durationMs);
-```
-
-### useInputBuffer (`src/hooks/useInputBuffer.ts`)
-
-Manages numeric input accumulator for keypad entry:
-
-```typescript
-const { buffer, appendDigit, appendDecimal, toggleSign, clear, getValue } = useInputBuffer();
-```
 
 ### useDataSourceConfig (`src/hooks/useDataSourceConfig.ts`)
 
@@ -484,74 +506,44 @@ interface MillStateContextValue {
 - Track connection status (connecting, connected, error)
 - Clean up subscriptions when connection changes or unmounts
 
-**Lifecycle:**
-1. When `initialConnection` prop is provided or `setConnection` is called with a new connection
-2. Context calls `connection.connect()` and sets `isConnecting: true`
-3. On success: subscribes to connection updates, sets `isConnecting: false`
-4. On failure: sets `error` with the connection error
-5. On unmount or connection change: calls `connection.disconnect()` and unsubscribes
-
-**Usage:**
-```typescript
-// Direct context access
-const { millState, connection, setConnection } = useMillStateContext();
-
-// Convenience hook (recommended)
-const { millState } = useMillState();
-
-// Check connection
-if (millState.connected) {
-  console.log(`Position: ${millState.position.x}, ${millState.position.y}`);
-}
-```
-
-**Note:** VolatileMemoryContext consumes MillStateContext internally for DRO calculations. Components needing mill state should use `useMillState()` or `useMillStateContext()` directly.
-
-### VolatileMemoryContext (`src/context/VolatileMemoryContext.tsx`)
-
-Provides DRO memory to the component tree. Consumes mill state from MillStateContext internally for calculations:
-
-```typescript
-interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemoryActions {}
-```
-
-Responsibilities:
-- DRO memory (ABS/INC mode, work offsets, incremental values)
-- Active axis selection
-- Calculate display values from machine position and offsets
-
-**Note:** Mill state (position, probe, connected, connection) is accessed via MillStateContext.
-**Note:** Operation state (boot, menus, center finding) is accessed via DROProvider from `dro-state-machine`.
-
 ### NonVolatileMemoryContext (`src/context/NonVolatileMemoryContext.tsx`)
 
 Provides settings to the component tree:
 
 ```typescript
 interface NonVolatileMemoryContextValue {
-  memory: NonVolatileMemory;
-  updateMemory: (partial: Partial<NonVolatileMemory>) => void;
-  resetMemory: () => void;
+  nvMem: NonVolatileMemory;
+  updateNvMem: (partial: Partial<NonVolatileMemory>) => void;
+  resetNvMem: () => void;
+}
+```
+
+### DROProvider (`src/dro-state-machine/context.tsx`)
+
+Unified state machine provider that manages operation state and volatile memory:
+
+```typescript
+interface DROContextValue {
+  state: DROStateName;           // Current operation state
+  data: DROStateData;            // Feature-specific context data
+  vMem: VolatileMemoryState;     // Volatile memory state
+  dispatch: Dispatch<DROEventPayload>;
 }
 ```
 
 **Provider Order:** The contexts must be nested in this order:
-1. NonVolatileMemoryProvider (outer) - no dependencies
-2. MillStateProvider - receives connection, manages connection
-3. VolatileMemoryProvider - consumes both MillState and NonVolatileMemory
-4. DROProvider (inner) - operation state machine
 
 ```tsx
 <NonVolatileMemoryProvider>
   <MillStateProvider initialConnection={connection}>
-    <VolatileMemoryProvider>
-      <DROProvider>
-        {children}
-      </DROProvider>
-    </VolatileMemoryProvider>
+    <DROProvider>
+      {children}
+    </DROProvider>
   </MillStateProvider>
 </NonVolatileMemoryProvider>
 ```
+
+**Note:** VolatileMemoryProvider is no longer used. The DROProvider now manages volatile memory directly via vMem.
 
 ## URL Configuration
 
@@ -598,6 +590,9 @@ src/dro-state-machine/features/menu.test.ts
 src/dro-state-machine/features/center-finding.test.ts
 src/dro-state-machine/features/abs-inc.test.ts
 src/dro-state-machine/features/inch-mm.test.ts
+src/dro-state-machine/features/keypad.test.ts
+src/dro-state-machine/features/mode-toggle.test.ts
+src/dro-state-machine/features/calculator.test.ts
 ```
 
 ### Integration Tests
@@ -607,12 +602,17 @@ src/components/PrimaryFunctionSection.integration.test.tsx
 src/components/SecondaryFunctionSection.integration.test.tsx
 src/components/AxisSelectionSection.integration.test.tsx
 src/components/UnitConversion.integration.test.tsx
+src/dro-state-machine/features/boot.integration.test.tsx
+src/dro-state-machine/features/calculator.integration.test.tsx
 ```
 
 ### E2E Tests
 
 ```
 e2e/02-core-operations/US-003-abs-inc-mode.spec.ts
+e2e/02-core-operations/US-005-zero-axes.spec.ts
+e2e/04-calculations/US-013-basic-calculator.spec.ts
+e2e/08-accessibility/US-037-keyboard-navigation.spec.ts
 e2e/09-integration/US-035-external-machine-connection.spec.ts
 e2e/09-integration/US-036-settings-persistence.spec.ts
 ```

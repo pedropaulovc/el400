@@ -4,7 +4,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
 import { MillStateProvider } from "./context/MillStateContext";
-import { VolatileMemoryProvider } from "./context/VolatileMemoryContext";
 import { DROProvider } from "./dro-state-machine";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { useMemo } from "react";
@@ -36,15 +35,13 @@ function AppContent() {
   return (
     <NonVolatileMemoryProvider>
       <MillStateProvider initialConnection={connection}>
-        <VolatileMemoryProvider>
-          <DROProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </DROProvider>
-        </VolatileMemoryProvider>
+        <DROProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </DROProvider>
       </MillStateProvider>
     </NonVolatileMemoryProvider>
   );

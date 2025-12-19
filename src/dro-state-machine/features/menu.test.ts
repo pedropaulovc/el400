@@ -6,9 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { menuReducer } from './menu';
-import type { DROStatePayload } from '../types';
 import type { DROStateName } from '../droStateMachine';
-import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
+import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 
 describe('menuReducer', () => {
   describe('state handling', () => {
@@ -24,12 +23,8 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of nonMenuStates) {
-        const state: DROStatePayload = {
-          stateName: menuState,
-          stateData: INITIAL_DRO_STATE_DATA,
-        };
-
-        const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
+        const state = createTestState(menuState);
+        const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
         expect(result).toBeNull();
       }
     });
@@ -44,12 +39,8 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of menuStates) {
-        const state: DROStatePayload = {
-          stateName: menuState,
-          stateData: INITIAL_DRO_STATE_DATA,
-        };
-
-        const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
+        const state = createTestState(menuState);
+        const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
         expect(result).not.toBeNull();
       }
     });
@@ -57,126 +48,71 @@ describe('menuReducer', () => {
 
   describe('forward navigation (KEY_6_RIGHT)', () => {
     it('should navigate from center to circle', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-center');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-circle');
     });
 
     it('should navigate from circle to line', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-circle',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-circle');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-line');
     });
 
     it('should navigate from line to linear', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-line',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-line');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-linear');
     });
 
     it('should navigate from linear to polar', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-linear',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-linear');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-polar');
     });
 
     it('should wrap from polar to center', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-polar',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-polar');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-center');
     });
 
     it('should preserve data during navigation', () => {
       const data = { stateDataType: 'none' as const };
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: data,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' });
-
+      const state = createTestState('function-menu-center', data);
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateData).toBe(data);
     });
   });
 
   describe('backward navigation (KEY_4_LEFT)', () => {
     it('should navigate from circle to center', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-circle',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' });
-
+      const state = createTestState('function-menu-circle');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-center');
     });
 
     it('should navigate from line to circle', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-line',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' });
-
+      const state = createTestState('function-menu-line');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-circle');
     });
 
     it('should navigate from linear to line', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-linear',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' });
-
+      const state = createTestState('function-menu-linear');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-line');
     });
 
     it('should navigate from polar to linear', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-polar',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' });
-
+      const state = createTestState('function-menu-polar');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-linear');
     });
 
     it('should wrap from center to polar', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' });
-
+      const state = createTestState('function-menu-center');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-polar');
     });
   });
@@ -191,14 +127,11 @@ describe('menuReducer', () => {
         'function-menu-polar',
       ];
 
-      let state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
+      let state = createTestState('function-menu-center');
 
       for (let i = 0; i < menuStates.length; i++) {
         const expectedNext = menuStates[(i + 1) % menuStates.length];
-        state = menuReducer(state, { eventName: 'KEY_6_RIGHT' })!;
+        state = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)!;
         expect(state.stateName).toBe(expectedNext);
       }
 
@@ -215,14 +148,11 @@ describe('menuReducer', () => {
         'function-menu-polar',
       ];
 
-      let state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
+      let state = createTestState('function-menu-center');
 
       for (let i = 0; i < menuStates.length; i++) {
         const expectedPrev = menuStates[(menuStates.length - 1 - i + menuStates.length) % menuStates.length];
-        state = menuReducer(state, { eventName: 'KEY_4_LEFT' })!;
+        state = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)!;
         expect(state.stateName).toBe(expectedPrev);
       }
 
@@ -242,13 +172,8 @@ describe('menuReducer', () => {
       ];
 
       for (const menuState of menuStates) {
-        const state: DROStatePayload = {
-          stateName: menuState,
-          stateData: INITIAL_DRO_STATE_DATA,
-        };
-
-        const result = menuReducer(state, { eventName: 'KEY_CLEAR' });
-
+        const state = createTestState(menuState);
+        const result = menuReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
         expect(result?.stateName).toBe('idle');
         expect(result?.stateData.stateDataType).toBe('none');
       }
@@ -257,12 +182,8 @@ describe('menuReducer', () => {
 
   describe('menu entry (KEY_ENTER)', () => {
     it('should enter center-line point collection from center menu', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' });
+      const state = createTestState('function-menu-center');
+      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-line-point-1');
       expect(result?.stateData.stateDataType).toBe('center-finding');
@@ -274,48 +195,32 @@ describe('menuReducer', () => {
     });
 
     it('should enter center-line point collection from line menu', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-line',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' });
+      const state = createTestState('function-menu-line');
+      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-line-point-1');
       expect(result?.stateData.stateDataType).toBe('center-finding');
     });
 
     it('should enter center-circle point collection from circle menu', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-circle',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' });
+      const state = createTestState('function-menu-circle');
+      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-circle-point-1');
       expect(result?.stateData.stateDataType).toBe('center-finding');
     });
 
     it('should return to idle from linear menu (not yet implemented)', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-linear',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' });
+      const state = createTestState('function-menu-linear');
+      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData.stateDataType).toBe('none');
     });
 
     it('should return to idle from polar menu (not yet implemented)', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-polar',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' });
+      const state = createTestState('function-menu-polar');
+      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData.stateDataType).toBe('none');
@@ -324,27 +229,20 @@ describe('menuReducer', () => {
 
   describe('unhandled events', () => {
     it('should return current state for unhandled events', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
+      const state = createTestState('function-menu-center');
 
-      expect(menuReducer(state, { eventName: 'KEY_5' })).toBe(state);
-      expect(menuReducer(state, { eventName: 'BTN_ABS_INC' })).toBe(state);
-      expect(menuReducer(state, { eventName: 'BTN_INCH_MM' })).toBe(state);
-      expect(menuReducer(state, { eventName: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } })).toBe(state);
+      expect(menuReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT)).toBe(state);
+      expect(menuReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT)).toBe(state);
+      expect(menuReducer(state, { eventName: 'BTN_INCH_MM' }, DEFAULT_TEST_CONTEXT)).toBe(state);
+      expect(menuReducer(state, { eventName: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } }, DEFAULT_TEST_CONTEXT)).toBe(state);
     });
 
     it('should ignore numeric keys other than 4 and 6', () => {
-      const state: DROStatePayload = {
-        stateName: 'function-menu-center',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
+      const state = createTestState('function-menu-center');
       const keysToIgnore = ['KEY_0', 'KEY_1', 'KEY_2_DOWN', 'KEY_3', 'KEY_5', 'KEY_7', 'KEY_8_UP', 'KEY_9'] as const;
 
       for (const key of keysToIgnore) {
-        const result = menuReducer(state, { eventName: key });
+        const result = menuReducer(state, { eventName: key }, DEFAULT_TEST_CONTEXT);
         expect(result).toBe(state);
       }
     });

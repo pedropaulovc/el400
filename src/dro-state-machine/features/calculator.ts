@@ -40,8 +40,8 @@ function performCalculation(first: number, second: number, operation: 'ADD' | 'S
   }
 }
 
-export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) => {
-  const { stateName: state, stateData: data } = statePayload;
+export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _context) => {
+  const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
 
   // Handle entering calculator mode from idle
@@ -49,6 +49,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
     return {
       stateName: 'calculator-idle',
       stateData: INITIAL_CALCULATOR_DATA,
+      vMem,
     };
   }
 
@@ -60,13 +61,14 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
   switch (eventName) {
     case 'BTN_CALCULATOR':
       // Exit calculator mode
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
 
     case 'KEY_CLEAR':
-      // Clear calculator but stay in calculator mode
-      return { 
-        stateName: 'calculator-idle', 
-        stateData: INITIAL_CALCULATOR_DATA 
+      // Clear calculator and input buffer but stay in calculator mode
+      return {
+        stateName: 'calculator-idle',
+        stateData: INITIAL_CALCULATOR_DATA,
+        vMem: { ...vMem, inputBuffer: '' },
       };
 
     case 'KEY_6_RIGHT': {
@@ -80,6 +82,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
       return {
         stateName: nextStateName,
         stateData: nextState,
+        vMem,
       };
     }
 
@@ -96,6 +99,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
               firstValue: newValue,
               currentValue: newValue,
             },
+            vMem: { ...vMem, inputBuffer: '' }, // Clear buffer after use
           };
         } else {
           // Second value - store and immediately calculate
@@ -107,6 +111,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
                 ...INITIAL_CALCULATOR_DATA,
                 currentValue: newValue,
               },
+              vMem: { ...vMem, inputBuffer: '' },
             };
           }
           const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
@@ -118,12 +123,14 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload) =>
               operation: null,
               currentValue: result,
             },
+            vMem: { ...vMem, inputBuffer: '' },
           };
         }
       }
-      return statePayload;
+      return null; // Let other reducers handle if no value provided
 
     default:
-      return statePayload;
+      // Return null for unhandled events to let keypadReducer handle digit input
+      return null;
   }
 };

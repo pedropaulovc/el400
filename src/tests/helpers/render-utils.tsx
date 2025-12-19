@@ -4,8 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { MillStateProvider } from '../../context/MillStateContext';
-import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
-import { DROProvider } from '../../dro-state-machine';
+import { DROProvider, INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_CONTEXT } from '../../dro-state-machine';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
 /**
  * Custom render function that includes all necessary providers
@@ -43,16 +43,22 @@ export function renderWithProviders(
     window.history.pushState({}, 'Test page', initialRoute);
   }
 
+  // Start in idle state for unit tests (skip boot sequence)
+  const idleInitialState = {
+    ...INITIAL_DRO_STATE_PAYLOAD,
+    stateName: 'idle' as const,
+    stateData: INITIAL_DRO_CONTEXT,
+    vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  };
+
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
       <BrowserRouter>
         <NonVolatileMemoryProvider>
           <MillStateProvider>
-            <VolatileMemoryProvider>
-              <DROProvider>
-                {children}
-              </DROProvider>
-            </VolatileMemoryProvider>
+            <DROProvider initialState={idleInitialState}>
+              {children}
+            </DROProvider>
           </MillStateProvider>
         </NonVolatileMemoryProvider>
       </BrowserRouter>

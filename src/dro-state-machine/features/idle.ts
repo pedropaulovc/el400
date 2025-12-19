@@ -8,20 +8,20 @@
 import type { FeatureReducer } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 
-export const idleReducer: FeatureReducer = (statePayload, eventPayload) => {
-  const { stateName: state, stateData: data } = statePayload;
+export const idleReducer: FeatureReducer = (statePayload, eventPayload, _context) => {
+  const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
 
   if (state !== 'idle') return null;
 
   switch (eventName) {
-    case 'BTN_ABS_INC':
-      return { stateName: 'abs-inc-mode', stateData: data };
+    // BTN_ABS_INC is handled by modeToggleReducer which also toggles vMem.mode
     case 'BTN_INCH_MM':
-      return { stateName: 'inch-mm-mode', stateData: data };
+      return { stateName: 'inch-mm-mode', stateData: data, vMem };
     case 'BTN_FUNCTION':
-      return { stateName: 'function-menu-center', stateData: INITIAL_DRO_STATE_DATA };
+      return { stateName: 'function-menu-center', stateData: INITIAL_DRO_STATE_DATA, vMem };
     default:
+      // Return current state for unhandled events (catch-all for idle state)
       return statePayload;
   }
 };

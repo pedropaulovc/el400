@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/fixtures';
 
 /**
  * E2E Tests: US-037 Keyboard Navigation
@@ -6,8 +6,8 @@ import { test, expect } from '@playwright/test';
  * Tests that the DRO can be fully operated using keyboard only.
  */
 test.describe('US-037: Keyboard Navigation', () => {
-  test('keypad buttons follow natural numeric tab order', async ({ page }) => {
-    await page.goto('/');
+  test('keypad buttons follow natural numeric tab order', async ({ dro }) => {
+    const page = dro.page;
 
     // Focus the first keypad button
     const firstKey = page.getByTestId('key-1');
@@ -32,20 +32,13 @@ test.describe('US-037: Keyboard Navigation', () => {
     }
   });
 
-  test('can enter value using keyboard only', async ({ page }) => {
-    await page.goto('/');
+  test('can enter value using keyboard only', async ({ dro }) => {
+    const page = dro.page;
 
     // Tab to X axis button and activate it
     const xButton = page.getByTestId('axis-select-x');
     await xButton.focus();
     await page.keyboard.press('Enter');
-
-    // Tab to keypad and enter "123.45"
-    await page.getByTestId('key-1').focus();
-    await page.keyboard.press('Enter'); // 1
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Enter'); // 2 (after tabbing past 2 to position 3, we need to go back)
 
     // More direct approach: focus each key and press Enter
     await page.getByTestId('key-1').focus();
@@ -70,8 +63,8 @@ test.describe('US-037: Keyboard Navigation', () => {
     await expect(xValue).toContainText('123.45');
   });
 
-  test('can toggle modes using keyboard', async ({ page }) => {
-    await page.goto('/');
+  test('can toggle modes using keyboard', async ({ dro }) => {
+    const page = dro.page;
 
     // Verify starting in ABS mode
     const absLed = page.getByTestId('led-abs');
@@ -92,8 +85,8 @@ test.describe('US-037: Keyboard Navigation', () => {
     await expect(absLed.locator('input')).toBeChecked();
   });
 
-  test('can zero axis using keyboard', async ({ page }) => {
-    await page.goto('/');
+  test('can zero axis using keyboard', async ({ dro }) => {
+    const page = dro.page;
 
     // Enter a value on X axis first
     const xButton = page.getByTestId('axis-select-x');
@@ -120,8 +113,8 @@ test.describe('US-037: Keyboard Navigation', () => {
     await expect(xValue).toContainText('0.0000');
   });
 
-  test('Space key activates buttons', async ({ page }) => {
-    await page.goto('/');
+  test('Space key activates buttons', async ({ dro }) => {
+    const page = dro.page;
 
     // Focus X axis button and activate with Space
     const xButton = page.getByTestId('axis-select-x');
@@ -139,8 +132,8 @@ test.describe('US-037: Keyboard Navigation', () => {
     await expect(xValue).toContainText('7');
   });
 
-  test('focus is visible on buttons', async ({ page }) => {
-    await page.goto('/');
+  test('focus is visible on buttons', async ({ dro }) => {
+    const page = dro.page;
 
     const button = page.getByTestId('key-5');
     await button.focus();

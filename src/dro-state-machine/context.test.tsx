@@ -14,19 +14,18 @@ import {
   useDROContext,
   type DROShape,
 } from './index';
-import { INITIAL_DRO_STATE, INITIAL_DRO_STATE_DATA } from './droStateMachine';
-
-const DEFAULT_INITIAL_SHAPE: DROShape = {
-  stateName: INITIAL_DRO_STATE,
-  stateData: INITIAL_DRO_STATE_DATA,
-};
+import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
+import { MillStateProvider } from '../context/MillStateContext';
 
 function createWrapper(initialState?: DROShape) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <DROProvider initialState={initialState ?? DEFAULT_INITIAL_SHAPE}>
-        {children}
-      </DROProvider>
+      <MillStateProvider>
+        <DROProvider initialState={initialState ?? INITIAL_DRO_STATE_PAYLOAD}>
+          {children}
+        </DROProvider>
+      </MillStateProvider>
     );
   };
 }
@@ -69,6 +68,7 @@ describe('DROProvider', () => {
       const initialState: DROShape = {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const { result } = renderHook(() => useDROState(), {
@@ -83,7 +83,11 @@ describe('DROProvider', () => {
 describe('useDROState', () => {
   it('should return current state', () => {
     const { result } = renderHook(() => useDROState(), {
-      wrapper: createWrapper({ stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA }),
+      wrapper: createWrapper({
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      }),
     });
 
     expect(result.current).toBe('idle');
@@ -95,7 +99,13 @@ describe('useDROState', () => {
         state: useDROState(),
         dispatch: useDRODispatch(),
       }),
-      { wrapper: createWrapper({ stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA }) }
+      {
+        wrapper: createWrapper({
+          stateName: 'idle',
+          stateData: INITIAL_DRO_STATE_DATA,
+          vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        }),
+      }
     );
 
     act(() => {
@@ -109,7 +119,11 @@ describe('useDROState', () => {
 describe('useDROContext', () => {
   it('should return current data', () => {
     const { result } = renderHook(() => useDROContext(), {
-      wrapper: createWrapper({ stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA }),
+      wrapper: createWrapper({
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      }),
     });
 
     expect(result.current.stateDataType).toBe('none');
@@ -125,6 +139,7 @@ describe('useDROContext', () => {
         wrapper: createWrapper({
           stateName: 'function-menu-center',
           stateData: INITIAL_DRO_STATE_DATA,
+          vMem: INITIAL_VOLATILE_MEMORY_STATE,
         }),
       }
     );

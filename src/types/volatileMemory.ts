@@ -14,8 +14,10 @@ export interface AxisValues {
 export type Axis = 'X' | 'Y' | 'Z';
 export type DatumMode = 'abs' | 'inc';
 
+export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };
+
 /**
- * DRO volatile memory - runtime state managed by VolatileMemoryContext
+ * DRO volatile memory - runtime state managed by DRO reducer
  * Note: Boot stage is now managed by DROModeContext
  */
 export interface VolatileMemory {
@@ -26,6 +28,32 @@ export interface VolatileMemory {
   workOffsets: AxisValues;
   activeAxis: Axis | null;
 }
+
+/**
+ * Volatile memory state stored in the DRO reducer.
+ * This is the "source of truth" state that the reducer manages.
+ * displayValues and absolute are computed from this state + millState.
+ */
+export interface VolatileMemoryState {
+  mode: DatumMode;
+  activeAxis: Axis | null;
+  workOffsets: AxisValues;
+  incrementalValues: AxisValues;
+  manualAbsoluteValues: AxisValues;
+  inputBuffer: string;
+}
+
+/**
+ * Initial volatile memory state
+ */
+export const INITIAL_VOLATILE_MEMORY_STATE: VolatileMemoryState = {
+  mode: 'abs',
+  activeAxis: null,
+  workOffsets: ZERO_AXIS_VALUES,
+  incrementalValues: ZERO_AXIS_VALUES,
+  manualAbsoluteValues: ZERO_AXIS_VALUES,
+  inputBuffer: '',
+};
 
 /**
  * Actions for modifying volatile memory
@@ -40,5 +68,3 @@ export interface VolatileMemoryActions {
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;
 }
-
-export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };

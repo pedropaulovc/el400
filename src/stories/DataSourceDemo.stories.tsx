@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { VolatileMemoryProvider } from "../context/VolatileMemoryContext";
 import { MillStateProvider, useMillStateContext } from "../context/MillStateContext";
 import { NonVolatileMemoryProvider, useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { DROProvider, INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_CONTEXT } from "../dro-state-machine";
+import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillConnection } from "../adapters/MockMillConnection";
 import type { Axis } from "../types/volatileMemory";
@@ -140,6 +141,14 @@ function VolatileMemoryDemo() {
   );
 }
 
+// Start in idle state for storybook (skip boot sequence)
+const idleInitialState = {
+  ...INITIAL_DRO_STATE_PAYLOAD,
+  stateName: 'idle' as const,
+  stateData: INITIAL_DRO_CONTEXT,
+  vMem: INITIAL_VOLATILE_MEMORY_STATE,
+};
+
 /**
  * Story wrapper with providers.
  */
@@ -153,9 +162,9 @@ function StoryWrapper({
   return (
     <NonVolatileMemoryProvider>
       <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
-        <VolatileMemoryProvider>
+        <DROProvider initialState={idleInitialState}>
           {children}
-        </VolatileMemoryProvider>
+        </DROProvider>
       </MillStateProvider>
     </NonVolatileMemoryProvider>
   );
