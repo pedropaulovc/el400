@@ -19,6 +19,7 @@ import {
   isFunctionMenuSelectionState,
   isResultState,
   isCalculatorActive,
+  isBoltCircleActive,
   MODEL_NUMBER,
   SOFTWARE_VERSION,
 } from '../dro-state-machine';
@@ -87,6 +88,48 @@ export function useDisplayValues(): DisplayAxisValues {
         Y: operation,
         Z: '',
       };
+    }
+
+    // Bolt circle (PCD) mode - prompts and distance-to-go
+    if (isBoltCircleActive(droState)) {
+      const boltData = droCtx.stateDataType === 'bolt-circle' ? droCtx : null;
+      
+      switch (droState) {
+        case 'pcd-menu-select':
+          return { X: boltData?.pcdMode ?? 'CIRCLE', Y: '', Z: '' };
+        case 'pcd-circle-center-x':
+          return { X: 'EntCnt 0', Y: '', Z: '' };
+        case 'pcd-circle-center-y':
+          return { X: 'EntCnt 1', Y: '', Z: '' };
+        case 'pcd-circle-radius':
+          return { X: 'rAdIUS', Y: '', Z: '' };
+        case 'pcd-circle-angle':
+          return { X: 'AngLE', Y: '', Z: '' };
+        case 'pcd-circle-holes':
+          return { X: 'hoLES', Y: '', Z: '' };
+        case 'pcd-circle-navigate': {
+          // Show distance-to-go to current hole
+          if (boltData && boltData.centerX !== null && boltData.centerY !== null &&
+              boltData.radius !== null && boltData.startAngle !== null && boltData.holeCount !== null) {
+            // Calculate target position for current hole
+            const angle = boltData.startAngle + ((boltData.currentHole - 1) * 360 / boltData.holeCount);
+            const angleRadians = (angle * Math.PI) / 180;
+            const targetX = boltData.centerX + boltData.radius * Math.cos(angleRadians);
+            const targetY = boltData.centerY + boltData.radius * Math.sin(angleRadians);
+            
+            // Get current position
+            const current = vMem.displayValues;
+            
+            // Return distance-to-go with unit conversion
+            return {
+              X: fromMmToAnyUnit(targetX - current.X, unit),
+              Y: fromMmToAnyUnit(targetY - current.Y, unit),
+              Z: fromMmToAnyUnit(0, unit), // Z stays at 0 for bolt circle
+            };
+          }
+          return { X: 0, Y: 0, Z: 0 };
+        }
+      }
     }
 
     // Function menu selection

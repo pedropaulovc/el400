@@ -25,6 +25,10 @@ const SecondaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_CALCULATOR' });
   };
 
+  const handlePCD = () => {
+    dispatch({ eventName: 'BTN_PCD' });
+  };
+
   return (
     <>
       <h2 className="sr-only">Secondary functions</h2>
@@ -33,7 +37,7 @@ const SecondaryFunctionSection = () => {
         <div className="flex flex-col gap-4 h-full justify-center">
           {/* Top row */}
           <div className="flex gap-4 justify-between">
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-bolt-circle" title="Bolt hole">
+            <DROButton onClick={handlePCD} variant="dark" size="secondary" className="p-0" data-testid="btn-bolt-circle" title="Bolt hole">
               <Icon name="bolt-hole-pcd-function" /><span className="sr-only">Bolt hole</span>
             </DROButton>
             <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">

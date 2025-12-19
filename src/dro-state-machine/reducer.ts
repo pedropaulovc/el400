@@ -14,6 +14,7 @@ import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
 import { calculatorReducer } from './features/calculator';
+import { boltCircleReducer } from './features/bolt-circle';
 import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
@@ -26,6 +27,7 @@ import { modeToggleReducer } from './features/mode-toggle';
 const featureReducers: FeatureReducer[] = [
   bootReducer,
   calculatorReducer,
+  boltCircleReducer,
   // New vMem reducers for idle state operations
   modeToggleReducer, // Handles BTN_ABS_INC with vMem.mode toggle
   keypadReducer, // Handles digit input to vMem.inputBuffer

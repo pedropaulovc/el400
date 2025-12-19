@@ -41,7 +41,15 @@ export type DROStateName =
   | 'calculator-add'
   | 'calculator-sub'
   | 'calculator-multi'
-  | 'calculator-div';
+  | 'calculator-div'
+  // Bolt circle states (PCD)
+  | 'pcd-menu-select'
+  | 'pcd-circle-center-x'
+  | 'pcd-circle-center-y'
+  | 'pcd-circle-radius'
+  | 'pcd-circle-angle'
+  | 'pcd-circle-holes'
+  | 'pcd-circle-navigate';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -56,6 +64,7 @@ interface BaseDROStateData {
 export type DROStateData =
   | EmptyData
   | CenterFindingData
+  | BoltCircleData
   | BoltHoleData
   | ArcData
   | CalculatorData;
@@ -73,6 +82,17 @@ export interface CenterFindingData extends BaseDROStateData {
   readonly stateDataType: 'center-finding';
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
+}
+
+export interface BoltCircleData extends BaseDROStateData {
+  readonly stateDataType: 'bolt-circle';
+  pcdMode: 'CIRCLE' | 'ARC';
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  holeCount: number | null;
+  currentHole: number;
 }
 
 export interface BoltHoleData extends BaseDROStateData {
@@ -133,6 +153,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_INCH_MM' }
   | { eventName: 'BTN_FUNCTION' }
   | { eventName: 'BTN_CALCULATOR' }
+  | { eventName: 'BTN_PCD' }
   | { eventName: 'BTN_ZERO_X' }
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
@@ -177,6 +198,10 @@ export const isFunctionActive = (s: DROStateName): boolean =>
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
 
+/** Check if bolt circle (PCD) mode is active */
+export const isBoltCircleActive = (s: DROStateName): boolean =>
+  s.startsWith('pcd-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -196,6 +221,17 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
   firstValue: null,
   operation: null,
   currentValue: 0,
+};
+
+export const INITIAL_BOLT_CIRCLE_DATA: BoltCircleData = {
+  stateDataType: 'bolt-circle',
+  pcdMode: 'CIRCLE',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  holeCount: null,
+  currentHole: 1,
 };
 
 /**
