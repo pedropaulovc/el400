@@ -543,8 +543,6 @@ interface DROContextValue {
 </NonVolatileMemoryProvider>
 ```
 
-**Note:** VolatileMemoryProvider is no longer used. The DROProvider now manages volatile memory directly via vMem.
-
 ## URL Configuration
 
 The DRO can be configured via URL query parameters:
