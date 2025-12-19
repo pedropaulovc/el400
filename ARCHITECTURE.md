@@ -7,7 +7,7 @@ Technical documentation for developers working on the EL400 DRO simulator.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     EL400Simulator                              │
-│  (consumes DROState, VolatileMemory via hooks)                  │
+│  (consumes DROState, VolatileMemoryState via hooks)             │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
           ┌───────────────────┼───────────────────┐
@@ -76,6 +76,8 @@ Runtime state that is lost on refresh. Split across two contexts:
 - DRO display values (ABS/INC modes)
 - Active axis selection
 - Work offsets
+
+**Note:** Boot sequence state was moved from VolatileMemoryContext to the DRO State Machine (`src/dro-state-machine/`).
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
@@ -300,6 +302,7 @@ interface AxisValues {
 type Axis = 'X' | 'Y' | 'Z';
 type DatumMode = 'abs' | 'inc';
 
+// Consumer-facing interface (what components see)
 interface VolatileMemory {
   displayValues: AxisValues;
   absolute: AxisValues;
@@ -307,6 +310,16 @@ interface VolatileMemory {
   mode: DatumMode;
   workOffsets: AxisValues;
   activeAxis: Axis | null;
+}
+
+// Internal state managed by the reducer
+interface VolatileMemoryState {
+  mode: DatumMode;
+  activeAxis: Axis | null;
+  workOffsets: AxisValues;
+  incrementalValues: AxisValues;
+  manualAbsoluteValues: AxisValues;
+  inputBuffer: string;
 }
 
 interface VolatileMemoryActions {
@@ -319,8 +332,6 @@ interface VolatileMemoryActions {
   halfAxis: (axis: Axis) => void;
 }
 ```
-
-**Note:** Boot sequence state was moved to the DRO State Machine (`src/dro-state-machine/`).
 
 ### NonVolatileMemory (`src/types/nonVolatileMemory.ts`)
 
@@ -429,7 +440,7 @@ const vm = useVolatileMemory();
 Manages DRO settings with localStorage persistence:
 
 ```typescript
-const { memory, updateMemory, resetMemory } = useNonVolatileMemory();
+const { nvMem, updateNvMem, resetMemory } = useNonVolatileMemory();
 ```
 
 - Loads from `localStorage['el400-dro-non-volatile-memory']` on mount
@@ -529,7 +540,7 @@ Provides settings to the component tree:
 
 ```typescript
 interface NonVolatileMemoryContextValue {
-  memory: NonVolatileMemory;
+  nvMem: NonVolatileMemory;
   updateMemory: (partial: Partial<NonVolatileMemory>) => void;
   resetMemory: () => void;
 }
