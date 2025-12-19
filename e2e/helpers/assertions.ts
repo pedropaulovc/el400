@@ -15,11 +15,11 @@ export async function expectPureTextValue(
 ) {
   const text = await display.textContent();
   const trimmedText = text?.trim() || '';
-  
+
   if (VALID_NUMBER_PATTERN.test(trimmedText)) {
-    throw new Error(`Expected text value, but got numeric value: ${text}`);
+    throw new Error(`Expected text value '${expectedValue}', but got numeric value: ${text}`);
   }
-  
+
   expect(trimmedText).toBe(expectedValue);
 }
 

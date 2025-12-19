@@ -67,7 +67,8 @@ test.describe('US-036: Settings Persistence', () => {
 
     expect(settings).toBeTruthy();
     const parsed = JSON.parse(settings!);
-    expect(parsed.defaultUnit).toBe('mm');
+    // Zustand persist middleware wraps state in { state: {...}, version: 0 }
+    expect(parsed.state.nvMem.defaultUnit).toBe('mm');
   });
 
   /**

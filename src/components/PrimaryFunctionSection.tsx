@@ -3,14 +3,15 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import PowerLED from "./PowerLED";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
+import { useNvMem, useUpdateNvMem } from "../stores/settingsStore";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 const PrimaryFunctionSection = () => {
   const vMem = useVolatileMemory();
-  const { nvMem, updateNvMem } = useNonVolatileMemoryContext();
+  const nvMem = useNvMem();
+  const updateNvMem = useUpdateNvMem();
 
   const handleToggleUnit = () => {
     updateNvMem({ defaultUnit: nvMem.defaultUnit === 'inch' ? 'mm' : 'inch' });

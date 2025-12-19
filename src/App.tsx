@@ -1,16 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { NonVolatileMemoryProvider } from "./context/NonVolatileMemoryContext";
-import { MillStateProvider } from "./context/MillStateContext";
-import { DROProvider } from "./dro-state-machine";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
-import { useMemo } from "react";
 import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
 import { NoOpMillConnection } from "./adapters/NoOpMillConnection";
 import type { MillConnection } from "./adapters/MillConnection";
 import type { DataSourceConfig } from "./types/millState";
+import { initializeMillStore } from "./stores/millStore";
 
 const queryClient = new QueryClient();
 
@@ -27,23 +25,40 @@ function createConnection(config: DataSourceConfig): MillConnection {
 
 /**
  * Inner app component that has access to router context for URL params.
+ * Initializes the mill store with the appropriate connection.
  */
 function AppContent() {
   const config = useDataSourceConfig();
   const connection = useMemo(() => createConnection(config), [config]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize mill store with connection
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
+    const init = async () => {
+      cleanup = await initializeMillStore(connection);
+      setIsInitialized(true);
+    };
+
+    void init();
+
+    return () => {
+      cleanup?.();
+    };
+  }, [connection]);
+
+  // Wait for initialization before rendering
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
-    <NonVolatileMemoryProvider>
-      <MillStateProvider initialConnection={connection}>
-        <DROProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </DROProvider>
-      </MillStateProvider>
-    </NonVolatileMemoryProvider>
+    <Routes>
+      <Route path="/" element={<Index />} />
+      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
