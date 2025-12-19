@@ -107,6 +107,18 @@ describe('calculatorReducer', () => {
         expect((result?.stateData as CalculatorData).operation).toBe(to);
       }
     });
+
+    it('should ignore BTN_SELECT_X in calculator mode (returns null)', () => {
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'BTN_SELECT_X' }, DEFAULT_TEST_CONTEXT);
+      expect(result).toBeNull();
+    });
+
+    it('should ignore BTN_SELECT_Z in calculator mode (returns null)', () => {
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Z' }, DEFAULT_TEST_CONTEXT);
+      expect(result).toBeNull();
+    });
   });
 
   describe('value entry and calculation', () => {
