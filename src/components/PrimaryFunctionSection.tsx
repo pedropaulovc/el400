@@ -27,19 +27,19 @@ const PrimaryFunctionSection = () => {
           }}
         >
           <div className="flex justify-between w-full">
-            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-settings">
+            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
               <Icon name="setup" /><span className="sr-only">Settings</span>
             </DROButton>
-            <DROButton onClick={vMem.toggleMode} size="icon" className="p-0" data-testid="btn-abs-inc">
+            <DROButton onClick={vMem.toggleMode} size="icon" className="p-0" data-testid="btn-abs-inc" title="Abs/Inc">
               <Icon name="abs-inc" /><span className="sr-only">Abs/Inc</span>
             </DROButton>
-            <DROButton onClick={handleToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit">
+            <DROButton onClick={handleToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit" title="Toggle units">
               <Icon name="inch-mm" /><span className="sr-only">Toggle units</span>
             </DROButton>
-            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-center">
+            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-center" title="Reference">
               <Icon name="reference" /><span className="sr-only">Reference</span>
             </DROButton>
-            <DROButton onClick={vMem.zeroAll} size="icon" className="p-0" data-testid="btn-zero-all">
+            <DROButton onClick={vMem.zeroAll} size="icon" className="p-0" data-testid="btn-zero-all" title="Zero all axes">
               <Icon name="preset" /><span className="sr-only">Zero all axes</span>
             </DROButton>
           </div>

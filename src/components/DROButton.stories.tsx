@@ -35,6 +35,7 @@ export const Default: Story = {
     children: "1",
     variant: "default",
     size: "square",
+    title: "Button 1",
   },
 };
 
@@ -43,6 +44,7 @@ export const Yellow: Story = {
     children: "CLR",
     variant: "yellow",
     size: "square",
+    title: "Clear",
   },
 };
 
@@ -51,6 +53,7 @@ export const Dark: Story = {
     children: "X",
     variant: "dark",
     size: "axis",
+    title: "X Axis",
   },
 };
 
@@ -60,20 +63,22 @@ export const Active: Story = {
     variant: "default",
     size: "square",
     isActive: true,
+    title: "Button 5",
   },
 };
 
 export const AllVariants: Story = {
   args: {
     children: "Default",
+    title: "Example Button",
   },
   render: () => (
     <div className="flex gap-4 flex-wrap">
-      <DROButton variant="default">Default</DROButton>
-      <DROButton variant="dark">Dark</DROButton>
-      <DROButton variant="yellow">Yellow</DROButton>
-      <DROButton variant="clear">Clear</DROButton>
-      <DROButton variant="enter">Enter</DROButton>
+      <DROButton variant="default" title="Default">Default</DROButton>
+      <DROButton variant="dark" title="Dark">Dark</DROButton>
+      <DROButton variant="yellow" title="Yellow">Yellow</DROButton>
+      <DROButton variant="clear" title="Clear">Clear</DROButton>
+      <DROButton variant="enter" title="Enter">Enter</DROButton>
     </div>
   ),
 };
@@ -81,14 +86,15 @@ export const AllVariants: Story = {
 export const AllSizes: Story = {
   args: {
     children: "BTN",
+    title: "Example Button",
   },
   render: () => (
     <div className="flex gap-4 items-center flex-wrap">
-      <DROButton size="icon">Primary 2:1</DROButton>
-      <DROButton size="secondary">Secondary 1.75:1</DROButton>
-      <DROButton size="axis">Axis 1.22:1</DROButton>
-      <DROButton size="square">Square 1:1</DROButton>
-      <DROButton size="enter">Enter</DROButton>
+      <DROButton size="icon" title="Primary 2:1">Primary 2:1</DROButton>
+      <DROButton size="secondary" title="Secondary 1.75:1">Secondary 1.75:1</DROButton>
+      <DROButton size="axis" title="Axis 1.22:1">Axis 1.22:1</DROButton>
+      <DROButton size="square" title="Square 1:1">Square 1:1</DROButton>
+      <DROButton size="enter" title="Enter">Enter</DROButton>
     </div>
   ),
 };
@@ -98,6 +104,7 @@ export const ClickInteraction: Story = {
     children: "Click Me",
     variant: "yellow",
     size: "icon",
+    title: "Click Me",
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -114,6 +121,7 @@ export const KeyboardNavigation: Story = {
     children: "Tab + Enter",
     variant: "default",
     size: "icon",
+    title: "Tab + Enter",
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
