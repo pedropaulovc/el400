@@ -73,15 +73,15 @@ describe('calculatorReducer', () => {
   });
 
   describe('operation cycling', () => {
-    it('should cycle from null to ADD', () => {
+    it('should cycle from null to ADD on BTN_SELECT_Y', () => {
       const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
-      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-add');
       expect((result?.stateData as CalculatorData).operation).toBe('ADD');
     });
 
-    it('should cycle ADD -> SUB -> MULTI -> DIV -> ADD', () => {
+    it('should cycle ADD -> SUB -> MULTI -> DIV -> ADD on BTN_SELECT_Y', () => {
       const operations: { from: 'ADD' | 'SUB' | 'MULTI' | 'DIV', to: 'SUB' | 'MULTI' | 'DIV' | 'ADD' }[] = [
         { from: 'ADD', to: 'SUB' },
         { from: 'SUB', to: 'MULTI' },
@@ -101,7 +101,7 @@ describe('calculatorReducer', () => {
           vMem: INITIAL_VOLATILE_MEMORY_STATE,
         };
 
-        const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+        const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
 
         expect(result?.stateName).toBe(`calculator-${to.toLowerCase()}`);
         expect((result?.stateData as CalculatorData).operation).toBe(to);
@@ -247,10 +247,18 @@ describe('calculatorReducer', () => {
       expect(calcData.operation).toBeNull();
     });
 
-    it('should return null for unhandled events (let keypadReducer handle digits)', () => {
+    it('should handle digit input in calculator state (calculatorReducer owns digits)', () => {
       const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
       const result = calculatorReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
-      expect(result).toBeNull();
+      expect(result?.stateName).toBe('calculator-idle');
+      expect(result?.vMem.inputBuffer).toBe('5');
+    });
+
+    it('should append digit 6 (KEY_6_RIGHT is just a digit, not operation cycling)', () => {
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('calculator-idle');
+      expect(result?.vMem.inputBuffer).toBe('6');
     });
   });
 

@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { keypadReducer, getBufferValue } from './keypad';
+import { keypadReducer } from './keypad';
+import { getBufferValue } from './buffer-utils';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';

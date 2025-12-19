@@ -43,5 +43,5 @@ export {
   BOOT_MESSAGE_DURATION_MS,
 } from './features/boot';
 
-// Re-export keypad utilities
-export { getBufferValue } from './features/keypad';
+// Re-export buffer utilities
+export { getBufferValue } from './features/buffer-utils';
