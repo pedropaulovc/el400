@@ -3,8 +3,10 @@
  * Simulates machine position updates without real hardware.
  */
 
+import type { Dispatch } from 'react';
 import type { MillConnection } from './MillConnection';
 import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
 import { createDefaultMillState, createProbeState } from '../types/millState';
 
 export interface MockMillConnectionOptions {
@@ -23,6 +25,7 @@ export class MockMillConnection implements MillConnection {
 
   private state: MillState;
   private listeners = new Set<MillStateListener>();
+  private dispatch: Dispatch<DROEventPayload> | null = null;
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private options: Required<MockMillConnectionOptions>;
 
@@ -38,6 +41,10 @@ export class MockMillConnection implements MillConnection {
       ...createDefaultMillState('mock'),
       position: { ...this.options.initialPosition },
     };
+  }
+
+  setDispatch(dispatch: Dispatch<DROEventPayload> | null): void {
+    this.dispatch = dispatch;
   }
 
   connect(): Promise<void> {
@@ -140,6 +147,9 @@ export class MockMillConnection implements MillConnection {
   private notifyListeners(): void {
     for (const listener of this.listeners) {
       listener(this.state);
+    }
+    if (this.dispatch) {
+      this.dispatch({ eventName: 'MILL_STATE_CHANGED' });
     }
   }
 }

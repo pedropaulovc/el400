@@ -111,6 +111,7 @@ export type DROEventPayload =
   | { eventName: 'BOOT_STARTED'; skipBootMessage: boolean }
   | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
   | { eventName: 'MODE_TOGGLE_COMPLETE' }
+  | { eventName: 'MILL_STATE_CHANGED' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }

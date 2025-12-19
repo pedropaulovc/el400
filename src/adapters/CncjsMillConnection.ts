@@ -4,8 +4,10 @@
  */
 
 import { io, Socket } from 'socket.io-client';
+import type { Dispatch } from 'react';
 import type { MillConnection } from './MillConnection';
 import type { MillStateListener, MillState, MillPosition } from '../types/millState';
+import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
 import { createProbeState, createDefaultMillState } from '../types/millState';
 
 export interface CncjsMillConnectionOptions {
@@ -169,6 +171,7 @@ export class CncjsMillConnection implements MillConnection {
 
   private socket: Socket | null = null;
   private listeners = new Set<MillStateListener>();
+  private dispatch: Dispatch<DROEventPayload> | null = null;
   private state: MillState = {
     ...createDefaultMillState(),
     controllerType: 'cncjs',
@@ -178,6 +181,10 @@ export class CncjsMillConnection implements MillConnection {
 
   constructor(options: CncjsMillConnectionOptions) {
     this.options = options;
+  }
+
+  setDispatch(dispatch: Dispatch<DROEventPayload> | null): void {
+    this.dispatch = dispatch;
   }
 
   async connect(): Promise<void> {
@@ -276,6 +283,9 @@ export class CncjsMillConnection implements MillConnection {
   private notifyListeners(): void {
     for (const listener of this.listeners) {
       listener(this.state);
+    }
+    if (this.dispatch) {
+      this.dispatch({ eventName: 'MILL_STATE_CHANGED' });
     }
   }
 }
