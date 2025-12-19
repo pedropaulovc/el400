@@ -8,7 +8,6 @@ import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useDROState, useDRODispatch, useBootSequence } from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
 import { useDisplayValues } from "../hooks/useDisplayValues";
-import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 const EL400Simulator = () => {
   const droState = useDROState();
@@ -18,9 +17,6 @@ const EL400Simulator = () => {
 
   // Boot sequence logic
   useBootSequence(dispatch, droState, nvMem);
-  
-  // Zero approach warning monitoring
-  useZeroApproachWarning();
 
   return (
     <div

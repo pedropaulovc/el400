@@ -9,6 +9,7 @@ import type { DROStatePayload, FeatureReducer, DROReducerContext } from './types
 import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
 import { millStateChangedReducer } from './features/millStateChanged';
+import { zeroApproachWarningReducer } from './features/zero-approach-warning';
 import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
@@ -27,6 +28,7 @@ import { modeToggleReducer } from './features/mode-toggle';
 const featureReducers: FeatureReducer[] = [
   bootReducer,
   millStateChangedReducer, // Handles MILL_STATE_CHANGED from connection
+  zeroApproachWarningReducer, // Handles zero approach warning beep on MILL_STATE_CHANGED
   calculatorReducer,
   // New vMem reducers for idle state operations
   modeToggleReducer, // Handles BTN_ABS_INC with vMem.mode toggle
