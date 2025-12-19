@@ -96,11 +96,12 @@ export function useDisplayValues(): DisplayAxisValues {
       
       switch (droState) {
         case 'pcd-menu-select':
-          return { X: boltData?.pcdMode ?? 'CIRCLE', Y: '', Z: '' };
+          // Use lowercase to avoid unsupported characters
+          return { X: boltData?.pcdMode === 'ARC' ? 'Arc' : 'CIrcLE', Y: '', Z: '' };
         case 'pcd-circle-center-x':
-          return { X: 'EntCnt 0', Y: '', Z: '' };
+          return { X: 'Cnt  X', Y: '', Z: '' };
         case 'pcd-circle-center-y':
-          return { X: 'EntCnt 1', Y: '', Z: '' };
+          return { X: 'Cnt  Y', Y: '', Z: '' };
         case 'pcd-circle-radius':
           return { X: 'rAdIUS', Y: '', Z: '' };
         case 'pcd-circle-angle':
