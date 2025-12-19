@@ -8,10 +8,9 @@ import { describe, it, expect } from 'vitest';
 import { centerFindingReducer } from './center-finding';
 import type { DROStatePayload } from '../types';
 import type { DROStateName, CenterFindingData } from '../droStateMachine';
-import {
-  INITIAL_DRO_STATE_DATA,
-  INITIAL_CENTER_FINDING_DATA,
-} from '../droStateMachine';
+import { INITIAL_CENTER_FINDING_DATA } from '../droStateMachine';
+import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
 describe('centerFindingReducer', () => {
   describe('state handling', () => {
@@ -28,12 +27,8 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of nonCenterStates) {
-        const current: DROStatePayload = {
-          stateName: state,
-          stateData: INITIAL_DRO_STATE_DATA,
-        };
-
-        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+        const current = createTestState(state);
+        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
         expect(result).toBeNull();
       }
     });
@@ -46,13 +41,8 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of lineStates) {
-        const current: DROStatePayload = {
-          stateName: state,
-          stateData: INITIAL_CENTER_FINDING_DATA,
-        };
-
-        // KEY_CLEAR is handled by all center finding states
-        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+        const current = createTestState(state, INITIAL_CENTER_FINDING_DATA);
+        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
         expect(result).not.toBeNull();
       }
     });
@@ -66,12 +56,8 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of circleStates) {
-        const current: DROStatePayload = {
-          stateName: state,
-          stateData: INITIAL_CENTER_FINDING_DATA,
-        };
-
-        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+        const current = createTestState(state, INITIAL_CENTER_FINDING_DATA);
+        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
         expect(result).not.toBeNull();
       }
     });
@@ -79,12 +65,8 @@ describe('centerFindingReducer', () => {
 
   describe('KEY_CLEAR cancellation', () => {
     it('should cancel from center-line-point-1', () => {
-      const current: DROStatePayload = {
-        stateName: 'function-menu-center-line-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
-
-      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+      const current = createTestState('function-menu-center-line-point-1', INITIAL_CENTER_FINDING_DATA);
+      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData.stateDataType).toBe('none');
@@ -98,9 +80,10 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData.stateDataType).toBe('none');
@@ -114,9 +97,10 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+      const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData.stateDataType).toBe('none');
@@ -131,12 +115,8 @@ describe('centerFindingReducer', () => {
       ];
 
       for (const state of circleStates) {
-        const current: DROStatePayload = {
-          stateName: state,
-          stateData: INITIAL_CENTER_FINDING_DATA,
-        };
-
-        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' });
+        const current = createTestState(state, INITIAL_CENTER_FINDING_DATA);
+        const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
 
         expect(result?.stateName).toBe('idle');
         expect(result?.stateData.stateDataType).toBe('none');
@@ -146,15 +126,12 @@ describe('centerFindingReducer', () => {
 
   describe('center-line point collection', () => {
     it('should store first point and advance to point-2', () => {
-      const current: DROStatePayload = {
-        stateName: 'function-menu-center-line-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
+      const current = createTestState('function-menu-center-line-point-1', INITIAL_CENTER_FINDING_DATA);
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 10, Y: 20, Z: 30 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-line-point-2');
       expect(result?.stateData.stateDataType).toBe('center-finding');
@@ -171,12 +148,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 100, Y: 200, Z: 100 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-line-result');
       const data = result?.stateData as CenterFindingData;
@@ -195,12 +173,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 50, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 100, Y: 50, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBe(50);
@@ -215,12 +194,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 50, Y: 0, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 50, Y: 100, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBe(50);
@@ -235,12 +215,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 10 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 100, Y: 100, Z: 30 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBe(50);
@@ -256,12 +237,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: -50, Y: -30, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 50, Y: 30, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBe(0);
@@ -278,25 +260,23 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' })).toBe(current);
-      expect(centerFindingReducer(current, { eventName: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } })).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } }, DEFAULT_TEST_CONTEXT)).toBe(current);
     });
   });
 
   describe('center-circle point collection', () => {
     it('should store first point and advance to point-2', () => {
-      const current: DROStatePayload = {
-        stateName: 'function-menu-center-circle-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
+      const current = createTestState('function-menu-center-circle-point-1', INITIAL_CENTER_FINDING_DATA);
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 10, Y: 0, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-circle-point-2');
       const data = result?.stateData as CenterFindingData;
@@ -311,12 +291,13 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 10, Y: 0, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 0, Y: 10, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-circle-point-3');
       const data = result?.stateData as CenterFindingData;
@@ -334,12 +315,13 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: -10, Y: 0, Z: 0 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-circle-result');
       const data = result?.stateData as CenterFindingData;
@@ -360,12 +342,13 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: -5, Y: 5, Z: 0 },  // Left of center
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBeCloseTo(5, 1);
@@ -383,12 +366,13 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: -10, Y: 0, Z: 30 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.Z).toBe(20); // Average of 10, 20, 30
@@ -405,12 +389,13 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 10, Y: 0, Z: 0 },  // Collinear with first two
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('function-menu-center-circle-result');
       const data = result?.stateData as CenterFindingData;
@@ -431,23 +416,21 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: { X: 0, Y: 0, Z: 0 },
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' })).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)).toBe(current);
     });
   });
 
   describe('unhandled events in point collection', () => {
     it('should return current state for non-POINT_DATA events in point-1', () => {
-      const current: DROStatePayload = {
-        stateName: 'function-menu-center-line-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
+      const current = createTestState('function-menu-center-line-point-1', INITIAL_CENTER_FINDING_DATA);
 
-      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' })).toBe(current);
-      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' })).toBe(current);
-      expect(centerFindingReducer(current, { eventName: 'BTN_ABS_INC' })).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT)).toBe(current);
     });
 
     it('should return current state for non-POINT_DATA events in point-2', () => {
@@ -458,9 +441,10 @@ describe('centerFindingReducer', () => {
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' })).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
     });
 
     it('should return current state for non-POINT_DATA events in circle point-3', () => {
@@ -474,23 +458,21 @@ describe('centerFindingReducer', () => {
           ],
           centerResult: null,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' })).toBe(current);
+      expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
     });
   });
 
   describe('data initialization', () => {
     it('should initialize data if not center-finding type', () => {
-      const current: DROStatePayload = {
-        stateName: 'function-menu-center-line-point-1',
-        stateData: { stateDataType: 'none' },
-      };
+      const current = createTestState('function-menu-center-line-point-1', { stateDataType: 'none' });
 
       const result = centerFindingReducer(current, {
         eventName: 'POINT_DATA',
         point: { X: 10, Y: 20, Z: 30 },
-      });
+      }, DEFAULT_TEST_CONTEXT);
 
       const data = result?.stateData as CenterFindingData;
       expect(data.stateDataType).toBe('center-finding');
@@ -500,23 +482,20 @@ describe('centerFindingReducer', () => {
 
   describe('full workflow', () => {
     it('should complete center-line workflow from point-1 to result', () => {
-      let state: DROStatePayload = {
-        stateName: 'function-menu-center-line-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
+      let state: DROStatePayload = createTestState('function-menu-center-line-point-1', INITIAL_CENTER_FINDING_DATA);
 
       // Point 1
       state = centerFindingReducer(state, {
         eventName: 'POINT_DATA',
         point: { X: 0, Y: 0, Z: 0 },
-      })!;
+      }, DEFAULT_TEST_CONTEXT)!;
       expect(state.stateName).toBe('function-menu-center-line-point-2');
 
       // Point 2
       state = centerFindingReducer(state, {
         eventName: 'POINT_DATA',
         point: { X: 100, Y: 0, Z: 0 },
-      })!;
+      }, DEFAULT_TEST_CONTEXT)!;
       expect(state.stateName).toBe('function-menu-center-line-result');
 
       const data = state.stateData as CenterFindingData;
@@ -524,30 +503,27 @@ describe('centerFindingReducer', () => {
     });
 
     it('should complete center-circle workflow from point-1 to result', () => {
-      let state: DROStatePayload = {
-        stateName: 'function-menu-center-circle-point-1',
-        stateData: INITIAL_CENTER_FINDING_DATA,
-      };
+      let state: DROStatePayload = createTestState('function-menu-center-circle-point-1', INITIAL_CENTER_FINDING_DATA);
 
       // Point 1
       state = centerFindingReducer(state, {
         eventName: 'POINT_DATA',
         point: { X: 0, Y: 10, Z: 0 },
-      })!;
+      }, DEFAULT_TEST_CONTEXT)!;
       expect(state.stateName).toBe('function-menu-center-circle-point-2');
 
       // Point 2
       state = centerFindingReducer(state, {
         eventName: 'POINT_DATA',
         point: { X: 10, Y: 0, Z: 0 },
-      })!;
+      }, DEFAULT_TEST_CONTEXT)!;
       expect(state.stateName).toBe('function-menu-center-circle-point-3');
 
       // Point 3
       state = centerFindingReducer(state, {
         eventName: 'POINT_DATA',
         point: { X: -10, Y: 0, Z: 0 },
-      })!;
+      }, DEFAULT_TEST_CONTEXT)!;
       expect(state.stateName).toBe('function-menu-center-circle-result');
 
       const data = state.stateData as CenterFindingData;

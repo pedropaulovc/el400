@@ -9,6 +9,7 @@ export {
   DROStateMachineProvider as DROProvider,
   useDROStateName as useDROState,
   useDROStateData as useDROContext,
+  useDROVolatileMemory as useDROVMem,
   useDROEventDispatch as useDRODispatch,
   type DROStateMachineProviderProps as DROProviderProps,
 } from './context';
@@ -26,6 +27,7 @@ export {
   isFunctionActive,
   isCalculatorActive,
   INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT,
+  INITIAL_DRO_STATE_PAYLOAD,
   type DROStateName as DROState,
   type DROStateData as DROContext,
   type DROEventPayload as DROEvent,
@@ -40,3 +42,6 @@ export {
   SOFTWARE_VERSION,
   BOOT_MESSAGE_DURATION_MS,
 } from './features/boot';
+
+// Re-export keypad utilities
+export { getBufferValue } from './features/keypad';

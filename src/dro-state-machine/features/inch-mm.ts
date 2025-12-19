@@ -7,11 +7,11 @@
 import type { FeatureReducer } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 
-export const inchMmReducer: FeatureReducer = (current, event) => {
+export const inchMmReducer: FeatureReducer = (current, event, _context) => {
   if (current.stateName !== 'inch-mm-mode') return null;
 
   if (event.eventName === 'MODE_TOGGLE_COMPLETE') {
-    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem: current.vMem };
   }
   return current;
 };

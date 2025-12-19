@@ -87,14 +87,14 @@ function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
   };
 }
 
-export const centerFindingReducer: FeatureReducer = (current, event) => {
-  const { stateName: state, stateData: data } = current;
+export const centerFindingReducer: FeatureReducer = (current, event, _context) => {
+  const { stateName: state, stateData: data, vMem } = current;
 
   if (!isCenterFindingState(state)) return null;
 
   // All center finding states can be cancelled with KEY_CLEAR
   if (event.eventName === 'KEY_CLEAR') {
-    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
   }
 
   switch (state) {
@@ -106,6 +106,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
         return {
           stateName: 'function-menu-center-line-point-2',
           stateData: addPointToData(data, event.point),
+          vMem,
         };
       }
       return current;
@@ -117,6 +118,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
         return {
           stateName: 'function-menu-center-line-result',
           stateData: { ...newData, centerResult },
+          vMem,
         };
       }
       return current;
@@ -133,6 +135,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
         return {
           stateName: 'function-menu-center-circle-point-2',
           stateData: addPointToData(data, event.point),
+          vMem,
         };
       }
       return current;
@@ -142,6 +145,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
         return {
           stateName: 'function-menu-center-circle-point-3',
           stateData: addPointToData(data, event.point),
+          vMem,
         };
       }
       return current;
@@ -153,6 +157,7 @@ export const centerFindingReducer: FeatureReducer = (current, event) => {
         return {
           stateName: 'function-menu-center-circle-result',
           stateData: { ...newData, centerResult },
+          vMem,
         };
       }
       return current;

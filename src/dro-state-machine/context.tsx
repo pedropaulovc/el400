@@ -9,29 +9,21 @@ import {
   createContext,
   useContext,
   useReducer,
+  useCallback,
   type ReactNode,
   type Dispatch,
 } from 'react';
-import type { DROStatePayload } from './types';
+import type { DROStatePayload, DROReducerContext } from './types';
 import type {
   DROStateName,
   DROStateData as DROStateData,
   DROEventPayload,
 } from './droStateMachine';
-import {
-  INITIAL_DRO_STATE,
-  INITIAL_DRO_STATE_DATA,
-} from './droStateMachine';
+import { INITIAL_DRO_STATE_PAYLOAD } from './droStateMachine';
 import { droReducer } from './reducer';
-
-// ─────────────────────────────────────────────────────────────────
-// INITIAL STATE
-// ─────────────────────────────────────────────────────────────────
-
-const INITIAL_DRO_STATE_PAYLOAD: DROStatePayload = {
-  stateName: INITIAL_DRO_STATE,
-  stateData: INITIAL_DRO_STATE_DATA,
-};
+import { useMillStateContext } from '../context/MillStateContext';
+import { useNonVolatileMemoryContext } from '../context/NonVolatileMemoryContext';
+import type { VolatileMemoryState } from '../types/volatileMemory';
 
 // ─────────────────────────────────────────────────────────────────
 // CONTEXT
@@ -40,6 +32,7 @@ const INITIAL_DRO_STATE_PAYLOAD: DROStatePayload = {
 interface DROContextValue {
   state: DROStateName;
   data: DROStateData;
+  vMem: VolatileMemoryState;
   dispatch: Dispatch<DROEventPayload>;
 }
 
@@ -58,10 +51,25 @@ export function DROStateMachineProvider({
   children,
   initialState = INITIAL_DRO_STATE_PAYLOAD,
 }: DROStateMachineProviderProps) {
-  const [{ stateName: state, stateData: data }, dispatch] = useReducer(droReducer, initialState);
+  const { millState } = useMillStateContext();
+  const { nvMem } = useNonVolatileMemoryContext();
+
+  // Create a reducer wrapper that injects the context
+  const reducerWithContext = useCallback(
+    (current: DROStatePayload, event: DROEventPayload): DROStatePayload => {
+      const context: DROReducerContext = { millState, nvMem };
+      return droReducer(current, event, context);
+    },
+    [millState, nvMem]
+  );
+
+  const [{ stateName: state, stateData: data, vMem }, dispatch] = useReducer(
+    reducerWithContext,
+    initialState
+  );
 
   return (
-    <DROReactContext.Provider value={{ state, data, dispatch }}>
+    <DROReactContext.Provider value={{ state, data, vMem, dispatch }}>
       {children}
     </DROReactContext.Provider>
   );
@@ -87,6 +95,11 @@ export function useDROStateName(): DROStateName {
 /** Get DRO context data (stored points, results, etc.) */
 export function useDROStateData(): DROStateData {
   return useDROContextInternal().data;
+}
+
+/** Get volatile memory state */
+export function useDROVolatileMemory(): VolatileMemoryState {
+  return useDROContextInternal().vMem;
 }
 
 /** Get dispatch function for sending events */
