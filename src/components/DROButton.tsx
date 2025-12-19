@@ -50,7 +50,7 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
   size?: 'icon' | 'secondary' | 'axis' | 'square' | 'enter';
   isActive?: boolean;
-  title?: string;
+  title: string;
 }
 
 const DROButton = ({
