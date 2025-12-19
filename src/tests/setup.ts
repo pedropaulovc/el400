@@ -46,20 +46,37 @@ class MockAudioBufferSourceNode {
   connect = vi.fn().mockReturnThis();
   start = vi.fn();
   stop = vi.fn();
+  disconnect = vi.fn();
+}
+
+class MockOscillatorNode {
+  type: OscillatorType = 'sine';
+  frequency = { value: 440 };
+  connect = vi.fn().mockReturnThis();
+  start = vi.fn();
+  stop = vi.fn();
+  disconnect = vi.fn();
 }
 
 class MockGainNode {
-  gain = { value: 1 };
+  gain = {
+    value: 1,
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
+  };
   connect = vi.fn().mockReturnThis();
+  disconnect = vi.fn();
 }
 
 class MockAudioContext {
   state = 'running';
+  currentTime = 0;
+  destination = {};
   createBufferSource = vi.fn(() => new MockAudioBufferSourceNode());
   createGain = vi.fn(() => new MockGainNode());
+  createOscillator = vi.fn(() => new MockOscillatorNode());
   decodeAudioData = vi.fn().mockResolvedValue({} as AudioBuffer);
   resume = vi.fn().mockResolvedValue(undefined);
-  destination = {};
 }
 
 global.AudioContext = MockAudioContext as unknown as typeof AudioContext;

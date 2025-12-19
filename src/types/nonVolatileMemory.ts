@@ -14,6 +14,12 @@ export interface NonVolatileMemory {
   precision: number;
   /** Whether to show boot message on startup */
   bootMessageMode: 'show' | 'skip';
+  /** Zero approach warning enabled (BU22 ON/OFF) */
+  zeroApproachEnabled: boolean;
+  /** Beep distance - distance from zero when beeping starts (in inches) */
+  bpDist: number;
+  /** Beep tolerance - hysteresis to prevent beep flutter when leaving zero (in inches) */
+  bpTolr: number;
 }
 
 /**
@@ -24,6 +30,9 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   defaultUnit: 'inch',
   precision: 4,
   bootMessageMode: 'show',
+  zeroApproachEnabled: false,
+  bpDist: 0.002,
+  bpTolr: 0.0000,
 };
 
 /**
