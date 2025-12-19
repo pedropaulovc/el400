@@ -83,7 +83,7 @@ export function useDisplayValues(): DisplayAxisValues {
   const droState = useDROState();
   const droCtx = useDROContext();
   const { nvMem } = useNonVolatileMemoryContext();
-  const droVMem = useDROVMem(); // Get vMem directly for inputBuffer access
+  const droVMem = useDROVMem();
 
   return useMemo(() => {
     const unit = nvMem.defaultUnit;

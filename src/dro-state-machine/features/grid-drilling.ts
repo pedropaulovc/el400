@@ -33,7 +33,11 @@ export function calculateGridPositions(
   const positions: { x: number; y: number }[] = [];
   const angleRad = (angle * Math.PI) / 180;
   
-  // For each row (i) and column (j), calculate position
+  // For each row (i) and column (j), calculate position:
+  // - i represents row index (Y direction, 0 to holesY-1)
+  // - j represents column index (X direction, 0 to holesX-1)
+  // - Coordinate system: X-axis is horizontal right, Y-axis is vertical up
+  // - Rotation is counterclockwise from the positive X-axis
   for (let i = 0; i < holesY; i++) {
     for (let j = 0; j < holesX; j++) {
       // X = start_x + (j × pitch_x × cos(angle)) + (i × pitch_y × cos(angle + 90°))
