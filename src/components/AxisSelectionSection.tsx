@@ -2,21 +2,18 @@ import { Fragment } from "react";
 import DROButton from "./DROButton";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDROState, useDRODispatch, isCalculatorActive } from "../dro-state-machine";
+import { useDRODispatch } from "../dro-state-machine";
 
 const AxisSelectionSection = () => {
   const vMem = useVolatileMemory();
-  const droState = useDROState();
   const dispatch = useDRODispatch();
   const axes: ('X' | 'Y' | 'Z')[] = ['X', 'Y', 'Z'];
 
   const handleAxisSelect = (axis: 'X' | 'Y' | 'Z') => {
-    // In calculator mode, Y button cycles through operations
-    if (axis === 'Y' && isCalculatorActive(droState)) {
-      dispatch({ eventName: 'KEY_6_RIGHT' });
-      return;
-    }
-    vMem.selectAxis(axis);
+    // Dispatch button event - reducers decide what to do based on current state
+    // In calculator mode, calculatorReducer handles BTN_SELECT_Y as operation cycling
+    // In other modes, axis operations reducer handles axis selection
+    dispatch({ eventName: `BTN_SELECT_${axis}` as const });
   };
 
   return (

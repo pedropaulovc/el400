@@ -9,7 +9,7 @@ import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../type
 import type { DROEventPayload } from '../droStateMachine';
 import type { Axis, AxisValues } from '../../types/volatileMemory';
 import { fromAnyUnitToMm } from '../../utils/unitConversion';
-import { getBufferValue } from './keypad';
+import { getBufferValue } from './buffer-utils';
 
 /**
  * Get the machine position for an axis.

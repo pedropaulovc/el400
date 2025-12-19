@@ -231,5 +231,31 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('axis-select-y'));
       expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
     });
+
+    it('KEY_6 appends digit 6, Y button cycles operations in all calculator states', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // In calculator-idle, KEY_6 appends to input buffer
+      await user.click(screen.getByTestId('key-6'));
+      await user.click(screen.getByTestId('key-6'));
+      await user.click(screen.getByTestId('key-enter'));
+      // Should store 66 as first value
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(66, 4);
+
+      // Y button cycles operations regardless of state
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
+
+      // After operator chosen, KEY_6 still appends as digit for second operand
+      await user.click(screen.getByTestId('key-6'));
+      await user.click(screen.getByTestId('key-3'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Should calculate: 66 + 63 = 129
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(129, 4);
+    });
   });
 });
