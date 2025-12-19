@@ -50,6 +50,7 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   variant?: 'default' | 'dark' | 'yellow' | 'clear' | 'enter';
   size?: 'icon' | 'secondary' | 'axis' | 'square' | 'enter';
   isActive?: boolean;
+  title?: string;
 }
 
 const DROButton = ({
@@ -59,6 +60,7 @@ const DROButton = ({
   variant = 'default',
   size = 'square',
   isActive = false,
+  title,
   ...props
 }: DROButtonProps) => {
   const variantClasses = {
@@ -89,13 +91,14 @@ const DROButton = ({
       className={cn(
         "dro-button flex items-center justify-center rounded-lg border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
-        "hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/50",
+        "focus:outline-none focus:ring-2 focus:ring-white/50",
         variantClasses[variant],
         sizeClasses[size],
         isActive && "ring-2 ring-white shadow-lg brightness-110",
         className
       )}
       aria-pressed={isActive}
+      title={title}
       {...props}
     >
       {children}
