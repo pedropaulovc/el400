@@ -125,7 +125,9 @@ export type DROEventPayload =
   | { eventName: 'KEY_DECIMAL' }
   | { eventName: 'KEY_SIGN' }
   | { eventName: 'KEY_CLEAR' }
-  | { eventName: 'KEY_ENTER'; value?: number }
+  | { eventName: 'KEY_ENTER' }
+  // Programmatic buffer manipulation (for API use, not keypad)
+  | { eventName: 'SET_INPUT_BUFFER'; value: string }
   // Button presses
   | { eventName: 'BTN_ABS_INC' }
   | { eventName: 'BTN_INCH_MM' }
@@ -140,9 +142,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Y' }
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
-  | { eventName: 'BTN_HALF' }
-  // Data payload for point storage
-  | { eventName: 'POINT_DATA'; point: StoredPoint };
+  | { eventName: 'BTN_HALF' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS

@@ -18,7 +18,6 @@ import type {
   Axis,
   DatumMode,
 } from '../types/volatileMemory';
-import { fromAnyUnitToMm } from '../utils/unitConversion';
 
 export type { VolatileMemory, VolatileMemoryActions, AxisValues, Axis, DatumMode };
 
@@ -40,7 +39,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   const vMem = useDROVMem();
   const dispatch = useDRODispatch();
   const { millState } = useMillStateContext();
-  const { nvMem } = useNonVolatileMemoryContext();
+  useNonVolatileMemoryContext(); // Ensure context is available
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
@@ -93,15 +92,14 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   }, [dispatch]);
 
   const setAxisValue = useCallback((axis: Axis, value: number) => {
-    // Convert from display unit to mm for internal storage
-    const valueMm = fromAnyUnitToMm(value, nvMem.defaultUnit);
-
     // Dispatch axis selection first
     const selectEvent = `BTN_SELECT_${axis}` as const;
     dispatch({ eventName: selectEvent });
-    // Then dispatch KEY_ENTER with the value
-    dispatch({ eventName: 'KEY_ENTER', value: valueMm });
-  }, [dispatch, nvMem.defaultUnit]);
+    // Set the input buffer with the value string (reducer handles unit conversion)
+    dispatch({ eventName: 'SET_INPUT_BUFFER', value: String(value) });
+    // Then dispatch KEY_ENTER to commit the value
+    dispatch({ eventName: 'KEY_ENTER' });
+  }, [dispatch]);
 
   const halfAxis = useCallback((axis: Axis) => {
     // First select the axis, then apply half

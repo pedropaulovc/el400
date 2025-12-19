@@ -109,6 +109,16 @@ export const keypadReducer: FeatureReducer = (
         },
       };
 
+    case 'SET_INPUT_BUFFER':
+      // Programmatic buffer set - used by API (e.g., setAxisValue)
+      return {
+        ...state,
+        vMem: {
+          ...vMem,
+          inputBuffer: event.value,
+        },
+      };
+
     case 'KEY_CLEAR':
       // Clear input buffer only (not axis selection)
       if (vMem.inputBuffer !== '') {

@@ -208,21 +208,15 @@ describe('Provider integration', () => {
     expect(result.current.state).toBe('function-menu-center-line-point-1');
     expect(result.current.data.stateDataType).toBe('center-finding');
 
-    // First point
+    // First point - KEY_6_RIGHT captures current position from vMem
     act(() => {
-      result.current.dispatch({
-        eventName: 'POINT_DATA',
-        point: { X: 0, Y: 0, Z: 0 },
-      });
+      result.current.dispatch({ eventName: 'KEY_6_RIGHT' });
     });
     expect(result.current.state).toBe('function-menu-center-line-point-2');
 
     // Second point
     act(() => {
-      result.current.dispatch({
-        eventName: 'POINT_DATA',
-        point: { X: 100, Y: 0, Z: 0 },
-      });
+      result.current.dispatch({ eventName: 'KEY_6_RIGHT' });
     });
     expect(result.current.state).toBe('function-menu-center-line-result');
 

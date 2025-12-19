@@ -225,16 +225,8 @@ export const axisOperationsReducer: FeatureReducer = (
 
     // Enter key - commit input buffer value to active axis
     case 'KEY_ENTER': {
-      // If there's an active axis
+      // If there's an active axis and a valid value in the buffer
       if (vMem.activeAxis !== null) {
-        // Check if value is provided directly (from API, already in mm)
-        if (event.value !== undefined) {
-          return {
-            ...state,
-            vMem: setAxisValueMm(vMem, vMem.activeAxis, event.value, context),
-          };
-        }
-        // Fall back to buffer value (from keypad, in display units)
         const value = getBufferValue(vMem.inputBuffer);
         if (value !== null) {
           return {

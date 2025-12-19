@@ -3,6 +3,7 @@
  *
  * Handles basic calculator functions (ADD, SUB, MULTI, DIV).
  * Supports sign toggle and result display.
+ * Parses values from vMem.inputBuffer on KEY_ENTER.
  */
 
 import type { FeatureReducer } from '../types';
@@ -12,6 +13,7 @@ import {
   INITIAL_CALCULATOR_DATA,
   isCalculatorActive,
 } from '../droStateMachine';
+import { getBufferValue } from './keypad';
 
 /**
  * Calculator operations cycle: ADD -> SUB -> MULTI -> DIV -> ADD
@@ -86,48 +88,50 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
       };
     }
 
-    case 'KEY_ENTER':
-      // Handle value entry and calculation
-      if (eventPayload.value !== undefined) {
-        const newValue = eventPayload.value;
-        if (calcData.operation === null) {
-          // First value - store as first value and current value
-          return {
-            stateName: state,
-            stateData: {
-              ...calcData,
-              firstValue: newValue,
-              currentValue: newValue,
-            },
-            vMem: { ...vMem, inputBuffer: '' }, // Clear buffer after use
-          };
-        } else {
-          // Second value - store and immediately calculate
-          if (calcData.firstValue === null) {
-            // Reset to idle with the new value if invariant violated
-            return {
-              stateName: 'calculator-idle',
-              stateData: {
-                ...INITIAL_CALCULATOR_DATA,
-                currentValue: newValue,
-              },
-              vMem: { ...vMem, inputBuffer: '' },
-            };
-          }
-          const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+    case 'KEY_ENTER': {
+      // Parse value from input buffer
+      const newValue = getBufferValue(vMem.inputBuffer);
+      if (newValue === null) {
+        return null; // No valid value in buffer
+      }
+
+      if (calcData.operation === null) {
+        // First value - store as first value and current value
+        return {
+          stateName: state,
+          stateData: {
+            ...calcData,
+            firstValue: newValue,
+            currentValue: newValue,
+          },
+          vMem: { ...vMem, inputBuffer: '' }, // Clear buffer after use
+        };
+      } else {
+        // Second value - store and immediately calculate
+        if (calcData.firstValue === null) {
+          // Reset to idle with the new value if invariant violated
           return {
             stateName: 'calculator-idle',
             stateData: {
-              ...calcData,
-              firstValue: null,
-              operation: null,
-              currentValue: result,
+              ...INITIAL_CALCULATOR_DATA,
+              currentValue: newValue,
             },
             vMem: { ...vMem, inputBuffer: '' },
           };
         }
+        const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+        return {
+          stateName: 'calculator-idle',
+          stateData: {
+            ...calcData,
+            firstValue: null,
+            operation: null,
+            currentValue: result,
+          },
+          vMem: { ...vMem, inputBuffer: '' },
+        };
       }
-      return null; // Let other reducers handle if no value provided
+    }
 
     default:
       // Return null for unhandled events to let keypadReducer handle digit input
