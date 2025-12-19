@@ -96,8 +96,8 @@ export function useDisplayValues(): DisplayAxisValues {
       
       switch (droState) {
         case 'pcd-menu-select':
-          // Use lowercase to avoid unsupported characters
-          return { X: boltData?.pcdMode === 'ARC' ? 'Arc' : 'CIrcLE', Y: '', Z: '' };
+          // Use lowercase 'r' to match seven-segment display limitations
+          return { X: boltData?.pcdMode === 'ARC' ? 'Arc' : 'CirCLE', Y: '', Z: '' };
         case 'pcd-circle-center-x':
           return { X: 'Cnt  X', Y: '', Z: '' };
         case 'pcd-circle-center-y':
