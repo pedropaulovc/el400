@@ -32,7 +32,11 @@ export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
 
 /**
  * Resets all Zustand stores to their initial state.
- * Call this in beforeEach/afterEach to ensure test isolation.
+ *
+ * Note on test isolation: Vitest runs each test file in isolation by default,
+ * meaning each file gets its own module scope and store instances.
+ * Tests within the same file run sequentially, so there are no race conditions.
+ * This function is called by renderSimulator() automatically.
  */
 export function resetStores(): void {
   // Reset settings store

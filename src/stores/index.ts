@@ -51,7 +51,18 @@ export {
   // Aliases used by useVolatileMemory hook
   useDROVMem,
   useDRODispatch,
+  initializeDROMillConnection,
 } from './droStore';
+
+// ─────────────────────────────────────────────────────────────────
+// INITIALIZATION
+// ─────────────────────────────────────────────────────────────────
+
+// Initialize the DRO-Mill connection when this module is imported.
+// This is done explicitly here rather than at module-level in droStore.ts
+// to make the initialization order clear and avoid hidden side effects.
+import { initializeDROMillConnection as _initDROMillConnection } from './droStore';
+_initDROMillConnection();
 
 // ─────────────────────────────────────────────────────────────────
 // RE-EXPORT TYPES

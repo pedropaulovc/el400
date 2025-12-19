@@ -17,7 +17,9 @@ export async function expectPureTextValue(
   const trimmedText = text?.trim() || '';
 
   if (VALID_NUMBER_PATTERN.test(trimmedText)) {
-    throw new Error(`Expected text value '${expectedValue}', but got numeric value: ${text}`);
+    throw new Error(
+      `Expected non-numeric text '${expectedValue}', but display shows numeric value: ${text}`
+    );
   }
 
   expect(trimmedText).toBe(expectedValue);

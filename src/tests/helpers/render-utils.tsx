@@ -28,6 +28,11 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 /**
  * Resets all Zustand stores to their initial state for testing.
  * Sets DRO to idle state (skip boot sequence).
+ *
+ * Note on test isolation: Vitest runs each test file in isolation by default,
+ * meaning each file gets its own module scope and store instances.
+ * Tests within the same file run sequentially, so there are no race conditions.
+ * This function is called by renderWithProviders() automatically.
  */
 function resetStoresForTest(): void {
   // Reset settings store
