@@ -25,8 +25,8 @@ export const MODEL_NUMBER = 'EL400';
  */
 export const SOFTWARE_VERSION = 'vEr 1.0.0';
 
-export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
-  const { stateName: state } = statePayload;
+export const bootReducer: FeatureReducer = (statePayload, eventPayload, _context) => {
+  const { stateName: state, vMem } = statePayload;
   const { eventName } = eventPayload;
 
   switch (state) {
@@ -35,13 +35,14 @@ export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
         return {
           stateName: eventPayload.skipBootMessage ? 'idle' : 'boot-show-message',
           stateData: INITIAL_DRO_STATE_DATA,
+          vMem,
         };
       }
       return statePayload;
 
     case 'boot-show-message':
       if (eventName === 'BOOT_MESSAGE_TIMEOUT' || eventName === 'KEY_CLEAR') {
-        return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA };
+        return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
       }
       return statePayload;
 

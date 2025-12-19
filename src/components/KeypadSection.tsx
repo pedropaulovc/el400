@@ -3,23 +3,38 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useInputBuffer } from "../hooks/useInputBuffer";
 import {
   useDROState,
   useDRODispatch,
+  useDROVMem,
   isFunctionMenuSelectionState,
   isCollectingPoints,
   isCalculatorActive,
+  getBufferValue,
 } from "../dro-state-machine";
+
+/** Map digit to KEY event name */
+const DIGIT_TO_EVENT: Record<string, string> = {
+  '0': 'KEY_0',
+  '1': 'KEY_1',
+  '2': 'KEY_2_DOWN',
+  '3': 'KEY_3',
+  '4': 'KEY_4_LEFT',
+  '5': 'KEY_5',
+  '6': 'KEY_6_RIGHT',
+  '7': 'KEY_7',
+  '8': 'KEY_8_UP',
+  '9': 'KEY_9',
+};
 
 const KeypadSection = () => {
   const vMem = useVolatileMemory();
-  const inputBuffer = useInputBuffer();
+  const droVMem = useDROVMem();
   const droState = useDROState();
   const dispatch = useDRODispatch();
 
   const handleNumber = useCallback((num: string) => {
-    // Dispatch raw key events to the operation state machine
+    // Dispatch raw key events to the state machine
     // The reducer interprets them based on current state
 
     if (num === '4') {
@@ -50,47 +65,24 @@ const KeypadSection = () => {
       }
     }
 
-    // Calculator mode: accumulate digits
-    if (isCalculatorActive(droState)) {
-      inputBuffer.appendDigit(num);
-      return;
+    // Dispatch raw digit event - reducers handle based on state (calculator or normal)
+    const eventName = DIGIT_TO_EVENT[num];
+    if (eventName) {
+      dispatch({ eventName } as Parameters<typeof dispatch>[0]);
     }
-
-    // Normal mode: append digit if axis selected
-    if (!vMem.activeAxis) {
-      return;
-    }
-    inputBuffer.appendDigit(num);
-  }, [droState, dispatch, vMem, inputBuffer]);
+  }, [droState, dispatch, vMem.displayValues]);
 
   const handleDecimal = useCallback(() => {
-    if (isCalculatorActive(droState)) {
-      inputBuffer.appendDecimal();
-      return;
-    }
-    if (!vMem.activeAxis) {
-      return;
-    }
-    inputBuffer.appendDecimal();
-  }, [droState, vMem.activeAxis, inputBuffer]);
+    dispatch({ eventName: 'KEY_DECIMAL' });
+  }, [dispatch]);
 
   const handleSign = useCallback(() => {
-    if (isCalculatorActive(droState)) {
-      // In calculator mode, toggle sign in buffer
-      inputBuffer.toggleSign();
-      return;
-    }
-    if (!vMem.activeAxis) {
-      return;
-    }
-    inputBuffer.toggleSign();
-  }, [droState, vMem.activeAxis, inputBuffer]);
+    dispatch({ eventName: 'KEY_SIGN' });
+  }, [dispatch]);
 
   const handleClear = useCallback(() => {
-    inputBuffer.clear();
-    // Dispatch KEY_CLEAR to state machine - handles boot dismiss and menu exit
     dispatch({ eventName: 'KEY_CLEAR' });
-  }, [inputBuffer, dispatch]);
+  }, [dispatch]);
 
   const handleEnter = useCallback(() => {
     // In function menu, ENT confirms the selection
@@ -99,27 +91,18 @@ const KeypadSection = () => {
       return;
     }
 
-    // Calculator mode: handle value entry or calculation
+    // Calculator mode: pass value with KEY_ENTER event
     if (isCalculatorActive(droState)) {
-      const value = inputBuffer.getValue();
+      const value = getBufferValue(droVMem.inputBuffer);
       if (value !== null) {
-        // Pass value with KEY_ENTER event for calculator
         dispatch({ eventName: 'KEY_ENTER', value });
-        inputBuffer.clear();
       }
       return;
     }
 
-    // Normal mode: handle numeric entry
-    if (!vMem.activeAxis) {
-      return;
-    }
-    const value = inputBuffer.getValue();
-    if (value !== null) {
-      vMem.setAxisValue(vMem.activeAxis, value);
-      inputBuffer.clear();
-    }
-  }, [droState, dispatch, vMem, inputBuffer]);
+    // Normal mode: dispatch KEY_ENTER - reducer reads from vMem.inputBuffer
+    dispatch({ eventName: 'KEY_ENTER' });
+  }, [droState, dispatch, droVMem.inputBuffer]);
 
   return (
     <BeveledFrame>

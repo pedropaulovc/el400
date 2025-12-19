@@ -8,7 +8,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
 import { NonVolatileMemoryProvider } from '../../context/NonVolatileMemoryContext';
 import { MillStateProvider } from '../../context/MillStateContext';
-import { VolatileMemoryProvider } from '../../context/VolatileMemoryContext';
 import { DROProvider } from '../../dro-state-machine';
 import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
@@ -56,11 +55,9 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
       <BrowserRouter>
         <NonVolatileMemoryProvider>
           <MillStateProvider>
-            <VolatileMemoryProvider>
-              <DROProvider>
-                <EL400Simulator />
-              </DROProvider>
-            </VolatileMemoryProvider>
+            <DROProvider>
+              <EL400Simulator />
+            </DROProvider>
           </MillStateProvider>
         </NonVolatileMemoryProvider>
       </BrowserRouter>

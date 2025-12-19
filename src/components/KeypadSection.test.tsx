@@ -1,23 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import KeypadSection from './KeypadSection';
-import { VolatileMemoryProvider } from '../context/VolatileMemoryContext';
-import { NonVolatileMemoryProvider } from '../context/NonVolatileMemoryContext';
-
-const renderWithProviders = (ui: React.ReactElement) => {
-  return render(
-    <NonVolatileMemoryProvider>
-      <VolatileMemoryProvider>
-        {ui}
-      </VolatileMemoryProvider>
-    </NonVolatileMemoryProvider>
-  );
-};
 
 describe('KeypadSection', () => {
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      renderWithProviders(<KeypadSection />);
+      render(<KeypadSection />);
 
       const heading = screen.getByRole('heading', { name: 'Numeric keypad' });
       expect(heading).toBeInTheDocument();
@@ -25,7 +13,7 @@ describe('KeypadSection', () => {
     });
 
     it('has sr-only text for number buttons', () => {
-      renderWithProviders(<KeypadSection />);
+      render(<KeypadSection />);
 
       const expectedLabels: Record<number, string> = {
         0: '0',
@@ -48,7 +36,7 @@ describe('KeypadSection', () => {
     });
 
     it('has sr-only text for function buttons', () => {
-      renderWithProviders(<KeypadSection />);
+      render(<KeypadSection />);
 
       expect(screen.getByTestId('key-sign').querySelector('.sr-only')).toHaveTextContent('Toggle sign');
       expect(screen.getByTestId('key-decimal').querySelector('.sr-only')).toHaveTextContent('.');
@@ -57,7 +45,7 @@ describe('KeypadSection', () => {
     });
 
     it('has buttons in natural numeric order for tab navigation', () => {
-      renderWithProviders(<KeypadSection />);
+      render(<KeypadSection />);
 
       const buttons = screen.getAllByRole('button');
       const expectedOrder = [

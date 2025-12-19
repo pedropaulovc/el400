@@ -9,41 +9,30 @@ import { calculatorReducer } from './calculator';
 import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA, INITIAL_CALCULATOR_DATA } from '../droStateMachine';
 import type { CalculatorData } from '../droStateMachine';
+import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
 describe('calculatorReducer', () => {
   describe('entering calculator mode', () => {
     it('should transition from idle to calculator-idle on BTN_CALCULATOR', () => {
-      const state: DROStatePayload = {
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' });
+      const state = createTestState('idle');
+      const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       expect(result?.stateData).toEqual(INITIAL_CALCULATOR_DATA);
     });
 
     it('should return null for non-calculator states', () => {
-      const state: DROStatePayload = {
-        stateName: 'boot',
-        stateData: INITIAL_DRO_STATE_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 });
-
+      const state = createTestState('boot');
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
       expect(result).toBeNull();
     });
   });
 
   describe('exiting calculator mode', () => {
     it('should exit to idle on BTN_CALCULATOR', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' });
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData).toEqual(INITIAL_DRO_STATE_DATA);
@@ -60,9 +49,10 @@ describe('calculatorReducer', () => {
           operation: 'ADD',
           currentValue: 10,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_CLEAR' });
+      const result = calculatorReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       expect(result?.stateData).toEqual(INITIAL_CALCULATOR_DATA);
@@ -71,12 +61,8 @@ describe('calculatorReducer', () => {
 
   describe('operation cycling', () => {
     it('should cycle from null to ADD', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-add');
       expect((result?.stateData as CalculatorData).operation).toBe('ADD');
@@ -99,9 +85,10 @@ describe('calculatorReducer', () => {
             operation: from,
             currentValue: 5,
           },
+          vMem: INITIAL_VOLATILE_MEMORY_STATE,
         };
 
-        const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
+        const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
 
         expect(result?.stateName).toBe(`calculator-${to.toLowerCase()}`);
         expect((result?.stateData as CalculatorData).operation).toBe(to);
@@ -111,12 +98,8 @@ describe('calculatorReducer', () => {
 
   describe('value entry and calculation', () => {
     it('should store first value', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 2.5 });
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 2.5 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -134,9 +117,10 @@ describe('calculatorReducer', () => {
           operation: 'ADD',
           currentValue: 2.5,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.75 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.75 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -154,9 +138,10 @@ describe('calculatorReducer', () => {
           operation: 'SUB',
           currentValue: 10,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.5 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.5 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -172,9 +157,10 @@ describe('calculatorReducer', () => {
           operation: 'MULTI',
           currentValue: 2.5,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -190,9 +176,10 @@ describe('calculatorReducer', () => {
           operation: 'DIV',
           currentValue: 10,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -208,9 +195,10 @@ describe('calculatorReducer', () => {
           operation: 'DIV',
           currentValue: 10,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 0 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 0 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -219,15 +207,10 @@ describe('calculatorReducer', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle KEY_ENTER without value', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' });
-
-      expect(result).toBe(state);
+    it('should return null for KEY_ENTER without value (let other reducers handle)', () => {
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result).toBeNull();
     });
 
     it('should reset to idle if firstValue is null when operation is set', () => {
@@ -239,9 +222,10 @@ describe('calculatorReducer', () => {
           operation: 'ADD',
           currentValue: 0,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -250,15 +234,10 @@ describe('calculatorReducer', () => {
       expect(calcData.operation).toBeNull();
     });
 
-    it('should return current state for unhandled events', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_CALCULATOR_DATA,
-      };
-
-      const result = calculatorReducer(state, { eventName: 'KEY_5' });
-
-      expect(result).toBe(state);
+    it('should return null for unhandled events (let keypadReducer handle digits)', () => {
+      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+      const result = calculatorReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      expect(result).toBeNull();
     });
   });
 
@@ -272,9 +251,10 @@ describe('calculatorReducer', () => {
           operation: null,
           currentValue: 10,
         },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' });
+      const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
 
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.currentValue).toBe(10);
@@ -285,9 +265,10 @@ describe('calculatorReducer', () => {
       const state: DROStatePayload = {
         stateName: 'calculator-idle',
         stateData: INITIAL_DRO_STATE_DATA, // Wrong data type
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 });
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
 
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.stateDataType).toBe('calculator');
