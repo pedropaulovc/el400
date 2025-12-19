@@ -2,9 +2,9 @@
 
 ## Quick Reference
 
-**State Machine:** `src/dro-state-machine/` - All DRO behavior
-**Adapters:** `src/adapters/` - CncjsMillConnection, MockMillConnection
-**Types:** `src/types/` - MillState, VolatileMemory, NonVolatileMemory
+* **State Machine:** `src/dro-state-machine/` - All DRO behavior
+* **Adapters:** `src/adapters/` - CncjsMillConnection, MockMillConnection
+* **Types:** `src/types/` - MillState, VolatileMemory, NonVolatileMemory
 
 ## Core State Structure
 
