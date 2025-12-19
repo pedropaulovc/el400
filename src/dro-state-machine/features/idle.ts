@@ -21,7 +21,6 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, _context
     case 'BTN_FUNCTION':
       return { stateName: 'function-menu-center', stateData: INITIAL_DRO_STATE_DATA, vMem };
     default:
-      // Return current state for unhandled events (catch-all for idle state)
-      return statePayload;
+      return null;
   }
 };

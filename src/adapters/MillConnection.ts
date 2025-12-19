@@ -3,7 +3,9 @@
  * Implementations provide data from various sources (CNCjs, LinuxCNC, mock, etc.)
  */
 
+import type { Dispatch } from 'react';
 import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
 
 /**
  * Abstract interface for mill data connections.
@@ -41,4 +43,10 @@ export interface MillConnection {
    * The type of controller this connection connects to.
    */
   readonly controllerType: ControllerType;
+
+  /**
+   * Dispatch DRO events when mill state changes.
+   * @param dispatch React dispatch function for DRO events
+   */
+  setDispatch(dispatch: Dispatch<DROEventPayload> | null): void;
 }

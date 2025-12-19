@@ -10,6 +10,7 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useEffect,
   type ReactNode,
   type Dispatch,
 } from 'react';
@@ -51,7 +52,7 @@ export function DROStateMachineProvider({
   children,
   initialState = INITIAL_DRO_STATE_PAYLOAD,
 }: DROStateMachineProviderProps) {
-  const { millState } = useMillStateContext();
+  const { millState, connection } = useMillStateContext();
   const { nvMem } = useNonVolatileMemoryContext();
 
   // Create a reducer wrapper that injects the context
@@ -67,6 +68,16 @@ export function DROStateMachineProvider({
     reducerWithContext,
     initialState
   );
+
+  // Inject the DRO dispatch into the mill connection so it can emit MILL_STATE_CHANGED events
+  useEffect(() => {
+    connection.setDispatch(dispatch);
+
+    // Clean up dispatch on unmount
+    return () => {
+      connection.setDispatch(null);
+    };
+  }, [connection, dispatch]);
 
   return (
     <DROReactContext.Provider value={{ state, data, vMem, dispatch }}>

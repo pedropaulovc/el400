@@ -233,4 +233,68 @@ describe('MockMillConnection', () => {
       expect(adapter.getState().probe.triggered).toBe(false);
     });
   });
+
+  describe('dispatch integration', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createDispatch = (fn: ReturnType<typeof vi.fn>): any => fn;
+
+    it('should set and clear dispatch', () => {
+      const dispatch = vi.fn();
+
+      adapter.setDispatch(createDispatch(dispatch));
+      // No error should be thrown
+
+      adapter.setDispatch(null);
+      // No error should be thrown
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on state updates', () => {
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      adapter.setPosition(1, 2, 3);
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on connect', async () => {
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+      dispatch.mockClear();
+
+      await adapter.connect();
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on disconnect', async () => {
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      await adapter.connect();
+      dispatch.mockClear();
+
+      adapter.disconnect();
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED when not set', () => {
+      // Should not throw when dispatch is null
+      expect(() => {
+        adapter.setPosition(1, 2, 3);
+      }).not.toThrow();
+    });
+
+    it('should stop dispatching after clearing dispatch', () => {
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+      dispatch.mockClear();
+
+      adapter.setDispatch(null);
+      adapter.setPosition(1, 2, 3);
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
 });
