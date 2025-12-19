@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { idleReducer } from './idle';
+import type { DROEventPayload } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 
 describe('idleReducer', () => {
@@ -17,10 +18,17 @@ describe('idleReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should handle idle state', () => {
-      const state = createTestState('idle');
-      const result = idleReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
-      expect(result).not.toBeNull();
+    it('should process events only when in idle state', () => {
+      const idleState = createTestState('idle');
+      const nonIdleState = createTestState('boot');
+
+      // Specific events are handled in idle state
+      expect(idleReducer(idleState, { eventName: 'BTN_INCH_MM' }, DEFAULT_TEST_CONTEXT)).not.toBeNull();
+      expect(idleReducer(idleState, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT)).not.toBeNull();
+
+      // But not in other states
+      expect(idleReducer(nonIdleState, { eventName: 'BTN_INCH_MM' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+      expect(idleReducer(nonIdleState, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT)).toBeNull();
     });
   });
 
@@ -41,33 +49,45 @@ describe('idleReducer', () => {
       expect(result?.stateData.stateDataType).toBe('none');
     });
 
-    it('should return current state for unhandled events', () => {
+    it('should return null for unhandled events (handled by other reducers)', () => {
       const state = createTestState('idle');
 
-      expect(idleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(state);
-      expect(idleReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)).toBe(state);
-      expect(idleReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)).toBe(state);
-      expect(idleReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)).toBe(state);
+      expect(idleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+      expect(idleReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+      expect(idleReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+      expect(idleReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)).toBeNull();
     });
 
-    it('should return current state for numeric key events (handled by keypadReducer)', () => {
+    it('should return null for numeric key events (handled by keypadReducer)', () => {
       const state = createTestState('idle');
       const numericKeys = ['KEY_0', 'KEY_1', 'KEY_2_DOWN', 'KEY_3', 'KEY_4_LEFT', 'KEY_5', 'KEY_6_RIGHT', 'KEY_7', 'KEY_8_UP', 'KEY_9'] as const;
 
       for (const key of numericKeys) {
         const result = idleReducer(state, { eventName: key }, DEFAULT_TEST_CONTEXT);
-        // idleReducer returns current state, but in the actual reducer chain,
-        // keypadReducer will handle these before idleReducer
-        expect(result).toBe(state);
+        expect(result).toBeNull();
       }
     });
 
-    it('should return current state for BTN_ABS_INC (handled by modeToggleReducer)', () => {
-      // BTN_ABS_INC is now handled by modeToggleReducer, not idleReducer
-      // idleReducer returns current state for unhandled events
+    it('should return null for BTN_ABS_INC (handled by modeToggleReducer)', () => {
       const state = createTestState('idle');
       const result = idleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
-      expect(result).toBe(state);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for system events (handled by other reducers)', () => {
+      const state = createTestState('idle');
+
+      const systemEvents: DROEventPayload[] = [
+        { eventName: 'BOOT_STARTED', skipBootMessage: false },
+        { eventName: 'BOOT_MESSAGE_TIMEOUT' },
+        { eventName: 'MODE_TOGGLE_COMPLETE' },
+        { eventName: 'MILL_STATE_CHANGED' },
+      ];
+
+      for (const event of systemEvents) {
+        const result = idleReducer(state, event, DEFAULT_TEST_CONTEXT);
+        expect(result).toBeNull();
+      }
     });
   });
 

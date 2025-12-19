@@ -172,6 +172,139 @@ describe('CncjsMillConnection', () => {
       expect(adapter.controllerType).toBe('cncjs');
     });
   });
+
+  describe('dispatch integration', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createDispatch = (fn: ReturnType<typeof vi.fn>): any => fn;
+
+    it('should set and clear dispatch', () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+
+      adapter.setDispatch(createDispatch(dispatch));
+      // No error should be thrown
+
+      adapter.setDispatch(null);
+      // No error should be thrown
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on connect', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      connectHandler?.();
+
+      await connectPromise;
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on controller state update', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      connectHandler?.();
+
+      await connectPromise;
+      dispatch.mockClear();
+
+      // Simulate controller state event
+      const stateHandler = mockSocket.on.mock.calls.find(([event]) => event === 'controller:state')?.[1];
+      stateHandler?.('Grbl', {
+        status: {
+          mpos: [10, 20, 30],
+        },
+      });
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on serialport:open', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      connectHandler?.();
+
+      await connectPromise;
+      dispatch.mockClear();
+
+      // Simulate serialport:open event
+      const openHandler = mockSocket.on.mock.calls.find(([event]) => event === 'serialport:open')?.[1];
+      openHandler?.();
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should dispatch MILL_STATE_CHANGED on disconnect', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      connectHandler?.();
+
+      await connectPromise;
+      dispatch.mockClear();
+
+      const disconnectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'disconnect')?.[1];
+      disconnectHandler?.();
+
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+    });
+
+    it('should not throw when dispatch is not set', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      expect(() => connectHandler?.()).not.toThrow();
+
+      await connectPromise;
+    });
+
+    it('should stop dispatching after clearing dispatch', async () => {
+      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      const connectPromise = adapter.connect();
+
+      const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
+      connectHandler?.();
+
+      await connectPromise;
+      dispatch.mockClear();
+
+      // Clear dispatch
+      adapter.setDispatch(null);
+
+      // Trigger another state change
+      const stateHandler = mockSocket.on.mock.calls.find(([event]) => event === 'controller:state')?.[1];
+      stateHandler?.('Grbl', {
+        status: {
+          mpos: [5, 10, 15],
+        },
+      });
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('normalizeControllerState', () => {
