@@ -77,7 +77,7 @@ Runtime state that is lost on refresh. Split across two contexts:
 - Active axis selection
 - Work offsets
 
-**Note:** Boot sequence state was moved from VolatileMemoryContext to the DRO State Machine (`src/dro-state-machine/`).
+**Note:** Boot sequence state was moved from VolatileMemoryContext to the DRO State Machine (`src/dro-state-machine/`) as part of this consolidation.
 
 ### Non-Volatile Memory
 Persisted settings saved to localStorage. Includes:
