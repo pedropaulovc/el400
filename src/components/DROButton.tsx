@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ReactNode, ButtonHTMLAttributes, useCallback } from "react";
-import { playButtonClick } from "@/utils/audioManager";
+import { playButtonClick } from "../utils/audioManager";
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;

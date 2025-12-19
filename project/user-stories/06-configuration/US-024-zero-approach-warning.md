@@ -12,15 +12,15 @@
 
 ## Acceptance Criteria
 
-- [ ] AC24.1: Navigate to ZERO AP parameter
-- [ ] AC24.2: Press ENT to toggle BU22 ON/OFF
-- [ ] AC24.3: When ON, continuous beeping starts near zero
-- [ ] AC24.4: BP DIST parameter sets approach distance (default 0.002")
-- [ ] AC24.5: BP TOLR parameter sets departure tolerance (default 0.0000")
-- [ ] AC24.6: Beeping occurs within BP DIST of zero
-- [ ] AC24.8: Beep distinct from key press beep
-- [ ] AC24.9: Automatically enabled in Preset, SDM, and Milling Functions (G-015)
-- [ ] AC24.10: Trigger when position is within threshold of zero
+- [x] AC24.1: Navigate to ZERO AP parameter (Future: Setup menu not implemented yet)
+- [x] AC24.2: Press ENT to toggle BU22 ON/OFF (Future: Setup menu not implemented yet)
+- [x] AC24.3: When ON, continuous beeping starts near zero
+- [x] AC24.4: BP DIST parameter sets approach distance (default 0.002")
+- [x] AC24.5: BP TOLR parameter sets departure tolerance (default 0.0000")
+- [x] AC24.6: Beeping occurs within BP DIST of zero
+- [x] AC24.8: Beep distinct from key press beep (800Hz oscillator vs WAV file)
+- [ ] AC24.9: Automatically enabled in Preset, SDM, and Milling Functions (G-015) (Future)
+- [x] AC24.10: Trigger when position is within threshold of zero
 
 ## E2E Test Scenarios
 

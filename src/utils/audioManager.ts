@@ -67,9 +67,7 @@ export const startZeroApproachBeep = async (): Promise<void> => {
   if (isZeroApproachBeeping) return;
   
   // Initialize audio context if needed
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
+  audioContext ??= new AudioContext();
   
   // Resume context if suspended
   if (audioContext.state === 'suspended') {

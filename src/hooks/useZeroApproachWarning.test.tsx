@@ -39,7 +39,9 @@ describe('useZeroApproachWarning', () => {
   });
 
   it('should not beep when zero approach is disabled', () => {
-    const { result } = renderHook(() => useZeroApproachWarning(), {
+    const { result } = renderHook(() => {
+      useZeroApproachWarning();
+    }, {
       wrapper: AllProviders,
     });
 
@@ -48,7 +50,9 @@ describe('useZeroApproachWarning', () => {
   });
 
   it('should render without errors', () => {
-    const { result } = renderHook(() => useZeroApproachWarning(), {
+    const { result } = renderHook(() => {
+      useZeroApproachWarning();
+    }, {
       wrapper: AllProviders,
     });
 
@@ -56,7 +60,9 @@ describe('useZeroApproachWarning', () => {
   });
 
   it('should clean up on unmount', () => {
-    const { unmount } = renderHook(() => useZeroApproachWarning(), {
+    const { unmount } = renderHook(() => {
+      useZeroApproachWarning();
+    }, {
       wrapper: AllProviders,
     });
 
