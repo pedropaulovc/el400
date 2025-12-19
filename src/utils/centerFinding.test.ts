@@ -2,10 +2,22 @@ import { describe, it, expect } from 'vitest';
 import {
   findLineCenter,
   findCircleCenter,
-  calculateRadius,
-  calculateDistanceToGo,
   type Point2D,
 } from './centerFinding';
+
+// Helper functions for testing (not exported from module)
+function calculateRadius(center: Point2D, point: Point2D): number {
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function calculateDistanceToGo(current: Point2D, target: Point2D): Point2D {
+  return {
+    x: target.x - current.x,
+    y: target.y - current.y,
+  };
+}
 
 /**
  * Unit tests for center finding utility functions
@@ -166,76 +178,6 @@ describe('centerFinding utilities', () => {
     });
   });
 
-  describe('calculateRadius', () => {
-    it('should calculate radius correctly', () => {
-      const center: Point2D = { x: 0, y: 0 };
-      const point: Point2D = { x: 10, y: 0 };
-      
-      const radius = calculateRadius(center, point);
-      
-      expect(radius).toBeCloseTo(10, 5);
-    });
-
-    it('should calculate radius for point not on axis', () => {
-      const center: Point2D = { x: 0, y: 0 };
-      const point: Point2D = { x: 3, y: 4 };
-      
-      const radius = calculateRadius(center, point);
-      
-      expect(radius).toBeCloseTo(5, 5); // 3-4-5 triangle
-    });
-
-    it('should handle center not at origin', () => {
-      const center: Point2D = { x: 5, y: 5 };
-      const point: Point2D = { x: 8, y: 9 };
-      
-      const radius = calculateRadius(center, point);
-      
-      expect(radius).toBeCloseTo(5, 5); // 3-4-5 triangle
-    });
-  });
-
-  describe('calculateDistanceToGo', () => {
-    it('should calculate positive distance when target is ahead', () => {
-      const current: Point2D = { x: 0, y: 0 };
-      const target: Point2D = { x: 50, y: 30 };
-      
-      const dtg = calculateDistanceToGo(current, target);
-      
-      expect(dtg.x).toBe(50);
-      expect(dtg.y).toBe(30);
-    });
-
-    it('should calculate negative distance when target is behind', () => {
-      const current: Point2D = { x: 100, y: 50 };
-      const target: Point2D = { x: 50, y: 25 };
-      
-      const dtg = calculateDistanceToGo(current, target);
-      
-      expect(dtg.x).toBe(-50);
-      expect(dtg.y).toBe(-25);
-    });
-
-    it('should return zero when at target', () => {
-      const current: Point2D = { x: 50, y: 50 };
-      const target: Point2D = { x: 50, y: 50 };
-      
-      const dtg = calculateDistanceToGo(current, target);
-      
-      expect(dtg.x).toBe(0);
-      expect(dtg.y).toBe(0);
-    });
-
-    it('should handle mixed positive and negative distances', () => {
-      const current: Point2D = { x: 100, y: 0 };
-      const target: Point2D = { x: 50, y: 30 };
-      
-      const dtg = calculateDistanceToGo(current, target);
-      
-      expect(dtg.x).toBe(-50);
-      expect(dtg.y).toBe(30);
-    });
-  });
 
   describe('integration: line center from user story example', () => {
     it('should match US-007 example: center of line from 0 to 100', () => {
