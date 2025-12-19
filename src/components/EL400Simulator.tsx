@@ -5,82 +5,18 @@ import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import {
-  useDROState,
-  useDRODispatch,
-  useDROContext,
-  isFunctionMenuSelectionState,
-  isCollectingPoints,
-  isResultState,
-  isCalculatorActive,
-} from "../dro-state-machine";
+import { useDROState, useDRODispatch, useBootSequence } from "../dro-state-machine";
 import { useNonVolatileMemoryContext } from "../context/NonVolatileMemoryContext";
-import { useBootSequence, MODEL_NUMBER, SOFTWARE_VERSION } from "../dro-state-machine";
-
-/** Menu text displayed for each function menu state */
-const MENU_TEXT_MAP: Record<string, string> = {
-  'function-menu-center': 'CEntrE',
-  'function-menu-circle': 'CirCLE',
-  'function-menu-line': 'LinE',
-  'function-menu-linear': 'LinEAr',
-  'function-menu-polar': 'PoLAr',
-};
-
-/** Calculator operation text displayed in Y window */
-const CALC_OPERATION_MAP: Record<string, string> = {
-  'calculator-idle': '',
-  'calculator-add': 'Add',
-  'calculator-sub': 'SUb',
-  'calculator-multi': 'mULtI',
-  'calculator-div': 'dIv',
-};
+import { useDisplayValues } from "../hooks/useDisplayValues";
 
 const EL400Simulator = () => {
-  const vMem = useVolatileMemory();
   const droState = useDROState();
-  const droCtx = useDROContext();
   const dispatch = useDRODispatch();
   const { nvMem } = useNonVolatileMemoryContext();
+  const axisDisplayValues = useDisplayValues();
 
   // Boot sequence logic
   useBootSequence(dispatch, droState, nvMem);
-
-  // Determine what to show on the display
-  let axisDisplayValues;
-
-  if (droState === 'boot-show-message') {
-    // Boot message
-    axisDisplayValues = { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
-  } else if (isCalculatorActive(droState)) {
-    // Calculator mode
-    const calcData = droCtx.stateDataType === 'calculator' ? droCtx : null;
-    const operation = CALC_OPERATION_MAP[droState] ?? '';
-    axisDisplayValues = {
-      X: calcData?.currentValue ?? 0,
-      Y: operation,
-      Z: '',
-    };
-  } else if (isFunctionMenuSelectionState(droState)) {
-    // Show menu option text
-    const menuText = MENU_TEXT_MAP[droState] ?? '';
-    axisDisplayValues = { X: menuText, Y: '', Z: '' };
-  } else if (isCollectingPoints(droState)) {
-    // While collecting points, show current position (normal display)
-    axisDisplayValues = vMem.displayValues;
-  } else if (isResultState(droState) && droCtx.stateDataType === 'center-finding' && droCtx.centerResult) {
-    // Show distance-to-go when center is calculated
-    const center = droCtx.centerResult;
-    const current = vMem.displayValues;
-    axisDisplayValues = {
-      X: center.X - current.X,
-      Y: center.Y - current.Y,
-      Z: center.Z - current.Z,
-    };
-  } else {
-    // Normal operation (idle, boot, transitional states)
-    axisDisplayValues = vMem.displayValues;
-  }
 
   return (
     <div
