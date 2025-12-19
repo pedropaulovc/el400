@@ -108,7 +108,7 @@ export interface GridDrillingData extends BaseDROStateData {
   holesX: number | null;
   holesY: number | null;
   currentHole: number;
-  holePositions: Array<{ x: number; y: number }>;
+  holePositions: { x: number; y: number }[];
 }
 
 export interface CalculatorData extends BaseDROStateData {

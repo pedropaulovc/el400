@@ -6,7 +6,7 @@
  */
 
 import type { FeatureReducer, DROStatePayload } from '../types';
-import type { DROEventPayload, GridDrillingData } from '../droStateMachine';
+import type { DROEventPayload } from '../droStateMachine';
 import { INITIAL_GRID_DRILLING_DATA } from '../droStateMachine';
 
 /**
@@ -29,8 +29,8 @@ export function calculateGridPositions(
   angle: number,
   holesX: number,
   holesY: number
-): Array<{ x: number; y: number }> {
-  const positions: Array<{ x: number; y: number }> = [];
+): { x: number; y: number }[] {
+  const positions: { x: number; y: number }[] = [];
   const angleRad = (angle * Math.PI) / 180;
   
   // For each row (i) and column (j), calculate position
@@ -91,7 +91,7 @@ export const gridDrillingReducer: FeatureReducer = (
     return null;
   }
 
-  const gridData = stateData as GridDrillingData;
+  const gridData = stateData;
 
   // Handle KEY_CLEAR - cancel and return to idle
   if (event.eventName === 'KEY_CLEAR') {
@@ -162,18 +162,23 @@ export const gridDrillingReducer: FeatureReducer = (
           vMem: { ...vMem, inputBuffer: '' },
         };
 
-      case 'grid-drilling-holes-y':
+      case 'grid-drilling-holes-y': {
         if (value === null || value < 1 || !Number.isInteger(value)) return state;
         
         // Calculate all hole positions
         const holesY = Math.floor(value);
+        if (!gridData.startX || !gridData.startY || !gridData.pitchX || !gridData.pitchY || 
+            gridData.angle === null || !gridData.holesX) {
+          return state;
+        }
+        
         const positions = calculateGridPositions(
-          gridData.startX!,
-          gridData.startY!,
-          gridData.pitchX!,
-          gridData.pitchY!,
-          gridData.angle!,
-          gridData.holesX!,
+          gridData.startX,
+          gridData.startY,
+          gridData.pitchX,
+          gridData.pitchY,
+          gridData.angle,
+          gridData.holesX,
           holesY
         );
 
@@ -188,6 +193,7 @@ export const gridDrillingReducer: FeatureReducer = (
           },
           vMem: { ...vMem, inputBuffer: '' },
         };
+      }
 
       default:
         return state;

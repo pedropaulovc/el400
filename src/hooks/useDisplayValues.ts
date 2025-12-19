@@ -124,7 +124,7 @@ export function useDisplayValues(): DisplayAxisValues {
           // Show hole number in X, and distance-to-go for position
           const current = vMem.displayValues;
           return {
-            X: `HoLE ${gridData.currentHole}/${totalHoles}`,
+            X: `HoLE ${String(gridData.currentHole)}/${String(totalHoles)}`,
             Y: fromMmToAnyUnit(currentPos.y - current.Y, unit),
             Z: fromMmToAnyUnit(currentPos.x - current.X, unit),
           };
