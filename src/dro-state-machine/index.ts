@@ -26,6 +26,7 @@ export {
   isResultState,
   isFunctionActive,
   isCalculatorActive,
+  isGridDrillingActive,
   INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT,
   INITIAL_DRO_STATE_PAYLOAD,
   type DROStateName as DROState,

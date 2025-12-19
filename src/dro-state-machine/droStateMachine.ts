@@ -36,6 +36,15 @@ export type DROStateName =
   | 'function-menu-center-circle-point-2'
   | 'function-menu-center-circle-point-3'
   | 'function-menu-center-circle-result'
+  // Grid drilling states
+  | 'grid-drilling-start-x'
+  | 'grid-drilling-start-y'
+  | 'grid-drilling-pitch-x'
+  | 'grid-drilling-pitch-y'
+  | 'grid-drilling-angle'
+  | 'grid-drilling-holes-x'
+  | 'grid-drilling-holes-y'
+  | 'grid-drilling-navigate'
   // Calculator states
   | 'calculator-idle'
   | 'calculator-add'
@@ -58,6 +67,7 @@ export type DROStateData =
   | CenterFindingData
   | BoltHoleData
   | ArcData
+  | GridDrillingData
   | CalculatorData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -86,6 +96,19 @@ export interface BoltHoleData extends BaseDROStateData {
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
   // TODO: define arc-specific fields when implementing arc feature
+}
+
+export interface GridDrillingData extends BaseDROStateData {
+  readonly stateDataType: 'grid-drilling';
+  startX: number | null;
+  startY: number | null;
+  pitchX: number | null;
+  pitchY: number | null;
+  angle: number | null;
+  holesX: number | null;
+  holesY: number | null;
+  currentHole: number;
+  holePositions: Array<{ x: number; y: number }>;
 }
 
 export interface CalculatorData extends BaseDROStateData {
@@ -142,7 +165,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Y' }
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
-  | { eventName: 'BTN_HALF' };
+  | { eventName: 'BTN_HALF' }
+  | { eventName: 'BTN_GRID' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -177,6 +201,10 @@ export const isFunctionActive = (s: DROStateName): boolean =>
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
 
+/** Check if grid drilling is active */
+export const isGridDrillingActive = (s: DROStateName): boolean =>
+  s.startsWith('grid-drilling-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -196,6 +224,19 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
   firstValue: null,
   operation: null,
   currentValue: 0,
+};
+
+export const INITIAL_GRID_DRILLING_DATA: GridDrillingData = {
+  stateDataType: 'grid-drilling',
+  startX: null,
+  startY: null,
+  pitchX: null,
+  pitchY: null,
+  angle: null,
+  holesX: null,
+  holesY: null,
+  currentHole: 1,
+  holePositions: [],
 };
 
 /**

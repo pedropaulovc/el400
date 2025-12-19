@@ -18,6 +18,7 @@ import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
 import { modeToggleReducer } from './features/mode-toggle';
+import { gridDrillingReducer } from './features/grid-drilling';
 
 /**
  * All feature reducers in priority order.
@@ -31,6 +32,7 @@ const featureReducers: FeatureReducer[] = [
   keypadReducer, // Handles digit input to vMem.inputBuffer
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
+  gridDrillingReducer, // Handles grid drilling pattern generation
   // State transition reducers
   idleReducer,
   absIncReducer,

@@ -16,9 +16,11 @@ import { useMemo } from 'react';
 import {
   useDROState,
   useDROContext,
+  useDROVMem,
   isFunctionMenuSelectionState,
   isResultState,
   isCalculatorActive,
+  isGridDrillingActive,
   MODEL_NUMBER,
   SOFTWARE_VERSION,
 } from '../dro-state-machine';
@@ -51,6 +53,18 @@ const CALC_OPERATION_MAP: Record<string, string> = {
   'calculator-div': 'dIv',
 };
 
+/** Grid drilling prompt text displayed in X window */
+const GRID_DRILLING_PROMPT_MAP: Record<string, string> = {
+  'grid-drilling-start-x': 'EntCnt 0',
+  'grid-drilling-start-y': 'EntCnt 1',
+  'grid-drilling-pitch-x': 'PItCH X',
+  'grid-drilling-pitch-y': 'PItCH Y',
+  'grid-drilling-angle': 'AngLE',
+  'grid-drilling-holes-x': 'HoLES X',
+  'grid-drilling-holes-y': 'HoLES Y',
+  'grid-drilling-navigate': 'grId',
+};
+
 /**
  * Hook that computes display values for all three axes.
  *
@@ -69,6 +83,7 @@ export function useDisplayValues(): DisplayAxisValues {
   const droState = useDROState();
   const droCtx = useDROContext();
   const { nvMem } = useNonVolatileMemoryContext();
+  const droVMem = useDROVMem(); // Get vMem directly for inputBuffer access
 
   return useMemo(() => {
     const unit = nvMem.defaultUnit;
@@ -95,6 +110,35 @@ export function useDisplayValues(): DisplayAxisValues {
       return { X: menuText, Y: '', Z: '' };
     }
 
+    // Grid drilling mode - show prompts and input buffer
+    if (isGridDrillingActive(droState)) {
+      const prompt = GRID_DRILLING_PROMPT_MAP[droState] ?? 'grId';
+      
+      // In navigate mode, show current hole number and position
+      if (droState === 'grid-drilling-navigate' && droCtx.stateDataType === 'grid-drilling') {
+        const gridData = droCtx;
+        const currentPos = gridData.holePositions[gridData.currentHole - 1];
+        const totalHoles = gridData.holePositions.length;
+        
+        if (currentPos) {
+          // Show hole number in X, and distance-to-go for position
+          const current = vMem.displayValues;
+          return {
+            X: `HoLE ${gridData.currentHole}/${totalHoles}`,
+            Y: fromMmToAnyUnit(currentPos.y - current.Y, unit),
+            Z: fromMmToAnyUnit(currentPos.x - current.X, unit),
+          };
+        }
+      }
+      
+      // During data entry, show prompt and input buffer
+      return {
+        X: prompt,
+        Y: droVMem.inputBuffer || '0',
+        Z: '',
+      };
+    }
+
     // Center finding result - show distance-to-go with unit conversion
     if (isResultState(droState) && droCtx.stateDataType === 'center-finding' && droCtx.centerResult) {
       const center = droCtx.centerResult;
@@ -114,5 +158,5 @@ export function useDisplayValues(): DisplayAxisValues {
       Y: fromMmToAnyUnit(values.Y, unit),
       Z: fromMmToAnyUnit(values.Z, unit),
     };
-  }, [droState, droCtx, vMem.displayValues, nvMem.defaultUnit]);
+  }, [droState, droCtx, vMem.displayValues, nvMem.defaultUnit, droVMem.inputBuffer]);
 }
