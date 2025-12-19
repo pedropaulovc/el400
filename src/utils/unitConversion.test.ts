@@ -4,57 +4,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  MM_PER_INCH,
-  mmToInch,
-  inchToMm,
   fromAnyUnitToMm,
   fromMmToAnyUnit,
 } from './unitConversion';
 
 describe('unitConversion', () => {
-  describe('constants', () => {
-    it('should have correct conversion factor', () => {
-      expect(MM_PER_INCH).toBe(25.4);
-    });
-  });
-
-  describe('mmToInch', () => {
-    it('should convert millimeters to inches correctly', () => {
-      expect(mmToInch(25.4)).toBe(1);
-      expect(mmToInch(50.8)).toBe(2);
-      expect(mmToInch(0)).toBe(0);
-      expect(mmToInch(254)).toBe(10);
-    });
-
-    it('should handle decimal values', () => {
-      expect(mmToInch(12.7)).toBeCloseTo(0.5, 10);
-      expect(mmToInch(6.35)).toBeCloseTo(0.25, 10);
-    });
-
-    it('should handle negative values', () => {
-      expect(mmToInch(-25.4)).toBe(-1);
-      expect(mmToInch(-50.8)).toBe(-2);
-    });
-  });
-
-  describe('inchToMm', () => {
-    it('should convert inches to millimeters correctly', () => {
-      expect(inchToMm(1)).toBe(25.4);
-      expect(inchToMm(2)).toBe(50.8);
-      expect(inchToMm(0)).toBe(0);
-      expect(inchToMm(10)).toBe(254);
-    });
-
-    it('should handle decimal values', () => {
-      expect(inchToMm(0.5)).toBe(12.7);
-      expect(inchToMm(0.25)).toBe(6.35);
-    });
-
-    it('should handle negative values', () => {
-      expect(inchToMm(-1)).toBe(-25.4);
-      expect(inchToMm(-2)).toBe(-50.8);
-    });
-  });
 
   describe('fromAnyUnitToMm', () => {
     it('should convert from inches to mm when unit is "inch"', () => {

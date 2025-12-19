@@ -6,21 +6,7 @@
  */
 
 /** Conversion factor: 1 inch = 25.4 mm */
-export const MM_PER_INCH = 25.4;
-
-/**
- * Convert millimeters to inches
- */
-export function mmToInch(mm: number): number {
-  return mm / MM_PER_INCH;
-}
-
-/**
- * Convert inches to millimeters
- */
-export function inchToMm(inch: number): number {
-  return inch * MM_PER_INCH;
-}
+const MM_PER_INCH = 25.4;
 
 /**
  * Convert a value from any unit to mm (internal storage)
@@ -29,7 +15,7 @@ export function inchToMm(inch: number): number {
  * @returns The value in millimeters
  */
 export function fromAnyUnitToMm(value: number, unit: 'inch' | 'mm'): number {
-  return unit === 'inch' ? inchToMm(value) : value;
+  return unit === 'inch' ? value * MM_PER_INCH : value;
 }
 
 /**
@@ -39,5 +25,5 @@ export function fromAnyUnitToMm(value: number, unit: 'inch' | 'mm'): number {
  * @returns The value in the target unit
  */
 export function fromMmToAnyUnit(valueMm: number, unit: 'inch' | 'mm'): number {
-  return unit === 'inch' ? mmToInch(valueMm) : valueMm;
+  return unit === 'inch' ? valueMm / MM_PER_INCH : valueMm;
 }
