@@ -145,33 +145,3 @@ export function findCircleCenter(
   return { x: centerX, y: centerY };
 }
 
-/**
- * Calculate the radius of a circle given its center and a point on the circumference.
- * 
- * @param center - The center point of the circle
- * @param point - A point on the circle's circumference
- * @returns The radius of the circle
- */
-export function calculateRadius(center: Point2D, point: Point2D): number {
-  const dx = point.x - center.x;
-  const dy = point.y - center.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-/**
- * Calculate the distance-to-go vector from current position to target.
- * Returns negative values to indicate direction (as per EL400 convention).
- * 
- * @param current - Current position
- * @param target - Target position (center)
- * @returns Distance-to-go vector (negative when target is behind current position)
- */
-export function calculateDistanceToGo(
-  current: Point2D,
-  target: Point2D
-): Point2D {
-  return {
-    x: target.x - current.x,
-    y: target.y - current.y,
-  };
-}

@@ -25,13 +25,6 @@ export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
   }));
 }
 
-/**
- * Clears non-volatile memory from localStorage
- */
-export function clearNonVolatileMemory(): void {
-  localStorage.removeItem(NON_VOLATILE_MEMORY_STORAGE_KEY);
-}
-
 interface RenderSimulatorOptions {
   /** Boot message mode - defaults to 'skip' for faster tests */
   bootMessageMode?: 'show' | 'skip';
