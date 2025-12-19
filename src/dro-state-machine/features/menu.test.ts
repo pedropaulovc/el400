@@ -234,7 +234,7 @@ describe('menuReducer', () => {
       expect(menuReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT)).toBe(state);
       expect(menuReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT)).toBe(state);
       expect(menuReducer(state, { eventName: 'BTN_INCH_MM' }, DEFAULT_TEST_CONTEXT)).toBe(state);
-      expect(menuReducer(state, { eventName: 'POINT_DATA', point: { X: 0, Y: 0, Z: 0 } }, DEFAULT_TEST_CONTEXT)).toBe(state);
+      expect(menuReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT)).toBe(state);
     });
 
     it('should ignore numeric keys other than 4 and 6', () => {

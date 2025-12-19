@@ -12,6 +12,19 @@ import type { CalculatorData } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
+/** Helper to create state with input buffer for testing KEY_ENTER */
+function stateWithBuffer(
+  stateName: DROStatePayload['stateName'],
+  stateData: DROStatePayload['stateData'],
+  inputBuffer: string
+): DROStatePayload {
+  return {
+    stateName,
+    stateData,
+    vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer },
+  };
+}
+
 describe('calculatorReducer', () => {
   describe('entering calculator mode', () => {
     it('should transition from idle to calculator-idle on BTN_CALCULATOR', () => {
@@ -23,8 +36,8 @@ describe('calculatorReducer', () => {
     });
 
     it('should return null for non-calculator states', () => {
-      const state = createTestState('boot');
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
+      const state = stateWithBuffer('boot', INITIAL_DRO_STATE_DATA, '5');
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
       expect(result).toBeNull();
     });
   });
@@ -98,8 +111,8 @@ describe('calculatorReducer', () => {
 
   describe('value entry and calculation', () => {
     it('should store first value', () => {
-      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 2.5 }, DEFAULT_TEST_CONTEXT);
+      const state = stateWithBuffer('calculator-idle', INITIAL_CALCULATOR_DATA, '2.5');
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -109,18 +122,18 @@ describe('calculatorReducer', () => {
     });
 
     it('should calculate ADD: 2.5 + 3.75 = 6.25', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-add',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-add',
+        {
           stateDataType: 'calculator',
           firstValue: 2.5,
           operation: 'ADD',
           currentValue: 2.5,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '3.75'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.75 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -130,18 +143,18 @@ describe('calculatorReducer', () => {
     });
 
     it('should calculate SUB: 10 - 3.5 = 6.5', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-sub',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-sub',
+        {
           stateDataType: 'calculator',
           firstValue: 10,
           operation: 'SUB',
           currentValue: 10,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '3.5'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 3.5 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -149,18 +162,18 @@ describe('calculatorReducer', () => {
     });
 
     it('should calculate MULTI: 2.5 * 4 = 10', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-multi',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-multi',
+        {
           stateDataType: 'calculator',
           firstValue: 2.5,
           operation: 'MULTI',
           currentValue: 2.5,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '4'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -168,18 +181,18 @@ describe('calculatorReducer', () => {
     });
 
     it('should calculate DIV: 10 / 4 = 2.5', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-div',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-div',
+        {
           stateDataType: 'calculator',
           firstValue: 10,
           operation: 'DIV',
           currentValue: 10,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '4'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 4 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -187,18 +200,18 @@ describe('calculatorReducer', () => {
     });
 
     it('should handle division by zero: 10 / 0 = "inF vAL"', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-div',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-div',
+        {
           stateDataType: 'calculator',
           firstValue: 10,
           operation: 'DIV',
           currentValue: 10,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '0'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 0 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -207,25 +220,25 @@ describe('calculatorReducer', () => {
   });
 
   describe('edge cases', () => {
-    it('should return null for KEY_ENTER without value (let other reducers handle)', () => {
+    it('should return null for KEY_ENTER without value in buffer', () => {
       const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
       const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
       expect(result).toBeNull();
     });
 
     it('should reset to idle if firstValue is null when operation is set', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-add',
-        stateData: {
+      const state = stateWithBuffer(
+        'calculator-add',
+        {
           stateDataType: 'calculator',
           firstValue: null,
           operation: 'ADD',
           currentValue: 0,
         },
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+        '5'
+      );
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
@@ -262,13 +275,9 @@ describe('calculatorReducer', () => {
     });
 
     it('should use correct calculator data type', () => {
-      const state: DROStatePayload = {
-        stateName: 'calculator-idle',
-        stateData: INITIAL_DRO_STATE_DATA, // Wrong data type
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      };
+      const state = stateWithBuffer('calculator-idle', INITIAL_DRO_STATE_DATA, '5');
 
-      const result = calculatorReducer(state, { eventName: 'KEY_ENTER', value: 5 }, DEFAULT_TEST_CONTEXT);
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.stateDataType).toBe('calculator');

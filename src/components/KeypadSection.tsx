@@ -2,75 +2,38 @@ import { useCallback } from "react";
 import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
-import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import {
-  useDROState,
-  useDRODispatch,
-  useDROVMem,
-  isFunctionMenuSelectionState,
-  isCollectingPoints,
-  isCalculatorActive,
-  getBufferValue,
-} from "../dro-state-machine";
+import { useDRODispatch } from "../dro-state-machine";
 
 /** Map digit to KEY event name */
-const DIGIT_TO_EVENT: Record<string, string> = {
-  '0': 'KEY_0',
-  '1': 'KEY_1',
-  '2': 'KEY_2_DOWN',
-  '3': 'KEY_3',
-  '4': 'KEY_4_LEFT',
-  '5': 'KEY_5',
-  '6': 'KEY_6_RIGHT',
-  '7': 'KEY_7',
-  '8': 'KEY_8_UP',
-  '9': 'KEY_9',
+const DIGIT_TO_EVENT: Record<string, Parameters<ReturnType<typeof useDRODispatch>>[0]> = {
+  '0': { eventName: 'KEY_0' },
+  '1': { eventName: 'KEY_1' },
+  '2': { eventName: 'KEY_2_DOWN' },
+  '3': { eventName: 'KEY_3' },
+  '4': { eventName: 'KEY_4_LEFT' },
+  '5': { eventName: 'KEY_5' },
+  '6': { eventName: 'KEY_6_RIGHT' },
+  '7': { eventName: 'KEY_7' },
+  '8': { eventName: 'KEY_8_UP' },
+  '9': { eventName: 'KEY_9' },
 };
 
+/**
+ * Numeric keypad section.
+ *
+ * This component emits raw key events - it has no knowledge of the current
+ * DRO state or mode. The state machine reducers interpret the meaning of
+ * each key based on the current state (idle, calculator, menu, etc.).
+ */
 const KeypadSection = () => {
-  const vMem = useVolatileMemory();
-  const droVMem = useDROVMem();
-  const droState = useDROState();
   const dispatch = useDRODispatch();
 
   const handleNumber = useCallback((num: string) => {
-    // Dispatch raw key events to the state machine
-    // The reducer interprets them based on current state
-
-    if (num === '4') {
-      // Key 4: In function menu, navigate left; otherwise digit entry
-      if (isFunctionMenuSelectionState(droState)) {
-        dispatch({ eventName: 'KEY_4_LEFT' });
-        return;
-      }
+    const event = DIGIT_TO_EVENT[num];
+    if (event) {
+      dispatch(event);
     }
-
-    if (num === '6') {
-      // Key 6: In function menu, navigate right; in collecting mode, store point
-      if (isFunctionMenuSelectionState(droState)) {
-        dispatch({ eventName: 'KEY_6_RIGHT' });
-        return;
-      }
-      if (isCollectingPoints(droState)) {
-        // Attach current position data for point storage
-        dispatch({
-          eventName: 'POINT_DATA',
-          point: {
-            X: vMem.displayValues.X,
-            Y: vMem.displayValues.Y,
-            Z: vMem.displayValues.Z,
-          },
-        });
-        return;
-      }
-    }
-
-    // Dispatch raw digit event - reducers handle based on state (calculator or normal)
-    const eventName = DIGIT_TO_EVENT[num];
-    if (eventName) {
-      dispatch({ eventName } as Parameters<typeof dispatch>[0]);
-    }
-  }, [droState, dispatch, vMem.displayValues]);
+  }, [dispatch]);
 
   const handleDecimal = useCallback(() => {
     dispatch({ eventName: 'KEY_DECIMAL' });
@@ -85,24 +48,8 @@ const KeypadSection = () => {
   }, [dispatch]);
 
   const handleEnter = useCallback(() => {
-    // In function menu, ENT confirms the selection
-    if (isFunctionMenuSelectionState(droState)) {
-      dispatch({ eventName: 'KEY_ENTER' });
-      return;
-    }
-
-    // Calculator mode: pass value with KEY_ENTER event
-    if (isCalculatorActive(droState)) {
-      const value = getBufferValue(droVMem.inputBuffer);
-      if (value !== null) {
-        dispatch({ eventName: 'KEY_ENTER', value });
-      }
-      return;
-    }
-
-    // Normal mode: dispatch KEY_ENTER - reducer reads from vMem.inputBuffer
     dispatch({ eventName: 'KEY_ENTER' });
-  }, [droState, dispatch, droVMem.inputBuffer]);
+  }, [dispatch]);
 
   return (
     <BeveledFrame>
