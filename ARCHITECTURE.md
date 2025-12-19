@@ -3,8 +3,8 @@
 ## Quick Reference
 
 * **State Machine:** `src/dro-state-machine/` - All DRO behavior
-* **Adapters:** `src/adapters/` - CncjsMillConnection, MockMillConnection
-* **Types:** `src/types/` - MillState, VolatileMemory, NonVolatileMemory
+* **Adapters:** `src/adapters/` - `CncjsMillConnection`, `NoopMillConnection`
+* **Types:** `src/types/` - `MillState`, `VolatileMemory`, `NonVolatileMemory`
 
 ## Core State Structure
 
@@ -45,12 +45,12 @@ interface NonVolatileMemory {
 
 ## Event Names (DROEventPayload)
 
-Keypad: `KEY_0`..`KEY_9`, `KEY_DECIMAL`, `KEY_SIGN`, `KEY_CLEAR`, `KEY_ENTER`
-Navigation: `KEY_2_DOWN`, `KEY_4_LEFT`, `KEY_6_RIGHT`, `KEY_8_UP`
-Axis: `BTN_SELECT_X/Y/Z`, `BTN_ZERO_X/Y/Z`, `BTN_ZERO_ALL`
-Mode: `BTN_ABS_INC`, `BTN_INCH_MM`
-Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
-Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
+* Keypad: `KEY_0`..`KEY_9`, `KEY_DECIMAL`, `KEY_SIGN`, `KEY_CLEAR`, `KEY_ENTER`
+* Navigation: `KEY_2_DOWN`, `KEY_4_LEFT`, `KEY_6_RIGHT`, `KEY_8_UP`
+* Axis: `BTN_SELECT_X/Y/Z`, `BTN_ZERO_X/Y/Z`, `BTN_ZERO_ALL`
+* Mode: `BTN_ABS_INC`, `BTN_INCH_MM`
+* Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
+* Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
 
 ## Provider Order (Required)
 
