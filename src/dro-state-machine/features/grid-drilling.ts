@@ -113,20 +113,22 @@ export const gridDrillingReducer: FeatureReducer = (
 
     switch (stateName) {
       case 'grid-drilling-start-x':
-        if (value === null) return state;
+        // Allow 0 for start coordinates
+        if (value === null && vMem.inputBuffer !== '0') return state;
         return {
           ...state,
           stateName: 'grid-drilling-start-y',
-          stateData: { ...gridData, startX: value },
+          stateData: { ...gridData, startX: value ?? 0 },
           vMem: { ...vMem, inputBuffer: '' },
         };
 
       case 'grid-drilling-start-y':
-        if (value === null) return state;
+        // Allow 0 for start coordinates
+        if (value === null && vMem.inputBuffer !== '0') return state;
         return {
           ...state,
           stateName: 'grid-drilling-pitch-x',
-          stateData: { ...gridData, startY: value },
+          stateData: { ...gridData, startY: value ?? 0 },
           vMem: { ...vMem, inputBuffer: '' },
         };
 
@@ -149,11 +151,14 @@ export const gridDrillingReducer: FeatureReducer = (
         };
 
       case 'grid-drilling-angle':
-        if (value === null || value < 0 || value >= 360) return state;
+        // Allow 0 for angle
+        if (value === null && vMem.inputBuffer !== '0') return state;
+        const angleValue = value ?? 0;
+        if (angleValue < 0 || angleValue >= 360) return state;
         return {
           ...state,
           stateName: 'grid-drilling-holes-x',
-          stateData: { ...gridData, angle: value },
+          stateData: { ...gridData, angle: angleValue },
           vMem: { ...vMem, inputBuffer: '' },
         };
 

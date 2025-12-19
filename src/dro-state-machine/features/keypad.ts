@@ -71,8 +71,10 @@ export const keypadReducer: FeatureReducer = (
   event: DROEventPayload,
   _context
 ): DROStatePayload | null => {
-  // Handle keypad input in idle state and calculator states
-  if (state.stateName !== 'idle' && !state.stateName.startsWith('calculator-')) {
+  // Handle keypad input in idle state, calculator states, and grid drilling states
+  if (state.stateName !== 'idle' && 
+      !state.stateName.startsWith('calculator-') &&
+      !state.stateName.startsWith('grid-drilling-')) {
     return null;
   }
 

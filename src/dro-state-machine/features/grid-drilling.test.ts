@@ -256,6 +256,44 @@ describe('Grid Drilling Feature', () => {
       }
     });
 
+    test('accepts 0 as start coordinate', () => {
+      const state: DROStatePayload = {
+        stateName: 'grid-drilling-start-x',
+        stateData: INITIAL_GRID_DRILLING_DATA,
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0' },
+      };
+
+      const result = gridDrillingReducer(state, { eventName: 'KEY_ENTER' }, mockContext);
+
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('grid-drilling-start-y');
+      if (result?.stateData.stateDataType === 'grid-drilling') {
+        expect(result.stateData.startX).toBe(0);
+      }
+    });
+
+    test('accepts 0 as angle', () => {
+      const state: DROStatePayload = {
+        stateName: 'grid-drilling-angle',
+        stateData: { 
+          ...INITIAL_GRID_DRILLING_DATA, 
+          startX: 0, 
+          startY: 0,
+          pitchX: 1,
+          pitchY: 1,
+        },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0' },
+      };
+
+      const result = gridDrillingReducer(state, { eventName: 'KEY_ENTER' }, mockContext);
+
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('grid-drilling-holes-x');
+      if (result?.stateData.stateDataType === 'grid-drilling') {
+        expect(result.stateData.angle).toBe(0);
+      }
+    });
+
     test('navigates to next hole with KEY_6_RIGHT', () => {
       const positions = [
         { x: 0, y: 0 },
