@@ -124,7 +124,7 @@ The DRO uses a flat state machine pattern to manage operation modes, function me
 ```
 src/dro-state-machine/
 ├── index.ts              # Public API exports
-├── types.ts              # DROStatePayload, FeatureReducer
+├── types.ts              # DROStatePayload, DROReducerContext, FeatureReducer
 ├── droStateMachine.ts    # DROStateName, DROEventPayload, DROStateData types
 ├── reducer.ts            # Root reducer (composes features)
 ├── context.tsx           # DROProvider, hooks
@@ -186,16 +186,17 @@ center-circle-point-1 → point-2 → point-3 → result
 
 ### Feature Reducer Pattern
 
-Feature reducers handle a subset of states and return `null` if they don't handle the current state/event combination. The root reducer tries each in order until one handles the event.
+Feature reducers handle a subset of states and return `null` if they don't handle the current state/event combination. The root reducer tries each in order until one handles the event. Reducers receive context for read-only access to mill state and settings.
 
 ```typescript
 type FeatureReducer = (
   statePayload: DROStatePayload,
-  eventPayload: DROEventPayload
+  eventPayload: DROEventPayload,
+  context: DROReducerContext
 ) => DROStatePayload | null;
 
 // Example: boot.ts
-export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
+export const bootReducer: FeatureReducer = (statePayload, eventPayload, context) => {
   const { stateName, stateData } = statePayload;
   const { eventName } = eventPayload;
   switch (stateName) {
@@ -204,6 +205,7 @@ export const bootReducer: FeatureReducer = (statePayload, eventPayload) => {
         return {
           stateName: eventPayload.skipBootMessage ? 'idle' : 'showMessage',
           stateData: INITIAL_DRO_STATE_DATA,
+          vMem: statePayload.vMem,
         };
       }
       return statePayload;
@@ -539,9 +541,9 @@ Responsibilities:
 Provides settings to the component tree:
 
 ```typescript
-interface NonVolatileMemoryContextValue {
+interface UseNonVolatileMemoryReturn {
   nvMem: NonVolatileMemory;
-  updateMemory: (partial: Partial<NonVolatileMemory>) => void;
+  updateNvMem: (partial: Partial<NonVolatileMemory>) => void;
   resetMemory: () => void;
 }
 ```
