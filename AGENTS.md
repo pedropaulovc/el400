@@ -34,7 +34,7 @@ npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybo
 
 | Type | Pattern | Notes |
 |------|---------|-------|
-| Unit | `src/**/*.test.tsx` | Primary. Use Vitest + RTL |
+| Unit | `src/**/*.test.ts(x)` | Primary. Use Vitest + RTL |
 | Integration | `*.integration.test.tsx` | Use `data-testid`, helpers in `src/tests/helpers/`. Test happy AND unhappy paths |
 | E2E | `e2e/**/*.spec.ts` | Playwright. Critical flows only |
 | Stories | `src/**/*.stories.tsx` | Visual docs only, no behavior tests |
