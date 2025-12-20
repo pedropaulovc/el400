@@ -175,6 +175,22 @@ describe('integration-test-utils', () => {
       injectMockAxisDisplay('x', '42.5000');
       expect(() => getAxisDisplayPureNumberValue('X', 0)).toThrow('Expected integer value for axis X with precision 0, but got: 42.5000');
     });
+
+    it('throws error for invalid precision parameter values', () => {
+      injectMockAxisDisplay('x', '123.4560');
+
+      // Test with non-integer precision
+      expect(() => getAxisDisplayPureNumberValue('X', 2.5)).toThrow('precision must be a non-negative integer, got: 2.5');
+
+      // Test with negative precision
+      expect(() => getAxisDisplayPureNumberValue('X', -1)).toThrow('precision must be a non-negative integer, got: -1');
+
+      // Test with NaN (which is technically a number in JavaScript)
+      expect(() => getAxisDisplayPureNumberValue('X', Number.NaN)).toThrow('precision must be a non-negative integer, got: NaN');
+
+      // Test with Infinity
+      expect(() => getAxisDisplayPureNumberValue('X', Number.POSITIVE_INFINITY)).toThrow('precision must be a non-negative integer, got: Infinity');
+    });
   });
 
   describe('trim handling consistency', () => {

@@ -203,13 +203,23 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
  *
  * @param axis - The axis to retrieve ('X', 'Y', or 'Z')
  * @param precision - Number of decimal places to expect (default: 4)
+ *                   Must be a non-negative integer (0, 1, 2, etc.)
  *                   If 0, the number must be an integer with no decimal point
  *
  * Throws an error if:
+ * - precision is not a non-negative integer
  * - The content cannot be parsed as a number
  * - The number doesn't have exactly `precision` decimal digits (or is not an integer when precision is 0)
  */
 export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision = 4): number {
+  // Validate precision parameter
+  if (!Number.isInteger(precision)) {
+    throw new Error(`precision must be a non-negative integer, got: ${String(precision)}`);
+  }
+  if (precision < 0) {
+    throw new Error(`precision must be a non-negative integer, got: ${String(precision)}`);
+  }
+
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
 
