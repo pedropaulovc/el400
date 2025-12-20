@@ -1,5 +1,5 @@
 import { expect, Locator } from '@playwright/test';
-import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
+import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 
 /**
  * Custom assertions for EL400 DRO E2E tests
@@ -31,21 +31,11 @@ export async function expectPureTextValue(
 export async function expectPureNumberValue(
   display: Locator,
   expectedValue: number,
-  tolerance = 0.0001
+  tolerance = 0.0001,
+  axis = 'unknown'
 ) {
   const text = await display.textContent();
-  const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
-  
-  if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
-    throw new Error(`Invalid numeric value: ${text}`);
-  }
-  
-  const actualValue = parseFloat(cleanedText);
-  
-  if (isNaN(actualValue)) {
-    throw new Error(`Could not parse numeric value from: ${text}`);
-  }
-  
+  const actualValue = parseNumericValue(text || '', axis);
   const diff = Math.abs(actualValue - expectedValue);
 
   expect(diff, `Expected ${expectedValue}, got ${actualValue}`).toBeLessThanOrEqual(tolerance);
