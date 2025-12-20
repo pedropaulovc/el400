@@ -1,20 +1,16 @@
 import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
-import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDRODispatch } from "../stores/dro";
+import { useDispatch } from "../stores/dro";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 const SecondaryFunctionSection = () => {
-  const vMem = useVolatileMemory();
-  const dispatch = useDRODispatch();
+  const dispatch = useDispatch();
 
   const handleHalf = () => {
-    if (vMem.activeAxis) {
-      vMem.halfAxis(vMem.activeAxis);
-    }
+    dispatch({ eventName: 'BTN_HALF' });
   };
 
   const handleFunction = () => {

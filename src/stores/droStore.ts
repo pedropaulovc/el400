@@ -127,6 +127,31 @@ export const useIncrementalValues = () => useDROStore((s) => s.vMem.incrementalV
 /** Get manual absolute values */
 export const useManualAbsoluteValues = () => useDROStore((s) => s.vMem.manualAbsoluteValues);
 
+// ─────────────────────────────────────────────────────────────────
+// PER-AXIS SELECTORS - Truly granular, only re-render when specific axis changes
+// ─────────────────────────────────────────────────────────────────
+
+/** Get work offset for X axis only */
+export const useWorkOffsetX = () => useDROStore((s) => s.vMem.workOffsets.X);
+/** Get work offset for Y axis only */
+export const useWorkOffsetY = () => useDROStore((s) => s.vMem.workOffsets.Y);
+/** Get work offset for Z axis only */
+export const useWorkOffsetZ = () => useDROStore((s) => s.vMem.workOffsets.Z);
+
+/** Get incremental value for X axis only */
+export const useIncrementalX = () => useDROStore((s) => s.vMem.incrementalValues.X);
+/** Get incremental value for Y axis only */
+export const useIncrementalY = () => useDROStore((s) => s.vMem.incrementalValues.Y);
+/** Get incremental value for Z axis only */
+export const useIncrementalZ = () => useDROStore((s) => s.vMem.incrementalValues.Z);
+
+/** Get manual absolute value for X axis only */
+export const useManualAbsoluteX = () => useDROStore((s) => s.vMem.manualAbsoluteValues.X);
+/** Get manual absolute value for Y axis only */
+export const useManualAbsoluteY = () => useDROStore((s) => s.vMem.manualAbsoluteValues.Y);
+/** Get manual absolute value for Z axis only */
+export const useManualAbsoluteZ = () => useDROStore((s) => s.vMem.manualAbsoluteValues.Z);
+
 /** Get dispatch function - stable reference, never changes */
 export const useDispatch = () => useDROStore((s) => s.dispatch);
 

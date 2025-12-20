@@ -68,6 +68,13 @@ export const useMillState = () => useMillStore((s) => s.millState);
 /** Get mill position */
 export const useMillPosition = () => useMillStore((s) => s.millState.position);
 
+/** Get mill X position only */
+export const useMillPositionX = () => useMillStore((s) => s.millState.position.x);
+/** Get mill Y position only */
+export const useMillPositionY = () => useMillStore((s) => s.millState.position.y);
+/** Get mill Z position only */
+export const useMillPositionZ = () => useMillStore((s) => s.millState.position.z);
+
 /** Get mill connection status */
 export const useMillConnected = () => useMillStore((s) => s.millState.connected);
 
