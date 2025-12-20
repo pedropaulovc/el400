@@ -199,9 +199,17 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
 
 /**
  * Gets the displayed numeric value for an axis from the screen reader text
- * Throws an error if the content cannot be parsed as a number
+ * Validates that the number has the exact decimal precision specified
+ *
+ * @param axis - The axis to retrieve ('X', 'Y', or 'Z')
+ * @param precision - Number of decimal places to expect (default: 4)
+ *                   If 0, the number must be an integer with no decimal point
+ *
+ * Throws an error if:
+ * - The content cannot be parsed as a number
+ * - The number doesn't have exactly `precision` decimal digits (or is not an integer when precision is 0)
  */
-export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
+export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision: number = 4): number {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
 
@@ -216,6 +224,25 @@ export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): number {
 
   if (isNaN(parsedValue)) {
     throw new Error(`Expected numeric value for axis ${axis}, but parsing resulted in NaN from: ${match[0]}`);
+  }
+
+  // Validate precision
+  const numberString = match[0];
+  if (precision === 0) {
+    // For precision 0, ensure it's an integer (no decimal point)
+    if (numberString.includes('.')) {
+      throw new Error(`Expected integer value for axis ${axis} with precision 0, but got: ${numberString}`);
+    }
+  } else {
+    // For other precisions, check that we have exactly `precision` decimal digits
+    const decimalIndex = numberString.indexOf('.');
+    if (decimalIndex === -1) {
+      throw new Error(`Expected decimal value for axis ${axis} with precision ${precision}, but got integer: ${numberString}`);
+    }
+    const decimalPlaces = numberString.length - decimalIndex - 1;
+    if (decimalPlaces !== precision) {
+      throw new Error(`Expected ${precision} decimal places for axis ${axis}, but got ${decimalPlaces} in: ${numberString}`);
+    }
   }
 
   return parsedValue;

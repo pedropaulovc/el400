@@ -103,15 +103,15 @@ describe('integration-test-utils', () => {
     it('returns numeric value from display', () => {
       injectMockAxisDisplay('x', '0.0000');
       injectMockAxisDisplay('y', '123.4567');
-      injectMockAxisDisplay('z', '-45.67');
-      
+      injectMockAxisDisplay('z', '-45.6700');
+
       expect(getAxisDisplayPureNumberValue('X')).toBe(0);
       expect(getAxisDisplayPureNumberValue('Y')).toBe(123.4567);
       expect(getAxisDisplayPureNumberValue('Z')).toBe(-45.67);
     });
 
     it('extracts numeric value from end of string', () => {
-      injectMockAxisDisplay('x', 'Prefix 123.456');
+      injectMockAxisDisplay('x', 'Prefix 123.4560');
       const xValue = getAxisDisplayPureNumberValue('X');
       expect(xValue).toBe(123.456);
     });
@@ -122,9 +122,9 @@ describe('integration-test-utils', () => {
     });
 
     it('handles negative numbers correctly', () => {
-      injectMockAxisDisplay('x', '-123.456');
-      injectMockAxisDisplay('y', '-0.001');
-      
+      injectMockAxisDisplay('x', '-123.4560');
+      injectMockAxisDisplay('y', '-0.0010');
+
       expect(getAxisDisplayPureNumberValue('X')).toBe(-123.456);
       expect(getAxisDisplayPureNumberValue('Y')).toBe(-0.001);
     });
@@ -132,9 +132,9 @@ describe('integration-test-utils', () => {
     it('handles integer numbers correctly', () => {
       injectMockAxisDisplay('x', '42');
       injectMockAxisDisplay('y', '-100');
-      
-      expect(getAxisDisplayPureNumberValue('X')).toBe(42);
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(-100);
+
+      expect(getAxisDisplayPureNumberValue('X', 0)).toBe(42);
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(-100);
     });
 
     it('handles decimal numbers correctly', () => {
@@ -146,15 +146,15 @@ describe('integration-test-utils', () => {
     });
 
     it('handles trimming whitespace consistently', () => {
-      injectMockAxisDisplay('x', '  123.456  ');
-      injectMockAxisDisplay('y', '\n\t789.012\t\n');
-      
+      injectMockAxisDisplay('x', '  123.4560  ');
+      injectMockAxisDisplay('y', '\n\t789.0120\t\n');
+
       expect(getAxisDisplayPureNumberValue('X')).toBe(123.456);
       expect(getAxisDisplayPureNumberValue('Y')).toBe(789.012);
     });
 
     it('throws error when content has trailing text after number', () => {
-      injectMockAxisDisplay('x', '123.456mm');
+      injectMockAxisDisplay('x', '123.4560mm');
       expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but no numeric match found');
     });
   });
@@ -180,12 +180,12 @@ describe('integration-test-utils', () => {
     });
 
     it('getAxisDisplayPureNumberValue handles trimming before extraction', () => {
-      injectMockAxisDisplay('x', '   123.456   ');
+      injectMockAxisDisplay('x', '   123.4560   ');
       expect(getAxisDisplayPureNumberValue('X')).toBe(123.456);
     });
 
     it('getAxisDisplayPureNumberValue handles trimming with negative numbers', () => {
-      injectMockAxisDisplay('x', '   -123.456   ');
+      injectMockAxisDisplay('x', '   -123.4560   ');
       expect(getAxisDisplayPureNumberValue('X')).toBe(-123.456);
     });
 
@@ -220,16 +220,16 @@ describe('integration-test-utils', () => {
       expect(() => getAxisDisplayPureTextValue('X')).toThrow();
     });
 
-    it('getAxisDisplayPureNumberValue accepts valid numbers with no decimal point', () => {
+    it('getAxisDisplayPureNumberValue accepts valid numbers with no decimal point when precision=0', () => {
       injectMockAxisDisplay('x', '123');
-      expect(() => getAxisDisplayPureNumberValue('X')).not.toThrow();
-      expect(getAxisDisplayPureNumberValue('X')).toBe(123);
+      expect(() => getAxisDisplayPureNumberValue('X', 0)).not.toThrow();
+      expect(getAxisDisplayPureNumberValue('X', 0)).toBe(123);
     });
 
-    it('getAxisDisplayPureNumberValue accepts valid numbers with one decimal point', () => {
+    it('getAxisDisplayPureNumberValue accepts valid numbers with two decimal points when precision=2', () => {
       injectMockAxisDisplay('x', '123.45');
 
-      expect(getAxisDisplayPureNumberValue('X')).toBe(123.45);
+      expect(getAxisDisplayPureNumberValue('X', 2)).toBe(123.45);
     });
 
     it('getAxisDisplayPureNumberValue rejects pure text', () => {
