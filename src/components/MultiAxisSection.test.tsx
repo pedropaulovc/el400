@@ -3,13 +3,9 @@ import { render, screen } from '@/tests/helpers/render-utils';
 import MultiAxisSection from './MultiAxisSection';
 
 describe('MultiAxisSection', () => {
-  const defaultProps = {
-    axisValues: { X: 0, Y: 0, Z: 0 },
-  };
-
   describe('Accessibility', () => {
     it('has sr-only heading', () => {
-      render(<MultiAxisSection {...defaultProps} />);
+      render(<MultiAxisSection />);
 
       const heading = screen.getByRole('heading', { name: 'Axis display' });
       expect(heading).toBeInTheDocument();
@@ -17,7 +13,7 @@ describe('MultiAxisSection', () => {
     });
 
     it('has sr-only table with axis values', () => {
-      render(<MultiAxisSection {...defaultProps} />);
+      render(<MultiAxisSection />);
 
       const table = screen.getByRole('table', { name: 'Axis positions' });
       expect(table).toBeInTheDocument();
@@ -25,7 +21,7 @@ describe('MultiAxisSection', () => {
     });
 
     it('has text in LED indicators', () => {
-      render(<MultiAxisSection {...defaultProps} />);
+      render(<MultiAxisSection />);
 
       expect(screen.getByTestId('led-abs')).toHaveTextContent('abs');
       expect(screen.getByTestId('led-inc')).toHaveTextContent('inc');

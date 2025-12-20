@@ -11,6 +11,9 @@ export {
   useStateData as useDROContext,
   useDROVMem,
   useDRODispatch,
+  useMode,
+  useActiveAxis,
+  useDispatch,
 } from '../droStore';
 
 // Types
