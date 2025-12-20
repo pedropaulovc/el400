@@ -10,6 +10,7 @@ import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
 import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
+import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
 import { calculatorReducer } from './features/calculator';
@@ -28,13 +29,14 @@ const featureReducers: FeatureReducer[] = [
   bootReducer,
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
-  // vMem reducers for idle state operations
+  // vMem/nvMem reducers for idle state operations
   absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)
+  inchMmReducer, // Handles BTN_INCH_MM with nvMem.defaultUnit toggle
   keypadReducer, // Handles digit input to vMem.inputBuffer
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
   // State transition reducers
-  idleReducer, // Handles MILL_STATE_CHANGED and BTN_INCH_MM for idle state
+  idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:
   // boltHoleReducer,
