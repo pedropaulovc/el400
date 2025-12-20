@@ -7,27 +7,17 @@
 import { useEffect, type Dispatch } from 'react';
 import type { FeatureReducer } from '../types';
 import type { DROStateName, DROEventPayload } from '../droStateMachine';
-import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA, BOOT_DISPLAY, MODEL_NUMBER, SOFTWARE_VERSION } from '../droStateMachine';
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
-import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
+import { computeNormalDisplay } from '../utils/displayComputation';
 
 /**
  * Duration in milliseconds for the boot message to be displayed before auto-dismissing.
  */
 export const BOOT_MESSAGE_DURATION_MS = 1000;
 
-/**
- * Model number displayed during boot sequence.
- */
-export const MODEL_NUMBER = 'EL400';
-
-/**
- * Software version displayed during boot sequence.
- */
-export const SOFTWARE_VERSION = 'vEr 1.0.0';
-
-/** Boot display: X shows model number, Y shows version, Z is blank */
-const BOOT_DISPLAY = createDisplay(MODEL_NUMBER, SOFTWARE_VERSION, '');
+// Re-export for backwards compatibility
+export { MODEL_NUMBER, SOFTWARE_VERSION };
 
 export const bootReducer: FeatureReducer = (statePayload, eventPayload, context) => {
   const { stateName: state, vMem } = statePayload;

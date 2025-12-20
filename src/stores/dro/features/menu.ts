@@ -14,7 +14,7 @@ import {
 import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
 
 /** Menu text displayed for each function menu state */
-const MENU_TEXT_MAP: Record<string, string> = {
+export const MENU_TEXT_MAP: Record<string, string> = {
   'function-menu-center': 'CEntrE',
   'function-menu-circle': 'CirCLE',
   'function-menu-line': 'LinE',

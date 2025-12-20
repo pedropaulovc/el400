@@ -9,12 +9,10 @@
 import type { FeatureReducer } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
-
-/** Menu text for function-menu-center */
-const MENU_CENTER_TEXT = 'CEntrE';
+import { MENU_TEXT_MAP } from './menu';
 
 export const idleReducer: FeatureReducer = (statePayload, eventPayload, context) => {
-  const { stateName: state, stateData: data, vMem } = statePayload;
+  const { stateName: state, vMem } = statePayload;
   const { eventName } = eventPayload;
 
   if (state !== 'idle') return null;
@@ -27,11 +25,10 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         display: computeNormalDisplay(vMem, context),
       };
     // BTN_ABS_INC is handled by modeToggleReducer which also toggles vMem.mode
+    // BTN_INCH_MM triggers display recomputation when unit setting changes
     case 'BTN_INCH_MM':
       return {
-        stateName: 'inch-mm-mode',
-        stateData: data,
-        vMem,
+        ...statePayload,
         display: computeNormalDisplay(vMem, context),
       };
     case 'BTN_FUNCTION':
@@ -39,7 +36,7 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateName: 'function-menu-center',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem,
-        display: createDisplay(MENU_CENTER_TEXT, '', ''),
+        display: createDisplay(MENU_TEXT_MAP['function-menu-center'] ?? '', '', ''),
       };
     default:
       return null;

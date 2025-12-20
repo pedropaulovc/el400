@@ -36,7 +36,6 @@ describe('isFunctionMenuSelectionState', () => {
       'boot-show-message',
       'idle',
       'abs-inc-mode',
-      'inch-mm-mode',
     ];
 
     for (const state of nonMenuStates) {
@@ -91,7 +90,6 @@ describe('isCollectingPoints', () => {
       'boot-show-message',
       'idle',
       'abs-inc-mode',
-      'inch-mm-mode',
       'function-menu-center',
       'function-menu-circle',
       'function-menu-center-line-result',
@@ -255,7 +253,6 @@ describe('isFunctionActive', () => {
       'boot-show-message',
       'idle',
       'abs-inc-mode',
-      'inch-mm-mode',
     ];
 
     for (const state of nonFunctionStates) {

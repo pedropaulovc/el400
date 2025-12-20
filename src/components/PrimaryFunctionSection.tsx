@@ -15,8 +15,8 @@ const PrimaryFunctionSection = () => {
 
   const handleToggleUnit = () => {
     updateNvMem({ defaultUnit: defaultUnit === 'inch' ? 'mm' : 'inch' });
-    // Dispatch to trigger display recomputation with new unit setting
-    dispatch({ eventName: 'MILL_STATE_CHANGED' });
+    // Dispatch BTN_INCH_MM to trigger display recomputation with new unit setting
+    dispatch({ eventName: 'BTN_INCH_MM' });
   };
 
   return (

@@ -57,7 +57,6 @@ describe('centerFindingReducer', () => {
         'boot-show-message',
         'idle',
         'abs-inc-mode',
-        'inch-mm-mode',
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
