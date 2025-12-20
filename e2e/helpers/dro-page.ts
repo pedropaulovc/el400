@@ -300,4 +300,73 @@ export class DROPage {
   async isFnModeActive(): Promise<boolean> {
     return await this.isLEDOn(this.fnLED);
   }
+
+  /**
+   * Get the raw text displayed for an axis (for text assertions)
+   */
+  async getAxisRawText(axis: 'X' | 'Y' | 'Z'): Promise<string> {
+    const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
+    const text = await display.textContent();
+    return text?.trim() || '';
+  }
+
+  /**
+   * Wait for an axis to display a specific numeric value.
+   * Uses polling to handle async updates (e.g., from Socket.IO events).
+   *
+   * @param axis - The axis to check
+   * @param expected - The expected numeric value
+   * @param precision - Number of decimal places for comparison (default: 2)
+   * @param timeout - Maximum time to wait in ms (default: 500)
+   */
+  async waitForAxisPureNumberValue(
+    axis: 'X' | 'Y' | 'Z',
+    expected: number,
+    precision = 2,
+    timeout = 500
+  ): Promise<void> {
+    await expect
+      .poll(() => this.getAxisValue(axis), { timeout })
+      .toBeCloseTo(expected, precision);
+  }
+
+  /**
+   * Wait for an axis to display specific text.
+   * Uses polling to handle async updates.
+   *
+   * @param axis - The axis to check
+   * @param expected - The expected text value
+   * @param timeout - Maximum time to wait in ms (default: 500)
+   */
+  async waitForAxisPureTextValue(
+    axis: 'X' | 'Y' | 'Z',
+    expected: string,
+    timeout = 500
+  ): Promise<void> {
+    await expect
+      .poll(() => this.getAxisRawText(axis), { timeout })
+      .toBe(expected);
+  }
+
+  /**
+   * Simulate relative encoder movement for an axis.
+   * Calls the mock CNCjs server HTTP API to add delta to current position.
+   *
+   * @param axis - The axis to move ('X', 'Y', or 'Z')
+   * @param delta - The delta value to add to current position (in mm)
+   */
+  async simulateEncoderRelativeMove(axis: 'X' | 'Y' | 'Z', delta: number): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-move-relative?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, delta }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to simulate relative encoder move: ${response.statusText}`);
+    }
+  }
 }

@@ -47,3 +47,12 @@ export {
 
 // Re-export buffer utilities
 export { getBufferValue } from './features/buffer-utils';
+
+// Re-export bolt hole feature
+export {
+  useBoltHoleIntro,
+  BOLT_HOLE_INTRO_DURATION_MS,
+} from './features/bolt-hole';
+
+// Re-export bolt hole types and guards
+export { isBoltHoleActive } from './droStateMachine';
