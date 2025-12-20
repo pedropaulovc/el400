@@ -83,7 +83,7 @@ describe('idleReducer', () => {
       const systemEvents: DROEventPayload[] = [
         { eventName: 'BOOT_STARTED', skipBootMessage: false },
         { eventName: 'BOOT_MESSAGE_TIMEOUT' },
-        { eventName: 'MODE_TOGGLE_COMPLETE' },
+        { eventName: 'ABS_INC_TOGGLE_COMPLETE' },
       ];
 
       for (const event of systemEvents) {

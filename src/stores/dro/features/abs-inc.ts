@@ -46,8 +46,8 @@ export const absIncReducer: FeatureReducer = (state, event, context) => {
     };
   }
 
-  // Handle MODE_TOGGLE_COMPLETE - transition back to idle
-  if (stateName === 'abs-inc-mode' && eventName === 'MODE_TOGGLE_COMPLETE') {
+  // Handle ABS_INC_TOGGLE_COMPLETE - transition back to idle
+  if (stateName === 'abs-inc-mode' && eventName === 'ABS_INC_TOGGLE_COMPLETE') {
     return {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
