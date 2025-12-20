@@ -1,0 +1,114 @@
+/**
+ * Display Computation Utilities
+ *
+ * Pure utility functions for computing display values from DRO state.
+ * Handles abs/inc mode, connected vs manual positioning, and unit conversion.
+ */
+
+import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
+import type { DROReducerContext } from '../types';
+import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+
+/**
+ * Display value for a single axis - can be a number or text string
+ */
+export type AxisDisplayValue = number | string;
+
+/**
+ * Display state for all three axes
+ */
+export interface DisplayState {
+  X: AxisDisplayValue;
+  Y: AxisDisplayValue;
+  Z: AxisDisplayValue;
+}
+
+/**
+ * Initial display state - all zeros
+ */
+export const INITIAL_DISPLAY_STATE: DisplayState = {
+  X: 0,
+  Y: 0,
+  Z: 0,
+};
+
+/**
+ * Compute the raw position (in mm) for a single axis.
+ * Handles abs vs inc mode and connected vs manual positioning.
+ *
+ * @param axis - The axis to compute position for
+ * @param vMem - Volatile memory state
+ * @param context - Reducer context (millState, nvMem)
+ * @returns Position in millimeters
+ */
+export function computeAxisPositionMm(
+  axis: Axis,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): number {
+  const { mode, workOffsets, incrementalValues, manualAbsoluteValues } = vMem;
+  const { millState } = context;
+
+  if (mode === 'abs') {
+    if (millState.connected) {
+      const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+      return millState.position[axisKey] - workOffsets[axis];
+    }
+    return manualAbsoluteValues[axis];
+  }
+  return incrementalValues[axis];
+}
+
+/**
+ * Compute display value for a single axis with unit conversion.
+ * This is the main function for normal position display.
+ *
+ * @param axis - The axis to compute display value for
+ * @param vMem - Volatile memory state
+ * @param context - Reducer context (millState, nvMem)
+ * @returns Display value in the user's preferred unit
+ */
+export function computeDisplayPosition(
+  axis: Axis,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): number {
+  const rawMm = computeAxisPositionMm(axis, vMem, context);
+  return fromMmToAnyUnit(rawMm, context.nvMem.defaultUnit);
+}
+
+/**
+ * Compute normal display state for all three axes.
+ * Used by reducers that show standard position values.
+ *
+ * @param vMem - Volatile memory state
+ * @param context - Reducer context (millState, nvMem)
+ * @returns Display state with unit-converted position values
+ */
+export function computeNormalDisplay(
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  return {
+    X: computeDisplayPosition('X', vMem, context),
+    Y: computeDisplayPosition('Y', vMem, context),
+    Z: computeDisplayPosition('Z', vMem, context),
+  };
+}
+
+/**
+ * Create a custom display state.
+ * Used by reducers that override the normal position display.
+ *
+ * @param x - Value for X axis
+ * @param y - Value for Y axis
+ * @param z - Value for Z axis
+ * @returns Display state with the given values
+ */
+export function createDisplay(
+  x: AxisDisplayValue,
+  y: AxisDisplayValue,
+  z: AxisDisplayValue
+): DisplayState {
+  return { X: x, Y: y, Z: z };
+}

@@ -31,6 +31,7 @@ import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
 import { createDefaultMillState } from '../types/millState';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';
 import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
+import { INITIAL_DISPLAY_STATE } from './dro/utils/displayComputation';
 
 describe('droStore', () => {
   beforeEach(() => {
@@ -39,6 +40,7 @@ describe('droStore', () => {
       stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
       stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      display: INITIAL_DISPLAY_STATE,
     });
 
     useMillStore.setState({
@@ -76,6 +78,7 @@ describe('droStore', () => {
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       });
 
       // Dispatch an event
@@ -94,6 +97,7 @@ describe('droStore', () => {
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       });
 
       // Dispatch an event that might use the unit setting
@@ -115,6 +119,7 @@ describe('droStore', () => {
           mode: 'inc' as const,
           activeAxis: 'X' as const,
         },
+        display: INITIAL_DISPLAY_STATE,
       };
 
       useDROStore.getState()._setState(newPayload);
@@ -138,6 +143,7 @@ describe('droStore', () => {
           ...INITIAL_VOLATILE_MEMORY_STATE,
           inputBuffer: '123',
         },
+        display: INITIAL_DISPLAY_STATE,
       });
 
       const state = useDROStore.getState();
@@ -154,6 +160,7 @@ describe('droStore', () => {
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       });
 
       // Initialize the connection - this calls setDRODispatch
@@ -175,6 +182,7 @@ describe('droStore', () => {
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       });
 
       // Initialize connection
@@ -199,6 +207,7 @@ describe('droStore', () => {
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       });
 
       // Initialize the DRO-Mill connection first
@@ -237,6 +246,7 @@ describe('droStore', () => {
           activeAxis: 'Y',
           inputBuffer: '456',
         },
+        display: INITIAL_DISPLAY_STATE,
       });
     });
 
@@ -302,6 +312,7 @@ describe('droStore', () => {
           incrementalValues: { X: 1.5, Y: 2.5, Z: 3.5 },
           manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
         },
+        display: INITIAL_DISPLAY_STATE,
       });
     });
 

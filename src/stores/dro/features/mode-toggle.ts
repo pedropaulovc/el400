@@ -8,6 +8,7 @@
 import type { FeatureReducer, DROStatePayload } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
+import { computeNormalDisplay } from '../utils/displayComputation';
 
 /**
  * Mode toggle reducer - handles ABS/INC mode toggling.
@@ -20,38 +21,42 @@ import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 export const modeToggleReducer: FeatureReducer = (
   state: DROStatePayload,
   event: DROEventPayload,
-  _context
+  context
 ): DROStatePayload | null => {
   const { stateName, vMem } = state;
 
   // Handle BTN_ABS_INC in idle state - toggle mode and stay in idle
   // Preserve activeAxis but clear inputBuffer (user may want to continue with same axis)
   if (stateName === 'idle' && event.eventName === 'BTN_ABS_INC') {
-    const newMode = vMem.mode === 'abs' ? 'inc' : 'abs';
+    const newMode = vMem.mode === 'abs' ? 'inc' as const : 'abs' as const;
+    const newVMem = {
+      ...vMem,
+      mode: newMode,
+      inputBuffer: '',
+      // activeAxis is preserved for continued operations
+    };
     return {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
-      vMem: {
-        ...vMem,
-        mode: newMode,
-        inputBuffer: '',
-        // activeAxis is preserved for continued operations
-      },
+      vMem: newVMem,
+      display: computeNormalDisplay(newVMem, context),
     };
   }
 
   // Handle BTN_ABS_INC in abs-inc-mode state (if already in transitional state)
   if (stateName === 'abs-inc-mode' && event.eventName === 'BTN_ABS_INC') {
-    const newMode = vMem.mode === 'abs' ? 'inc' : 'abs';
+    const newMode = vMem.mode === 'abs' ? 'inc' as const : 'abs' as const;
+    const newVMem = {
+      ...vMem,
+      mode: newMode,
+      inputBuffer: '',
+      // activeAxis is preserved for continued operations
+    };
     return {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
-      vMem: {
-        ...vMem,
-        mode: newMode,
-        inputBuffer: '',
-        // activeAxis is preserved for continued operations
-      },
+      vMem: newVMem,
+      display: computeNormalDisplay(newVMem, context),
     };
   }
 
@@ -61,6 +66,7 @@ export const modeToggleReducer: FeatureReducer = (
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
       vMem,
+      display: computeNormalDisplay(vMem, context),
     };
   }
 

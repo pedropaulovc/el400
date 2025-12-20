@@ -11,6 +11,7 @@ import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 
 describe('keypadReducer', () => {
   describe('state handling', () => {
@@ -61,6 +62,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '12' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_DECIMAL' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('12.');
@@ -71,6 +73,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '12.5' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_DECIMAL' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('12.5');
@@ -83,6 +86,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '42' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_SIGN' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('-42');
@@ -93,6 +97,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '-42' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_SIGN' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('42');
@@ -111,6 +116,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '123' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('');
@@ -121,6 +127,7 @@ describe('keypadReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '', activeAxis: 'X' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.activeAxis).toBeNull();

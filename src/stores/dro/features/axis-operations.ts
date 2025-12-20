@@ -10,6 +10,7 @@ import type { DROEventPayload } from '../droStateMachine';
 import type { Axis, AxisValues } from '../../../types/volatileMemory';
 import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
+import { computeNormalDisplay } from '../utils/displayComputation';
 
 /**
  * Get the machine position for an axis.
@@ -163,7 +164,7 @@ export const axisOperationsReducer: FeatureReducer = (
   const { vMem } = state;
 
   switch (event.eventName) {
-    // Axis selection buttons
+    // Axis selection buttons - no display change (selecting doesn't change values)
     case 'BTN_SELECT_X':
       return {
         ...state,
@@ -182,46 +183,58 @@ export const axisOperationsReducer: FeatureReducer = (
         vMem: { ...vMem, activeAxis: 'Z', inputBuffer: '' },
       };
 
-    // Zero buttons - zero the axis and clear any input
-    case 'BTN_ZERO_X':
+    // Zero buttons - zero the axis and update display
+    case 'BTN_ZERO_X': {
+      const newVMem = {
+        ...zeroAxis(vMem, 'X', context),
+        inputBuffer: '',
+        activeAxis: null,
+      };
       return {
         ...state,
-        vMem: {
-          ...zeroAxis(vMem, 'X', context),
-          inputBuffer: '',
-          activeAxis: null,
-        },
+        vMem: newVMem,
+        display: computeNormalDisplay(newVMem, context),
       };
+    }
 
-    case 'BTN_ZERO_Y':
+    case 'BTN_ZERO_Y': {
+      const newVMem = {
+        ...zeroAxis(vMem, 'Y', context),
+        inputBuffer: '',
+        activeAxis: null,
+      };
       return {
         ...state,
-        vMem: {
-          ...zeroAxis(vMem, 'Y', context),
-          inputBuffer: '',
-          activeAxis: null,
-        },
+        vMem: newVMem,
+        display: computeNormalDisplay(newVMem, context),
       };
+    }
 
-    case 'BTN_ZERO_Z':
+    case 'BTN_ZERO_Z': {
+      const newVMem = {
+        ...zeroAxis(vMem, 'Z', context),
+        inputBuffer: '',
+        activeAxis: null,
+      };
       return {
         ...state,
-        vMem: {
-          ...zeroAxis(vMem, 'Z', context),
-          inputBuffer: '',
-          activeAxis: null,
-        },
+        vMem: newVMem,
+        display: computeNormalDisplay(newVMem, context),
       };
+    }
 
-    case 'BTN_ZERO_ALL':
+    case 'BTN_ZERO_ALL': {
+      const newVMem = {
+        ...zeroAllAxes(vMem, context),
+        inputBuffer: '',
+        activeAxis: null,
+      };
       return {
         ...state,
-        vMem: {
-          ...zeroAllAxes(vMem, context),
-          inputBuffer: '',
-          activeAxis: null,
-        },
+        vMem: newVMem,
+        display: computeNormalDisplay(newVMem, context),
       };
+    }
 
     // Enter key - commit input buffer value to active axis
     case 'KEY_ENTER': {
@@ -229,9 +242,11 @@ export const axisOperationsReducer: FeatureReducer = (
       if (vMem.activeAxis !== null) {
         const value = getBufferValue(vMem.inputBuffer);
         if (value !== null) {
+          const newVMem = setAxisValue(vMem, vMem.activeAxis, value, context);
           return {
             ...state,
-            vMem: setAxisValue(vMem, vMem.activeAxis, value, context),
+            vMem: newVMem,
+            display: computeNormalDisplay(newVMem, context),
           };
         }
       }

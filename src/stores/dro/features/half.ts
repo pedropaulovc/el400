@@ -7,6 +7,7 @@
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
 import type { Axis, AxisValues } from '../../../types/volatileMemory';
+import { computeNormalDisplay } from '../utils/displayComputation';
 
 /**
  * Get the machine position for an axis.
@@ -112,8 +113,10 @@ export const halfReducer: FeatureReducer = (
     return state;
   }
 
+  const newVMem = halfAxis(vMem, vMem.activeAxis, context);
   return {
     ...state,
-    vMem: halfAxis(vMem, vMem.activeAxis, context),
+    vMem: newVMem,
+    display: computeNormalDisplay(newVMem, context),
   };
 };

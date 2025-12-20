@@ -18,9 +18,18 @@ import {
   INITIAL_CENTER_FINDING_DATA,
   isCenterLineState,
   isCenterCircleState,
+  isCollectingPoints,
+  isResultState,
 } from '../droStateMachine';
 import type { AxisValues, VolatileMemoryState } from '../../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../../utils/centerFinding';
+import {
+  computeNormalDisplay,
+  computeAxisPositionMm,
+  createDisplay,
+  type DisplayState,
+} from '../utils/displayComputation';
+import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 
 /**
  * Check if state is handled by this feature.
@@ -30,10 +39,10 @@ function isCenterFindingState(state: DROStateName): boolean {
 }
 
 /**
- * Compute current display position from vMem and context.
- * This is the position that gets stored when collecting points.
+ * Compute current position (in mm) from vMem and context.
+ * This is the raw position that gets stored when collecting points.
  */
-function computeDisplayPosition(
+function computeStoredPosition(
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): StoredPoint {
@@ -120,19 +129,66 @@ function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
   };
 }
 
+/**
+ * Compute display showing distance-to-go to center result.
+ * Shows (centerResult - currentPosition) in user's preferred unit.
+ */
+function computeCenterResultDisplay(
+  centerResult: AxisValues,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  const currentX = computeAxisPositionMm('X', vMem, context);
+  const currentY = computeAxisPositionMm('Y', vMem, context);
+  const currentZ = computeAxisPositionMm('Z', vMem, context);
+  const unit = context.nvMem.defaultUnit;
+
+  return createDisplay(
+    fromMmToAnyUnit(centerResult.X - currentX, unit),
+    fromMmToAnyUnit(centerResult.Y - currentY, unit),
+    fromMmToAnyUnit(centerResult.Z - currentZ, unit)
+  );
+}
+
 export const centerFindingReducer: FeatureReducer = (current, event, context) => {
   const { stateName: state, stateData: data, vMem } = current;
 
   if (!isCenterFindingState(state)) return null;
 
+  const centerData = data.stateDataType === 'center-finding' ? data : INITIAL_CENTER_FINDING_DATA;
+
+  // Handle MILL_STATE_CHANGED - update display for position changes
+  if (event.eventName === 'MILL_STATE_CHANGED') {
+    if (isCollectingPoints(state)) {
+      // Collecting points shows normal position display
+      return {
+        ...current,
+        display: computeNormalDisplay(vMem, context),
+      };
+    }
+    if (isResultState(state) && centerData.centerResult) {
+      // Result state shows distance-to-go display
+      return {
+        ...current,
+        display: computeCenterResultDisplay(centerData.centerResult, vMem, context),
+      };
+    }
+    return current;
+  }
+
   // All center finding states can be cancelled with KEY_CLEAR
   if (event.eventName === 'KEY_CLEAR') {
-    return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
+    return {
+      stateName: 'idle',
+      stateData: INITIAL_DRO_STATE_DATA,
+      vMem,
+      display: computeNormalDisplay(vMem, context),
+    };
   }
 
   // KEY_6_RIGHT stores the current position as a point during collection
   if (event.eventName === 'KEY_6_RIGHT') {
-    const point = computeDisplayPosition(vMem, context);
+    const point = computeStoredPosition(vMem, context);
 
     switch (state) {
       // ─────────────────────────────────────────────────────────────
@@ -143,6 +199,7 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           stateName: 'function-menu-center-line-point-2',
           stateData: addPointToData(data, point),
           vMem,
+          display: computeNormalDisplay(vMem, context),
         };
 
       case 'function-menu-center-line-point-2': {
@@ -152,6 +209,9 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           stateName: 'function-menu-center-line-result',
           stateData: { ...newData, centerResult },
           vMem,
+          display: centerResult
+            ? computeCenterResultDisplay(centerResult, vMem, context)
+            : computeNormalDisplay(vMem, context),
         };
       }
 
@@ -163,6 +223,7 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           stateName: 'function-menu-center-circle-point-2',
           stateData: addPointToData(data, point),
           vMem,
+          display: computeNormalDisplay(vMem, context),
         };
 
       case 'function-menu-center-circle-point-2':
@@ -170,6 +231,7 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           stateName: 'function-menu-center-circle-point-3',
           stateData: addPointToData(data, point),
           vMem,
+          display: computeNormalDisplay(vMem, context),
         };
 
       case 'function-menu-center-circle-point-3': {
@@ -179,6 +241,9 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           stateName: 'function-menu-center-circle-result',
           stateData: { ...newData, centerResult },
           vMem,
+          display: centerResult
+            ? computeCenterResultDisplay(centerResult, vMem, context)
+            : computeNormalDisplay(vMem, context),
         };
       }
 
