@@ -33,17 +33,10 @@ import {
   useMillPositionX, useMillPositionY, useMillPositionZ,
 } from '../stores/millStore';
 import type { DROState, DROContext as DROContextType } from '../stores/dro';
-import { useVolatileMemory } from './useVolatileMemory';
 import type { Axis } from '../types/volatileMemory';
 import { useDefaultUnit } from '../stores/settingsStore';
 import { fromMmToAnyUnit } from '../utils/unitConversion';
 import type { AxisDisplayValue } from '../components/Axis';
-
-export interface DisplayAxisValues {
-  X: AxisDisplayValue;
-  Y: AxisDisplayValue;
-  Z: AxisDisplayValue;
-}
 
 /** Menu text displayed for each function menu state */
 const MENU_TEXT_MAP: Record<string, string> = {
@@ -205,30 +198,4 @@ export function useDisplayValueZ(): AxisDisplayValue {
     () => computeDisplayValueForAxis('Z', droState, droCtx, displayValue, defaultUnit),
     [droState, droCtx, displayValue, defaultUnit]
   );
-}
-
-/**
- * Hook that computes display values for all three axes.
- *
- * Handles all display modes:
- * - Boot: Shows model number and software version
- * - Calculator: Shows current value and operation (no unit conversion)
- * - Function menu: Shows menu option text
- * - Center finding (collecting): Shows current position
- * - Center finding (result): Shows distance-to-go
- * - Normal: Shows position values with unit conversion
- *
- * @returns Display values ready to render, already unit-converted where appropriate
- */
-export function useDisplayValues(): DisplayAxisValues {
-  const vMem = useVolatileMemory();
-  const droState = useDROState();
-  const droCtx = useDROContext();
-  const defaultUnit = useDefaultUnit();
-
-  return useMemo(() => ({
-    X: computeDisplayValueForAxis('X', droState, droCtx, vMem.displayValues.X, defaultUnit),
-    Y: computeDisplayValueForAxis('Y', droState, droCtx, vMem.displayValues.Y, defaultUnit),
-    Z: computeDisplayValueForAxis('Z', droState, droCtx, vMem.displayValues.Z, defaultUnit),
-  }), [droState, droCtx, vMem.displayValues, defaultUnit]);
 }

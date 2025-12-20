@@ -13,6 +13,15 @@ import {
   useActiveAxis,
   useInputBuffer,
   useDispatch,
+  useWorkOffsetX,
+  useWorkOffsetY,
+  useWorkOffsetZ,
+  useIncrementalX,
+  useIncrementalY,
+  useIncrementalZ,
+  useManualAbsoluteX,
+  useManualAbsoluteY,
+  useManualAbsoluteZ,
 } from './droStore';
 import { useMillStore, setDRODispatch, initializeMillStore } from './millStore';
 import { MockMillConnection } from '../adapters/MockMillConnection';
@@ -279,6 +288,87 @@ describe('droStore', () => {
       });
 
       expect(result.current).toBe('abs');
+    });
+  });
+
+  describe('per-axis selectors', () => {
+    beforeEach(() => {
+      useDROStore.setState({
+        stateName: 'idle',
+        stateData: { stateDataType: 'none' },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          workOffsets: { X: 10, Y: 20, Z: 30 },
+          incrementalValues: { X: 1.5, Y: 2.5, Z: 3.5 },
+          manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
+        },
+      });
+    });
+
+    it('useWorkOffsetX returns X work offset', () => {
+      const { result } = renderHook(() => useWorkOffsetX());
+      expect(result.current).toBe(10);
+    });
+
+    it('useWorkOffsetY returns Y work offset', () => {
+      const { result } = renderHook(() => useWorkOffsetY());
+      expect(result.current).toBe(20);
+    });
+
+    it('useWorkOffsetZ returns Z work offset', () => {
+      const { result } = renderHook(() => useWorkOffsetZ());
+      expect(result.current).toBe(30);
+    });
+
+    it('useIncrementalX returns X incremental value', () => {
+      const { result } = renderHook(() => useIncrementalX());
+      expect(result.current).toBe(1.5);
+    });
+
+    it('useIncrementalY returns Y incremental value', () => {
+      const { result } = renderHook(() => useIncrementalY());
+      expect(result.current).toBe(2.5);
+    });
+
+    it('useIncrementalZ returns Z incremental value', () => {
+      const { result } = renderHook(() => useIncrementalZ());
+      expect(result.current).toBe(3.5);
+    });
+
+    it('useManualAbsoluteX returns X manual absolute value', () => {
+      const { result } = renderHook(() => useManualAbsoluteX());
+      expect(result.current).toBe(100);
+    });
+
+    it('useManualAbsoluteY returns Y manual absolute value', () => {
+      const { result } = renderHook(() => useManualAbsoluteY());
+      expect(result.current).toBe(200);
+    });
+
+    it('useManualAbsoluteZ returns Z manual absolute value', () => {
+      const { result } = renderHook(() => useManualAbsoluteZ());
+      expect(result.current).toBe(300);
+    });
+
+    it('per-axis selectors update independently', () => {
+      const { result: resultX } = renderHook(() => useWorkOffsetX());
+      const { result: resultY } = renderHook(() => useWorkOffsetY());
+
+      expect(resultX.current).toBe(10);
+      expect(resultY.current).toBe(20);
+
+      act(() => {
+        useDROStore.setState((state) => ({
+          ...state,
+          vMem: {
+            ...state.vMem,
+            workOffsets: { ...state.vMem.workOffsets, X: 99 },
+          },
+        }));
+      });
+
+      expect(resultX.current).toBe(99);
+      expect(resultY.current).toBe(20); // Y unchanged
     });
   });
 });
