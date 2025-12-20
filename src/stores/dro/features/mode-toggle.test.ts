@@ -10,6 +10,7 @@ import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 
 describe('modeToggleReducer', () => {
   describe('state handling', () => {
@@ -32,6 +33,7 @@ describe('modeToggleReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'abs' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.mode).toBe('inc');
@@ -42,6 +44,7 @@ describe('modeToggleReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.mode).toBe('abs');
@@ -52,6 +55,7 @@ describe('modeToggleReducer', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '123', activeAxis: 'X' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.inputBuffer).toBe('');
@@ -65,6 +69,7 @@ describe('modeToggleReducer', () => {
         stateName: 'abs-inc-mode',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('idle');
@@ -75,6 +80,7 @@ describe('modeToggleReducer', () => {
         stateName: 'abs-inc-mode',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'BTN_ABS_INC' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.mode).toBe('abs');
@@ -87,6 +93,7 @@ describe('modeToggleReducer', () => {
         stateName: 'abs-inc-mode',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'MODE_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('idle');
@@ -97,6 +104,7 @@ describe('modeToggleReducer', () => {
         stateName: 'abs-inc-mode',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
       };
       const result = modeToggleReducer(state, { eventName: 'MODE_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.mode).toBe('inc');

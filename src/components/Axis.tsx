@@ -1,14 +1,14 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
-import { useDisplayValueX, useDisplayValueY, useDisplayValueZ } from "../hooks/useDisplayValues";
+import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
 
 export type AxisDisplayValue = number | string;
 
 /** Map axis to its corresponding hook */
 const axisHooks = {
-  X: useDisplayValueX,
-  Y: useDisplayValueY,
-  Z: useDisplayValueZ,
+  X: useDisplayX,
+  Y: useDisplayY,
+  Z: useDisplayZ,
 } as const;
 
 interface AxisProps {

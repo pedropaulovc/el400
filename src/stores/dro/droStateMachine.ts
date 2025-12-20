@@ -7,6 +7,8 @@
 
 import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import type { DisplayState } from './utils/displayComputation';
+import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates
@@ -201,17 +203,19 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
 };
 
 /**
- * Initial DRO state payload including vMem.
+ * Initial DRO state payload including vMem and display.
  * Used by context to initialize the reducer.
  */
 export interface DROStatePayloadInit {
   stateName: DROStateName;
   stateData: DROStateData;
   vMem: VolatileMemoryState;
+  display: DisplayState;
 }
 
 export const INITIAL_DRO_STATE_PAYLOAD: DROStatePayloadInit = {
   stateName: INITIAL_DRO_STATE,
   stateData: INITIAL_DRO_STATE_DATA,
   vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  display: INITIAL_DISPLAY_STATE,
 };

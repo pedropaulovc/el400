@@ -8,6 +8,7 @@ import { INITIAL_DRO_STATE_DATA } from './droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../types/millState';
+import { INITIAL_DISPLAY_STATE, type DisplayState } from './utils/displayComputation';
 
 /**
  * Default mock context for reducer tests.
@@ -18,15 +19,17 @@ export const DEFAULT_TEST_CONTEXT: DROReducerContext = {
 };
 
 /**
- * Create a state payload with default vMem for testing.
+ * Create a state payload with default vMem and display for testing.
  */
 export function createTestState(
   stateName: DROStateName,
-  stateData: DROStateData = INITIAL_DRO_STATE_DATA
+  stateData: DROStateData = INITIAL_DRO_STATE_DATA,
+  display: DisplayState = INITIAL_DISPLAY_STATE
 ): DROStatePayload {
   return {
     stateName,
     stateData,
     vMem: INITIAL_VOLATILE_MEMORY_STATE,
+    display,
   };
 }

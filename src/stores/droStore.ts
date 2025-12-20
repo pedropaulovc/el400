@@ -16,6 +16,7 @@ import type {
 import { INITIAL_DRO_STATE_PAYLOAD } from './dro/droStateMachine';
 import { droReducer } from './dro/reducer';
 import type { VolatileMemoryState } from '../types/volatileMemory';
+import type { DisplayState } from './dro/utils/displayComputation';
 import { useMillStore, setDRODispatch } from './millStore';
 import { useSettingsStore } from './settingsStore';
 
@@ -28,6 +29,7 @@ interface DROStore {
   stateName: DROStateName;
   stateData: DROStateData;
   vMem: VolatileMemoryState;
+  display: DisplayState;
 
   // Actions
   dispatch: (event: DROEventPayload) => void;
@@ -45,6 +47,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
   stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
   stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
   vMem: INITIAL_DRO_STATE_PAYLOAD.vMem,
+  display: INITIAL_DRO_STATE_PAYLOAD.display,
 
   // Dispatch action - calls reducer with cross-store context
   dispatch: (event) => {
@@ -53,6 +56,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       stateName: current.stateName,
       stateData: current.stateData,
       vMem: current.vMem,
+      display: current.display,
     };
 
     // Get context from other stores
@@ -68,6 +72,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       stateName: newState.stateName,
       stateData: newState.stateData,
       vMem: newState.vMem,
+      display: newState.display,
     });
   },
 
@@ -77,6 +82,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       stateName: payload.stateName,
       stateData: payload.stateData,
       vMem: payload.vMem,
+      display: payload.display,
     });
   },
 }));
@@ -151,6 +157,17 @@ export const useManualAbsoluteX = () => useDROStore((s) => s.vMem.manualAbsolute
 export const useManualAbsoluteY = () => useDROStore((s) => s.vMem.manualAbsoluteValues.Y);
 /** Get manual absolute value for Z axis only */
 export const useManualAbsoluteZ = () => useDROStore((s) => s.vMem.manualAbsoluteValues.Z);
+
+// ─────────────────────────────────────────────────────────────────
+// DISPLAY SELECTORS - Granular, only re-render when specific axis changes
+// ─────────────────────────────────────────────────────────────────
+
+/** Get display value for X axis only - primitive, minimal re-renders */
+export const useDisplayX = () => useDROStore((s) => s.display.X);
+/** Get display value for Y axis only - primitive, minimal re-renders */
+export const useDisplayY = () => useDROStore((s) => s.display.Y);
+/** Get display value for Z axis only - primitive, minimal re-renders */
+export const useDisplayZ = () => useDROStore((s) => s.display.Z);
 
 /** Get dispatch function - stable reference, never changes */
 export const useDispatch = () => useDROStore((s) => s.dispatch);

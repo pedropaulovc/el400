@@ -9,6 +9,7 @@ import { droReducer } from './reducer';
 import type { DROStatePayload } from './types';
 import { createTestState, DEFAULT_TEST_CONTEXT } from './test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 
 /** Helper to create state with a specific position for testing KEY_6_RIGHT */
 function stateWithPosition(
@@ -23,6 +24,7 @@ function stateWithPosition(
       ...INITIAL_VOLATILE_MEMORY_STATE,
       manualAbsoluteValues: position,
     },
+    display: INITIAL_DISPLAY_STATE,
   };
 }
 

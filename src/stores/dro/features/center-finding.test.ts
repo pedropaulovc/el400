@@ -11,6 +11,7 @@ import type { DROStateName, CenterFindingData, DROStateData } from '../droStateM
 import { INITIAL_CENTER_FINDING_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 
 /**
  * Helper to create test state with a specific position.
@@ -28,6 +29,7 @@ function stateWithPosition(
       ...INITIAL_VOLATILE_MEMORY_STATE,
       manualAbsoluteValues: position,
     },
+    display: INITIAL_DISPLAY_STATE,
   };
 }
 
@@ -116,6 +118,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -133,6 +136,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -282,6 +286,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -423,6 +428,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 0, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -447,6 +453,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -464,6 +471,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);

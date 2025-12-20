@@ -8,7 +8,10 @@ import { CncjsMillAdapter } from "./adapters/CncjsMillAdapter";
 import { NoOpMillAdapter } from "./adapters/NoOpMillAdapter";
 import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
-import { initializeMillStore } from "./stores/millStore";
+import { initializeMillStore, initializeDROMillConnection } from "./stores";
+
+// Initialize DRO-Mill connection at module load time
+initializeDROMillConnection();
 
 const queryClient = new QueryClient();
 

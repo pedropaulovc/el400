@@ -74,20 +74,27 @@ describe('idleReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null for system events (handled by other reducers)', () => {
+    it('should return null for boot and mode toggle events (handled by other reducers)', () => {
       const state = createTestState('idle');
 
       const systemEvents: DROEventPayload[] = [
         { eventName: 'BOOT_STARTED', skipBootMessage: false },
         { eventName: 'BOOT_MESSAGE_TIMEOUT' },
         { eventName: 'MODE_TOGGLE_COMPLETE' },
-        { eventName: 'MILL_STATE_CHANGED' },
       ];
 
       for (const event of systemEvents) {
         const result = idleReducer(state, event, DEFAULT_TEST_CONTEXT);
         expect(result).toBeNull();
       }
+    });
+
+    it('should handle MILL_STATE_CHANGED by recomputing display', () => {
+      const state = createTestState('idle');
+      const result = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('idle');
+      expect(result?.display).toBeDefined();
     });
   });
 

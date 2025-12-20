@@ -8,13 +8,32 @@
  */
 
 import type { FeatureReducer } from '../types';
-import type { CalculatorData } from '../droStateMachine';
+import type { CalculatorData, DROStateName } from '../droStateMachine';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CALCULATOR_DATA,
   isCalculatorActive,
 } from '../droStateMachine';
 import { appendDigit, appendDecimal, toggleSign, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
+import { createDisplay, computeNormalDisplay, type AxisDisplayValue } from '../utils/displayComputation';
+
+/** Calculator operation text displayed in Y window */
+const CALC_OPERATION_MAP: Record<string, string> = {
+  'calculator-idle': '',
+  'calculator-add': 'Add',
+  'calculator-sub': 'SUb',
+  'calculator-multi': 'mULtI',
+  'calculator-div': 'dIv',
+};
+
+/** Compute calculator display: X=currentValue, Y=operation text, Z=blank */
+function computeCalculatorDisplay(stateName: DROStateName, calcData: CalculatorData): ReturnType<typeof createDisplay> {
+  return createDisplay(
+    calcData.currentValue as AxisDisplayValue,
+    CALC_OPERATION_MAP[stateName] ?? '',
+    ''
+  );
+}
 
 /**
  * Calculator operations cycle: ADD -> SUB -> MULTI -> DIV -> ADD
@@ -43,7 +62,7 @@ function performCalculation(first: number, second: number, operation: 'ADD' | 'S
   }
 }
 
-export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _context) => {
+export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, context) => {
   const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
 
@@ -53,6 +72,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
       stateName: 'calculator-idle',
       stateData: INITIAL_CALCULATOR_DATA,
       vMem,
+      display: computeCalculatorDisplay('calculator-idle', INITIAL_CALCULATOR_DATA),
     };
   }
 
@@ -62,9 +82,9 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
   const calcData = data.stateDataType === 'calculator' ? data : INITIAL_CALCULATOR_DATA;
 
   // Handle digit keys - calculatorReducer owns all digit input in calculator state
+  // Display doesn't change on digit input (inputBuffer not shown in calculator mode)
   const digit = KEY_TO_DIGIT[eventName];
   if (digit !== undefined) {
-    // All digits append to buffer
     return {
       ...statePayload,
       vMem: {
@@ -77,7 +97,12 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
   switch (eventName) {
     case 'BTN_CALCULATOR':
       // Exit calculator mode
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
+      return {
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem,
+        display: computeNormalDisplay(vMem, context),
+      };
 
     case 'BTN_SELECT_Y': {
       // Y button in calculator mode cycles through operations
@@ -91,6 +116,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
         stateName: nextStateName,
         stateData: nextState,
         vMem,
+        display: computeCalculatorDisplay(nextStateName, nextState),
       };
     }
 
@@ -100,6 +126,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
       return null;
 
     case 'KEY_DECIMAL':
+      // Display doesn't change on decimal input
       return {
         ...statePayload,
         vMem: {
@@ -109,6 +136,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
       };
 
     case 'KEY_SIGN':
+      // Display doesn't change on sign input
       return {
         ...statePayload,
         vMem: {
@@ -117,13 +145,15 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
         },
       };
 
-    case 'KEY_CLEAR':
+    case 'KEY_CLEAR': {
       // Clear calculator and input buffer but stay in calculator mode
       return {
         stateName: 'calculator-idle',
         stateData: INITIAL_CALCULATOR_DATA,
         vMem: { ...vMem, inputBuffer: '' },
+        display: computeCalculatorDisplay('calculator-idle', INITIAL_CALCULATOR_DATA),
       };
+    }
 
     case 'KEY_ENTER': {
       // Parse value from input buffer
@@ -134,38 +164,44 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, _c
 
       if (calcData.operation === null) {
         // First value - store as first value and current value
+        const newCalcData: CalculatorData = {
+          ...calcData,
+          firstValue: newValue,
+          currentValue: newValue,
+        };
         return {
           stateName: state,
-          stateData: {
-            ...calcData,
-            firstValue: newValue,
-            currentValue: newValue,
-          },
-          vMem: { ...vMem, inputBuffer: '' }, // Clear buffer after use
+          stateData: newCalcData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeCalculatorDisplay(state, newCalcData),
         };
       } else {
         // Second value - store and immediately calculate
         if (calcData.firstValue === null) {
           // Reset to idle with the new value if invariant violated
+          const resetCalcData: CalculatorData = {
+            ...INITIAL_CALCULATOR_DATA,
+            currentValue: newValue,
+          };
           return {
             stateName: 'calculator-idle',
-            stateData: {
-              ...INITIAL_CALCULATOR_DATA,
-              currentValue: newValue,
-            },
+            stateData: resetCalcData,
             vMem: { ...vMem, inputBuffer: '' },
+            display: computeCalculatorDisplay('calculator-idle', resetCalcData),
           };
         }
         const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+        const resultCalcData: CalculatorData = {
+          ...calcData,
+          firstValue: null,
+          operation: null,
+          currentValue: result,
+        };
         return {
           stateName: 'calculator-idle',
-          stateData: {
-            ...calcData,
-            firstValue: null,
-            operation: null,
-            currentValue: result,
-          },
+          stateData: resultCalcData,
           vMem: { ...vMem, inputBuffer: '' },
+          display: computeCalculatorDisplay('calculator-idle', resultCalcData),
         };
       }
     }
