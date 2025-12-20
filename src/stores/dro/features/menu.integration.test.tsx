@@ -14,7 +14,7 @@ import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
   enterValue,
-} from '../tests/helpers/integration-test-utils';
+} from '../../../tests/helpers/integration-test-utils';
 
 describe('Function Menu Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
