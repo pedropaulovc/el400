@@ -49,7 +49,7 @@ const AxisSelectionSection = () => {
               <DROButton
                 variant="dark"
                 size="square"
-                onClick={() => { dispatch({ eventName: `BTN_ZERO_${axis}` }); }}
+                onClick={() => { dispatch({ eventName: `BTN_ZERO_${axis}` as const }); }}
                 data-testid={`axis-zero-${axis.toLowerCase()}`}
                 title={`Zero ${axis} axis`}
               >

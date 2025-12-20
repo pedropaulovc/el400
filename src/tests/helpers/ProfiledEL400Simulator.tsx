@@ -34,7 +34,7 @@ interface ComponentAggregatedMetrics {
   renders: ComponentRenderMetric[];
 }
 
-let componentMetricsMap: Map<string, ComponentAggregatedMetrics> = new Map();
+let componentMetricsMap = new Map<string, ComponentAggregatedMetrics>();
 let isProfilingEnabled = false;
 
 export function enableComponentProfiling(enabled: boolean): void {
@@ -58,7 +58,7 @@ export function printComponentMetrics(): void {
 
   sorted.forEach(([id, metrics]) => {
     console.log(`\n${id}:`);
-    console.log(`  Total Renders: ${metrics.renderCount} (${metrics.mountCount} mounts, ${metrics.updateCount} updates)`);
+    console.log(`  Total Renders: ${String(metrics.renderCount)} (${String(metrics.mountCount)} mounts, ${String(metrics.updateCount)} updates)`);
     console.log(`  Total Time: ${metrics.totalActualDuration.toFixed(2)}ms`);
     console.log(`  Avg Time: ${metrics.avgActualDuration.toFixed(2)}ms`);
     console.log(`  Base Duration: ${metrics.totalBaseDuration.toFixed(2)}ms (ideal without memoization loss)`);
@@ -82,7 +82,7 @@ export function printComponentMetrics(): void {
     .reduce((sum, m) => sum + m.totalActualDuration, 0);
 
   console.log('\n' + '='.repeat(60));
-  console.log(`TOTAL: ${totalRenders} renders, ${totalTime.toFixed(2)}ms`);
+  console.log(`TOTAL: ${String(totalRenders)} renders, ${totalTime.toFixed(2)}ms`);
   console.log('='.repeat(60) + '\n');
 }
 
@@ -92,14 +92,14 @@ const createProfilerCallback = (componentId: string): ProfilerOnRenderCallback =
 
     const metric: ComponentRenderMetric = {
       componentId: id,
-      phase: phase as 'mount' | 'update' | 'nested-update',
+      phase: phase,
       actualDuration,
       baseDuration,
       startTime,
       commitTime,
     };
 
-    const existing = componentMetricsMap.get(componentId) || {
+    const existing = componentMetricsMap.get(componentId) ?? {
       componentId,
       renderCount: 0,
       mountCount: 0,

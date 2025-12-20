@@ -31,7 +31,7 @@ const PrimaryFunctionSection = () => {
             <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
               <Icon name="setup" /><span className="sr-only">Settings</span>
             </DROButton>
-            <DROButton onClick={() => dispatch({ eventName: 'BTN_ABS_INC' })} size="icon" className="p-0" data-testid="btn-abs-inc" title="Abs/Inc">
+            <DROButton onClick={() => { dispatch({ eventName: 'BTN_ABS_INC' }); }} size="icon" className="p-0" data-testid="btn-abs-inc" title="Abs/Inc">
               <Icon name="abs-inc" /><span className="sr-only">Abs/Inc</span>
             </DROButton>
             <DROButton onClick={handleToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit" title="Toggle units">
@@ -40,7 +40,7 @@ const PrimaryFunctionSection = () => {
             <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-center" title="Reference">
               <Icon name="reference" /><span className="sr-only">Reference</span>
             </DROButton>
-            <DROButton onClick={() => dispatch({ eventName: 'BTN_ZERO_ALL' })} size="icon" className="p-0" data-testid="btn-zero-all" title="Zero all axes">
+            <DROButton onClick={() => { dispatch({ eventName: 'BTN_ZERO_ALL' }); }} size="icon" className="p-0" data-testid="btn-zero-all" title="Zero all axes">
               <Icon name="preset" /><span className="sr-only">Zero all axes</span>
             </DROButton>
           </div>
