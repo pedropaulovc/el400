@@ -157,6 +157,24 @@ describe('integration-test-utils', () => {
       injectMockAxisDisplay('x', '123.4560mm');
       expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but no numeric match found');
     });
+
+    it('throws error if the number of decimal places does not match', () => {
+      // Test with too few decimal places (3 instead of 4)
+      injectMockAxisDisplay('x', '123.456');
+      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected 4 decimal places for axis X, but got 3 in: 123.456');
+
+      // Test with too many decimal places (5 instead of 4)
+      injectMockAxisDisplay('y', '45.67890');
+      expect(() => getAxisDisplayPureNumberValue('Y')).toThrow('Expected 4 decimal places for axis Y, but got 5 in: 45.67890');
+
+      // Test with precision=2 but given 4 decimal places
+      injectMockAxisDisplay('z', '10.1234');
+      expect(() => getAxisDisplayPureNumberValue('Z', 2)).toThrow('Expected 2 decimal places for axis Z, but got 4 in: 10.1234');
+
+      // Test with precision=0 but given decimal value
+      injectMockAxisDisplay('x', '42.5000');
+      expect(() => getAxisDisplayPureNumberValue('X', 0)).toThrow('Expected integer value for axis X with precision 0, but got: 42.5000');
+    });
   });
 
   describe('trim handling consistency', () => {

@@ -209,7 +209,7 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
  * - The content cannot be parsed as a number
  * - The number doesn't have exactly `precision` decimal digits (or is not an integer when precision is 0)
  */
-export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision: number = 4): number {
+export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision = 4): number {
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
 
@@ -237,11 +237,11 @@ export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision: 
     // For other precisions, check that we have exactly `precision` decimal digits
     const decimalIndex = numberString.indexOf('.');
     if (decimalIndex === -1) {
-      throw new Error(`Expected decimal value for axis ${axis} with precision ${precision}, but got integer: ${numberString}`);
+      throw new Error(`Expected decimal value for axis ${axis} with precision ${String(precision)}, but got integer: ${numberString}`);
     }
     const decimalPlaces = numberString.length - decimalIndex - 1;
     if (decimalPlaces !== precision) {
-      throw new Error(`Expected ${precision} decimal places for axis ${axis}, but got ${decimalPlaces} in: ${numberString}`);
+      throw new Error(`Expected ${String(precision)} decimal places for axis ${axis}, but got ${String(decimalPlaces)} in: ${numberString}`);
     }
   }
 
