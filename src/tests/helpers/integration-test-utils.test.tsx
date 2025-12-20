@@ -244,7 +244,7 @@ describe('integration-test-utils', () => {
       expect(getAxisDisplayPureNumberValue('X', 0)).toBe(123);
     });
 
-    it('getAxisDisplayPureNumberValue accepts valid numbers with two decimal points when precision=2', () => {
+    it('getAxisDisplayPureNumberValue accepts valid numbers with two decimal places when precision=2', () => {
       injectMockAxisDisplay('x', '123.45');
 
       expect(getAxisDisplayPureNumberValue('X', 2)).toBe(123.45);
