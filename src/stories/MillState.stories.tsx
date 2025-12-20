@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { useMillStore } from "../stores/millStore";
-import { MockMillConnection } from "../adapters/MockMillConnection";
+import { MockMillAdapter } from "../adapters/MockMillAdapter";
 
 /**
  * Display component to show current mill state.
@@ -83,7 +83,7 @@ function MillStateDisplay() {
  * Initialize stores for storybook - uses provided connection.
  * Returns an unsubscribe function for cleanup.
  */
-function initializeStoresForStory(connection: MockMillConnection): () => void {
+function initializeStoresForStory(connection: MockMillAdapter): () => void {
   // Set up mill store with connection
   useMillStore.setState({
     millState: connection.getState(),
@@ -107,11 +107,11 @@ function StoryWrapper({
   connection,
   children,
 }: {
-  connection?: MockMillConnection;
+  connection?: MockMillAdapter;
   children: React.ReactNode;
 }) {
   // Use useState with initializer to ensure stable connection reference
-  const [conn] = useState(() => connection ?? new MockMillConnection());
+  const [conn] = useState(() => connection ?? new MockMillAdapter());
 
   // Initialize stores in useEffect to avoid side effects during render
   useEffect(() => {
@@ -148,7 +148,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * NoOp mode - no external data source connected.
- * Default state when no connection is provided (uses NoOpMillConnection).
+ * Default state when no connection is provided (uses NoOpMillAdapter).
  */
 export const NoOpMode: Story = {};
 
@@ -158,7 +158,7 @@ export const NoOpMode: Story = {};
 export const MockConnected: Story = {
   decorators: [
     (Story) => {
-      const connection = new MockMillConnection();
+      const connection = new MockMillAdapter();
       return (
         <StoryWrapper connection={connection}>
           <Story />
@@ -175,7 +175,7 @@ export const MockConnected: Story = {
 export const MockWithPosition: Story = {
   decorators: [
     (Story) => {
-      const [connection] = useState(() => new MockMillConnection());
+      const [connection] = useState(() => new MockMillAdapter());
 
       useEffect(() => {
         connection.setPosition(12.3456, -45.6789, 100.0001);
@@ -198,7 +198,7 @@ export const MockWithPosition: Story = {
 export const ProbeTriggered: Story = {
   decorators: [
     (Story) => {
-      const [connection] = useState(() => new MockMillConnection());
+      const [connection] = useState(() => new MockMillAdapter());
 
       useEffect(() => {
         connection.setPosition(50, 50, 25);
@@ -222,7 +222,7 @@ export const ProbeTriggered: Story = {
 export const ProbePlusLimitSwitch: Story = {
   decorators: [
     (Story) => {
-      const [connection] = useState(() => new MockMillConnection());
+      const [connection] = useState(() => new MockMillAdapter());
 
       useEffect(() => {
         connection.setPosition(-100, 0, 0);
@@ -247,7 +247,7 @@ export const LiveMovement: Story = {
   decorators: [
     (Story) => {
       const [connection] = useState(
-        () => new MockMillConnection({ simulateMovement: true, updateInterval: 100 })
+        () => new MockMillAdapter({ simulateMovement: true, updateInterval: 100 })
       );
 
       useEffect(() => {

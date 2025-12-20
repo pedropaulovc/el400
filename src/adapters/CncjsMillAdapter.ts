@@ -5,12 +5,12 @@
 
 import { io, Socket } from 'socket.io-client';
 import type { Dispatch } from 'react';
-import type { MillConnection } from './MillConnection';
+import type { MillAdapter } from './MillAdapter';
 import type { MillStateListener, MillState, MillPosition } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createProbeState, createDefaultMillState } from '../types/millState';
 
-export interface CncjsMillConnectionOptions {
+export interface CncjsMillAdapterOptions {
   host: string;
   port: number;
   token?: string | undefined;
@@ -166,7 +166,7 @@ export function normalizeControllerState(
   }
 }
 
-export class CncjsMillConnection implements MillConnection {
+export class CncjsMillAdapter implements MillAdapter {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
@@ -176,10 +176,10 @@ export class CncjsMillConnection implements MillConnection {
     ...createDefaultMillState(),
     controllerType: 'cncjs',
   };
-  private options: CncjsMillConnectionOptions;
+  private options: CncjsMillAdapterOptions;
   private currentControllerType: CncjsControllerType = 'grbl';
 
-  constructor(options: CncjsMillConnectionOptions) {
+  constructor(options: CncjsMillAdapterOptions) {
     this.options = options;
   }
 

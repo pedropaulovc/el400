@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMillStore } from '../../stores/millStore';
 import { useDROStore } from '../../stores/droStore';
-import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { createDefaultMillState } from '../../types/millState';
@@ -79,7 +79,7 @@ function resetStoresForTest(): void {
   // Reset mill store
   useMillStore.setState({
     millState: createDefaultMillState('noop'),
-    connection: new NoOpMillConnection(),
+    connection: new NoOpMillAdapter(),
     isConnecting: false,
     error: null,
   });

@@ -16,8 +16,8 @@ import {
   useConnectionError,
   useSetConnection,
 } from './millStore';
-import { MockMillConnection } from '../adapters/MockMillConnection';
-import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
+import { MockMillAdapter } from '../adapters/MockMillAdapter';
+import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../types/millState';
 
 describe('millStore', () => {
@@ -25,7 +25,7 @@ describe('millStore', () => {
     // Reset store to initial state before each test
     useMillStore.setState({
       millState: createDefaultMillState('noop'),
-      connection: new NoOpMillConnection(),
+      connection: new NoOpMillAdapter(),
       isConnecting: false,
       error: null,
     });
@@ -54,7 +54,7 @@ describe('millStore', () => {
 
   describe('setConnection', () => {
     it('updates the connection', () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       useMillStore.getState().setConnection(mockConnection);
 
       expect(useMillStore.getState().connection).toBe(mockConnection);
@@ -66,7 +66,7 @@ describe('millStore', () => {
       expect(useMillStore.getState().error).not.toBeNull();
 
       // Set connection should clear it
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       useMillStore.getState().setConnection(mockConnection);
 
       expect(useMillStore.getState().error).toBeNull();
@@ -121,7 +121,7 @@ describe('millStore', () => {
 
   describe('initializeMillStore', () => {
     it('sets the connection and initial state', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       mockConnection.setPosition(100, 200, 300);
 
       await initializeMillStore(mockConnection);
@@ -132,7 +132,7 @@ describe('millStore', () => {
     });
 
     it('subscribes to connection state updates', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       await initializeMillStore(mockConnection);
 
       // Update position through connection
@@ -146,7 +146,7 @@ describe('millStore', () => {
       const mockDispatch = vi.fn();
       setDRODispatch(mockDispatch);
 
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       await initializeMillStore(mockConnection);
 
       // Trigger a position change which should dispatch MILL_STATE_CHANGED
@@ -161,7 +161,7 @@ describe('millStore', () => {
       // Ensure dispatch is null
       setDRODispatch(null);
 
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       await initializeMillStore(mockConnection);
 
       // Should not throw when position changes
@@ -169,8 +169,8 @@ describe('millStore', () => {
     });
 
     it('connects if not already connected', async () => {
-      const mockConnection = new MockMillConnection();
-      // MockMillConnection starts connected, so disconnect first
+      const mockConnection = new MockMillAdapter();
+      // MockMillAdapter starts connected, so disconnect first
       mockConnection.disconnect();
       expect(mockConnection.getState().connected).toBe(false);
 
@@ -180,7 +180,7 @@ describe('millStore', () => {
     });
 
     it('sets isConnecting during connection', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       mockConnection.disconnect();
 
       // Track isConnecting changes
@@ -198,7 +198,7 @@ describe('millStore', () => {
     });
 
     it('handles connection errors', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       mockConnection.disconnect();
 
       // Make connect throw an error
@@ -212,7 +212,7 @@ describe('millStore', () => {
     });
 
     it('handles non-Error connection failures', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       mockConnection.disconnect();
 
       // Make connect throw a string
@@ -225,7 +225,7 @@ describe('millStore', () => {
     });
 
     it('returns cleanup function that unsubscribes and disconnects', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       const cleanup = await initializeMillStore(mockConnection);
 
       expect(mockConnection.getState().connected).toBe(true);
@@ -240,7 +240,7 @@ describe('millStore', () => {
       const mockDispatch = vi.fn();
       setDRODispatch(mockDispatch);
 
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       const cleanup = await initializeMillStore(mockConnection);
 
       // Clear any previous calls
@@ -253,13 +253,13 @@ describe('millStore', () => {
       // (connection is disconnected, but even if it weren't, dispatch should be null)
       mockConnection.setPosition(999, 999, 999);
 
-      // Note: MockMillConnection still notifies subscribers even when disconnected,
+      // Note: MockMillAdapter still notifies subscribers even when disconnected,
       // but the dispatch should have been set to null
       expect(mockDispatch).not.toHaveBeenCalled();
     });
 
     it('does not try to connect if already connected', async () => {
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       // Connect first so it's already connected
       await mockConnection.connect();
       expect(mockConnection.getState().connected).toBe(true);
@@ -275,7 +275,7 @@ describe('millStore', () => {
   describe('selectors', () => {
     beforeEach(async () => {
       // Set up a connected mock connection for selector tests
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       await mockConnection.connect();
       mockConnection.setPosition(10, 20, 30);
       mockConnection.setProbeState('P');
@@ -312,7 +312,7 @@ describe('millStore', () => {
 
     it('useConnection returns connection adapter', () => {
       const { result } = renderHook(() => useConnection());
-      expect(result.current).toBeInstanceOf(MockMillConnection);
+      expect(result.current).toBeInstanceOf(MockMillAdapter);
     });
 
     it('useIsConnecting returns connecting status', () => {
@@ -340,7 +340,7 @@ describe('millStore', () => {
       const { result } = renderHook(() => useSetConnection());
       expect(typeof result.current).toBe('function');
 
-      const newConnection = new NoOpMillConnection();
+      const newConnection = new NoOpMillAdapter();
       act(() => {
         result.current(newConnection);
       });

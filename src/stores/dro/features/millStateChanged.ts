@@ -1,7 +1,7 @@
 /**
  * Mill State Changed Feature Reducer
  *
- * Handles MILL_STATE_CHANGED events from the MillConnection.
+ * Handles MILL_STATE_CHANGED events from the MillAdapter.
  * Currently a no-op that prevents the event from bubbling to other reducers.
  * Future enhancements could update display values or trigger other state changes
  * based on significant mill state transitions (e.g., connection status changes).

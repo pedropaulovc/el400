@@ -6,8 +6,8 @@
  */
 
 import { create } from 'zustand';
-import type { MillConnection } from '../adapters/MillConnection';
-import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
+import type { MillAdapter } from '../adapters/MillAdapter';
+import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
 import type { MillState } from '../types/millState';
 import { createDefaultMillState } from '../types/millState';
 
@@ -18,12 +18,12 @@ import { createDefaultMillState } from '../types/millState';
 interface MillStore {
   // State
   millState: MillState;
-  connection: MillConnection;
+  connection: MillAdapter;
   isConnecting: boolean;
   error: Error | null;
 
   // Actions
-  setConnection: (connection: MillConnection) => void;
+  setConnection: (connection: MillAdapter) => void;
 
   // Internal actions (prefixed with _)
   _setMillState: (state: MillState) => void;
@@ -35,12 +35,12 @@ interface MillStore {
 // STORE IMPLEMENTATION
 // ─────────────────────────────────────────────────────────────────
 
-const defaultConnection = new NoOpMillConnection();
+const defaultAdapter = new NoOpMillAdapter();
 
 export const useMillStore = create<MillStore>()((set) => ({
   // Initial state
   millState: createDefaultMillState('noop'),
-  connection: defaultConnection,
+  connection: defaultAdapter,
   isConnecting: false,
   error: null,
 
@@ -114,37 +114,37 @@ export function setDRODispatch(
  * Initialize the mill store with a connection.
  * Sets up state subscription and connects to the data source.
  *
- * @param connection The mill connection adapter to use
+ * @param adapter The mill adapter to use
  * @returns Cleanup function to disconnect and unsubscribe
  */
 export async function initializeMillStore(
-  connection: MillConnection
+  adapter: MillAdapter
 ): Promise<() => void> {
   const store = useMillStore.getState();
 
-  // Set the connection
-  store.setConnection(connection);
-  store._setMillState(connection.getState());
+  // Set the adapter
+  store.setConnection(adapter);
+  store._setMillState(adapter.getState());
 
   // Subscribe to state updates
-  const unsubscribe = connection.subscribe((state) => {
+  const unsubscribe = adapter.subscribe((state) => {
     useMillStore.getState()._setMillState(state);
   });
 
-  // Inject DRO dispatch into connection for MILL_STATE_CHANGED events
-  connection.setDispatch((event) => {
+  // Inject DRO dispatch into adapter for MILL_STATE_CHANGED events
+  adapter.setDispatch((event) => {
     if (droStoreDispatch) {
       droStoreDispatch(event);
     }
   });
 
   // Connect if not already connected
-  if (!connection.getState().connected) {
+  if (!adapter.getState().connected) {
     store._setConnecting(true);
     store._setError(null);
 
     try {
-      await connection.connect();
+      await adapter.connect();
     } catch (err) {
       store._setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
@@ -155,7 +155,7 @@ export async function initializeMillStore(
   // Return cleanup function
   return () => {
     unsubscribe();
-    connection.setDispatch(null);
-    connection.disconnect();
+    adapter.setDispatch(null);
+    adapter.disconnect();
   };
 }
