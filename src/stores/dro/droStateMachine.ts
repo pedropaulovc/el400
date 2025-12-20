@@ -5,8 +5,8 @@
  * mode toggles, and function menu states.
  */
 
-import type { AxisValues, VolatileMemoryState } from '../types/volatileMemory';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
+import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates

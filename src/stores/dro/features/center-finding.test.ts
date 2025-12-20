@@ -10,7 +10,7 @@ import type { DROStatePayload } from '../types';
 import type { DROStateName, CenterFindingData, DROStateData } from '../droStateMachine';
 import { INITIAL_CENTER_FINDING_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 
 /**
  * Helper to create test state with a specific position.

@@ -2,7 +2,7 @@
 
 ## Quick Reference
 
-* **State Machine:** `src/dro-state-machine/` - All DRO behavior
+* **State Machine:** `src/stores/dro/` - All DRO behavior (colocated with Zustand store)
 * **Adapters:** `src/adapters/` - `CncjsMillConnection`, `NoopMillConnection`
 * **Types:** `src/types/` - `MillState`, `VolatileMemory`, `NonVolatileMemory`
 
@@ -24,7 +24,7 @@ useSettingsStore: { nvMem, updateNvMem, resetMemory }
 ## Core Types
 
 ```typescript
-// DRO reducer state (src/dro-state-machine/types.ts)
+// DRO reducer state (src/stores/dro/types.ts)
 interface DROStatePayload {
   stateName: DROStateName;     // 'idle' | 'boot' | 'function-menu-*' | 'calculator-*' | ...
   stateData: DROStateData;     // Feature context (discriminated by stateDataType)
@@ -60,7 +60,7 @@ interface NonVolatileMemory {
 ## Hooks
 
 ```typescript
-// DRO state (src/stores/droStore.ts, re-exported from src/dro-state-machine/index.ts)
+// DRO state (src/stores/droStore.ts, re-exported from src/stores/dro/index.ts)
 useDROState()      // → DROStateName
 useDROContext()    // → DROStateData
 useDROVMem()       // → VolatileMemoryState
@@ -87,26 +87,25 @@ src/stores/
 ├── index.ts              # Re-exports
 ├── droStore.ts           # DRO state machine store
 ├── millStore.ts          # Mill connection lifecycle
-└── settingsStore.ts      # Persisted settings (localStorage)
-
-src/dro-state-machine/
-├── index.ts              # Public exports (re-exports from stores)
-├── types.ts              # DROStatePayload, FeatureReducer, DROReducerContext
-├── droStateMachine.ts    # DROStateName, DROEventPayload, DROStateData
-├── reducer.ts            # Root reducer (composes features)
-├── test-utils.ts         # Test helpers (createTestState, DEFAULT_TEST_CONTEXT)
-└── features/
-    ├── boot.ts           # boot → showMessage → idle
-    ├── idle.ts           # Idle state handling
-    ├── keypad.ts         # KEY_0-9, KEY_DECIMAL, KEY_SIGN
-    ├── axis-operations.ts # BTN_SELECT_*, BTN_ZERO_*
-    ├── mode-toggle.ts    # BTN_ABS_INC
-    ├── half.ts           # BTN_HALF
-    ├── abs-inc.ts        # ABS/INC state transitions
-    ├── inch-mm.ts        # Inch/MM toggle
-    ├── menu.ts           # Function menu ring
-    ├── center-finding.ts # Point collection
-    └── calculator.ts     # +/-/×/÷ operations
+├── settingsStore.ts      # Persisted settings (localStorage)
+└── dro/                  # DRO state machine module
+    ├── index.ts          # Public exports (re-exports hooks from droStore)
+    ├── types.ts          # DROStatePayload, FeatureReducer, DROReducerContext
+    ├── droStateMachine.ts # DROStateName, DROEventPayload, DROStateData
+    ├── reducer.ts        # Root reducer (composes features)
+    ├── test-utils.ts     # Test helpers (createTestState, DEFAULT_TEST_CONTEXT)
+    └── features/
+        ├── boot.ts           # boot → showMessage → idle
+        ├── idle.ts           # Idle state handling
+        ├── keypad.ts         # KEY_0-9, KEY_DECIMAL, KEY_SIGN
+        ├── axis-operations.ts # BTN_SELECT_*, BTN_ZERO_*
+        ├── mode-toggle.ts    # BTN_ABS_INC
+        ├── half.ts           # BTN_HALF
+        ├── abs-inc.ts        # ABS/INC state transitions
+        ├── inch-mm.ts        # Inch/MM toggle
+        ├── menu.ts           # Function menu ring
+        ├── center-finding.ts # Point collection
+        └── calculator.ts     # +/-/×/÷ operations
 
 src/adapters/
 ├── MillConnection.ts     # Interface
@@ -206,9 +205,9 @@ interface MillConnection {
 **E2E:** `e2e/**/*.spec.ts` - Playwright
 
 Key test files:
-- `src/dro-state-machine/reducer.test.ts`
-- `src/dro-state-machine/features/*.test.ts`
-- `src/adapters/__tests__/*.test.ts`
+- `src/stores/dro/reducer.test.ts`
+- `src/stores/dro/features/*.test.ts`
+- `src/adapters/*.test.ts`
 
 ## Deployment
 

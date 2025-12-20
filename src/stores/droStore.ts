@@ -7,14 +7,14 @@
  */
 
 import { create } from 'zustand';
-import type { DROStatePayload, DROReducerContext } from '../dro-state-machine/types';
+import type { DROStatePayload, DROReducerContext } from './dro/types';
 import type {
   DROStateName,
   DROStateData,
   DROEventPayload,
-} from '../dro-state-machine/droStateMachine';
-import { INITIAL_DRO_STATE_PAYLOAD } from '../dro-state-machine/droStateMachine';
-import { droReducer } from '../dro-state-machine/reducer';
+} from './dro/droStateMachine';
+import { INITIAL_DRO_STATE_PAYLOAD } from './dro/droStateMachine';
+import { droReducer } from './dro/reducer';
 import type { VolatileMemoryState } from '../types/volatileMemory';
 import { useMillStore, setDRODispatch } from './millStore';
 import { useSettingsStore } from './settingsStore';

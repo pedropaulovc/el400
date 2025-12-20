@@ -12,13 +12,13 @@ import {
   useDROContext,
   type DROShape,
 } from './index';
-import { useDROStore } from '../stores/droStore';
-import { useMillStore } from '../stores/millStore';
-import { useSettingsStore } from '../stores/settingsStore';
+import { useDROStore } from '../droStore';
+import { useMillStore } from '../millStore';
+import { useSettingsStore } from '../settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
-import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
-import { createDefaultMillState } from '../types/millState';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { createDefaultMillState } from '../../types/millState';
 
 /**
  * Reset all stores to initial state before each test.

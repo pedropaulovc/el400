@@ -9,7 +9,7 @@ import { modeToggleReducer } from './mode-toggle';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 
 describe('modeToggleReducer', () => {
   describe('state handling', () => {

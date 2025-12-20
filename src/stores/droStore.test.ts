@@ -17,7 +17,7 @@ import {
 import { useMillStore, setDRODispatch, initializeMillStore } from './millStore';
 import { MockMillConnection } from '../adapters/MockMillConnection';
 import { useSettingsStore } from './settingsStore';
-import { INITIAL_DRO_STATE_PAYLOAD } from '../dro-state-machine/droStateMachine';
+import { INITIAL_DRO_STATE_PAYLOAD } from './dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
 import { createDefaultMillState } from '../types/millState';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';

@@ -6,7 +6,7 @@
 import type { Dispatch } from 'react';
 import type { MillConnection } from './MillConnection';
 import type { MillState, MillStateListener } from '../types/millState';
-import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
+import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createDefaultMillState } from '../types/millState';
 
 /**

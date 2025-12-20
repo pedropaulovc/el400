@@ -11,7 +11,7 @@ export {
   useStateData as useDROContext,
   useDROVMem,
   useDRODispatch,
-} from '../stores/droStore';
+} from '../droStore';
 
 // Types
 export type { DROStatePayload as DROShape, FeatureReducer } from './types';

@@ -12,7 +12,7 @@ import {
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
   renderSimulator,
-} from '../../tests/helpers/integration-test-utils';
+} from '../../../tests/helpers/integration-test-utils';
 
 describe('Boot sequence integration tests', () => {
   beforeEach(() => {

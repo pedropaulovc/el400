@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useMillStore } from "../stores/millStore";
 import { useDROStore } from "../stores/droStore";
-import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../dro-state-machine/droStateMachine";
+import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../stores/dro/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillConnection } from "../adapters/MockMillConnection";

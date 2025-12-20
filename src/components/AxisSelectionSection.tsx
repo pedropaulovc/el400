@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import DROButton from "./DROButton";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDRODispatch } from "../dro-state-machine";
+import { useDRODispatch } from "../stores/dro";
 
 const AxisSelectionSection = () => {
   const vMem = useVolatileMemory();
