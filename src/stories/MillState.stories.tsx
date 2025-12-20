@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMillStore } from "../stores/millStore";
 import { MockMillConnection } from "../adapters/MockMillConnection";
 
@@ -81,8 +81,9 @@ function MillStateDisplay() {
 
 /**
  * Initialize stores for storybook - uses provided connection.
+ * Returns an unsubscribe function for cleanup.
  */
-function initializeStoresForStory(connection: MockMillConnection) {
+function initializeStoresForStory(connection: MockMillConnection): () => void {
   // Set up mill store with connection
   useMillStore.setState({
     millState: connection.getState(),
@@ -91,10 +92,12 @@ function initializeStoresForStory(connection: MockMillConnection) {
     error: null,
   });
 
-  // Subscribe to connection updates
-  connection.subscribe((state) => {
+  // Subscribe to connection updates and return unsubscribe function
+  const unsubscribe = connection.subscribe((state) => {
     useMillStore.getState()._setMillState(state);
   });
+
+  return unsubscribe;
 }
 
 /**
@@ -107,19 +110,15 @@ function StoryWrapper({
   connection?: MockMillConnection;
   children: React.ReactNode;
 }) {
-  // Use useMemo to ensure stable connection reference
-  const conn = useMemo(() => connection ?? new MockMillConnection(), [connection]);
+  // Use useState with initializer to ensure stable connection reference
+  const [conn] = useState(() => connection ?? new MockMillConnection());
 
-  // Initialize Zustand stores during render.
-  // This is acceptable because Zustand stores are external to React's state management.
-  // The useMemo ensures this runs once per connection change, not on every render.
-  useMemo(() => {
-    initializeStoresForStory(conn);
-  }, [conn]);
-
-  // Clean up connection on unmount
+  // Initialize stores in useEffect to avoid side effects during render
   useEffect(() => {
+    const unsubscribe = initializeStoresForStory(conn);
+
     return () => {
+      unsubscribe();
       conn.disconnect();
     };
   }, [conn]);
