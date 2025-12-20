@@ -43,5 +43,6 @@ export default tseslint.config({ ignores: ["dist", "storybook-static", "coverage
     "@typescript-eslint/no-unsafe-argument": "off",
     "@typescript-eslint/no-floating-promises": "off",
     "@typescript-eslint/require-await": "off",
+    "react-refresh/only-export-components": "off",
   },
 }, storybook.configs["flat/recommended"]);
