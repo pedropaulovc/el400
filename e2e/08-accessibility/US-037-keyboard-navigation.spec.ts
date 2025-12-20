@@ -22,13 +22,15 @@ test.describe('US-037: Keyboard Navigation', () => {
       'key-clear', 'key-enter'
     ];
 
-    // Verify first button is focused
-    await expect(page.getByTestId('key-1')).toBeFocused();
-
     // Tab through and verify order
-    for (let i = 1; i < expectedOrder.length; i++) {
-      await page.keyboard.press('Tab');
-      await expect(page.getByTestId(expectedOrder[i])).toBeFocused();
+    for (let i = 0; i < expectedOrder.length; i++) {
+      const testId = expectedOrder[i];
+      if (testId) {
+        await expect(page.getByTestId(testId)).toBeFocused();
+      }
+      if (i < expectedOrder.length - 1) {
+        await page.keyboard.press('Tab');
+      }
     }
   });
 
