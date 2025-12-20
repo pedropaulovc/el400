@@ -2,7 +2,7 @@ import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDRODispatch } from "../dro-state-machine";
+import { useDRODispatch } from "../stores/dro";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};

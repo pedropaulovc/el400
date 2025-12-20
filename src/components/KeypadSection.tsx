@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import DROButton from "./DROButton";
 import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
-import { useDRODispatch } from "../dro-state-machine";
+import { useDRODispatch } from "../stores/dro";
 
 /** Map digit to KEY event name */
 const DIGIT_TO_EVENT: Record<string, Parameters<ReturnType<typeof useDRODispatch>>[0]> = {

@@ -5,9 +5,9 @@
 import type { DROReducerContext, DROStatePayload } from './types';
 import type { DROStateName, DROStateData } from './droStateMachine';
 import { INITIAL_DRO_STATE_DATA } from './droStateMachine';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
-import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';
-import { createDefaultMillState } from '../types/millState';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
+import { createDefaultMillState } from '../../types/millState';
 
 /**
  * Default mock context for reducer tests.

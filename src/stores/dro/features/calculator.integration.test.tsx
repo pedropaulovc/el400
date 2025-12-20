@@ -5,7 +5,7 @@ import {
   renderSimulator,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
-} from '../../tests/helpers/integration-test-utils';
+} from '../../../tests/helpers/integration-test-utils';
 
 describe('Calculator Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;

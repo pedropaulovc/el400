@@ -7,8 +7,8 @@
 
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
-import type { Axis, AxisValues } from '../../types/volatileMemory';
-import { fromAnyUnitToMm } from '../../utils/unitConversion';
+import type { Axis, AxisValues } from '../../../types/volatileMemory';
+import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
 
 /**

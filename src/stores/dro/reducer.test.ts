@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { droReducer } from './reducer';
 import type { DROStatePayload } from './types';
 import { createTestState, DEFAULT_TEST_CONTEXT } from './test-utils';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 
 /** Helper to create state with a specific position for testing KEY_6_RIGHT */
 function stateWithPosition(

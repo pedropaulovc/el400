@@ -5,7 +5,7 @@ import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import { useDROState, useDRODispatch, useBootSequence } from "../dro-state-machine";
+import { useDROState, useDRODispatch, useBootSequence } from "../stores/dro";
 import { useNvMem } from "../stores/settingsStore";
 import { useDisplayValues } from "../hooks/useDisplayValues";
 

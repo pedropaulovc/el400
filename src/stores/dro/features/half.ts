@@ -6,7 +6,7 @@
 
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
-import type { Axis, AxisValues } from '../../types/volatileMemory';
+import type { Axis, AxisValues } from '../../../types/volatileMemory';
 
 /**
  * Get the machine position for an axis.

@@ -3,7 +3,7 @@ import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { useDefaultUnit } from "../stores/settingsStore";
-import { useDROState, isFunctionActive } from "../dro-state-machine";
+import { useDROState, isFunctionActive } from "../stores/dro";
 
 export interface AxisValues {
   X: AxisDisplayValue;

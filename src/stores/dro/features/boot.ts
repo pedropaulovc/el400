@@ -8,7 +8,7 @@ import { useEffect, type Dispatch } from 'react';
 import type { FeatureReducer } from '../types';
 import type { DROStateName, DROEventPayload } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
-import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
+import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 
 /**
  * Duration in milliseconds for the boot message to be displayed before auto-dismissing.

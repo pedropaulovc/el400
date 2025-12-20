@@ -72,4 +72,4 @@ export type { NonVolatileMemory } from '../types/nonVolatileMemory';
 export type { MillState } from '../types/millState';
 export type { MillConnection } from '../adapters/MillConnection';
 export type { VolatileMemoryState, DatumMode, Axis, AxisValues } from '../types/volatileMemory';
-export type { DROStateName, DROStateData, DROEventPayload } from '../dro-state-machine/droStateMachine';
+export type { DROStateName, DROStateData, DROEventPayload } from './dro/droStateMachine';
