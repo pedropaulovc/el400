@@ -1,5 +1,5 @@
 /**
- * Mill connection interface for connecting to CNC controllers.
+ * Mill adapter interface for connecting to CNC controllers.
  * Implementations provide data from various sources (CNCjs, LinuxCNC, mock, etc.)
  */
 
@@ -8,11 +8,11 @@ import type { ControllerType, MillState, MillStateListener } from '../types/mill
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 
 /**
- * Abstract interface for mill data connections.
- * Each connection connects to a specific data source and normalizes
+ * Abstract interface for mill data adapters.
+ * Each adapter connects to a specific data source and normalizes
  * the data into the unified MillState format.
  */
-export interface MillConnection {
+export interface MillAdapter {
   /**
    * Connect to the data source.
    * @returns Promise that resolves when connected
@@ -40,7 +40,7 @@ export interface MillConnection {
   getState(): MillState;
 
   /**
-   * The type of controller this connection connects to.
+   * The type of controller this adapter connects to.
    */
   readonly controllerType: ControllerType;
 

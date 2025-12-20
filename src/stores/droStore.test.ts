@@ -24,13 +24,13 @@ import {
   useManualAbsoluteZ,
 } from './droStore';
 import { useMillStore, setDRODispatch, initializeMillStore } from './millStore';
-import { MockMillConnection } from '../adapters/MockMillConnection';
+import { MockMillAdapter } from '../adapters/MockMillAdapter';
 import { useSettingsStore } from './settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD } from './dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
 import { createDefaultMillState } from '../types/millState';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';
-import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
+import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
 
 describe('droStore', () => {
   beforeEach(() => {
@@ -43,7 +43,7 @@ describe('droStore', () => {
 
     useMillStore.setState({
       millState: createDefaultMillState('noop'),
-      connection: new NoOpMillConnection(),
+      connection: new NoOpMillAdapter(),
       isConnecting: false,
       error: null,
     });
@@ -191,7 +191,7 @@ describe('droStore', () => {
 
     it('dispatch callback is invoked when mill state changes via initializeMillStore', async () => {
       // This test exercises the full integration: initializeDROMillConnection sets up
-      // the callback, then initializeMillStore connects a MockMillConnection which
+      // the callback, then initializeMillStore connects a MockMillAdapter which
       // triggers MILL_STATE_CHANGED events when position changes
 
       // Set DRO to idle first
@@ -205,13 +205,13 @@ describe('droStore', () => {
       initializeDROMillConnection();
 
       // Create a mock connection and initialize mill store
-      const mockConnection = new MockMillConnection();
+      const mockConnection = new MockMillAdapter();
       const cleanup = await initializeMillStore(mockConnection);
 
       // Spy on DRO dispatch
       const dispatchSpy = vi.spyOn(useDROStore.getState(), 'dispatch');
 
-      // Trigger a position change - this should cause MockMillConnection to call
+      // Trigger a position change - this should cause MockMillAdapter to call
       // the dispatch function which was set up by initializeDROMillConnection
       mockConnection.setPosition(1, 2, 3);
 

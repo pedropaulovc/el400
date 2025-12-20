@@ -4,7 +4,7 @@
  *
  * URL format:
  * - /?source=cncjs&host=192.168.1.100&port=8000
- * - / (no params - uses NoOpMillConnection)
+ * - / (no params - uses NoOpMillAdapter)
  */
 
 import { useMemo } from 'react';

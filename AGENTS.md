@@ -1,98 +1,163 @@
-# Project Overview
+# EL400 DRO Simulator
 
-This is a faithful, touch-friendly web-based simulator of the Electronica EL400 (a.k.a. MagXact MX-100M) digital readout (DRO) system for CNC milling machines.
+Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for CNC mills.
 
-## Tech Stack
+## Quick Reference
 
-- **Build Tool:** Vite
-- **Framework:** React 18 with TypeScript
-- **Styling:** Tailwind CSS
-- **State Management:** React Context + hooks (MillStateContext, SettingsContext)
-- **Data Fetching:** @tanstack/react-query
-- **Routing:** react-router-dom
-- **Real-time:** socket.io-client (CNCjs integration)
-- **Unit Testing:** Vitest + @testing-library/react + jsdom
-- **E2E Testing:** Playwright with Page Object Model and Chrome headless (`npx playwright install --with-deps chromium-headless-shell`)
-- **Component Testing:** Storybook
+| Category | Location |
+|----------|----------|
+| State Machine | `src/stores/dro/` (Zustand + reducer) |
+| Feature Reducers | `src/stores/dro/features/` - boot, idle, keypad, calculator, etc. |
+| Adapters | `src/adapters/` - CNCjs, Mock, NoOp |
+| Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
+| Components | `src/components/` - EL400Simulator root |
+| User Stories | `project/user-stories/*` |
 
-## Development Commands
+## Commands
 
 ```bash
-# Development
-npm run dev
-npm run build
-npm run build:dev
-npm run preview
-npm run lint
-
-# Testing
-npm run test
-npm run test:ui
-npm run test:watch
-npm run test:coverage
-npm run test:storybook
-npm run test:e2e
-npm run test:e2e:headed
-npm run test:e2e:ui
-npm run test:e2e:debug
-npm run test:all
-
-# Storybook
-npm run storybook
-npm run build-storybook
+npm run dev              # Development server
+npm run build            # Production build
+npm run lint             # ESLint
+npm run typecheck        # TypeScript type checking (tsc)
+npm run test             # Unit and integration tests (Vitest)
+npm run test:coverage    # Unit and integration tests with coverage, min 70% enforced
+npm run test:storybook   # Storybook interaction tests
+npm run test:e2e         # Playwright E2E
+npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybook)
 ```
 
-## Testing Strategy
+## Testing Exit Criteria
 
-- **TypeScript** Strictest rules enabled
-- **Vitest** (`src/**/*.test.tsx`) - Component behavior, logic, interactions, accessibility. Primary test infrastructure.
-- **Integration** (`*.integration.test.tsx`) - Use helpers from `src/tests/helpers/integration-test-utils.tsx`. Use `data-testid`, not roles/labels.
-- **Playwright** (`e2e/**/*.spec.ts`) - End-to-end user workflows and journeys. Dedicated to acceptance testing and critical user flows, usually 1 or 2 per feature. Use unit or integration tests for in-depth testing coverage.
-- **Storybook** (`src/**/*.stories.tsx`) - Visual documentation only. Avoid duplicating behavioral tests.
-- **Coverage:** Min 70% enforced. Run `npm run test:coverage`.
-- **IMPORTANT: Exit criteria** 1 or 2 E2E tests plus several integration tests and unit tests (new features), successful `npm run test:all` (all changes)
+**All changes:** `npm run test:all` must pass
+**New features:** 1-2 E2E tests + integration tests + unit tests
 
-## Project Management
-
-User stories with acceptance tests are preserved in `project/user-stories/*`
+| Type | Pattern | Notes |
+|------|---------|-------|
+| Unit | `src/**/*.test.ts(x)` | Primary. Use Vitest + RTL |
+| Integration | `*.integration.test.tsx` | Use `data-testid`, helpers in `src/tests/helpers/`. Test happy AND unhappy paths |
+| E2E | `e2e/**/*.spec.ts` | Playwright. Critical flows only |
+| Stories | `src/**/*.stories.tsx` | Visual docs only, no behavior tests |
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed data flow and adapter implementation.
+```
+EL400Simulator (hooks)
+      ↑
+Zustand Stores
+├── droStore ←── reads millStore, settingsStore
+├── millStore ←── connection.subscribe()
+└── settingsStore (localStorage)
+      ↑
+MillAdapter interface
+      ↑
+CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
+```
 
-### Data Interface
+### Stores
 
-- **Adapters** (`src/adapters/`): CNCjs, Mock, Manual - implement `MillConnection` interface
-- **Contexts** (`src/context/`): `MillStateContext` (positions), `SettingsContext` (persisted prefs)
-- **Hooks** (`src/hooks/`): `useVolatileMemory` (ABS/INC switching), `useNonVolatileMemory` (persisted settings)
-- **URL config**: `?source=cncjs&host=localhost&port=8000` or `?source=mock`
+```typescript
+useDROStore: { stateName, stateData, vMem, dispatch }
+useMillStore: { millState, connection, isConnecting, error }
+useSettingsStore: { nvMem, updateNvMem, resetMemory }
+```
 
-### Component Structure
+### Key Hooks
 
-The application follows a hierarchical component structure with the main simulator at the root:
+```typescript
+useDROState()       // → DROStateName
+useDRODispatch()    // → dispatch({ eventName: 'KEY_5' })
+useMillState()      // → MillState
+useNvMem()          // → NonVolatileMemory
+useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
+```
 
-**Major Component Sections:**
-- `src/pages/Index.tsx` - Renders the `EL400Simulator` with styling wrapper
-- `EL400Simulator.tsx` - Root component
-- `MultiAxisSection` - Seven-segment displays for X/Y/Z axes plus mode indicators
-- `AxisSelectionSection` - Axis selection buttons (X, Y, Z) and zero buttons
-- `KeypadSection` - Numeric keypad with navigation arrows
-- `PrimaryFunctionSection` - Primary DRO functions (settings, calibrate, center, zero all)
-- `SecondaryFunctionSection` - Advanced functions (tool offset, bolt circle, linear pattern, half, SDM)
+### Events (DROEventPayload)
 
-## Key Implementation Details
+- Keypad: `KEY_0`..`KEY_9`, `KEY_DECIMAL`, `KEY_SIGN`, `KEY_CLEAR`, `KEY_ENTER`
+- Navigation: `KEY_2_DOWN`, `KEY_4_LEFT`, `KEY_6_RIGHT`, `KEY_8_UP`
+- Axis: `BTN_SELECT_X/Y/Z`, `BTN_ZERO_X/Y/Z`, `BTN_ZERO_ALL`
+- Mode: `BTN_ABS_INC`, `BTN_INCH_MM`
+- Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
+- Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
 
-### Accessibility
+### URL Config
 
-Components include:
-- ARIA labels and roles
-- Keyboard navigation support
-- Focus ring indicators
-- Screen reader support (sr-only class for hidden labels)
-- High contrast support (forced-colors)
+```
+/?source=cncjs&host=192.168.1.100&port=8000
+/?source=mock
+/?source=manual  (default)
+```
 
-### Component Structure
-*   **Path:** `src/components`
-*   **Pattern:** Functional components using React Hooks (`useState`, `useCallback`).
-*   **Styling:** Utility-first CSS using Tailwind classes directly in JSX.
-*   **Isolation:** Complex UI elements like the DRO display (`EL400Simulator.tsx`) are composed of smaller sub-components (e.g., `MultiAxisSection`, `KeypadSection`).
+## DRO State Names
+
+States are a **flat collection** (not nested). Each feature may define multiple states:
+
+- Boot: `boot`, `boot-show-message`
+- Idle: `idle`
+- Calculator: `calculator-first-operand`, `calculator-operator-selected`, `calculator-second-operand`, `calculator-result`
+- Center Finding: `center-finding-collect`, `center-finding-result`
+- Function Menu: `function-menu-ring`, `function-menu-*`
+
+## Core Types
+
+```typescript
+interface DROStatePayload {
+  stateName: DROStateName;   // Flat enum - see section above
+  stateData: DROStateData;   // Feature context (discriminated union)
+  vMem: VolatileMemoryState;
+}
+
+interface MillState {
+  position: { x: number; y: number; z: number };
+  probe: { pinState: string; triggered: boolean };
+  connected: boolean;
+  controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
+}
+
+interface NonVolatileMemory {
+  beepEnabled: boolean;
+  defaultUnit: 'inch' | 'mm';
+  precision: number;
+  bootMessageMode: 'show' | 'skip';
+}
+```
+
+## File Structure
+
+```
+src/stores/dro/
+├── droStateMachine.ts  # State names, events, data types
+├── reducer.ts          # Root reducer (composes features)
+├── test-utils.ts       # createTestState, DEFAULT_TEST_CONTEXT
+└── features/           # boot, idle, keypad, axis-operations, etc.
+
+src/adapters/
+├── MillAdapter.ts         # Interface
+├── CncjsMillAdapter.ts    # WebSocket to CNCjs
+├── MockMillAdapter.ts     # Test/dev simulation
+└── NoOpMillAdapter.ts     # Manual mode fallback
+```
+
+## Feature Reducer Pattern
+
+```typescript
+type FeatureReducer = (
+  state: DROStatePayload,
+  event: DROEventPayload,
+  context: { millState: MillState; nvMem: NonVolatileMemory }
+) => DROStatePayload | null;  // null = not handled
+```
+
+## Tech Stack
+
+React 18, TypeScript (strict), Vite, Tailwind CSS, Zustand, socket.io-client, Vitest, Playwright, Storybook
+
+## Component Hierarchy
+
+- `Index.tsx` → `EL400Simulator` (root)
+  - `MultiAxisSection` - Seven-segment displays
+  - `AxisSelectionSection` - X/Y/Z buttons
+  - `KeypadSection` - Numeric input
+  - `PrimaryFunctionSection` - Settings, calibrate, center, zero all
+  - `SecondaryFunctionSection` - Tool offset, bolt circle, linear pattern

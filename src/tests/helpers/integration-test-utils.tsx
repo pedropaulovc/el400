@@ -12,7 +12,7 @@ import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMillStore } from '../../stores/millStore';
 import { useDROStore } from '../../stores/droStore';
-import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { INITIAL_DRO_STATE_PAYLOAD } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { createDefaultMillState } from '../../types/millState';
@@ -76,7 +76,7 @@ export function setNonVolatileMemory(values: Partial<NonVolatileMemory>): void {
  * Tests within the same file run sequentially, so there are no race conditions.
  * This function is called by renderSimulator() automatically.
  *
- * Note on NoOpMillConnection: This is a lightweight no-op implementation that
+ * Note on NoOpMillAdapter: This is a lightweight no-op implementation that
  * doesn't hold any resources (no sockets, timers, etc.). Previous instances
  * are garbage collected when replaced by new ones - no explicit cleanup needed.
  */
@@ -91,10 +91,10 @@ export function resetStores(): void {
     },
   });
 
-  // Reset mill store (NoOpMillConnection is lightweight, no cleanup needed)
+  // Reset mill store (NoOpMillAdapter is lightweight, no cleanup needed)
   useMillStore.setState({
     millState: createDefaultMillState('noop'),
-    connection: new NoOpMillConnection(),
+    connection: new NoOpMillAdapter(),
     isConnecting: false,
     error: null,
   });
@@ -131,7 +131,7 @@ interface RenderSimulatorOptions {
  * Renders the EL400Simulator with all required providers.
  * Defaults to skipping boot message for faster tests.
  *
- * Note: Uses NoOpMillConnection which is a lightweight no-op implementation
+ * Note: Uses NoOpMillAdapter which is a lightweight no-op implementation
  * that doesn't hold any resources (no sockets, timers, etc.) and doesn't
  * require explicit cleanup. The connection is reset via resetStores() which
  * is called at the start of each test.
@@ -139,7 +139,7 @@ interface RenderSimulatorOptions {
 export function renderSimulator(options?: RenderSimulatorOptions) {
   const { bootMessageMode = 'skip', profile = false, componentProfiling = false } = options ?? {};
 
-  // Reset stores first (also initializes NoOpMillConnection)
+  // Reset stores first (also initializes NoOpMillAdapter)
   resetStores();
 
   // Set boot message mode
