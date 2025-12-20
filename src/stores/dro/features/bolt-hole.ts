@@ -41,7 +41,7 @@ export const BOLT_HOLE_INTRO_DURATION_MS = 1000;
 
 /** Display text for bolt hole states */
 const BOLT_HOLE_DISPLAY_TEXT: Record<string, string> = {
-  'bolt-hole-intro': 'b h0LE',
+  'bolt-hole-intro': 'b hoLE',
   'bolt-hole-menu-select-CIRCLE': 'CirCLE',
   'bolt-hole-menu-select-ARC': 'ArC',
   'bolt-hole-circle-center-x': 'Cnt X',
@@ -119,8 +119,26 @@ function computeBoltHoleNavigateDisplay(
 }
 
 /**
+ * Format buffer value for display.
+ * - Empty buffer: shows 0
+ * - Integers: show without decimals (e.g., "6")
+ * - Decimals: show with 4 decimal precision (e.g., "1.7500")
+ */
+function formatBufferForDisplay(buffer: string): number {
+  if (!buffer || buffer === '-' || buffer === '.' || buffer === '-.') {
+    return 0;
+  }
+  const value = parseFloat(buffer);
+  if (isNaN(value)) {
+    return 0;
+  }
+  // Return the numeric value - display formatting handles precision
+  return value;
+}
+
+/**
  * Compute display for parameter entry states.
- * X shows prompt text, Y shows buffer value, Z shows normal position.
+ * X shows prompt text, Y shows buffer value with proper precision, Z shows normal position.
  */
 function computeParameterEntryDisplay(
   state: DROStateName,
@@ -128,8 +146,8 @@ function computeParameterEntryDisplay(
   context: DROReducerContext
 ): DisplayState {
   const promptText = BOLT_HOLE_DISPLAY_TEXT[state] ?? '';
-  const bufferDisplay = vMem.inputBuffer || '0';
-  return createDisplay(promptText, bufferDisplay, computeNormalDisplay(vMem, context).Z);
+  const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
+  return createDisplay(promptText, bufferValue, computeNormalDisplay(vMem, context).Z);
 }
 
 /**

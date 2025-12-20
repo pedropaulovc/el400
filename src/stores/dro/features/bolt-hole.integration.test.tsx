@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   enterValue,
+  getAxisDisplayPureTextValue,
+  getAxisDisplayPureNumberValue,
 } from '../../../tests/helpers/integration-test-utils';
 import { useDROStore } from '../../droStore';
 import { BOLT_HOLE_INTRO_DURATION_MS } from './bolt-hole';
@@ -49,11 +51,19 @@ describe('Bolt Hole Circle Integration', () => {
       // Should be in bolt-hole-intro state first
       expect(useDROStore.getState().stateName).toBe('bolt-hole-intro');
 
+      // Display should show "b hoLE" intro message on X, 0 on Y
+      expect(getAxisDisplayPureTextValue('X')).toBe('b hoLE');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0);
+      expect(getAxisDisplayPureNumberValue('Z')).toBe(0);
+
       // Advance past intro
       await advancePastIntro();
 
       // Should now be in bolt-hole-menu-select state
       expect(useDROStore.getState().stateName).toBe('bolt-hole-menu-select');
+
+      // Display should show "CirCLE" menu option
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
     });
 
     it('does not enter bolt hole mode when in INC mode', async () => {
@@ -85,6 +95,7 @@ describe('Bolt Hole Circle Integration', () => {
       if (stateData.stateDataType === 'bolt-hole') {
         expect(stateData.boltHoleMode).toBe('CIRCLE');
       }
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
 
       // Press key 6 to toggle to ARC
       await user.click(screen.getByTestId('key-6'));
@@ -92,6 +103,7 @@ describe('Bolt Hole Circle Integration', () => {
       if (stateData2.stateDataType === 'bolt-hole') {
         expect(stateData2.boltHoleMode).toBe('ARC');
       }
+      expect(getAxisDisplayPureTextValue('X')).toBe('ArC');
 
       // Press key 6 again to toggle back to CIRCLE
       await user.click(screen.getByTestId('key-6'));
@@ -99,6 +111,7 @@ describe('Bolt Hole Circle Integration', () => {
       if (stateData3.stateDataType === 'bolt-hole') {
         expect(stateData3.boltHoleMode).toBe('CIRCLE');
       }
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
     });
 
     it('exits to idle when ARC mode is selected (not implemented)', async () => {
@@ -119,36 +132,57 @@ describe('Bolt Hole Circle Integration', () => {
   });
 
   describe('Parameter Entry', () => {
-    it('completes full parameter entry flow for bolt hole circle', async () => {
+    it('completes full parameter entry flow for bolt hole circle with display assertions', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       renderSimulator();
 
       // Enter bolt hole mode
       await enterBoltHoleMode(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-menu-select');
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
 
       // Confirm CIRCLE mode
       await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-x');
+      expect(getAxisDisplayPureTextValue('X')).toBe('Cnt X');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
 
-      // Enter center X = 1.75
-      await enterValue(user, '1.75');
+      // Enter center X = 1.75 - type digits and check display (numeric values)
+      await user.click(screen.getByTestId('key-1'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(1);
+      await user.click(screen.getByTestId('key-decimal'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(1); // "1." parses to 1
+      await user.click(screen.getByTestId('key-7'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(1.7, 4);
+      await user.click(screen.getByTestId('key-5'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(1.75, 4);
+      await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-y');
+      expect(getAxisDisplayPureTextValue('X')).toBe('Cnt Y');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
 
       // Enter center Y = 1.25
       await enterValue(user, '1.25');
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
+      expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
 
       // Enter radius = 0.95
       await enterValue(user, '0.95');
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-angle');
+      expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
 
       // Enter starting angle = 20
       await enterValue(user, '20');
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
 
       // Enter hole count = 6
-      await enterValue(user, '6');
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(6);
+      await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
 
       // Should switch to INC mode

@@ -33,8 +33,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Activate bolt hole mode
     await dro.page.click('[data-testid="btn-bolt-circle"]');
 
-    // Assert intro display: X shows "b h0LE", Y shows 0.0000
-    await dro.waitForAxisPureTextValue('X', 'b h0LE', 500);
+    // Assert intro display: X shows "b hoLE", Y shows 0.0000
+    await dro.waitForAxisPureTextValue('X', 'b hoLE', 500);
     await dro.waitForAxisPureNumberValue('Y', 0, 4, 500);
 
     // Wait for intro to complete and verify menu display (intro is 1000ms + buffer)
@@ -46,9 +46,9 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Should now be in center-x entry: X shows prompt, Y shows buffer value
     await dro.waitForAxisPureTextValue('X', 'Cnt X');
 
-    // Enter center X = 12.5
+    // Enter center X = 12.5 (Y displays numeric value)
     await dro.enterNumber('12.5');
-    await dro.waitForAxisPureTextValue('Y', '12.5');
+    await dro.waitForAxisPureNumberValue('Y', 12.5, 4);
     await dro.enterButton.click();
 
     // Should now be in center-y entry
@@ -56,17 +56,17 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Enter center Y = -7.25 (with negative)
     await dro.enterNumber('-7');
-    await dro.waitForAxisPureTextValue('Y', '-7');
+    await dro.waitForAxisPureNumberValue('Y', -7, 4);
 
     // Simulate user mistake: typed wrong digit, use C to erase
     await dro.enterNumber('9'); // Wrong digit
-    await dro.waitForAxisPureTextValue('Y', '-79');
+    await dro.waitForAxisPureNumberValue('Y', -79, 4);
     await dro.clearButton.click(); // Erase last digit
-    await dro.waitForAxisPureTextValue('Y', '-7');
+    await dro.waitForAxisPureNumberValue('Y', -7, 4);
 
     // Continue with correct value
     await dro.enterNumber('.25');
-    await dro.waitForAxisPureTextValue('Y', '-7.25');
+    await dro.waitForAxisPureNumberValue('Y', -7.25, 4);
     await dro.enterButton.click();
 
     // Should now be in radius entry
@@ -74,23 +74,23 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Enter radius = 25.75
     await dro.enterNumber('25.75');
-    await dro.waitForAxisPureTextValue('Y', '25.75');
+    await dro.waitForAxisPureNumberValue('Y', 25.75, 4);
     await dro.enterButton.click();
 
     // Should now be in angle entry
     await dro.waitForAxisPureTextValue('X', 'AnGLE');
 
-    // Enter starting angle = 45
+    // Enter starting angle = 45 (integer - no decimals)
     await dro.enterNumber('45');
-    await dro.waitForAxisPureTextValue('Y', '45');
+    await dro.waitForAxisPureNumberValue('Y', 45, 4);
     await dro.enterButton.click();
 
     // Should now be in holes entry
     await dro.waitForAxisPureTextValue('X', 'hoLES');
 
-    // Enter hole count = 8
+    // Enter hole count = 8 (integer - no decimals)
     await dro.key8.click();
-    await dro.waitForAxisPureTextValue('Y', '8');
+    await dro.waitForAxisPureNumberValue('Y', 8, 4);
     await dro.enterButton.click();
 
     // Should now be in INC mode (distance-to-go) showing distance to hole 1
@@ -129,31 +129,31 @@ test.describe('US-016: Bolt Hole Circle', () => {
     await dro.enterNumber('5');
     await dro.enterButton.click();
 
-    // Now in center Y entry - enter some numbers
+    // Now in center Y entry - enter some numbers (display shows numeric values)
     await dro.enterNumber('1');
-    await dro.waitForAxisPureTextValue('Y', '1');
+    await dro.waitForAxisPureNumberValue('Y', 1, 4);
     await dro.enterNumber('2');
-    await dro.waitForAxisPureTextValue('Y', '12');
+    await dro.waitForAxisPureNumberValue('Y', 12, 4);
     await dro.enterNumber('3');
-    await dro.waitForAxisPureTextValue('Y', '123');
+    await dro.waitForAxisPureNumberValue('Y', 123, 4);
 
     // Use C key to erase digits one by one
     await dro.clearButton.click();
-    await dro.waitForAxisPureTextValue('Y', '12');
+    await dro.waitForAxisPureNumberValue('Y', 12, 4);
     await dro.clearButton.click();
-    await dro.waitForAxisPureTextValue('Y', '1');
+    await dro.waitForAxisPureNumberValue('Y', 1, 4);
     await dro.clearButton.click();
 
     // Buffer is now empty - Y axis should show 0
-    await dro.waitForAxisPureTextValue('Y', '0');
+    await dro.waitForAxisPureNumberValue('Y', 0, 4);
 
-    // Type another digit and verify Y shows it
+    // Type another digit and verify Y shows it (numeric value)
     await dro.enterNumber('5');
-    await dro.waitForAxisPureTextValue('Y', '5');
+    await dro.waitForAxisPureNumberValue('Y', 5, 4);
 
     // Press C twice to exit: first clears buffer, second exits to idle
     await dro.clearButton.click();
-    await dro.waitForAxisPureTextValue('Y', '0');
+    await dro.waitForAxisPureNumberValue('Y', 0, 4);
     await dro.clearButton.click();
 
     // FN LED should be off (back to idle)
