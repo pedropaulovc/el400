@@ -48,7 +48,7 @@ const BOLT_HOLE_DISPLAY_TEXT: Record<string, string> = {
   'bolt-hole-circle-center-y': 'Cnt Y',
   'bolt-hole-circle-radius': 'rAdiUS',
   'bolt-hole-circle-angle': 'AnGLE',
-  'bolt-hole-circle-holes': 'h0LES',
+  'bolt-hole-circle-holes': 'hoLES',
 };
 
 /** States that accept numeric input for parameter entry */
