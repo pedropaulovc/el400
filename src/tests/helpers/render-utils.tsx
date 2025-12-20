@@ -9,6 +9,33 @@ import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { createDefaultMillState } from '../../types/millState';
+import {
+  DeepProfiler,
+  startTestProfiling,
+  endTestProfiling,
+  enableProfiling,
+  printReport,
+  exportReportAsJSON,
+  getAllReports,
+  clearReports,
+  getSummaryStats,
+  getComponentStats,
+  type TestRenderReport,
+} from './render-profiler';
+
+// Re-export profiling utilities for use in tests
+export {
+  startTestProfiling,
+  endTestProfiling,
+  enableProfiling,
+  printReport,
+  exportReportAsJSON,
+  getAllReports,
+  clearReports,
+  getSummaryStats,
+  getComponentStats,
+  type TestRenderReport,
+};
 
 /**
  * Custom render function that includes all necessary providers
@@ -23,6 +50,10 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
    * Custom QueryClient instance
    */
   queryClient?: QueryClient;
+  /**
+   * Enable render profiling for performance measurement
+   */
+  profile?: boolean;
 }
 
 /**
@@ -66,7 +97,7 @@ function resetStoresForTest(): void {
  */
 export function renderWithProviders(
   ui: ReactElement,
-  { initialRoute = '/', queryClient, ...renderOptions }: CustomRenderOptions = {}
+  { initialRoute = '/', queryClient, profile = false, ...renderOptions }: CustomRenderOptions = {}
 ) {
   const defaultQueryClient = new QueryClient({
     defaultOptions: {
@@ -85,13 +116,21 @@ export function renderWithProviders(
   // Reset stores to initial state for testing
   resetStoresForTest();
 
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <BrowserRouter>
-        {children}
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
+  const Wrapper = ({ children }: { children: React.ReactNode }) => {
+    const content = (
+      <QueryClientProvider client={client}>
+        <BrowserRouter>
+          {children}
+        </BrowserRouter>
+      </QueryClientProvider>
+    );
+
+    if (profile) {
+      return <DeepProfiler>{content}</DeepProfiler>;
+    }
+
+    return content;
+  };
 
   return render(ui, {
     wrapper: Wrapper,

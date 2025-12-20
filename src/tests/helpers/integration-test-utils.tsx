@@ -16,6 +16,44 @@ import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
 import { INITIAL_DRO_STATE_PAYLOAD } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { createDefaultMillState } from '../../types/millState';
+import {
+  DeepProfiler,
+  startTestProfiling,
+  endTestProfiling,
+  enableProfiling,
+  printReport,
+  exportReportAsJSON,
+  getAllReports,
+  clearReports,
+  getSummaryStats,
+  getComponentStats,
+  type TestRenderReport,
+} from './render-profiler';
+import ProfiledEL400Simulator, {
+  enableComponentProfiling,
+  clearComponentMetrics,
+  getComponentMetrics,
+  printComponentMetrics,
+} from './ProfiledEL400Simulator';
+
+// Re-export profiling utilities for use in tests
+export {
+  startTestProfiling,
+  endTestProfiling,
+  enableProfiling,
+  printReport,
+  exportReportAsJSON,
+  getAllReports,
+  clearReports,
+  getSummaryStats,
+  getComponentStats,
+  type TestRenderReport,
+  // Component-level profiling
+  enableComponentProfiling,
+  clearComponentMetrics,
+  getComponentMetrics,
+  printComponentMetrics,
+};
 
 /**
  * Sets non-volatile memory in localStorage
@@ -83,6 +121,10 @@ export function setIdleState(): void {
 interface RenderSimulatorOptions {
   /** Boot message mode - defaults to 'skip' for faster tests */
   bootMessageMode?: 'show' | 'skip';
+  /** Enable render profiling for performance measurement */
+  profile?: boolean;
+  /** Use component-level profiling for detailed metrics */
+  componentProfiling?: boolean;
 }
 
 /**
@@ -95,7 +137,7 @@ interface RenderSimulatorOptions {
  * is called at the start of each test.
  */
 export function renderSimulator(options?: RenderSimulatorOptions) {
-  const { bootMessageMode = 'skip' } = options ?? {};
+  const { bootMessageMode = 'skip', profile = false, componentProfiling = false } = options ?? {};
 
   // Reset stores first (also initializes NoOpMillConnection)
   resetStores();
@@ -112,13 +154,27 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
     defaultOptions: { queries: { retry: false } },
   });
 
-  return render(
+  // Use profiled simulator if component profiling is enabled
+  const SimulatorComponent = componentProfiling ? ProfiledEL400Simulator : EL400Simulator;
+
+  const content = (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <EL400Simulator />
+        <SimulatorComponent />
       </BrowserRouter>
     </QueryClientProvider>
   );
+
+  // Wrap with profiler if profiling is enabled
+  if (profile) {
+    return render(
+      <DeepProfiler>
+        {content}
+      </DeepProfiler>
+    );
+  }
+
+  return render(content);
 }
 
 /**
