@@ -28,7 +28,10 @@ test.describe('US-037: Keyboard Navigation', () => {
     // Tab through and verify order
     for (let i = 1; i < expectedOrder.length; i++) {
       await page.keyboard.press('Tab');
-      await expect(page.getByTestId(expectedOrder[i])).toBeFocused();
+      const testId = expectedOrder[i];
+      if (testId) {
+        await expect(page.getByTestId(testId)).toBeFocused();
+      }
     }
   });
 

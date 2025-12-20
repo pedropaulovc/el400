@@ -16,7 +16,7 @@ test.describe('US-004: Inch/Metric Mode', () => {
    * AC 4.4: The displayed value converts correctly (1 inch = 25.4 mm)
    * AC 4.5: The DRO remembers the unit preference
    */
-  test('should toggle units with correct conversion and persistence', async ({ dro, page }) => {
+  test('should toggle units with correct conversion and persistence', async ({ dro }) => {
     // AC 4.1 & 4.2: Start in inch mode by default
     await expect(await dro.isInchUnits()).toBe(true);
     await expect(await dro.isMmUnits()).toBe(false);
