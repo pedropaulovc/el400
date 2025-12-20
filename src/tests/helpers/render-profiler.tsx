@@ -42,14 +42,14 @@ export interface TestRenderReport {
 let currentTestName = '';
 let currentTestType: 'unit' | 'integration' = 'unit';
 let testStartTime = 0;
-let componentMetrics: Map<string, ComponentStats> = new Map();
+let componentMetrics = new Map<string, ComponentStats>();
 let allReports: TestRenderReport[] = [];
 let isEnabled = false;
 
 /**
  * Enable/disable profiling
  */
-export function enableProfiling(enabled: boolean = true): void {
+export function enableProfiling(enabled = true): void {
   isEnabled = enabled;
 }
 
@@ -159,7 +159,7 @@ export function getComponentStats(): Map<string, {
 
   allReports.forEach((report) => {
     report.components.forEach((componentStats, componentId) => {
-      const existing = stats.get(componentId) || {
+      const existing = stats.get(componentId) ?? {
         totalRenders: 0,
         totalTime: 0,
         avgRenderTime: 0,
@@ -198,12 +198,12 @@ export function printReport(): void {
 
   console.log('\n📊 SUMMARY');
   console.log('-'.repeat(40));
-  console.log(`Unit Tests:        ${summary.unit.count} tests`);
+  console.log(`Unit Tests:        ${String(summary.unit.count)} tests`);
   console.log(`  Avg Renders:     ${summary.unit.avgRenders.toFixed(1)}`);
   console.log(`  Avg Time:        ${summary.unit.avgTime.toFixed(2)}ms`);
   console.log(`  Total Time:      ${summary.unit.totalTime.toFixed(2)}ms`);
 
-  console.log(`\nIntegration Tests: ${summary.integration.count} tests`);
+  console.log(`\nIntegration Tests: ${String(summary.integration.count)} tests`);
   console.log(`  Avg Renders:     ${summary.integration.avgRenders.toFixed(1)}`);
   console.log(`  Avg Time:        ${summary.integration.avgTime.toFixed(2)}ms`);
   console.log(`  Total Time:      ${summary.integration.totalTime.toFixed(2)}ms`);
@@ -221,8 +221,8 @@ export function printReport(): void {
     .slice(0, 10);
 
   sortedComponents.forEach(([id, stats], index) => {
-    console.log(`${index + 1}. ${id}`);
-    console.log(`   Renders: ${stats.totalRenders} (${stats.unnecessaryRenders} potentially unnecessary)`);
+    console.log(`${String(index + 1)}. ${id}`);
+    console.log(`   Renders: ${String(stats.totalRenders)} (${String(stats.unnecessaryRenders)} potentially unnecessary)`);
     console.log(`   Total Time: ${stats.totalTime.toFixed(2)}ms, Avg: ${stats.avgRenderTime.toFixed(2)}ms`);
   });
 
@@ -262,14 +262,14 @@ const onRenderCallback: ProfilerOnRenderCallback = (
 
   const metrics: RenderMetrics = {
     componentId: id,
-    phase: phase as 'mount' | 'update' | 'nested-update',
+    phase: phase,
     actualDuration,
     baseDuration,
     startTime,
     commitTime,
   };
 
-  const existing = componentMetrics.get(id) || {
+  const existing = componentMetrics.get(id) ?? {
     renderCount: 0,
     mountCount: 0,
     updateCount: 0,
@@ -302,6 +302,7 @@ export function withProfiling<P extends object>(
   Component: React.ComponentType<P>,
   id?: string
 ): React.FC<P> {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   const displayName = id || Component.displayName || Component.name || 'Unknown';
 
   const WrappedComponent: React.FC<P> = (props) => (

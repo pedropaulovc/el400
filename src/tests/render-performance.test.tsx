@@ -123,7 +123,7 @@ describe('Unit Test Render Performance', () => {
       await user.click(screen.getByTestId('test-btn'));
 
       const report = endTestProfiling();
-      console.log(`DROButton clicks - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`DROButton clicks - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
       expect(handleClick).toHaveBeenCalledTimes(3);
     });
   });
@@ -139,7 +139,7 @@ describe('Integration Test Render Performance', () => {
       expect(screen.getByTestId('axis-select-x')).toBeInTheDocument();
 
       const report = endTestProfiling();
-      console.log(`Initial render - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Initial render - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
   });
 
@@ -155,7 +155,7 @@ describe('Integration Test Render Performance', () => {
       await user.click(screen.getByTestId('axis-select-z'));
 
       const report = endTestProfiling();
-      console.log(`Axis selection - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Axis selection - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
   });
 
@@ -171,7 +171,7 @@ describe('Integration Test Render Performance', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(12.345, 3);
 
       const report = endTestProfiling();
-      console.log(`Numeric entry - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Numeric entry - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
 
     it('measures renders during longer numeric entry', async () => {
@@ -186,7 +186,7 @@ describe('Integration Test Render Performance', () => {
       await enterValue(user, '-987.654');
 
       const report = endTestProfiling();
-      console.log(`Long numeric entry - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Long numeric entry - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
   });
 
@@ -214,7 +214,7 @@ describe('Integration Test Render Performance', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(15, 0);
 
       const report = endTestProfiling();
-      console.log(`Calculator - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Calculator - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
   });
 
@@ -239,7 +239,7 @@ describe('Integration Test Render Performance', () => {
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 4);
 
       const report = endTestProfiling();
-      console.log(`Zero axes - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms`);
+      console.log(`Zero axes - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
     });
   });
 
@@ -276,7 +276,7 @@ describe('Integration Test Render Performance', () => {
       await user.click(screen.getByTestId('key-enter'));
 
       const report = endTestProfiling();
-      console.log(`Complex workflow - renders: ${report.totalRenderCount}, time: ${report.totalRenderTime.toFixed(2)}ms, duration: ${report.duration.toFixed(2)}ms`);
+      console.log(`Complex workflow - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms, duration: ${report.duration.toFixed(2)}ms`);
     });
   });
 });
@@ -294,7 +294,7 @@ describe('Component-Level Profiling', () => {
       await user.click(screen.getByTestId('axis-select-z'));
 
       const report = endTestProfiling();
-      console.log(`Component axis selection - renders: ${report.totalRenderCount}`);
+      console.log(`Component axis selection - renders: ${String(report.totalRenderCount)}`);
     });
 
     it('measures individual component renders during numeric entry', async () => {
@@ -306,7 +306,7 @@ describe('Component-Level Profiling', () => {
       await enterValue(user, '12.345');
 
       const report = endTestProfiling();
-      console.log(`Component numeric entry - renders: ${report.totalRenderCount}`);
+      console.log(`Component numeric entry - renders: ${String(report.totalRenderCount)}`);
     });
 
     it('measures individual component renders during complex workflow', async () => {
@@ -328,7 +328,7 @@ describe('Component-Level Profiling', () => {
       await user.click(screen.getByTestId('key-enter'));
 
       const report = endTestProfiling();
-      console.log(`Component complex workflow - renders: ${report.totalRenderCount}`);
+      console.log(`Component complex workflow - renders: ${String(report.totalRenderCount)}`);
     });
   });
 });
@@ -371,7 +371,7 @@ describe('Performance Regression Tests', () => {
         if (componentMetrics) {
           expect(
             componentMetrics.updateCount,
-            `${name} should have 0 updates but had ${componentMetrics.updateCount}`
+            `${name} should have 0 updates but had ${String(componentMetrics.updateCount)}`
           ).toBe(0);
         }
       }
@@ -395,7 +395,7 @@ describe('Performance Regression Tests', () => {
       // Budget: max 10 updates for this workflow
       expect(
         multiAxis?.updateCount ?? 0,
-        `MultiAxisSection had ${multiAxis?.updateCount} updates, expected <= 10`
+        `MultiAxisSection had ${String(multiAxis?.updateCount ?? 0)} updates, expected <= 10`
       ).toBeLessThanOrEqual(10);
     });
   });
@@ -415,7 +415,7 @@ describe('Performance Regression Tests', () => {
       // Budget: max 6 total renders for 3 axis selections (1 mount + 1 per selection + buffer)
       expect(
         report.totalRenderCount,
-        `Axis selection had ${report.totalRenderCount} renders, expected <= 6`
+        `Axis selection had ${String(report.totalRenderCount)} renders, expected <= 6`
       ).toBeLessThanOrEqual(6);
     });
 
@@ -432,7 +432,7 @@ describe('Performance Regression Tests', () => {
       // Budget: max 5 renders for selecting axis + entering 6 chars
       expect(
         report.totalRenderCount,
-        `Numeric entry had ${report.totalRenderCount} renders, expected <= 5`
+        `Numeric entry had ${String(report.totalRenderCount)} renders, expected <= 5`
       ).toBeLessThanOrEqual(5);
     });
 
@@ -455,7 +455,7 @@ describe('Performance Regression Tests', () => {
       // Budget: max 15 renders for this complex workflow
       expect(
         report.totalRenderCount,
-        `Complex workflow had ${report.totalRenderCount} renders, expected <= 15`
+        `Complex workflow had ${String(report.totalRenderCount)} renders, expected <= 15`
       ).toBeLessThanOrEqual(15);
     });
   });

@@ -13,10 +13,15 @@ export interface AxisValues {
 
 export type { AxisDisplayValue };
 
+const SCREEN_READER_AXIS_HOOKS = {
+  X: useDisplayValueX,
+  Y: useDisplayValueY,
+  Z: useDisplayValueZ,
+} as const;
+
 /** Screen-reader-only value display - subscribes to its own axis only */
 const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
-  const hooks = { X: useDisplayValueX, Y: useDisplayValueY, Z: useDisplayValueZ };
-  const value = hooks[axis]();
+  const value = SCREEN_READER_AXIS_HOOKS[axis]();
   const formatted = typeof value === 'number' ? value.toFixed(4) : value;
   return (
     <tr>

@@ -131,6 +131,8 @@ export function useDisplayValueX(): AxisDisplayValue {
     return incrementalX;
   }, [mode, connected, millPosX, workOffsetX, manualAbsX, incrementalX]);
 
+  // TODO: Extract granular selectors for droCtx properties (stateDataType, currentValue, centerResult)
+  // to avoid unnecessary recalculations when unrelated droCtx properties change.
   return useMemo(
     () => computeDisplayValueForAxis('X', droState, droCtx, displayValue, defaultUnit),
     [droState, droCtx, displayValue, defaultUnit]
@@ -163,6 +165,8 @@ export function useDisplayValueY(): AxisDisplayValue {
     return incrementalY;
   }, [mode, connected, millPosY, workOffsetY, manualAbsY, incrementalY]);
 
+  // TODO: Extract granular selectors for droCtx properties (stateDataType, currentValue, centerResult)
+  // to avoid unnecessary recalculations when unrelated droCtx properties change.
   return useMemo(
     () => computeDisplayValueForAxis('Y', droState, droCtx, displayValue, defaultUnit),
     [droState, droCtx, displayValue, defaultUnit]
@@ -195,6 +199,8 @@ export function useDisplayValueZ(): AxisDisplayValue {
     return incrementalZ;
   }, [mode, connected, millPosZ, workOffsetZ, manualAbsZ, incrementalZ]);
 
+  // TODO: Extract granular selectors for droCtx properties (stateDataType, currentValue, centerResult)
+  // to avoid unnecessary recalculations when unrelated droCtx properties change.
   return useMemo(
     () => computeDisplayValueForAxis('Z', droState, droCtx, displayValue, defaultUnit),
     [droState, droCtx, displayValue, defaultUnit]
