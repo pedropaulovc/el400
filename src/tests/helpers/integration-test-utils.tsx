@@ -15,6 +15,7 @@ import { useDROStore } from '../../stores/droStore';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { INITIAL_DRO_STATE_PAYLOAD } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../../stores/dro/utils/displayComputation';
 import { createDefaultMillState } from '../../types/millState';
 import {
   DeepProfiler,
@@ -104,6 +105,7 @@ export function resetStores(): void {
     stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
     stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
     vMem: INITIAL_VOLATILE_MEMORY_STATE,
+    display: INITIAL_DISPLAY_STATE,
   });
 }
 
@@ -115,6 +117,7 @@ export function setIdleState(): void {
     stateName: 'idle',
     stateData: { stateDataType: 'none' },
     vMem: INITIAL_VOLATILE_MEMORY_STATE,
+    display: INITIAL_DISPLAY_STATE,
   });
 }
 

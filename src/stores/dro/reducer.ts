@@ -10,7 +10,6 @@ import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
 import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
-import { inchMmReducer } from './features/inch-mm';
 import { menuReducer } from './features/menu';
 import { centerFindingReducer } from './features/center-finding';
 import { calculatorReducer } from './features/calculator';
@@ -36,9 +35,8 @@ const featureReducers: FeatureReducer[] = [
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
   // State transition reducers
-  idleReducer, // Handles MILL_STATE_CHANGED for idle state
+  idleReducer, // Handles MILL_STATE_CHANGED and BTN_INCH_MM for idle state
   absIncReducer,
-  inchMmReducer,
   menuReducer,
   // Future features:
   // boltHoleReducer,
