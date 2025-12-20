@@ -19,8 +19,8 @@ import {
   isCenterLineState,
   isCenterCircleState,
 } from '../droStateMachine';
-import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory';
-import { findLineCenter, findCircleCenter } from '../../utils/centerFinding';
+import type { AxisValues, VolatileMemoryState } from '../../../types/volatileMemory';
+import { findLineCenter, findCircleCenter } from '../../../utils/centerFinding';
 
 /**
  * Check if state is handled by this feature.

@@ -10,7 +10,7 @@ import type { DROStatePayload } from '../types';
 import { INITIAL_DRO_STATE_DATA, INITIAL_CALCULATOR_DATA } from '../droStateMachine';
 import type { CalculatorData } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 
 /** Helper to create state with input buffer for testing KEY_ENTER */
 function stateWithBuffer(

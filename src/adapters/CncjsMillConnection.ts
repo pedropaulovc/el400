@@ -7,7 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import type { Dispatch } from 'react';
 import type { MillConnection } from './MillConnection';
 import type { MillStateListener, MillState, MillPosition } from '../types/millState';
-import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
+import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createProbeState, createDefaultMillState } from '../types/millState';
 
 export interface CncjsMillConnectionOptions {

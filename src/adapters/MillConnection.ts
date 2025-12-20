@@ -5,7 +5,7 @@
 
 import type { Dispatch } from 'react';
 import type { ControllerType, MillState, MillStateListener } from '../types/millState';
-import type { DROEventPayload } from '../dro-state-machine/droStateMachine';
+import type { DROEventPayload } from '../stores/dro/droStateMachine';
 
 /**
  * Abstract interface for mill data connections.

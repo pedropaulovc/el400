@@ -9,9 +9,9 @@ import type {
   DROStateData,
   DROEventPayload,
 } from './droStateMachine';
-import type { VolatileMemoryState } from '../types/volatileMemory';
-import type { MillState } from '../types/millState';
-import type { NonVolatileMemory } from '../types/nonVolatileMemory';
+import type { VolatileMemoryState } from '../../types/volatileMemory';
+import type { MillState } from '../../types/millState';
+import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
 
 /**
  * The shape of the state machine state.

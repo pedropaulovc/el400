@@ -21,7 +21,7 @@ import {
   isCalculatorActive,
   MODEL_NUMBER,
   SOFTWARE_VERSION,
-} from '../dro-state-machine';
+} from '../stores/dro';
 import { useVolatileMemory } from './useVolatileMemory';
 import { useDefaultUnit } from '../stores/settingsStore';
 import { fromMmToAnyUnit } from '../utils/unitConversion';
