@@ -4,12 +4,12 @@
  */
 
 import type { Dispatch } from 'react';
-import type { MillConnection } from './MillConnection';
+import type { MillAdapter } from './MillAdapter';
 import type { ControllerType, MillState, MillStateListener } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createDefaultMillState, createProbeState } from '../types/millState';
 
-export interface MockMillConnectionOptions {
+export interface MockMillAdapterOptions {
   /** Update interval in milliseconds (default: 100ms) */
   updateInterval?: number;
   /** Initial position */
@@ -20,16 +20,16 @@ export interface MockMillConnectionOptions {
   movementSpeed?: number;
 }
 
-export class MockMillConnection implements MillConnection {
+export class MockMillAdapter implements MillAdapter {
   readonly controllerType: ControllerType = 'mock';
 
   private state: MillState;
   private listeners = new Set<MillStateListener>();
   private dispatch: Dispatch<DROEventPayload> | null = null;
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private options: Required<MockMillConnectionOptions>;
+  private options: Required<MockMillAdapterOptions>;
 
-  constructor(options: MockMillConnectionOptions = {}) {
+  constructor(options: MockMillAdapterOptions = {}) {
     this.options = {
       updateInterval: options.updateInterval ?? 100,
       initialPosition: options.initialPosition ?? { x: 0, y: 0, z: 0 },

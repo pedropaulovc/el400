@@ -7,6 +7,7 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 | Category | Location |
 |----------|----------|
 | State Machine | `src/stores/dro/` (Zustand + reducer) |
+| Feature Reducers | `src/stores/dro/features/` - boot, idle, keypad, calculator, etc. |
 | Adapters | `src/adapters/` - CNCjs, Mock, NoOp |
 | Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
 | Components | `src/components/` - EL400Simulator root |
@@ -17,10 +18,13 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 ```bash
 npm run dev              # Development server
 npm run build            # Production build
-npm run test             # Unit tests (Vitest)
-npm run test:coverage    # Min 70% enforced
+npm run lint             # ESLint
+npm run typecheck        # TypeScript type checking (tsc)
+npm run test             # Unit and integration tests (Vitest)
+npm run test:coverage    # Unit and integration tests with coverage, min 70% enforced
+npm run test:storybook   # Storybook interaction tests
 npm run test:e2e         # Playwright E2E
-npm run test:all         # REQUIRED before commit
+npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybook)
 ```
 
 ## Testing Exit Criteria
@@ -31,7 +35,7 @@ npm run test:all         # REQUIRED before commit
 | Type | Pattern | Notes |
 |------|---------|-------|
 | Unit | `src/**/*.test.tsx` | Primary. Use Vitest + RTL |
-| Integration | `*.integration.test.tsx` | Use `data-testid`, helpers in `src/tests/helpers/` |
+| Integration | `*.integration.test.tsx` | Use `data-testid`, helpers in `src/tests/helpers/`. Test happy AND unhappy paths |
 | E2E | `e2e/**/*.spec.ts` | Playwright. Critical flows only |
 | Stories | `src/**/*.stories.tsx` | Visual docs only, no behavior tests |
 
@@ -45,9 +49,9 @@ Zustand Stores
 ├── millStore ←── connection.subscribe()
 └── settingsStore (localStorage)
       ↑
-MillConnection interface
+MillAdapter interface
       ↑
-CncjsMillConnection | MockMillConnection | NoOpMillConnection
+CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
 ```
 
 ### Stores
@@ -75,6 +79,7 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 - Axis: `BTN_SELECT_X/Y/Z`, `BTN_ZERO_X/Y/Z`, `BTN_ZERO_ALL`
 - Mode: `BTN_ABS_INC`, `BTN_INCH_MM`
 - Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
+- Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
 
 ### URL Config
 
@@ -84,11 +89,21 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 /?source=manual  (default)
 ```
 
+## DRO State Names
+
+States are a **flat collection** (not nested). Each feature may define multiple states:
+
+- Boot: `boot`, `boot-show-message`
+- Idle: `idle`
+- Calculator: `calculator-first-operand`, `calculator-operator-selected`, `calculator-second-operand`, `calculator-result`
+- Center Finding: `center-finding-collect`, `center-finding-result`
+- Function Menu: `function-menu-ring`, `function-menu-*`
+
 ## Core Types
 
 ```typescript
 interface DROStatePayload {
-  stateName: DROStateName;   // 'idle' | 'boot' | 'function-menu-*' | 'calculator-*'
+  stateName: DROStateName;   // Flat enum - see section above
   stateData: DROStateData;   // Feature context (discriminated union)
   vMem: VolatileMemoryState;
 }
@@ -118,10 +133,10 @@ src/stores/dro/
 └── features/           # boot, idle, keypad, axis-operations, etc.
 
 src/adapters/
-├── MillConnection.ts      # Interface
-├── CncjsMillConnection.ts # WebSocket to CNCjs
-├── MockMillConnection.ts  # Test/dev simulation
-└── NoOpMillConnection.ts  # Manual mode fallback
+├── MillAdapter.ts         # Interface
+├── CncjsMillAdapter.ts    # WebSocket to CNCjs
+├── MockMillAdapter.ts     # Test/dev simulation
+└── NoOpMillAdapter.ts     # Manual mode fallback
 ```
 
 ## Feature Reducer Pattern
@@ -136,7 +151,7 @@ type FeatureReducer = (
 
 ## Tech Stack
 
-React 18, TypeScript (strict), Vite, Tailwind CSS, Zustand, socket.io-client, Vitest, Playwright
+React 18, TypeScript (strict), Vite, Tailwind CSS, Zustand, socket.io-client, Vitest, Playwright, Storybook
 
 ## Component Hierarchy
 

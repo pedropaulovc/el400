@@ -17,7 +17,7 @@ import { useMillStore } from '../millStore';
 import { useSettingsStore } from '../settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
-import { NoOpMillConnection } from '../../adapters/NoOpMillConnection';
+import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
 
 /**
@@ -37,7 +37,7 @@ function resetStores(initialState?: DROShape) {
   // Reset mill store
   useMillStore.setState({
     millState: createDefaultMillState('noop'),
-    connection: new NoOpMillConnection(),
+    connection: new NoOpMillAdapter(),
     isConnecting: false,
     error: null,
   });

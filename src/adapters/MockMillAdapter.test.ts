@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MockMillConnection } from './MockMillConnection';
+import { MockMillAdapter } from './MockMillAdapter';
 import type { MillState } from '../types/millState';
 
-describe('MockMillConnection', () => {
-  let adapter: MockMillConnection;
+describe('MockMillAdapter', () => {
+  let adapter: MockMillAdapter;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    adapter = new MockMillConnection();
+    adapter = new MockMillAdapter();
   });
 
   afterEach(() => {
@@ -27,7 +27,7 @@ describe('MockMillConnection', () => {
     });
 
     it('should initialize with custom initial position', () => {
-      const customAdapter = new MockMillConnection({
+      const customAdapter = new MockMillAdapter({
         initialPosition: { x: 10, y: 20, z: 30 },
       });
 
@@ -138,7 +138,7 @@ describe('MockMillConnection', () => {
   describe('emit position updates', () => {
     it('should emit position updates at configured interval', async () => {
       const listener = vi.fn();
-      adapter = new MockMillConnection({ updateInterval: 100, simulateMovement: true });
+      adapter = new MockMillAdapter({ updateInterval: 100, simulateMovement: true });
 
       await adapter.connect();
       adapter.subscribe(listener);
@@ -156,7 +156,7 @@ describe('MockMillConnection', () => {
 
     it('should not emit updates when not simulating movement', async () => {
       const listener = vi.fn();
-      adapter = new MockMillConnection({ updateInterval: 100, simulateMovement: false });
+      adapter = new MockMillAdapter({ updateInterval: 100, simulateMovement: false });
 
       await adapter.connect();
       adapter.subscribe(listener);

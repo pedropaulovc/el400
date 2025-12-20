@@ -4,23 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
-import { CncjsMillConnection } from "./adapters/CncjsMillConnection";
-import { NoOpMillConnection } from "./adapters/NoOpMillConnection";
-import type { MillConnection } from "./adapters/MillConnection";
+import { CncjsMillAdapter } from "./adapters/CncjsMillAdapter";
+import { NoOpMillAdapter } from "./adapters/NoOpMillAdapter";
+import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
 import { initializeMillStore } from "./stores/millStore";
 
 const queryClient = new QueryClient();
 
 /**
- * Creates a connection based on URL config.
- * Returns CncjsMillConnection when source=cncjs, otherwise NoOpMillConnection.
+ * Creates an adapter based on URL config.
+ * Returns CncjsMillAdapter when source=cncjs, otherwise NoOpMillAdapter.
  */
-function createConnection(config: DataSourceConfig): MillConnection {
+function createAdapter(config: DataSourceConfig): MillAdapter {
   if (config.type === 'cncjs') {
-    return new CncjsMillConnection({ host: config.host, port: config.port, sessionId: config.sessionId });
+    return new CncjsMillAdapter({ host: config.host, port: config.port, sessionId: config.sessionId });
   }
-  return new NoOpMillConnection();
+  return new NoOpMillAdapter();
 }
 
 /**
@@ -29,7 +29,7 @@ function createConnection(config: DataSourceConfig): MillConnection {
  */
 function AppContent() {
   const config = useDataSourceConfig();
-  const connection = useMemo(() => createConnection(config), [config]);
+  const connection = useMemo(() => createAdapter(config), [config]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize mill store with connection

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CncjsMillConnection, normalizeControllerState } from './CncjsMillConnection';
+import { CncjsMillAdapter, normalizeControllerState } from './CncjsMillAdapter';
 
 // Mock socket.io-client
 const mockSocket = {
@@ -13,7 +13,7 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => mockSocket),
 }));
 
-describe('CncjsMillConnection', () => {
+describe('CncjsMillAdapter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset mock socket handlers
@@ -25,7 +25,7 @@ describe('CncjsMillConnection', () => {
   describe('connection', () => {
     it('should create socket with correct URL and options', async () => {
       const { io } = await import('socket.io-client');
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
 
       // Start connection but don't await (it won't resolve without manual trigger)
       const connectPromise = adapter.connect();
@@ -44,7 +44,7 @@ describe('CncjsMillConnection', () => {
 
     it('should include token in query when provided', async () => {
       const { io } = await import('socket.io-client');
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000, token: 'my-token' });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000, token: 'my-token' });
 
       const connectPromise = adapter.connect();
 
@@ -59,7 +59,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should update state to connected on connect event', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const connectPromise = adapter.connect();
 
       const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
@@ -71,7 +71,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should update state to disconnected on disconnect event', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const connectPromise = adapter.connect();
 
       const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
@@ -85,7 +85,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should reject on connect_error', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const connectPromise = adapter.connect();
 
       const errorHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect_error')?.[1];
@@ -97,7 +97,7 @@ describe('CncjsMillConnection', () => {
 
   describe('disconnect', () => {
     it('should call socket disconnect', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const connectPromise = adapter.connect();
 
       const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
@@ -113,7 +113,7 @@ describe('CncjsMillConnection', () => {
 
   describe('subscribe', () => {
     it('should notify listener immediately with current state', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const listener = vi.fn();
 
       adapter.subscribe(listener);
@@ -122,7 +122,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should notify listeners on state change', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const connectPromise = adapter.connect();
 
       const connectHandler = mockSocket.on.mock.calls.find(([event]) => event === 'connect')?.[1];
@@ -148,7 +148,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should return unsubscribe function', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const listener = vi.fn();
 
       const unsubscribe = adapter.subscribe(listener);
@@ -168,7 +168,7 @@ describe('CncjsMillConnection', () => {
 
   describe('controllerType', () => {
     it('should return cncjs as controller type', () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       expect(adapter.controllerType).toBe('cncjs');
     });
   });
@@ -178,7 +178,7 @@ describe('CncjsMillConnection', () => {
     const createDispatch = (fn: ReturnType<typeof vi.fn>): any => fn;
 
     it('should set and clear dispatch', () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
 
       adapter.setDispatch(createDispatch(dispatch));
@@ -189,7 +189,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should dispatch MILL_STATE_CHANGED on connect', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));
 
@@ -204,7 +204,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should dispatch MILL_STATE_CHANGED on controller state update', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));
 
@@ -228,7 +228,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should dispatch MILL_STATE_CHANGED on serialport:open', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));
 
@@ -248,7 +248,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should dispatch MILL_STATE_CHANGED on disconnect', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));
 
@@ -267,7 +267,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should not throw when dispatch is not set', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
 
       const connectPromise = adapter.connect();
 
@@ -279,7 +279,7 @@ describe('CncjsMillConnection', () => {
     });
 
     it('should stop dispatching after clearing dispatch', async () => {
-      const adapter = new CncjsMillConnection({ host: 'localhost', port: 8000 });
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));
 

@@ -2,7 +2,7 @@
  * Mill State Changed Feature Reducer Tests
  *
  * Tests for the mill state changed reducer which handles MILL_STATE_CHANGED events
- * dispatched by the MillConnection when the mill state updates.
+ * dispatched by the MillAdapter when the mill state updates.
  */
 
 import { describe, it, expect } from 'vitest';

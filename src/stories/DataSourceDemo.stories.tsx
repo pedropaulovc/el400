@@ -6,14 +6,14 @@ import { useDROStore } from "../stores/droStore";
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../stores/dro/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { MockMillConnection } from "../adapters/MockMillConnection";
+import { MockMillAdapter } from "../adapters/MockMillAdapter";
 import type { Axis } from "../types/volatileMemory";
 
 /**
  * Initialize stores for storybook - starts in idle state (skip boot).
  * Returns an unsubscribe function for cleanup.
  */
-function initializeStoresForStory(connection: MockMillConnection): () => void {
+function initializeStoresForStory(connection: MockMillAdapter): () => void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
@@ -188,11 +188,11 @@ function StoryWrapper({
   connection,
   children,
 }: {
-  connection?: MockMillConnection;
+  connection?: MockMillAdapter;
   children: React.ReactNode;
 }) {
   // Use useState with initializer to ensure stable connection reference
-  const [conn] = useState(() => connection ?? new MockMillConnection());
+  const [conn] = useState(() => connection ?? new MockMillAdapter());
 
   // Initialize stores in useEffect to avoid side effects during render
   useEffect(() => {
@@ -229,7 +229,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * NoOp mode without external data source.
- * Uses NoOpMillConnection - always connected but values stay at origin.
+ * Uses NoOpMillAdapter - always connected but values stay at origin.
  */
 export const NoOpMode: Story = {};
 
@@ -241,7 +241,7 @@ export const MockWithMovement: Story = {
   decorators: [
     (Story) => {
       const [connection] = useState(
-        () => new MockMillConnection({ simulateMovement: true, updateInterval: 200 })
+        () => new MockMillAdapter({ simulateMovement: true, updateInterval: 200 })
       );
 
       return (
@@ -260,7 +260,7 @@ export const MockWithMovement: Story = {
 export const MockFixedPosition: Story = {
   decorators: [
     (Story) => {
-      const [connection] = useState(() => new MockMillConnection());
+      const [connection] = useState(() => new MockMillAdapter());
 
       useEffect(() => {
         connection.setPosition(123.4567, 89.1234, -45.6789);
@@ -285,7 +285,7 @@ export const MockFixedPosition: Story = {
 export const InteractiveDemo: Story = {
   decorators: [
     (Story) => {
-      const [connection] = useState(() => new MockMillConnection());
+      const [connection] = useState(() => new MockMillAdapter());
 
       useEffect(() => {
         connection.setPosition(50.0, 100.0, 25.0);
