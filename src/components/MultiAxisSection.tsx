@@ -3,7 +3,7 @@ import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
 import { useDefaultUnit, useNvMem } from "../stores/settingsStore";
-import { useDROState, useDRODispatch, isFunctionActive, useBootSequence, useMode } from "../stores/dro";
+import { useDROState, useDRODispatch, isFunctionActive, useBootSequence, useMode, useBoltHoleIntro, isBoltHoleActive } from "../stores/dro";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -46,6 +46,9 @@ const MultiAxisSection = () => {
   const dispatch = useDRODispatch();
   const nvMem = useNvMem();
   useBootSequence(dispatch, droState, nvMem);
+
+  // Bolt hole intro timing - auto-advances after delay
+  useBoltHoleIntro(dispatch, droState);
 
   // LED indicators
   const mode = useMode();
@@ -129,7 +132,7 @@ const MultiAxisSection = () => {
               <LEDIndicator
                 label="fn"
                 name="status"
-                isOn={isFunctionActive(droState)}
+                isOn={isFunctionActive(droState) || isBoltHoleActive(droState)}
                 data-testid="led-fn"
               />
             </fieldset>

@@ -44,6 +44,17 @@ export function getBufferValue(buffer: string): number | null {
 }
 
 /**
+ * Remove the last character from the input buffer (backspace).
+ * Returns empty string if buffer becomes empty.
+ */
+export function removeLastChar(buffer: string): string {
+  if (buffer.length === 0) {
+    return '';
+  }
+  return buffer.slice(0, -1);
+}
+
+/**
  * Map key event names to their digit values.
  */
 export const KEY_TO_DIGIT: Record<string, string> = {

@@ -111,6 +111,47 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  // Simulate relative encoder move (adds delta to current position)
+  if (pathname === '/api/encoder-move-relative' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const { axis, delta } = JSON.parse(body);
+        if (!['X', 'Y', 'Z'].includes(axis) || typeof delta !== 'number') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid axis or delta' }));
+          return;
+        }
+
+        // Get or create session
+        let session = sessions.get(sessionId);
+        if (!session) {
+          session = { position: { x: 0, y: 0, z: 0 } };
+          sessions.set(sessionId, session);
+        }
+
+        const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+        session.position[axisKey] += delta;
+        console.log(`[MockCncjs] encoder-move-relative ${sessionId}: ${axis}+=${delta}, new position=[${session.position.x}, ${session.position.y}, ${session.position.z}]`);
+        emitStateToSession(sessionId);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, position: session.position }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
   // Probe trigger
   if (pathname === '/api/probe-trigger' && req.method === 'POST') {
     if (!sessionId) {

@@ -7,7 +7,7 @@
  */
 
 import type { FeatureReducer } from '../types';
-import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
 import { MENU_TEXT_MAP } from './menu';
 
@@ -32,6 +32,17 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateData: INITIAL_DRO_STATE_DATA,
         vMem,
         display: createDisplay(MENU_TEXT_MAP['function-menu-center'] ?? '', '', ''),
+      };
+    case 'BTN_BOLT_HOLE':
+      // Must be in ABS mode to run bolt hole macro
+      if (vMem.mode !== 'abs') {
+        return null;
+      }
+      return {
+        stateName: 'bolt-hole-intro',
+        stateData: INITIAL_BOLT_HOLE_DATA,
+        vMem,
+        display: createDisplay('b h0LE', '', ''),
       };
     default:
       return null;
