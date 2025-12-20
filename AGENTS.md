@@ -57,7 +57,7 @@ CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
 ### Stores
 
 ```typescript
-useDROStore: { stateName, stateData, vMem, dispatch }
+useDROStore: { stateName, stateData, vMem, display, dispatch }
 useMillStore: { millState, connection, isConnecting, error }
 useSettingsStore: { nvMem, updateNvMem, resetMemory }
 ```
@@ -79,7 +79,7 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 - Axis: `BTN_SELECT_X/Y/Z`, `BTN_ZERO_X/Y/Z`, `BTN_ZERO_ALL`
 - Mode: `BTN_ABS_INC`, `BTN_INCH_MM`
 - Function: `BTN_HALF`, `BTN_FUNCTION`, `BTN_CALCULATOR`
-- Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `MODE_TOGGLE_COMPLETE`, `SET_INPUT_BUFFER`
+- Internal: `BOOT_STARTED`, `BOOT_MESSAGE_TIMEOUT`, `ABS_INC_TOGGLE_COMPLETE`, `MILL_STATE_CHANGED`, `SET_INPUT_BUFFER`
 
 ### URL Config
 
@@ -95,9 +95,10 @@ States are a **flat collection** (not nested). Each feature may define multiple 
 
 - Boot: `boot`, `boot-show-message`
 - Idle: `idle`
-- Calculator: `calculator-first-operand`, `calculator-operator-selected`, `calculator-second-operand`, `calculator-result`
-- Center Finding: `center-finding-collect`, `center-finding-result`
-- Function Menu: `function-menu-ring`, `function-menu-*`
+- Mode Toggle: `abs-inc-mode`
+- Calculator: `calculator-idle`, `calculator-add`, `calculator-sub`, `calculator-multi`, `calculator-div`
+- Function Menu: `function-menu-center`, `function-menu-circle`, `function-menu-line`, `function-menu-linear`, `function-menu-polar`
+- Center Finding: `function-menu-center-line-point-1/2`, `function-menu-center-line-result`, `function-menu-center-circle-point-1/2/3`, `function-menu-center-circle-result`
 
 ## Core Types
 
@@ -106,6 +107,7 @@ interface DROStatePayload {
   stateName: DROStateName;   // Flat enum - see section above
   stateData: DROStateData;   // Feature context (discriminated union)
   vMem: VolatileMemoryState;
+  display: DisplayState;     // { X, Y, Z } - computed by reducers
 }
 
 interface MillState {
@@ -130,7 +132,8 @@ src/stores/dro/
 ├── droStateMachine.ts  # State names, events, data types
 ├── reducer.ts          # Root reducer (composes features)
 ├── test-utils.ts       # createTestState, DEFAULT_TEST_CONTEXT
-└── features/           # boot, idle, keypad, axis-operations, etc.
+├── utils/              # displayComputation.ts - pure display utilities
+└── features/           # boot, idle, keypad, calculator, abs-inc, inch-mm, etc.
 
 src/adapters/
 ├── MillAdapter.ts         # Interface
