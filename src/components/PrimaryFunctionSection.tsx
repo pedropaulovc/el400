@@ -3,18 +3,16 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import PowerLED from "./PowerLED";
 import { useDispatch } from "../stores/dro";
-import { useDefaultUnit, useUpdateNvMem } from "../stores/settingsStore";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 const PrimaryFunctionSection = () => {
   const dispatch = useDispatch();
-  const defaultUnit = useDefaultUnit();
-  const updateNvMem = useUpdateNvMem();
 
   const handleToggleUnit = () => {
-    updateNvMem({ defaultUnit: defaultUnit === 'inch' ? 'mm' : 'inch' });
+    // inchMmReducer handles nvMem update and display recomputation
+    dispatch({ eventName: 'BTN_INCH_MM' });
   };
 
   return (

@@ -12,15 +12,17 @@ import type {
 import type { VolatileMemoryState } from '../../types/volatileMemory';
 import type { MillState } from '../../types/millState';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
+import type { DisplayState } from './utils/displayComputation';
 
 /**
  * The shape of the state machine state.
- * Includes volatile memory as part of the unified state.
+ * Includes volatile memory and display state as part of the unified state.
  */
 export interface DROStatePayload {
   stateName: DROStateName;
   stateData: DROStateData;
   vMem: VolatileMemoryState;
+  display: DisplayState;
 }
 
 /**

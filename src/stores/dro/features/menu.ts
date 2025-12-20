@@ -4,13 +4,28 @@
  * Handles function menu navigation (center, circle, line, linear, polar).
  */
 
-import type { DROStatePayload, FeatureReducer } from '../types';
+import type { DROStatePayload, FeatureReducer, DROReducerContext } from '../types';
 import type { DROStateName } from '../droStateMachine';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CENTER_FINDING_DATA,
   isFunctionMenuSelectionState,
 } from '../droStateMachine';
+import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
+
+/** Menu text displayed for each function menu state */
+export const MENU_TEXT_MAP: Record<string, string> = {
+  'function-menu-center': 'CEntrE',
+  'function-menu-circle': 'CirCLE',
+  'function-menu-line': 'LinE',
+  'function-menu-linear': 'LinEAr',
+  'function-menu-polar': 'PoLAr',
+};
+
+/** Compute menu display: X shows menu text, Y and Z are blank */
+function computeMenuDisplay(stateName: DROStateName): ReturnType<typeof createDisplay> {
+  return createDisplay(MENU_TEXT_MAP[stateName] ?? '', '', '');
+}
 
 /**
  * Menu navigation ring - bidirectional, wraps around.
@@ -39,45 +54,81 @@ function getPrevMenuState(current: DROStateName): DROStateName {
   return prevState ?? current;
 }
 
-function handleMenuEnter(menuState: DROStateName, vMem: DROStatePayload['vMem']): DROStatePayload {
+function handleMenuEnter(
+  menuState: DROStateName,
+  vMem: DROStatePayload['vMem'],
+  context: DROReducerContext
+): DROStatePayload {
   switch (menuState) {
     case 'function-menu-center':
     case 'function-menu-line':
       // Center and Line both go to line center finding (2 points)
+      // Point collection shows normal position display
       return {
         stateName: 'function-menu-center-line-point-1',
         stateData: INITIAL_CENTER_FINDING_DATA,
         vMem,
+        display: computeNormalDisplay(vMem, context),
       };
     case 'function-menu-circle':
       return {
         stateName: 'function-menu-center-circle-point-1',
         stateData: INITIAL_CENTER_FINDING_DATA,
         vMem,
+        display: computeNormalDisplay(vMem, context),
       };
     case 'function-menu-linear':
     case 'function-menu-polar':
       // TODO: implement linear and polar
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
+      return {
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem,
+        display: computeNormalDisplay(vMem, context),
+      };
     default:
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
+      return {
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem,
+        display: computeNormalDisplay(vMem, context),
+      };
   }
 }
 
-export const menuReducer: FeatureReducer = (current, event, _context) => {
+export const menuReducer: FeatureReducer = (current, event, context) => {
   const { stateName: state, stateData: data, vMem } = current;
 
   if (!isFunctionMenuSelectionState(state)) return null;
 
   switch (event.eventName) {
     case 'KEY_CLEAR':
-      return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem };
-    case 'KEY_6_RIGHT':
-      return { stateName: getNextMenuState(state), stateData: data, vMem };
-    case 'KEY_4_LEFT':
-      return { stateName: getPrevMenuState(state), stateData: data, vMem };
+      return {
+        stateName: 'idle',
+        stateData: INITIAL_DRO_STATE_DATA,
+        vMem,
+        display: computeNormalDisplay(vMem, context),
+      };
+    case 'KEY_6_RIGHT': {
+      const nextState = getNextMenuState(state);
+      return {
+        stateName: nextState,
+        stateData: data,
+        vMem,
+        display: computeMenuDisplay(nextState),
+      };
+    }
+    case 'KEY_4_LEFT': {
+      const prevState = getPrevMenuState(state);
+      return {
+        stateName: prevState,
+        stateData: data,
+        vMem,
+        display: computeMenuDisplay(prevState),
+      };
+    }
     case 'KEY_ENTER':
-      return handleMenuEnter(state, vMem);
+      return handleMenuEnter(state, vMem, context);
     default:
       return current;
   }

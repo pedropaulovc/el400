@@ -17,6 +17,7 @@ import { useMillStore } from '../millStore';
 import { useSettingsStore } from '../settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
 
@@ -48,12 +49,14 @@ function resetStores(initialState?: DROShape) {
       stateName: initialState.stateName,
       stateData: initialState.stateData,
       vMem: initialState.vMem,
+      display: initialState.display,
     });
   } else {
     useDROStore.setState({
       stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
       stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      display: INITIAL_DISPLAY_STATE,
     });
   }
 }
@@ -79,6 +82,7 @@ describe('DRO Store Hooks', () => {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
       resetStores(initialState);
 
@@ -94,6 +98,7 @@ describe('useDROState', () => {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      display: INITIAL_DISPLAY_STATE,
     });
   });
 
@@ -122,6 +127,7 @@ describe('useDROContext', () => {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      display: INITIAL_DISPLAY_STATE,
     });
   });
 
@@ -135,6 +141,7 @@ describe('useDROContext', () => {
       stateName: 'function-menu-center',
       stateData: INITIAL_DRO_STATE_DATA,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
+      display: INITIAL_DISPLAY_STATE,
     });
 
     const { result } = renderHook(() => ({

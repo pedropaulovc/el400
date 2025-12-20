@@ -7,6 +7,23 @@
 
 import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import type { DisplayState } from './utils/displayComputation';
+import { createDisplay } from './utils/displayComputation';
+
+/**
+ * Model number displayed during boot sequence.
+ */
+export const MODEL_NUMBER = 'EL400';
+
+/**
+ * Software version displayed during boot sequence.
+ */
+export const SOFTWARE_VERSION = 'vEr 1.0.0';
+
+/**
+ * Boot display state - shown when initial state is 'boot'.
+ */
+export const BOOT_DISPLAY: DisplayState = createDisplay(MODEL_NUMBER, SOFTWARE_VERSION, '');
 
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates
@@ -20,7 +37,6 @@ export type DROStateName =
   | 'idle'
   // Transitional toggle states
   | 'abs-inc-mode'
-  | 'inch-mm-mode'
   // Function menu selection states
   | 'function-menu-center'
   | 'function-menu-circle'
@@ -110,7 +126,7 @@ export type DROEventPayload =
   // System events
   | { eventName: 'BOOT_STARTED'; skipBootMessage: boolean }
   | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
-  | { eventName: 'MODE_TOGGLE_COMPLETE' }
+  | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
@@ -201,17 +217,19 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
 };
 
 /**
- * Initial DRO state payload including vMem.
+ * Initial DRO state payload including vMem and display.
  * Used by context to initialize the reducer.
  */
 export interface DROStatePayloadInit {
   stateName: DROStateName;
   stateData: DROStateData;
   vMem: VolatileMemoryState;
+  display: DisplayState;
 }
 
 export const INITIAL_DRO_STATE_PAYLOAD: DROStatePayloadInit = {
   stateName: INITIAL_DRO_STATE,
   stateData: INITIAL_DRO_STATE_DATA,
   vMem: INITIAL_VOLATILE_MEMORY_STATE,
+  display: BOOT_DISPLAY, // Initial state is 'boot', so display boot message
 };

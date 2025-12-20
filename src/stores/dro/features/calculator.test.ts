@@ -11,6 +11,7 @@ import { INITIAL_DRO_STATE_DATA, INITIAL_CALCULATOR_DATA } from '../droStateMach
 import type { CalculatorData } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 
 /** Helper to create state with input buffer for testing KEY_ENTER */
 function stateWithBuffer(
@@ -22,6 +23,7 @@ function stateWithBuffer(
     stateName,
     stateData,
     vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer },
+    display: INITIAL_DISPLAY_STATE,
   };
 }
 
@@ -63,6 +65,7 @@ describe('calculatorReducer', () => {
           currentValue: 10,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = calculatorReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -99,6 +102,7 @@ describe('calculatorReducer', () => {
             currentValue: 5,
           },
           vMem: INITIAL_VOLATILE_MEMORY_STATE,
+          display: INITIAL_DISPLAY_STATE,
         };
 
         const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
@@ -285,6 +289,7 @@ describe('calculatorReducer', () => {
           currentValue: 10,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = calculatorReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);

@@ -11,6 +11,7 @@ import type { DROStateName, CenterFindingData, DROStateData } from '../droStateM
 import { INITIAL_CENTER_FINDING_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 
 /**
  * Helper to create test state with a specific position.
@@ -28,6 +29,7 @@ function stateWithPosition(
       ...INITIAL_VOLATILE_MEMORY_STATE,
       manualAbsoluteValues: position,
     },
+    display: INITIAL_DISPLAY_STATE,
   };
 }
 
@@ -55,7 +57,6 @@ describe('centerFindingReducer', () => {
         'boot-show-message',
         'idle',
         'abs-inc-mode',
-        'inch-mm-mode',
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
@@ -116,6 +117,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -133,6 +135,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       const result = centerFindingReducer(current, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -282,6 +285,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -423,6 +427,7 @@ describe('centerFindingReducer', () => {
           centerResult: { X: 0, Y: 0, Z: 0 },
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -447,6 +452,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -464,6 +470,7 @@ describe('centerFindingReducer', () => {
           centerResult: null,
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
       };
 
       expect(centerFindingReducer(current, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBe(current);
@@ -483,6 +490,134 @@ describe('centerFindingReducer', () => {
       const data = result?.stateData as CenterFindingData;
       expect(data.stateDataType).toBe('center-finding');
       expect(data.storedPoints).toHaveLength(1);
+    });
+  });
+
+  describe('MILL_STATE_CHANGED handling', () => {
+    it('should recompute normal display when collecting points', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-line-point-1',
+        stateData: INITIAL_CENTER_FINDING_DATA,
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
+        },
+        display: INITIAL_DISPLAY_STATE,
+      };
+
+      const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('function-menu-center-line-point-1');
+      // Display should be recomputed based on position
+      expect(result?.display).toBeDefined();
+    });
+
+    it('should recompute normal display for all point collection states', () => {
+      const collectStates: DROStateName[] = [
+        'function-menu-center-line-point-1',
+        'function-menu-center-line-point-2',
+        'function-menu-center-circle-point-1',
+        'function-menu-center-circle-point-2',
+        'function-menu-center-circle-point-3',
+      ];
+
+      for (const stateName of collectStates) {
+        const current: DROStatePayload = {
+          stateName,
+          stateData: INITIAL_CENTER_FINDING_DATA,
+          vMem: INITIAL_VOLATILE_MEMORY_STATE,
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe(stateName);
+        expect(result?.display).toBeDefined();
+      }
+    });
+
+    it('should recompute distance-to-go display in result state with center', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-line-result',
+        stateData: {
+          stateDataType: 'center-finding',
+          storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
+          centerResult: { X: 50, Y: 0, Z: 0 },
+        },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+        },
+        display: INITIAL_DISPLAY_STATE,
+      };
+
+      const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('function-menu-center-line-result');
+      // Display should show distance to center (50 - 0 = 50 in mm, converted to inches)
+      expect(result?.display.X).toBeCloseTo(50 / 25.4, 2);
+    });
+
+    it('should recompute distance-to-go display for circle result state', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-circle-result',
+        stateData: {
+          stateDataType: 'center-finding',
+          storedPoints: [
+            { X: 10, Y: 0, Z: 0 },
+            { X: 0, Y: 10, Z: 0 },
+            { X: -10, Y: 0, Z: 0 },
+          ],
+          centerResult: { X: 0, Y: 0, Z: 0 },
+        },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          manualAbsoluteValues: { X: 10, Y: 10, Z: 5 },
+        },
+        display: INITIAL_DISPLAY_STATE,
+      };
+
+      const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).not.toBeNull();
+      expect(result?.stateName).toBe('function-menu-center-circle-result');
+      // Display should show distance to center
+      // X: 0 - 10 = -10, Y: 0 - 10 = -10, Z: 0 - 5 = -5 (all in mm, converted to inches)
+      expect(result?.display.X).toBeCloseTo(-10 / 25.4, 2);
+      expect(result?.display.Y).toBeCloseTo(-10 / 25.4, 2);
+    });
+
+    it('should return current state for result state without center result', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-line-result',
+        stateData: {
+          stateDataType: 'center-finding',
+          storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
+          centerResult: null,
+        },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
+      };
+
+      const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).toBe(current);
+    });
+
+    it('should return current state for result state with non-center-finding data', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-line-result',
+        stateData: { stateDataType: 'none' },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
+      };
+
+      const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).toBe(current);
     });
   });
 

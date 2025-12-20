@@ -1,7 +1,7 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { useDisplayValueX, useDisplayValueY, useDisplayValueZ } from "../hooks/useDisplayValues";
+import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
 import { useDefaultUnit, useNvMem } from "../stores/settingsStore";
 import { useDROState, useDRODispatch, isFunctionActive, useBootSequence, useMode } from "../stores/dro";
 
@@ -14,9 +14,9 @@ export interface AxisValues {
 export type { AxisDisplayValue };
 
 const SCREEN_READER_AXIS_HOOKS = {
-  X: useDisplayValueX,
-  Y: useDisplayValueY,
-  Z: useDisplayValueZ,
+  X: useDisplayX,
+  Y: useDisplayY,
+  Z: useDisplayZ,
 } as const;
 
 /** Screen-reader-only value display - subscribes to its own axis only */

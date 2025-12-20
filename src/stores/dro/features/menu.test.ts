@@ -17,7 +17,6 @@ describe('menuReducer', () => {
         'boot-show-message',
         'idle',
         'abs-inc-mode',
-        'inch-mm-mode',
         'function-menu-center-line-point-1',
         'function-menu-center-line-result',
       ];
