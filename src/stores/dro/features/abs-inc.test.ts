@@ -93,7 +93,7 @@ describe('absIncReducer', () => {
     });
   });
 
-  describe('MODE_TOGGLE_COMPLETE in abs-inc-mode', () => {
+  describe('ABS_INC_TOGGLE_COMPLETE in abs-inc-mode', () => {
     it('should transition back to idle', () => {
       const state: DROStatePayload = {
         stateName: 'abs-inc-mode',
@@ -101,7 +101,7 @@ describe('absIncReducer', () => {
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
         display: INITIAL_DISPLAY_STATE,
       };
-      const result = absIncReducer(state, { eventName: 'MODE_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
+      const result = absIncReducer(state, { eventName: 'ABS_INC_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('idle');
     });
 
@@ -112,13 +112,13 @@ describe('absIncReducer', () => {
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
         display: INITIAL_DISPLAY_STATE,
       };
-      const result = absIncReducer(state, { eventName: 'MODE_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
+      const result = absIncReducer(state, { eventName: 'ABS_INC_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
       expect(result?.vMem.mode).toBe('inc');
     });
 
     it('should compute display', () => {
       const state = createTestState('abs-inc-mode');
-      const result = absIncReducer(state, { eventName: 'MODE_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
+      const result = absIncReducer(state, { eventName: 'ABS_INC_TOGGLE_COMPLETE' }, DEFAULT_TEST_CONTEXT);
       expect(result?.display).toBeDefined();
     });
   });
