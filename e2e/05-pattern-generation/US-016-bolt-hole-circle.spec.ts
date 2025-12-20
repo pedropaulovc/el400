@@ -86,7 +86,7 @@ test.describe('US-016: Bolt Hole Circle', () => {
     await dro.enterButton.click();
 
     // Should now be in holes entry
-    await dro.waitForAxisPureTextValue('X', 'h0LES');
+    await dro.waitForAxisPureTextValue('X', 'hoLES');
 
     // Enter hole count = 8
     await dro.key8.click();

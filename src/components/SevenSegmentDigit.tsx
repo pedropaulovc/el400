@@ -52,6 +52,7 @@ const SevenSegmentDigit = ({
     // m = n with top segment (a) lit (used to distinguish between m and n on 7-segment displays)
     'n': [false, false, true,  false, true,  false, true ],
     'm': [true,  false, true,  false, true,  false, true ],
+    'o': [false, false, true,  true,  true,  false, true ],
 
     'P': [true,  true,  false, false, true,  true,  true ],
     'r': [false, false, false, false, true,  false, true ],
