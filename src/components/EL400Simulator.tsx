@@ -5,18 +5,8 @@ import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
-import { useDROState, useDRODispatch, useBootSequence } from "../stores/dro";
-import { useNvMem } from "../stores/settingsStore";
-import { useDisplayValues } from "../hooks/useDisplayValues";
 
 const EL400Simulator = () => {
-  const droState = useDROState();
-  const dispatch = useDRODispatch();
-  const nvMem = useNvMem();
-  const axisDisplayValues = useDisplayValues();
-
-  // Boot sequence logic
-  useBootSequence(dispatch, droState, nvMem);
 
   return (
     <div
@@ -41,7 +31,7 @@ const EL400Simulator = () => {
       {/* Main content area */}
       <div className="px-14 pb-2 pt-4">
         <div className="flex gap-5 items-stretch">
-          <MultiAxisSection axisValues={axisDisplayValues} />
+          <MultiAxisSection />
           <AxisSelectionSection />
           <KeypadSection />
         </div>

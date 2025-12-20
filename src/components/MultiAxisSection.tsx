@@ -1,9 +1,9 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDefaultUnit } from "../stores/settingsStore";
-import { useDROState, isFunctionActive } from "../stores/dro";
+import { useDisplayValueX, useDisplayValueY, useDisplayValueZ } from "../hooks/useDisplayValues";
+import { useDefaultUnit, useNvMem } from "../stores/settingsStore";
+import { useDROState, useDRODispatch, isFunctionActive, useBootSequence, useMode } from "../stores/dro";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -13,30 +13,45 @@ export interface AxisValues {
 
 export type { AxisDisplayValue };
 
-interface MultiAxisSectionProps {
-  /** Pre-computed display values (already unit-converted where appropriate) */
-  axisValues: AxisValues;
-}
+const SCREEN_READER_AXIS_HOOKS = {
+  X: useDisplayValueX,
+  Y: useDisplayValueY,
+  Z: useDisplayValueZ,
+} as const;
+
+/** Screen-reader-only value display - subscribes to its own axis only */
+const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
+  const value = SCREEN_READER_AXIS_HOOKS[axis]();
+  const formatted = typeof value === 'number' ? value.toFixed(4) : value;
+  return (
+    <tr>
+      <th scope="row">{axis}</th>
+      <td aria-live="polite" aria-atomic="true" data-testid={`axis-value-${axis.toLowerCase()}`}>
+        {formatted}
+      </td>
+    </tr>
+  );
+};
 
 /**
  * Displays the three-axis DRO readout with LED mode indicators.
  *
- * This component is a pure renderer - it displays whatever values are passed
- * and has no knowledge of calculator mode or unit conversion. Those concerns
- * are handled by the useDisplayValues hook upstream.
+ * This component owns the boot sequence logic. Each axis subscribes
+ * to its own display value independently for optimal performance.
  */
-const MultiAxisSection = ({
-  axisValues,
-}: MultiAxisSectionProps) => {
-  const vMem = useVolatileMemory();
-  const defaultUnit = useDefaultUnit();
+const MultiAxisSection = () => {
+  // Boot sequence - this component shows the boot message
   const droState = useDROState();
+  const dispatch = useDRODispatch();
+  const nvMem = useNvMem();
+  useBootSequence(dispatch, droState, nvMem);
 
-  const isAbs = vMem.mode === 'abs';
+  // LED indicators
+  const mode = useMode();
+  const defaultUnit = useDefaultUnit();
+
+  const isAbs = mode === 'abs';
   const isInch = defaultUnit === 'inch';
-
-  const formatForScreenReader = (value: AxisDisplayValue) =>
-    typeof value === 'number' ? value.toFixed(4) : value;
 
   return (
     <div className="flex flex-col">
@@ -59,31 +74,16 @@ const MultiAxisSection = ({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row">X</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-x">
-                  {formatForScreenReader(axisValues.X)}
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Y</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-y">
-                  {formatForScreenReader(axisValues.Y)}
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Z</th>
-                <td aria-live="polite" aria-atomic="true" data-testid="axis-value-z">
-                  {formatForScreenReader(axisValues.Z)}
-                </td>
-              </tr>
+              <ScreenReaderAxisValue axis="X" />
+              <ScreenReaderAxisValue axis="Y" />
+              <ScreenReaderAxisValue axis="Z" />
             </tbody>
           </table>
 
           <div className="flex flex-col gap-3 flex-1 justify-center">
-            <Axis value={axisValues.X} axis="X" />
-            <Axis value={axisValues.Y} axis="Y" />
-            <Axis value={axisValues.Z} axis="Z" />
+            <Axis axis="X" />
+            <Axis axis="Y" />
+            <Axis axis="Z" />
           </div>
 
           {/* LED Indicators */}

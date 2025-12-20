@@ -1,11 +1,10 @@
 import { Fragment } from "react";
 import DROButton from "./DROButton";
 import BeveledFrame from "./BeveledFrame";
-import { useVolatileMemory } from "../hooks/useVolatileMemory";
-import { useDRODispatch } from "../stores/dro";
+import { useActiveAxis, useDRODispatch } from "../stores/dro";
 
 const AxisSelectionSection = () => {
-  const vMem = useVolatileMemory();
+  const activeAxis = useActiveAxis();
   const dispatch = useDRODispatch();
   const axes: ('X' | 'Y' | 'Z')[] = ['X', 'Y', 'Z'];
 
@@ -37,8 +36,8 @@ const AxisSelectionSection = () => {
                 variant="dark"
                 size="axis"
                 onClick={() => { handleAxisSelect(axis); }}
-                isActive={vMem.activeAxis === axis}
-                aria-pressed={vMem.activeAxis === axis}
+                isActive={activeAxis === axis}
+                aria-pressed={activeAxis === axis}
                 data-testid={`axis-select-${axis.toLowerCase()}`}
                 title={`Select ${axis} axis`}
               >
@@ -50,7 +49,7 @@ const AxisSelectionSection = () => {
               <DROButton
                 variant="dark"
                 size="square"
-                onClick={() => { vMem.zeroAxis(axis); }}
+                onClick={() => { dispatch({ eventName: `BTN_ZERO_${axis}` as const }); }}
                 data-testid={`axis-zero-${axis.toLowerCase()}`}
                 title={`Zero ${axis} axis`}
               >

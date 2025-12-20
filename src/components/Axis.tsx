@@ -1,10 +1,17 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
+import { useDisplayValueX, useDisplayValueY, useDisplayValueZ } from "../hooks/useDisplayValues";
 
 export type AxisDisplayValue = number | string;
 
+/** Map axis to its corresponding hook */
+const axisHooks = {
+  X: useDisplayValueX,
+  Y: useDisplayValueY,
+  Z: useDisplayValueZ,
+} as const;
+
 interface AxisProps {
-  value: AxisDisplayValue;
   axis: 'X' | 'Y' | 'Z';
 }
 
@@ -60,7 +67,11 @@ const formatTextValue = (text: string): { char: string; hasDecimal: boolean }[] 
   return padded.concat(truncated);
 };
 
-const Axis = ({ value, axis }: AxisProps) => {
+const Axis = ({ axis }: AxisProps) => {
+  // Each axis subscribes to its own value only
+  const useAxisValue = axisHooks[axis];
+  const value = useAxisValue();
+
   const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
     ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
     : formatTextValue(value);
