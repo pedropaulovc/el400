@@ -17,7 +17,7 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-intro',
         stateData: INITIAL_BOLT_HOLE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'abs' },
-        display: INITIAL_DISPLAY_STATE,
+        display: { X: 'b hoLE', Y: 0, Z: 0 }, // Intro display
       };
 
       const result = boltHoleReducer(state, { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }, DEFAULT_TEST_CONTEXT);
@@ -25,6 +25,28 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('bolt-hole-menu-select');
       expect(result?.stateData.stateDataType).toBe('bolt-hole');
+      // Display should show CIRCLE menu option with empty Y
+      expect(result?.display.X).toBe('CirCLE');
+      expect(result?.display.Y).toBe('');
+      expect(result?.display.Z).toBe('');
+    });
+
+    it('should have intro display showing "b hoLE" on X and 0 on Y', () => {
+      // This test verifies the expected intro display format
+      // The intro display is set by idleReducer when entering bolt-hole-intro
+      const introState: DROStatePayload = {
+        stateName: 'bolt-hole-intro',
+        stateData: INITIAL_BOLT_HOLE_DATA,
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'abs' },
+        display: { X: 'b hoLE', Y: 0, Z: 0 },
+      };
+
+      // The intro state should preserve the "b hoLE" display until timeout
+      const result = boltHoleReducer(introState, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      expect(result).toBe(introState); // Unchanged - ignores key input
+      expect(introState.display.X).toBe('b hoLE');
+      expect(introState.display.Y).toBe(0);
+      expect(introState.display.Z).toBe(0);
     });
 
     it('should exit to idle with KEY_CLEAR from intro state', () => {
@@ -91,6 +113,8 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.boltHoleMode).toBe('ARC');
       }
+      // Display should show ARC menu option
+      expect(result?.display.X).toBe('ArC');
     });
 
     it('should toggle from ARC to CIRCLE with KEY_6_RIGHT', () => {
@@ -107,6 +131,8 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.boltHoleMode).toBe('CIRCLE');
       }
+      // Display should show CIRCLE menu option
+      expect(result?.display.X).toBe('CirCLE');
     });
 
     it('should transition to center-x entry when CIRCLE mode is confirmed', () => {
@@ -122,6 +148,9 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('bolt-hole-circle-center-x');
       expect(result?.vMem.inputBuffer).toBe('');
+      // Display should show center X prompt with empty buffer (numeric 0)
+      expect(result?.display.X).toBe('Cnt X');
+      expect(result?.display.Y).toBe(0);
     });
 
     it('should exit to idle when ARC mode is selected (not implemented)', () => {
@@ -156,6 +185,9 @@ describe('boltHoleReducer', () => {
         expect(result.stateData.centerX).toBe(1.75);
       }
       expect(result?.vMem.inputBuffer).toBe('');
+      // Display should show center Y prompt (numeric 0)
+      expect(result?.display.X).toBe('Cnt Y');
+      expect(result?.display.Y).toBe(0);
     });
 
     it('should accept center Y coordinate', () => {
@@ -173,6 +205,9 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.centerY).toBe(1.25);
       }
+      // Display should show radius prompt (numeric 0)
+      expect(result?.display.X).toBe('rAdiUS');
+      expect(result?.display.Y).toBe(0);
     });
 
     it('should accept radius value', () => {
@@ -190,6 +225,9 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.radius).toBe(0.95);
       }
+      // Display should show angle prompt (numeric 0)
+      expect(result?.display.X).toBe('AnGLE');
+      expect(result?.display.Y).toBe(0);
     });
 
     it('should reject zero or negative radius', () => {
@@ -225,6 +263,9 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.startAngle).toBe(20);
       }
+      // Display should show holes prompt (numeric 0)
+      expect(result?.display.X).toBe('hoLES');
+      expect(result?.display.Y).toBe(0);
     });
 
     it('should normalize angle to 0-359 range', () => {
@@ -333,46 +374,76 @@ describe('boltHoleReducer', () => {
       }
     });
 
-    it('should append digit to input buffer', () => {
+    it('should append digit to input buffer and update display', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-center-x',
         stateData: INITIAL_BOLT_HOLE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1' },
-        display: INITIAL_DISPLAY_STATE,
+        display: { X: 'Cnt X', Y: 1, Z: 0 },
       };
 
       const result = boltHoleReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
 
       expect(result).not.toBeNull();
       expect(result?.vMem.inputBuffer).toBe('15');
+      // Display Y should show updated buffer as numeric value
+      expect(result?.display.X).toBe('Cnt X');
+      expect(result?.display.Y).toBe(15);
     });
 
-    it('should append decimal to input buffer', () => {
+    it('should append decimal to input buffer and update display', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-center-x',
         stateData: INITIAL_BOLT_HOLE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1' },
-        display: INITIAL_DISPLAY_STATE,
+        display: { X: 'Cnt X', Y: 1, Z: 0 },
       };
 
       const result = boltHoleReducer(state, { eventName: 'KEY_DECIMAL' }, DEFAULT_TEST_CONTEXT);
 
       expect(result).not.toBeNull();
       expect(result?.vMem.inputBuffer).toBe('1.');
+      // "1." parses to 1, displayed as numeric
+      expect(result?.display.Y).toBe(1);
     });
 
-    it('should toggle sign in input buffer', () => {
+    it('should toggle sign in input buffer and update display', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-center-x',
         stateData: INITIAL_BOLT_HOLE_DATA,
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1.5' },
-        display: INITIAL_DISPLAY_STATE,
+        display: { X: 'Cnt X', Y: 1.5, Z: 0 },
       };
 
       const result = boltHoleReducer(state, { eventName: 'KEY_SIGN' }, DEFAULT_TEST_CONTEXT);
 
       expect(result).not.toBeNull();
       expect(result?.vMem.inputBuffer).toBe('-1.5');
+      expect(result?.display.Y).toBe(-1.5);
+    });
+
+    it('should show hoLES prompt when entering holes state', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-circle-holes',
+        stateData: {
+          ...INITIAL_BOLT_HOLE_DATA,
+          centerX: 1.75,
+          centerY: 1.25,
+          radius: 0.95,
+          startAngle: 20,
+        },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '' },
+        display: { X: 'hoLES', Y: 0, Z: 0 },
+      };
+
+      // Typing a digit should update the buffer and display
+      // Note: KEY_6_RIGHT is a navigation key that also functions as digit 6
+      const result = boltHoleReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result).not.toBeNull();
+      expect(result?.vMem.inputBuffer).toBe('6');
+      expect(result?.display.X).toBe('hoLES');
+      expect(result?.display.Y).toBe(6);
     });
   });
 
@@ -700,7 +771,7 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.display).toBeDefined();
       expect(result?.display.X).toBe('Cnt X');
-      expect(result?.display.Y).toBe('5');
+      expect(result?.display.Y).toBe(5); // numeric value
     });
   });
 });
