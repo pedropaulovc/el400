@@ -35,7 +35,7 @@ function AppContent() {
   // Initialize mill store with connection
   useEffect(() => {
     let isMounted = true;
-    let cleanup: () => void = () => {};
+    let cleanup: () => void = () => { /* no-op */ };
 
     const init = async () => {
       const result = await initializeMillStore(connection);
