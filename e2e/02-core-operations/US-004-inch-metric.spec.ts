@@ -26,7 +26,7 @@ test.describe('US-004: Inch/Metric Mode', () => {
     await dro.enterNumber('1');
     await dro.enterButton.click();
     
-    let value = await dro.getAxisValue('X');
+    let value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(1, 4);
     
     // AC 4.1 & 4.3: Toggle to mm - LED and value should update
@@ -35,7 +35,7 @@ test.describe('US-004: Inch/Metric Mode', () => {
     await expect(await dro.isInchUnits()).toBe(false);
     
     // AC 4.4: Verify conversion (1 inch = 25.4 mm)
-    value = await dro.getAxisValue('X');
+    value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(25.4, 3);
     
     // AC 4.5: Test persistence across reload

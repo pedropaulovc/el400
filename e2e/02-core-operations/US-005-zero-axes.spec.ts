@@ -17,7 +17,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterNumber('99.999');
     await dro.enterButton.click();
 
-    const value = await dro.getAxisValue('X');
+    const value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(99.999, 2);
   });
 
@@ -29,7 +29,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterNumber('-50.5');
     await dro.enterButton.click();
 
-    const value = await dro.getAxisValue('Y');
+    const value = await dro.getAxisDisplayPureNumberValue('Y');
     expect(value).toBeCloseTo(-50.5, 1);
   });
 
@@ -41,7 +41,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterNumber('0.0001');
     await dro.enterButton.click();
 
-    const value = await dro.getAxisValue('Z');
+    const value = await dro.getAxisDisplayPureNumberValue('Z');
     expect(value).toBeCloseTo(0.0001, 4);
   });
 
@@ -55,13 +55,13 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterButton.click();
 
     // Verify X is set
-    expect(await dro.getAxisValue('X')).toBeCloseTo(123, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(123, 0);
 
     // Zero X
     await dro.zeroAxis('X');
 
     // Verify X is zero
-    expect(await dro.getAxisValue('X')).toBeCloseTo(0, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
   });
 
   /**
@@ -82,9 +82,9 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterButton.click();
 
     // Verify values
-    expect(await dro.getAxisValue('X')).toBeCloseTo(10, 0);
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(20, 0);
-    expect(await dro.getAxisValue('Z')).toBeCloseTo(30, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 0);
 
     // Zero all
     await dro.zeroAllButton.click();
@@ -105,7 +105,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterNumber('-100.5');
     await dro.enterButton.click();
 
-    const value = await dro.getAxisValue('X');
+    const value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(-100.5, 1);
   });
 
@@ -117,7 +117,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterNumber('.5');
     await dro.enterButton.click();
 
-    const value = await dro.getAxisValue('Y');
+    const value = await dro.getAxisDisplayPureNumberValue('Y');
     expect(value).toBeCloseTo(0.5, 1);
   });
 
@@ -131,7 +131,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterButton.click();
 
     // Verify initial value
-    let value = await dro.getAxisValue('X');
+    let value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(10, 0);
 
     // Now try to enter 999 but cancel it
@@ -143,7 +143,7 @@ test.describe('US-005: Axis Reset and Set', () => {
     await dro.enterButton.click();
 
     // Value should remain 10, not change to 999
-    value = await dro.getAxisValue('X');
+    value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(10, 0);
   });
 });

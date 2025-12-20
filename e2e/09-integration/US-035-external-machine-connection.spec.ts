@@ -35,7 +35,7 @@ test.describe('US-035: External Machine Connection', () => {
     await dro.enterNumber('12.345');
     await dro.enterButton.click();
 
-    const xValue = await dro.getAxisValue('X');
+    const xValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xValue).toBeCloseTo(12.345, 2);
   });
 
@@ -67,16 +67,16 @@ test.describe('US-035: External Machine Connection', () => {
     await dro.selectAxis('X');
     await dro.enterNumber('100');
     await dro.enterButton.click();
-    expect(await dro.getAxisValue('X')).toBeCloseTo(100, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 0);
 
     await dro.selectAxis('Y');
     await dro.enterNumber('200');
     await dro.enterButton.click();
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(200, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(200, 0);
 
     await dro.selectAxis('Z');
     await dro.enterNumber('300');
     await dro.enterButton.click();
-    expect(await dro.getAxisValue('Z')).toBeCloseTo(300, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(300, 0);
   });
 });

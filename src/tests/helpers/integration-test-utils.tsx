@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
-import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_FROM_END_PATTERN } from './test-constants';
+import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
 import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -212,50 +212,9 @@ export function getAxisDisplayPureTextValue(axis: 'X' | 'Y' | 'Z'): string {
  * - The number doesn't have exactly `precision` decimal digits (or is not an integer when precision is 0)
  */
 export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision = 4): number {
-  // Validate precision parameter
-  if (!Number.isInteger(precision)) {
-    throw new Error(`precision must be a non-negative integer, got: ${String(precision)}`);
-  }
-  if (precision < 0) {
-    throw new Error(`precision must be a non-negative integer, got: ${String(precision)}`);
-  }
-
   const valueElement = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
   const textContent = valueElement.textContent || '';
-
-  const trimmedContent = textContent.trim();
-  const match = trimmedContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
-
-  if (!match) {
-    throw new Error(`Expected numeric value for axis ${axis}, but no numeric match found in: ${textContent}`);
-  }
-
-  const parsedValue = parseFloat(match[0]);
-
-  if (isNaN(parsedValue)) {
-    throw new Error(`Expected numeric value for axis ${axis}, but parsing resulted in NaN from: ${match[0]}`);
-  }
-
-  // Validate precision
-  const numberString = match[0];
-  if (precision === 0) {
-    // For precision 0, ensure it's an integer (no decimal point)
-    if (numberString.includes('.')) {
-      throw new Error(`Expected integer value for axis ${axis} with precision 0, but got: ${numberString}`);
-    }
-  } else {
-    // For other precisions, check that we have exactly `precision` decimal digits
-    const decimalIndex = numberString.indexOf('.');
-    if (decimalIndex === -1) {
-      throw new Error(`Expected decimal value for axis ${axis} with precision ${String(precision)}, but got integer: ${numberString}`);
-    }
-    const decimalPlaces = numberString.length - decimalIndex - 1;
-    if (decimalPlaces !== precision) {
-      throw new Error(`Expected ${String(precision)} decimal places for axis ${axis}, but got ${String(decimalPlaces)} in: ${numberString}`);
-    }
-  }
-
-  return parsedValue;
+  return parseNumericValue(textContent, axis, precision);
 }
 
 /**

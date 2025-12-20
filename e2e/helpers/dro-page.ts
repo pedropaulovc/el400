@@ -1,5 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
+import { parseNumericValue } from './test-constants';
 import * as crypto from 'crypto';
 
 /**
@@ -147,24 +147,12 @@ export class DROPage {
   }
 
   /**
-   * Get the current value displayed for an axis
+   * Get the current numeric value displayed for an axis
    */
-  async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
+  async getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
     const text = await display.textContent();
-    const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
-
-    if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
-      throw new Error(`Invalid numeric value in axis ${axis}: ${text}`);
-    }
-
-    const value = parseFloat(cleanedText);
-
-    if (isNaN(value)) {
-      throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
-    }
-
-    return value;
+    return parseNumericValue(text || '', axis);
   }
 
   /**
@@ -210,7 +198,7 @@ export class DROPage {
     timeout = 500
   ): Promise<void> {
     await expect
-      .poll(() => this.getAxisValue(axis), { timeout })
+      .poll(() => this.getAxisDisplayPureNumberValue(axis), { timeout })
       .toBeCloseTo(expected, precision);
   }
 
@@ -316,17 +304,17 @@ export class DROPage {
    *
    * @param axis - The axis to check
    * @param expected - The expected numeric value
-   * @param precision - Number of decimal places for comparison (default: 2)
+   * @param precision - Number of decimal places for comparison (default: 4)
    * @param timeout - Maximum time to wait in ms (default: 500)
    */
   async waitForAxisPureNumberValue(
     axis: 'X' | 'Y' | 'Z',
     expected: number,
-    precision = 2,
+    precision = 4,
     timeout = 500
   ): Promise<void> {
     await expect
-      .poll(() => this.getAxisValue(axis), { timeout })
+      .poll(() => this.getAxisDisplayPureNumberValue(axis), { timeout })
       .toBeCloseTo(expected, precision);
   }
 
