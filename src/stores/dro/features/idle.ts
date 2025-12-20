@@ -25,12 +25,7 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         display: computeNormalDisplay(vMem, context),
       };
     // BTN_ABS_INC is handled by absIncReducer which toggles vMem.mode
-    // BTN_INCH_MM triggers display recomputation when unit setting changes
-    case 'BTN_INCH_MM':
-      return {
-        ...statePayload,
-        display: computeNormalDisplay(vMem, context),
-      };
+    // BTN_INCH_MM is handled by inchMmReducer which toggles nvMem.defaultUnit
     case 'BTN_FUNCTION':
       return {
         stateName: 'function-menu-center',
