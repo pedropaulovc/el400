@@ -34,17 +34,27 @@ function AppContent() {
 
   // Initialize mill store with connection
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
+    let isMounted = true;
+    let cleanup: () => void = () => {};
 
     const init = async () => {
-      cleanup = await initializeMillStore(connection);
+      const result = await initializeMillStore(connection);
+
+      if (!isMounted) {
+        // Component unmounted before initialization completed; clean up immediately.
+        result();
+        return;
+      }
+
+      cleanup = result;
       setIsInitialized(true);
     };
 
     void init();
 
     return () => {
-      cleanup?.();
+      isMounted = false;
+      cleanup();
     };
   }, [connection]);
 
