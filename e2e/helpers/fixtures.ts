@@ -28,9 +28,18 @@ export const test = base.extend<DROFixtures>({
   /**
    * DROPage connected to the global mock CNCjs server.
    * Each test gets a unique sessionId for isolation.
+   *
+   * Note: The fixture clears localStorage and performs an initial dro.goto().
+   * Tests that need different boot behavior should first arrange any desired
+   * localStorage or other boot state, then call dro.goto() again.
    */
   dro: async ({ page }, use) => {
+    // Clear localStorage before each test to ensure isolation
+    await page.goto('/');
+    await page.evaluate(() => { localStorage.clear(); });
+
     const dro = new DROPage(page, MOCK_CNCJS_PORT);
+    // Navigate with default settings (boot message skipped)
     await dro.goto();
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(dro);

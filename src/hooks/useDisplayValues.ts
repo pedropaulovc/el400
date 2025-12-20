@@ -23,7 +23,7 @@ import {
   SOFTWARE_VERSION,
 } from '../dro-state-machine';
 import { useVolatileMemory } from './useVolatileMemory';
-import { useNonVolatileMemoryContext } from '../context/NonVolatileMemoryContext';
+import { useDefaultUnit } from '../stores/settingsStore';
 import { fromMmToAnyUnit } from '../utils/unitConversion';
 import type { AxisDisplayValue } from '../components/Axis';
 
@@ -68,13 +68,14 @@ export function useDisplayValues(): DisplayAxisValues {
   const vMem = useVolatileMemory();
   const droState = useDROState();
   const droCtx = useDROContext();
-  const { nvMem } = useNonVolatileMemoryContext();
+  const defaultUnit = useDefaultUnit();
 
   return useMemo(() => {
-    const unit = nvMem.defaultUnit;
+    const unit = defaultUnit;
 
-    // Boot message
-    if (droState === 'boot-show-message') {
+    // Boot sequence - show boot message for both 'boot' and 'boot-show-message'
+    // (Initial state is 'boot', which transitions to 'boot-show-message' after BOOT_STARTED)
+    if (droState === 'boot' || droState === 'boot-show-message') {
       return { X: MODEL_NUMBER, Y: SOFTWARE_VERSION, Z: '' };
     }
 
@@ -114,5 +115,5 @@ export function useDisplayValues(): DisplayAxisValues {
       Y: fromMmToAnyUnit(values.Y, unit),
       Z: fromMmToAnyUnit(values.Z, unit),
     };
-  }, [droState, droCtx, vMem.displayValues, nvMem.defaultUnit]);
+  }, [droState, droCtx, vMem.displayValues, defaultUnit]);
 }

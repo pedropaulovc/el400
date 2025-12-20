@@ -1,66 +1,76 @@
 /**
- * Context and Hooks Tests
+ * DRO Store Hook Tests
  *
- * Tests for React context provider and hooks.
+ * Tests for Zustand store hooks.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import {
-  DROProvider,
   useDROState,
   useDRODispatch,
   useDROContext,
   type DROShape,
 } from './index';
+import { useDROStore } from '../stores/droStore';
+import { useMillStore } from '../stores/millStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
-import { MillStateProvider } from '../context/MillStateContext';
+import { NoOpMillConnection } from '../adapters/NoOpMillConnection';
+import { createDefaultMillState } from '../types/millState';
 
-function createWrapper(initialState?: DROShape) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <MillStateProvider>
-        <DROProvider initialState={initialState ?? INITIAL_DRO_STATE_PAYLOAD}>
-          {children}
-        </DROProvider>
-      </MillStateProvider>
-    );
-  };
+/**
+ * Reset all stores to initial state before each test.
+ */
+function resetStores(initialState?: DROShape) {
+  // Reset settings store
+  useSettingsStore.setState({
+    nvMem: {
+      beepEnabled: true,
+      defaultUnit: 'inch',
+      precision: 4,
+      bootMessageMode: 'skip',
+    },
+  });
+
+  // Reset mill store
+  useMillStore.setState({
+    millState: createDefaultMillState('noop'),
+    connection: new NoOpMillConnection(),
+    isConnecting: false,
+    error: null,
+  });
+
+  // Reset DRO store
+  if (initialState) {
+    useDROStore.setState({
+      stateName: initialState.stateName,
+      stateData: initialState.stateData,
+      vMem: initialState.vMem,
+    });
+  } else {
+    useDROStore.setState({
+      stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
+      stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
+      vMem: INITIAL_VOLATILE_MEMORY_STATE,
+    });
+  }
 }
 
-describe('DROProvider', () => {
-  describe('context access', () => {
-    it('should throw error when hooks are used outside provider', () => {
-      expect(() => {
-        renderHook(() => useDROState());
-      }).toThrow('useDROState must be used within a DROProvider');
-    });
-
-    it('should provide context when wrapped in provider', () => {
-      const { result } = renderHook(() => useDROState(), {
-        wrapper: createWrapper(),
-      });
-
-      expect(result.current).toBe('boot');
-    });
+describe('DRO Store Hooks', () => {
+  beforeEach(() => {
+    resetStores();
   });
 
   describe('initial state', () => {
     it('should start in boot state by default', () => {
-      const { result } = renderHook(() => useDROState(), {
-        wrapper: createWrapper(),
-      });
-
+      const { result } = renderHook(() => useDROState());
       expect(result.current).toBe('boot');
     });
 
     it('should start with none data by default', () => {
-      const { result } = renderHook(() => useDROContext(), {
-        wrapper: createWrapper(),
-      });
-
+      const { result } = renderHook(() => useDROContext());
       expect(result.current.stateDataType).toBe('none');
     });
 
@@ -70,43 +80,33 @@ describe('DROProvider', () => {
         stateData: INITIAL_DRO_STATE_DATA,
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
       };
+      resetStores(initialState);
 
-      const { result } = renderHook(() => useDROState(), {
-        wrapper: createWrapper(initialState),
-      });
-
+      const { result } = renderHook(() => useDROState());
       expect(result.current).toBe('idle');
     });
   });
 });
 
 describe('useDROState', () => {
-  it('should return current state', () => {
-    const { result } = renderHook(() => useDROState(), {
-      wrapper: createWrapper({
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      }),
+  beforeEach(() => {
+    resetStores({
+      stateName: 'idle',
+      stateData: INITIAL_DRO_STATE_DATA,
+      vMem: INITIAL_VOLATILE_MEMORY_STATE,
     });
+  });
 
+  it('should return current state', () => {
+    const { result } = renderHook(() => useDROState());
     expect(result.current).toBe('idle');
   });
 
   it('should update when state changes', () => {
-    const { result } = renderHook(
-      () => ({
-        state: useDROState(),
-        dispatch: useDRODispatch(),
-      }),
-      {
-        wrapper: createWrapper({
-          stateName: 'idle',
-          stateData: INITIAL_DRO_STATE_DATA,
-          vMem: INITIAL_VOLATILE_MEMORY_STATE,
-        }),
-      }
-    );
+    const { result } = renderHook(() => ({
+      state: useDROState(),
+      dispatch: useDRODispatch(),
+    }));
 
     act(() => {
       result.current.dispatch({ eventName: 'BTN_FUNCTION' });
@@ -117,32 +117,30 @@ describe('useDROState', () => {
 });
 
 describe('useDROContext', () => {
-  it('should return current data', () => {
-    const { result } = renderHook(() => useDROContext(), {
-      wrapper: createWrapper({
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-        vMem: INITIAL_VOLATILE_MEMORY_STATE,
-      }),
+  beforeEach(() => {
+    resetStores({
+      stateName: 'idle',
+      stateData: INITIAL_DRO_STATE_DATA,
+      vMem: INITIAL_VOLATILE_MEMORY_STATE,
     });
+  });
 
+  it('should return current data', () => {
+    const { result } = renderHook(() => useDROContext());
     expect(result.current.stateDataType).toBe('none');
   });
 
   it('should update when data changes', () => {
-    const { result } = renderHook(
-      () => ({
-        data: useDROContext(),
-        dispatch: useDRODispatch(),
-      }),
-      {
-        wrapper: createWrapper({
-          stateName: 'function-menu-center',
-          stateData: INITIAL_DRO_STATE_DATA,
-          vMem: INITIAL_VOLATILE_MEMORY_STATE,
-        }),
-      }
-    );
+    resetStores({
+      stateName: 'function-menu-center',
+      stateData: INITIAL_DRO_STATE_DATA,
+      vMem: INITIAL_VOLATILE_MEMORY_STATE,
+    });
+
+    const { result } = renderHook(() => ({
+      data: useDROContext(),
+      dispatch: useDRODispatch(),
+    }));
 
     act(() => {
       result.current.dispatch({ eventName: 'KEY_ENTER' });
@@ -153,22 +151,20 @@ describe('useDROContext', () => {
 });
 
 describe('useDRODispatch', () => {
-  it('should return dispatch function', () => {
-    const { result } = renderHook(() => useDRODispatch(), {
-      wrapper: createWrapper(),
-    });
+  beforeEach(() => {
+    resetStores();
+  });
 
+  it('should return dispatch function', () => {
+    const { result } = renderHook(() => useDRODispatch());
     expect(typeof result.current).toBe('function');
   });
 
   it('should dispatch events that trigger state transitions', () => {
-    const { result } = renderHook(
-      () => ({
-        state: useDROState(),
-        dispatch: useDRODispatch(),
-      }),
-      { wrapper: createWrapper() }
-    );
+    const { result } = renderHook(() => ({
+      state: useDROState(),
+      dispatch: useDRODispatch(),
+    }));
 
     act(() => {
       result.current.dispatch({ eventName: 'BOOT_STARTED', skipBootMessage: true });
@@ -178,16 +174,17 @@ describe('useDRODispatch', () => {
   });
 });
 
-describe('Provider integration', () => {
+describe('Store integration', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
   it('should support full center-line workflow through hooks', () => {
-    const { result } = renderHook(
-      () => ({
-        state: useDROState(),
-        data: useDROContext(),
-        dispatch: useDRODispatch(),
-      }),
-      { wrapper: createWrapper() }
-    );
+    const { result } = renderHook(() => ({
+      state: useDROState(),
+      data: useDROContext(),
+      dispatch: useDRODispatch(),
+    }));
 
     // Boot complete
     act(() => {

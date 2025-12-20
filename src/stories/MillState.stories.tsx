@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { MillStateProvider, useMillStateContext } from "../context/MillStateContext";
+import { useMillStore } from "../stores/millStore";
 import { MockMillConnection } from "../adapters/MockMillConnection";
 
 /**
@@ -8,7 +8,7 @@ import { MockMillConnection } from "../adapters/MockMillConnection";
  * Used in stories to visualize the data contract.
  */
 function MillStateDisplay() {
-  const { millState } = useMillStateContext();
+  const millState = useMillStore((s) => s.millState);
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-lg font-mono text-sm space-y-4 min-w-[400px]">
@@ -80,7 +80,28 @@ function MillStateDisplay() {
 }
 
 /**
- * Story wrapper component that provides context and connection.
+ * Initialize stores for storybook - uses provided connection.
+ * Returns an unsubscribe function for cleanup.
+ */
+function initializeStoresForStory(connection: MockMillConnection): () => void {
+  // Set up mill store with connection
+  useMillStore.setState({
+    millState: connection.getState(),
+    connection: connection,
+    isConnecting: false,
+    error: null,
+  });
+
+  // Subscribe to connection updates and return unsubscribe function
+  const unsubscribe = connection.subscribe((state) => {
+    useMillStore.getState()._setMillState(state);
+  });
+
+  return unsubscribe;
+}
+
+/**
+ * Story wrapper component that initializes stores.
  */
 function StoryWrapper({
   connection,
@@ -89,11 +110,20 @@ function StoryWrapper({
   connection?: MockMillConnection;
   children: React.ReactNode;
 }) {
-  return (
-    <MillStateProvider initialConnection={connection ?? new MockMillConnection()}>
-      {children}
-    </MillStateProvider>
-  );
+  // Use useState with initializer to ensure stable connection reference
+  const [conn] = useState(() => connection ?? new MockMillConnection());
+
+  // Initialize stores in useEffect to avoid side effects during render
+  useEffect(() => {
+    const unsubscribe = initializeStoresForStory(conn);
+
+    return () => {
+      unsubscribe();
+      conn.disconnect();
+    };
+  }, [conn]);
+
+  return <>{children}</>;
 }
 
 const meta = {
