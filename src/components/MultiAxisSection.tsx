@@ -22,6 +22,7 @@ const SCREEN_READER_AXIS_HOOKS = {
 /** Screen-reader-only value display - subscribes to its own axis only */
 const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
   const value = SCREEN_READER_AXIS_HOOKS[axis]();
+  // Format numeric values to exactly 4 decimal places, keep text values as-is
   const formatted = typeof value === 'number' ? value.toFixed(4) : value;
   return (
     <tr>
