@@ -16,7 +16,6 @@ import { calculatorReducer } from './features/calculator';
 import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
-import { modeToggleReducer } from './features/mode-toggle';
 
 /**
  * All feature reducers in priority order.
@@ -30,13 +29,12 @@ const featureReducers: FeatureReducer[] = [
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   // vMem reducers for idle state operations
-  modeToggleReducer, // Handles BTN_ABS_INC with vMem.mode toggle
+  absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)
   keypadReducer, // Handles digit input to vMem.inputBuffer
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
   // State transition reducers
   idleReducer, // Handles MILL_STATE_CHANGED and BTN_INCH_MM for idle state
-  absIncReducer,
   menuReducer,
   // Future features:
   // boltHoleReducer,
