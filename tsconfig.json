@@ -33,5 +33,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "e2e", ".storybook", ".storybook-forced-colors", "*.ts"]
+  "include": ["src", "e2e", ".storybook", ".storybook-forced-colors", "*.ts", "*.tsx"]
 }
