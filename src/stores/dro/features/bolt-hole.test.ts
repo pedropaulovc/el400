@@ -183,7 +183,8 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('bolt-hole-circle-center-y');
       if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.centerX).toBe(1.75);
+        // 1.75 inches = 44.45mm (default context uses inches)
+        expect(result.stateData.centerX).toBeCloseTo(44.45, 4);
       }
       expect(result?.vMem.inputBuffer).toBe('');
       // Display should show center Y: X shows prompt, Y shows buffer value (0)
@@ -195,7 +196,7 @@ describe('boltHoleReducer', () => {
     it('should accept center Y coordinate', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-center-y',
-        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 1.75 },
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 44.45 },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1.25' },
         display: INITIAL_DISPLAY_STATE,
       };
@@ -205,7 +206,8 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('bolt-hole-circle-radius');
       if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.centerY).toBe(1.25);
+        // 1.25 inches = 31.75mm (default context uses inches)
+        expect(result.stateData.centerY).toBeCloseTo(31.75, 4);
       }
       // Display should show radius prompt (numeric 0)
       expect(result?.display.X).toBe('rAdiUS');
@@ -215,7 +217,7 @@ describe('boltHoleReducer', () => {
     it('should accept radius value', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-radius',
-        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 1.75, centerY: 1.25 },
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 44.45, centerY: 31.75 },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0.95' },
         display: INITIAL_DISPLAY_STATE,
       };
@@ -225,7 +227,8 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('bolt-hole-circle-angle');
       if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.radius).toBe(0.95);
+        // 0.95 inches = 24.13mm (default context uses inches)
+        expect(result.stateData.radius).toBeCloseTo(24.13, 4);
       }
       // Display should show angle prompt (numeric 0)
       expect(result?.display.X).toBe('AnGLE');
@@ -235,7 +238,7 @@ describe('boltHoleReducer', () => {
     it('should reject zero or negative radius', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-radius',
-        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 1.75, centerY: 1.25 },
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 44.45, centerY: 31.75 },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0' },
         display: INITIAL_DISPLAY_STATE,
       };
@@ -250,9 +253,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-angle',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '20' },
         display: INITIAL_DISPLAY_STATE,
@@ -275,9 +278,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-angle',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '400' },
         display: INITIAL_DISPLAY_STATE,
@@ -296,9 +299,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 20,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '6', mode: 'abs' },
@@ -321,9 +324,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 20,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1' },
@@ -340,9 +343,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 20,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1000' },
@@ -359,9 +362,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 20,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '6.8' },
@@ -434,9 +437,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 20,
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '' },
@@ -459,9 +462,9 @@ describe('boltHoleReducer', () => {
       stateName: 'bolt-hole-circle-navigate',
       stateData: {
         ...INITIAL_BOLT_HOLE_DATA,
-        centerX: 1.75,
-        centerY: 1.25,
-        radius: 0.95,
+        centerX: 44.45,
+        centerY: 31.75,
+        radius: 24.13,
         startAngle: 0,
         holeCount: 6,
         currentHole: 1,
@@ -632,7 +635,7 @@ describe('boltHoleReducer', () => {
     it('should exit to idle with KEY_CLEAR from any parameter entry state when buffer is empty', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-radius',
-        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 1.75, centerY: 1.25 },
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 44.45, centerY: 31.75 },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
         display: INITIAL_DISPLAY_STATE,
       };
@@ -646,7 +649,7 @@ describe('boltHoleReducer', () => {
     it('should erase last digit with KEY_CLEAR when buffer has content (backspace)', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-radius',
-        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 1.75, centerY: 1.25 },
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 44.45, centerY: 31.75 },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '123' },
         display: INITIAL_DISPLAY_STATE,
       };
@@ -691,9 +694,9 @@ describe('boltHoleReducer', () => {
         stateName: 'bolt-hole-circle-navigate',
         stateData: {
           ...INITIAL_BOLT_HOLE_DATA,
-          centerX: 1.75,
-          centerY: 1.25,
-          radius: 0.95,
+          centerX: 44.45,
+          centerY: 31.75,
+          radius: 24.13,
           startAngle: 0,
           holeCount: 6,
           currentHole: 3,
@@ -781,6 +784,173 @@ describe('boltHoleReducer', () => {
       expect(result?.display.X).toBe(5); // numeric value
       expect(result?.display.Y).toBe('EntCnt0');
       expect(result?.display.Z).toBe('');
+    });
+  });
+
+  describe('unit conversion', () => {
+    describe('inch mode (default)', () => {
+      it('should convert center X from inches to mm', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-center-x',
+          stateData: INITIAL_BOLT_HOLE_DATA,
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0.5' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-center-y');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // 0.5 inches = 12.7mm
+          expect(result.stateData.centerX).toBeCloseTo(12.7, 4);
+        }
+      });
+
+      it('should convert center Y from inches to mm', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-center-y',
+          stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 12.7 },
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '-0.3' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-radius');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // -0.3 inches = -7.62mm
+          expect(result.stateData.centerY).toBeCloseTo(-7.62, 4);
+        }
+      });
+
+      it('should convert radius from inches to mm', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-radius',
+          stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 12.7, centerY: -7.62 },
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1.0' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-angle');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // 1.0 inch = 25.4mm
+          expect(result.stateData.radius).toBeCloseTo(25.4, 4);
+        }
+      });
+    });
+
+    describe('mm mode', () => {
+      const mmContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const },
+      };
+
+      it('should store center X in mm without conversion', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-center-x',
+          stateData: INITIAL_BOLT_HOLE_DATA,
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '12.7' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-center-y');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // 12.7mm stored as-is
+          expect(result.stateData.centerX).toBeCloseTo(12.7, 4);
+        }
+      });
+
+      it('should store center Y in mm without conversion', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-center-y',
+          stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 12.7 },
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '-7.62' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-radius');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // -7.62mm stored as-is
+          expect(result.stateData.centerY).toBeCloseTo(-7.62, 4);
+        }
+      });
+
+      it('should store radius in mm without conversion', () => {
+        const state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-radius',
+          stateData: { ...INITIAL_BOLT_HOLE_DATA, centerX: 12.7, centerY: -7.62 },
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '25.4' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+
+        const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+
+        expect(result).not.toBeNull();
+        expect(result?.stateName).toBe('bolt-hole-circle-angle');
+        if (result?.stateData.stateDataType === 'bolt-hole') {
+          // 25.4mm stored as-is
+          expect(result.stateData.radius).toBeCloseTo(25.4, 4);
+        }
+      });
+    });
+
+    describe('hole position calculations use stored mm values', () => {
+      it('should calculate hole positions correctly with inch input', () => {
+        // Complete workflow: enter parameters in inches, verify hole positions in mm
+        const context = DEFAULT_TEST_CONTEXT; // inch mode
+
+        // Enter center X = 0.5" -> 12.7mm
+        let state: DROStatePayload = {
+          stateName: 'bolt-hole-circle-center-x',
+          stateData: INITIAL_BOLT_HOLE_DATA,
+          vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0.5' },
+          display: INITIAL_DISPLAY_STATE,
+        };
+        let result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, context);
+        expect(result?.stateData.stateDataType === 'bolt-hole' && result.stateData.centerX).toBeCloseTo(12.7, 4);
+
+        // Enter center Y = -0.3" -> -7.62mm
+        state = result!;
+        state.vMem = { ...state.vMem, inputBuffer: '-0.3' };
+        result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, context);
+        expect(result?.stateData.stateDataType === 'bolt-hole' && result.stateData.centerY).toBeCloseTo(-7.62, 4);
+
+        // Enter radius = 1.0" -> 25.4mm
+        state = result!;
+        state.vMem = { ...state.vMem, inputBuffer: '1' };
+        result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, context);
+        expect(result?.stateData.stateDataType === 'bolt-hole' && result.stateData.radius).toBeCloseTo(25.4, 4);
+
+        // Enter angle = 0
+        state = result!;
+        state.vMem = { ...state.vMem, inputBuffer: '0' };
+        result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, context);
+
+        // Enter holes = 4
+        state = result!;
+        state.vMem = { ...state.vMem, inputBuffer: '4' };
+        result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, context);
+
+        // Verify hole 1 position at 0° is calculated correctly in mm
+        // Hole 1: X = centerX + radius*cos(0) = 12.7 + 25.4 = 38.1mm
+        //         Y = centerY + radius*sin(0) = -7.62 + 0 = -7.62mm
+        expect(result?.stateName).toBe('bolt-hole-circle-navigate');
+        // Display should show distance in inches from origin (0, 0) to hole 1 (38.1mm, -7.62mm)
+        // X: 38.1mm = 1.5 inches, Y: -7.62mm = -0.3 inches
+        expect(result?.display.X).toBeCloseTo(1.5, 4);
+        expect(result?.display.Y).toBeCloseTo(-0.3, 4);
+      });
     });
   });
 });

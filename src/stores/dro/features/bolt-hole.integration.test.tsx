@@ -194,13 +194,16 @@ describe('Bolt Hole Circle Integration', () => {
       // Should switch to INC mode
       expect(useDROStore.getState().vMem.mode).toBe('inc');
 
-      // Verify state data
+      // Verify state data (stored in mm after conversion from inches)
       const stateData = useDROStore.getState().stateData;
       expect(stateData.stateDataType).toBe('bolt-hole');
       if (stateData.stateDataType === 'bolt-hole') {
-        expect(stateData.centerX).toBe(1.75);
-        expect(stateData.centerY).toBe(1.25);
-        expect(stateData.radius).toBe(0.95);
+        // 1.75 inches = 44.45mm
+        expect(stateData.centerX).toBeCloseTo(44.45, 4);
+        // 1.25 inches = 31.75mm
+        expect(stateData.centerY).toBeCloseTo(31.75, 4);
+        // 0.95 inches = 24.13mm
+        expect(stateData.radius).toBeCloseTo(24.13, 4);
         expect(stateData.startAngle).toBe(20);
         expect(stateData.holeCount).toBe(6);
         expect(stateData.currentHole).toBe(1);
