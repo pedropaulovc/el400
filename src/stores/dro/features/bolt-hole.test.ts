@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { boltHoleReducer, useBoltHoleIntro, BOLT_HOLE_INTRO_DURATION_MS } from './bolt-hole';
-import { INITIAL_BOLT_HOLE_DATA } from '../droStateMachine';
+import { INITIAL_BOLT_HOLE_DATA, type DROStateName } from '../droStateMachine';
 import { DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROStatePayload } from '../types';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
@@ -1244,10 +1244,10 @@ describe('useBoltHoleIntro hook', () => {
     const mockDispatch = vi.fn();
 
     const { rerender } = renderHook(
-      ({ state }) => {
+      ({ state }: { state: DROStateName }) => {
         useBoltHoleIntro(mockDispatch, state);
       },
-      { initialProps: { state: 'bolt-hole-intro' as const } }
+      { initialProps: { state: 'bolt-hole-intro' as DROStateName } }
     );
 
     // Change state before timer expires
@@ -1255,7 +1255,7 @@ describe('useBoltHoleIntro hook', () => {
       vi.advanceTimersByTime(BOLT_HOLE_INTRO_DURATION_MS / 2);
     });
 
-    rerender({ state: 'idle' as const });
+    rerender({ state: 'idle' as DROStateName });
 
     // Complete the rest of the time
     act(() => {
@@ -1270,14 +1270,14 @@ describe('useBoltHoleIntro hook', () => {
     const mockDispatch = vi.fn();
 
     const { rerender } = renderHook(
-      ({ state }) => {
+      ({ state }: { state: DROStateName }) => {
         useBoltHoleIntro(mockDispatch, state);
       },
-      { initialProps: { state: 'idle' as const } }
+      { initialProps: { state: 'idle' as DROStateName } }
     );
 
     // Enter intro state
-    rerender({ state: 'bolt-hole-intro' as const });
+    rerender({ state: 'bolt-hole-intro' as DROStateName });
 
     // Fast-forward time
     act(() => {
