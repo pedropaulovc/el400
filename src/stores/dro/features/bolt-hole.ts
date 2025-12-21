@@ -28,7 +28,6 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
-  computeAxisPositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -44,8 +43,8 @@ const BOLT_HOLE_DISPLAY_TEXT: Record<string, string> = {
   'bolt-hole-intro': 'b hoLE',
   'bolt-hole-menu-select-CIRCLE': 'CirCLE',
   'bolt-hole-menu-select-ARC': 'ArC',
-  'bolt-hole-circle-center-x': 'Cnt X',
-  'bolt-hole-circle-center-y': 'Cnt Y',
+  'bolt-hole-circle-center-x': 'EntCnt0',
+  'bolt-hole-circle-center-y': 'EntCnt1',
   'bolt-hole-circle-radius': 'rAdiUS',
   'bolt-hole-circle-angle': 'AnGLE',
   'bolt-hole-circle-holes': 'hoLES',
@@ -107,8 +106,16 @@ function computeBoltHoleNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   const holePos = calculateHolePosition(boltData, boltData.currentHole);
-  const currentX = computeAxisPositionMm('X', vMem, context);
-  const currentY = computeAxisPositionMm('Y', vMem, context);
+
+  // Always use absolute position for distance-to-go calculation (not mode-dependent)
+  const { millState } = context;
+  const currentX = millState.connected
+    ? millState.position.x - vMem.workOffsets.X
+    : vMem.manualAbsoluteValues.X;
+  const currentY = millState.connected
+    ? millState.position.y - vMem.workOffsets.Y
+    : vMem.manualAbsoluteValues.Y;
+
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
@@ -138,25 +145,34 @@ function formatBufferForDisplay(buffer: string): number {
 
 /**
  * Compute display for parameter entry states.
- * X shows prompt text, Y shows buffer value with proper precision, Z shows normal position.
+ * For center-x: X shows buffer value, Y shows prompt text
+ * For all others: X shows prompt text, Y shows buffer value
+ * Z always shows empty string
  */
 function computeParameterEntryDisplay(
   state: DROStateName,
-  vMem: VolatileMemoryState,
-  context: DROReducerContext
+  vMem: VolatileMemoryState
 ): DisplayState {
   const promptText = BOLT_HOLE_DISPLAY_TEXT[state] ?? '';
   const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
-  return createDisplay(promptText, bufferValue, computeNormalDisplay(vMem, context).Z);
+
+  // For center-x, swap X and Y: X shows value, Y shows prompt
+  if (state === 'bolt-hole-circle-center-x') {
+    return createDisplay(bufferValue, promptText, '');
+  }
+
+  // For all others: X shows prompt, Y shows value
+  return createDisplay(promptText, bufferValue, '');
 }
 
 /**
  * Compute display for menu select state.
+ * X shows menu text, Y shows 0, Z shows empty string
  */
 function computeMenuSelectDisplay(boltData: BoltHoleData): DisplayState {
   const key = `bolt-hole-menu-select-${boltData.boltHoleMode}`;
   const text = BOLT_HOLE_DISPLAY_TEXT[key] ?? '';
-  return createDisplay(text, '', '');
+  return createDisplay(text, 0, '');
 }
 
 export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, context) => {
@@ -179,7 +195,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     if (isParameterEntryState(state)) {
       return {
         ...statePayload,
-        display: computeParameterEntryDisplay(state, vMem, context),
+        display: computeParameterEntryDisplay(state, vMem),
       };
     }
     return statePayload;
@@ -194,16 +210,17 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         ...statePayload,
         vMem: { ...vMem, inputBuffer: newBuffer },
         display: isParameterEntryState(state)
-          ? computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }, context)
+          ? computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer })
           : statePayload.display,
       };
     }
-    // If buffer is empty, exit to idle
+    // If buffer is empty, exit to idle and restore ABS mode
+    const restoredVMem = { ...vMem, mode: 'abs' as const };
     return {
       stateName: 'idle',
       stateData: INITIAL_DRO_STATE_DATA,
-      vMem,
-      display: computeNormalDisplay(vMem, context),
+      vMem: restoredVMem,
+      display: computeNormalDisplay(restoredVMem, context),
     };
   }
 
@@ -215,7 +232,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       return {
         ...statePayload,
         vMem: { ...vMem, inputBuffer: newBuffer },
-        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }, context),
+        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }),
       };
     }
 
@@ -224,7 +241,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       return {
         ...statePayload,
         vMem: { ...vMem, inputBuffer: newBuffer },
-        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }, context),
+        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }),
       };
     }
 
@@ -233,7 +250,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       return {
         ...statePayload,
         vMem: { ...vMem, inputBuffer: newBuffer },
-        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }, context),
+        display: computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer }),
       };
     }
   }
@@ -272,7 +289,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
             stateName: 'bolt-hole-circle-center-x',
             stateData: boltData,
             vMem: newVMem,
-            display: computeParameterEntryDisplay('bolt-hole-circle-center-x', newVMem, context),
+            display: computeParameterEntryDisplay('bolt-hole-circle-center-x', newVMem),
           };
         }
         // ARC mode not yet implemented
@@ -296,7 +313,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
           stateName: 'bolt-hole-circle-center-y',
           stateData: newData,
           vMem: newVMem,
-          display: computeParameterEntryDisplay('bolt-hole-circle-center-y', newVMem, context),
+          display: computeParameterEntryDisplay('bolt-hole-circle-center-y', newVMem),
         };
       }
       return null;
@@ -312,7 +329,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
           stateName: 'bolt-hole-circle-radius',
           stateData: newData,
           vMem: newVMem,
-          display: computeParameterEntryDisplay('bolt-hole-circle-radius', newVMem, context),
+          display: computeParameterEntryDisplay('bolt-hole-circle-radius', newVMem),
         };
       }
       return null;
@@ -328,7 +345,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
           stateName: 'bolt-hole-circle-angle',
           stateData: newData,
           vMem: newVMem,
-          display: computeParameterEntryDisplay('bolt-hole-circle-angle', newVMem, context),
+          display: computeParameterEntryDisplay('bolt-hole-circle-angle', newVMem),
         };
       }
       return null;
@@ -346,7 +363,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
           stateName: 'bolt-hole-circle-holes',
           stateData: newData,
           vMem: newVMem,
-          display: computeParameterEntryDisplay('bolt-hole-circle-holes', newVMem, context),
+          display: computeParameterEntryDisplay('bolt-hole-circle-holes', newVMem),
         };
       }
       return null;

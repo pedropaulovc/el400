@@ -51,10 +51,10 @@ describe('Bolt Hole Circle Integration', () => {
       // Should be in bolt-hole-intro state first
       expect(useDROStore.getState().stateName).toBe('bolt-hole-intro');
 
-      // Display should show "b hoLE" intro message on X, 0 on Y
+      // Display should show "b hoLE" intro message on X, 0 on Y, empty on Z
       expect(getAxisDisplayPureTextValue('X')).toBe('b hoLE');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0);
-      expect(getAxisDisplayPureNumberValue('Z')).toBe(0);
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Advance past intro
       await advancePastIntro();
@@ -144,34 +144,40 @@ describe('Bolt Hole Circle Integration', () => {
       // Confirm CIRCLE mode
       await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-x');
-      expect(getAxisDisplayPureTextValue('X')).toBe('Cnt X');
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
+      // For center-x: X shows buffer value, Y shows prompt
+      expect(getAxisDisplayPureNumberValue('X')).toBe(0); // Empty buffer shows 0
+      expect(getAxisDisplayPureTextValue('Y')).toBe('EntCnt0');
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
-      // Enter center X = 1.75 - type digits and check display (numeric values)
+      // Enter center X = 1.75 - type digits and check display (X shows numeric values for center-x)
       await user.click(screen.getByTestId('key-1'));
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(1);
+      expect(getAxisDisplayPureNumberValue('X')).toBe(1);
       await user.click(screen.getByTestId('key-decimal'));
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(1); // "1." parses to 1
+      expect(getAxisDisplayPureNumberValue('X')).toBe(1); // "1." parses to 1
       await user.click(screen.getByTestId('key-7'));
-      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(1.7, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1.7, 4);
       await user.click(screen.getByTestId('key-5'));
-      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(1.75, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1.75, 4);
       await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-y');
-      expect(getAxisDisplayPureTextValue('X')).toBe('Cnt Y');
+      // For center-y: X shows prompt, Y shows buffer value
+      expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter center Y = 1.25
       await enterValue(user, '1.25');
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
       expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter radius = 0.95
       await enterValue(user, '0.95');
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
+      expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter starting angle = 20
       await enterValue(user, '20');

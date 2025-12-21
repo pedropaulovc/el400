@@ -55,4 +55,4 @@ export {
 } from './features/bolt-hole';
 
 // Re-export bolt hole types and guards
-export { isBoltHoleActive } from './droStateMachine';
+export { isBoltHoleActive, isFnLedActive } from './droStateMachine';
