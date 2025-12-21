@@ -60,7 +60,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.enterButton.click();
 
     // Verify X shows 10.5 in ABS mode
-    const xAbsValue = await dro.getAxisValue('X');
+    const xAbsValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xAbsValue).toBeCloseTo(10.5, 1);
 
     // Switch to INC mode
@@ -68,7 +68,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     await expect(await dro.isIncMode()).toBe(true);
 
     // INC mode should show 0 (independent memory)
-    const xIncValue = await dro.getAxisValue('X');
+    const xIncValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xIncValue).toBeCloseTo(0, 1);
 
     // Enter a different value in INC mode
@@ -77,7 +77,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.enterButton.click();
 
     // Verify INC shows 5.25
-    const xIncValue2 = await dro.getAxisValue('X');
+    const xIncValue2 = await dro.getAxisDisplayPureNumberValue('X');
     expect(xIncValue2).toBeCloseTo(5.25, 1);
 
     // Switch back to ABS mode
@@ -85,7 +85,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     await expect(await dro.isAbsMode()).toBe(true);
 
     // ABS value should still be 10.5
-    const xAbsValueAfter = await dro.getAxisValue('X');
+    const xAbsValueAfter = await dro.getAxisDisplayPureNumberValue('X');
     expect(xAbsValueAfter).toBeCloseTo(10.5, 1);
   });
 
@@ -113,15 +113,15 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.enterButton.click();
 
     // Verify INC values displayed
-    expect(await dro.getAxisValue('X')).toBeCloseTo(50, 0);
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(75, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(75, 0);
 
     // Switch back to ABS
     await dro.toggleAbsInc();
 
     // Verify ABS values displayed
-    expect(await dro.getAxisValue('X')).toBeCloseTo(100, 0);
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(200, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(200, 0);
   });
 
   /**
@@ -143,13 +143,13 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.zeroAxis('X');
 
     // INC X should be 0
-    expect(await dro.getAxisValue('X')).toBeCloseTo(0, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
 
     // Switch back to ABS
     await dro.toggleAbsInc();
 
     // ABS X should still be 100
-    expect(await dro.getAxisValue('X')).toBeCloseTo(100, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 0);
   });
 
   /**
@@ -187,17 +187,17 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.zeroAllButton.click();
 
     // Verify INC values are all zero
-    expect(await dro.getAxisValue('X')).toBeCloseTo(0, 0);
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(0, 0);
-    expect(await dro.getAxisValue('Z')).toBeCloseTo(0, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(0, 0);
 
     // Switch to ABS mode
     await dro.toggleAbsInc();
 
     // Verify ABS values are preserved
-    expect(await dro.getAxisValue('X')).toBeCloseTo(10, 0);
-    expect(await dro.getAxisValue('Y')).toBeCloseTo(20, 0);
-    expect(await dro.getAxisValue('Z')).toBeCloseTo(30, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 0);
   });
 
   /**
@@ -213,7 +213,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.halfButton.click();
 
     // Verify X is halved to 50
-    expect(await dro.getAxisValue('X')).toBeCloseTo(50, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 0);
 
     // Set INC X to 40
     await dro.toggleAbsInc();
@@ -225,11 +225,11 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.halfButton.click();
 
     // INC X should be 20
-    expect(await dro.getAxisValue('X')).toBeCloseTo(20, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(20, 0);
 
     // ABS X should still be 50
     await dro.toggleAbsInc();
-    expect(await dro.getAxisValue('X')).toBeCloseTo(50, 0);
+    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 0);
   });
 
   /**
@@ -251,7 +251,7 @@ test.describe('US-003: ABS/INC Mode', () => {
 
     // Zero X in INC mode
     await dro.zeroAxis('X');
-    await dro.waitForAxisValue('X', 0, 1);
+    await dro.waitForAxisValue('X', 0);
 
     // Switch back to ABS
     await dro.toggleAbsInc();

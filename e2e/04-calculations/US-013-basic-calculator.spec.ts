@@ -46,8 +46,8 @@ test.describe('US-013: Basic Calculator Functions', () => {
     await dro.page.click('[data-testid="btn-calculator"]');
 
     // Should return to normal mode showing axis values
-    const yValue = await dro.getAxisValue('Y');
-    const zValue = await dro.getAxisValue('Z');
+    const yValue = await dro.getAxisDisplayPureNumberValue('Y');
+    const zValue = await dro.getAxisDisplayPureNumberValue('Z');
     expect(typeof yValue).toBe('number');
     expect(typeof zValue).toBe('number');
   });

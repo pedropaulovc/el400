@@ -57,7 +57,16 @@ export type DROStateName =
   | 'calculator-add'
   | 'calculator-sub'
   | 'calculator-multi'
-  | 'calculator-div';
+  | 'calculator-div'
+  // Bolt hole circle states
+  | 'bolt-hole-intro'
+  | 'bolt-hole-menu-select'
+  | 'bolt-hole-circle-center-x'
+  | 'bolt-hole-circle-center-y'
+  | 'bolt-hole-circle-radius'
+  | 'bolt-hole-circle-angle'
+  | 'bolt-hole-circle-holes'
+  | 'bolt-hole-circle-navigate';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -93,9 +102,12 @@ export interface CenterFindingData extends BaseDROStateData {
 
 export interface BoltHoleData extends BaseDROStateData {
   readonly stateDataType: 'bolt-hole';
-  holeCount: number;
-  radius: number;
-  startAngle: number;
+  boltHoleMode: 'CIRCLE' | 'ARC';
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  holeCount: number | null;
   currentHole: number;
 }
 
@@ -128,6 +140,7 @@ export type DROEventPayload =
   | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
+  | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -160,7 +173,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Y' }
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
-  | { eventName: 'BTN_HALF' };
+  | { eventName: 'BTN_HALF' }
+  | { eventName: 'BTN_BOLT_HOLE' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -195,6 +209,14 @@ export const isFunctionActive = (s: DROStateName): boolean =>
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
 
+/** Check if bolt hole mode is active */
+export const isBoltHoleActive = (s: DROStateName): boolean =>
+  s.startsWith('bolt-hole-');
+
+/** Check if FN LED should be active (function menu or bolt hole modes) */
+export const isFnLedActive = (s: DROStateName): boolean =>
+  isFunctionActive(s) || isBoltHoleActive(s);
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -216,6 +238,17 @@ export const INITIAL_CALCULATOR_DATA: CalculatorData = {
   currentValue: 0,
 };
 
+export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
+  stateDataType: 'bolt-hole',
+  boltHoleMode: 'CIRCLE',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  holeCount: null,
+  currentHole: 1,
+};
+
 /**
  * Initial DRO state payload including vMem and display.
  * Used by context to initialize the reducer.
@@ -231,5 +264,5 @@ export const INITIAL_DRO_STATE_PAYLOAD: DROStatePayloadInit = {
   stateName: INITIAL_DRO_STATE,
   stateData: INITIAL_DRO_STATE_DATA,
   vMem: INITIAL_VOLATILE_MEMORY_STATE,
-  display: BOOT_DISPLAY, // Initial state is 'boot', so display boot message
+  display: createDisplay('', '', ''), // Blank until boot sequence sets display
 };

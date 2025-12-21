@@ -57,7 +57,8 @@ test.describe('US-001: First Use and Power-Up Display', () => {
     // Show boot message for this test
     await dro.goto({ skipBootMessage: false });
 
-    await expectPureTextValue(dro.xDisplay, 'EL400');
+    // Display starts blank in boot state, then shows EL400 when state machine advances to boot-show-message
+    await dro.waitForAxisPureTextValue('X', 'EL400');
     await dro.clearButton.click();
 
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {

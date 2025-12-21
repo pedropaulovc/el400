@@ -110,15 +110,14 @@ describe('integration-test-utils', () => {
       expect(getAxisDisplayPureNumberValue('Z')).toBe(-45.67);
     });
 
-    it('extracts numeric value from end of string', () => {
+    it('throws error when text is mixed with number', () => {
       injectMockAxisDisplay('x', 'Prefix 123.4560');
-      const xValue = getAxisDisplayPureNumberValue('X');
-      expect(xValue).toBe(123.456);
+      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but got text');
     });
 
     it('throws error when no numeric match is found', () => {
       injectMockAxisDisplay('x', 'SELEct');
-      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but no numeric match found');
+      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but got text');
     });
 
     it('handles negative numbers correctly', () => {
@@ -155,7 +154,7 @@ describe('integration-test-utils', () => {
 
     it('throws error when content has trailing text after number', () => {
       injectMockAxisDisplay('x', '123.4560mm');
-      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but no numeric match found');
+      expect(() => getAxisDisplayPureNumberValue('X')).toThrow('Expected numeric value for axis X, but got text');
     });
 
     it('throws error if the number of decimal places does not match', () => {

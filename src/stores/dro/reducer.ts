@@ -17,6 +17,7 @@ import { calculatorReducer } from './features/calculator';
 import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
+import { boltHoleReducer } from './features/bolt-hole';
 
 /**
  * All feature reducers in priority order.
@@ -29,6 +30,7 @@ const featureReducers: FeatureReducer[] = [
   bootReducer,
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
+  boltHoleReducer, // Handles bolt hole circle pattern generation
   // vMem/nvMem reducers for idle state operations
   absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)
   inchMmReducer, // Handles BTN_INCH_MM with nvMem.defaultUnit toggle
@@ -39,7 +41,6 @@ const featureReducers: FeatureReducer[] = [
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:
-  // boltHoleReducer,
   // linearReducer,
   // polarReducer,
 ];

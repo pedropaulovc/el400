@@ -1,5 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { VALID_NUMBER_PATTERN, EXTRACT_NUMBER_PATTERN } from './test-constants';
+import { parseNumericValue } from './test-constants';
 import * as crypto from 'crypto';
 
 /**
@@ -131,10 +131,10 @@ export class DROPage {
     await this.page.goto(url);
     await this.page.waitForLoadState('domcontentloaded');
 
-    // Wait for Socket.IO connection (initial state received)
-    // Only wait when boot message is skipped - otherwise display shows "EL400" text first
+    // Wait for Socket.IO connection and boot sequence to complete
+    // Initial display is blank until useEffect runs and sets display
     if (skipBoot) {
-      await this.waitForAxisValue('X', 0, 0);
+      await this.waitForAxisValue('X', 0);
     }
   }
 
@@ -147,24 +147,13 @@ export class DROPage {
   }
 
   /**
-   * Get the current value displayed for an axis
+   * Get the current numeric value displayed for an axis.
+   * Throws if the display shows text instead of a number.
    */
-  async getAxisValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
+  async getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision = 4): Promise<number> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
-    const text = await display.textContent();
-    const cleanedText = text?.replace(EXTRACT_NUMBER_PATTERN, '') || '0';
-
-    if (!VALID_NUMBER_PATTERN.test(cleanedText)) {
-      throw new Error(`Invalid numeric value in axis ${axis}: ${text}`);
-    }
-
-    const value = parseFloat(cleanedText);
-
-    if (isNaN(value)) {
-      throw new Error(`Could not parse numeric value from axis ${axis}: ${text}`);
-    }
-
-    return value;
+    const text = (await display.textContent()) || '';
+    return parseNumericValue(text, axis, precision);
   }
 
   /**
@@ -200,18 +189,25 @@ export class DROPage {
    *
    * @param axis - The axis to check
    * @param expected - The expected value
-   * @param precision - Number of decimal places for comparison (default: 2)
    * @param timeout - Maximum time to wait in ms (default: 500)
+   * @param displayPrecision - Number of decimal places expected in display (default: 4)
    */
   async waitForAxisValue(
     axis: 'X' | 'Y' | 'Z',
     expected: number,
-    precision = 2,
-    timeout = 500
+    timeout = 500,
+    displayPrecision = 4
   ): Promise<void> {
     await expect
-      .poll(() => this.getAxisValue(axis), { timeout })
-      .toBeCloseTo(expected, precision);
+      .poll(async () => {
+        try {
+          return await this.getAxisDisplayPureNumberValue(axis, displayPrecision);
+        } catch {
+          // Return NaN during polling to keep retrying until display shows valid number
+          return NaN;
+        }
+      }, { timeout })
+      .toBeCloseTo(expected, displayPrecision);
   }
 
   /**
@@ -299,5 +295,83 @@ export class DROPage {
    */
   async isFnModeActive(): Promise<boolean> {
     return await this.isLEDOn(this.fnLED);
+  }
+
+  /**
+   * Get the raw text displayed for an axis (for text assertions)
+   */
+  async getAxisRawText(axis: 'X' | 'Y' | 'Z'): Promise<string> {
+    const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
+    const text = await display.textContent();
+    return text?.trim() || '';
+  }
+
+  /**
+   * Wait for an axis to display a specific numeric value.
+   * Uses polling to handle async updates (e.g., from Socket.IO events).
+   *
+   * @param axis - The axis to check
+   * @param expected - The expected numeric value
+   * @param precision - Number of decimal places for comparison (default: 4)
+   * @param timeout - Maximum time to wait in ms (default: 500)
+   * @param displayPrecision - Number of decimal places expected in display (default: 4)
+   */
+  async waitForAxisPureNumberValue(
+    axis: 'X' | 'Y' | 'Z',
+    expected: number,
+    precision = 4,
+    timeout = 500,
+    displayPrecision = 4
+  ): Promise<void> {
+    await expect
+      .poll(async () => {
+        try {
+          return await this.getAxisDisplayPureNumberValue(axis, displayPrecision);
+        } catch {
+          // Return NaN during polling to keep retrying until display shows valid number
+          return NaN;
+        }
+      }, { timeout })
+      .toBeCloseTo(expected, precision);
+  }
+
+  /**
+   * Wait for an axis to display specific text.
+   * Uses polling to handle async updates.
+   *
+   * @param axis - The axis to check
+   * @param expected - The expected text value
+   * @param timeout - Maximum time to wait in ms (default: 500)
+   */
+  async waitForAxisPureTextValue(
+    axis: 'X' | 'Y' | 'Z',
+    expected: string,
+    timeout = 500
+  ): Promise<void> {
+    await expect
+      .poll(() => this.getAxisRawText(axis), { timeout })
+      .toBe(expected);
+  }
+
+  /**
+   * Simulate relative encoder movement for an axis.
+   * Calls the mock CNCjs server HTTP API to add delta to current position.
+   *
+   * @param axis - The axis to move ('X', 'Y', or 'Z')
+   * @param delta - The delta value to add to current position (in mm)
+   */
+  async simulateEncoderRelativeMove(axis: 'X' | 'Y' | 'Z', delta: number): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-move-relative?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, delta }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to simulate relative encoder move: ${response.statusText}`);
+    }
   }
 }
