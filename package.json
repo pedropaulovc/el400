@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "typecheck": "tsc --project tsconfig.app.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",

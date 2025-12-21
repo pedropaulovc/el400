@@ -8,10 +8,9 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
+  forbidOnly: !!process.env['CI'],
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  workers: undefined,
+  retries: process.env['CI'] ? 2 : 0,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html'],
@@ -26,7 +25,7 @@ export default defineConfig({
     /* Take screenshot on failure */
     screenshot: 'only-on-failure',
     /* Force headless in CI for performance */
-    headless: process.env.CI ? true : undefined,
+    ...(process.env['CI'] ? { headless: true } : {}),
   },
 
   /* Configure projects for major browsers */
@@ -62,13 +61,13 @@ export default defineConfig({
     {
       command: 'npm run dev',
       url: 'http://localhost:8080',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env['CI'],
       timeout: 120 * 1000,
     },
     {
       command: 'npx tsx e2e/mock-cncjs-server.ts',
       url: 'http://localhost:8765/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env['CI'],
       timeout: 10 * 1000,
     },
   ],

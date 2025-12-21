@@ -1,5 +1,5 @@
 import { createServer } from 'http';
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as SocketIOServer } from 'socket.io';
 import { parse } from 'url';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -15,7 +15,7 @@ const sessions = new Map<string, { position: { x: number; y: number; z: number }
 
 const httpServer = createServer((req, res) => {
   const { pathname, query } = parse(req.url || '', true);
-  const sessionId = query.sessionId as string | undefined;
+  const sessionId = query['sessionId'] as string | undefined;
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -93,7 +93,7 @@ const httpServer = createServer((req, res) => {
         // Get or create session
         let session = sessions.get(sessionId);
         if (!session) {
-          session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+          session = { position: { x: 0, y: 0, z: 0 } };
           sessions.set(sessionId, session);
         }
 
@@ -162,7 +162,7 @@ const httpServer = createServer((req, res) => {
 
     let session = sessions.get(sessionId);
     if (!session) {
-      session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+      session = { position: { x: 0, y: 0, z: 0 } };
       sessions.set(sessionId, session);
     }
 
@@ -188,7 +188,7 @@ const httpServer = createServer((req, res) => {
 
     let session = sessions.get(sessionId);
     if (!session) {
-      session = { socket: null, position: { x: 0, y: 0, z: 0 } };
+      session = { position: { x: 0, y: 0, z: 0 } };
       sessions.set(sessionId, session);
     }
 
@@ -248,7 +248,7 @@ function emitStateToSession(sessionId: string) {
 
 io.on('connection', (socket) => {
   // Extract sessionId from query
-  const sessionId = socket.handshake.query.sessionId as string | undefined;
+  const sessionId = socket.handshake.query['sessionId'] as string | undefined;
 
   if (!sessionId) {
     console.log(`[MockCncjs] client connected without sessionId, disconnecting`);

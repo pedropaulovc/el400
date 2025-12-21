@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     checker({
       typescript: {
-        tsconfigPath: "tsconfig.app.json",
+        tsconfigPath: "tsconfig.json",
       },
       enableBuild: true,
     }),
