@@ -21,6 +21,9 @@ test.describe('US-036: Settings Persistence', () => {
    * Unit preference persists across page reload.
    */
   test('should persist unit preference across page reload', async ({ dro }) => {
+    // Install clock to control time-based operations
+    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+
     // Verify starting in inch mode (default)
     await expect(await dro.isInchUnits()).toBe(true);
 
@@ -28,8 +31,8 @@ test.describe('US-036: Settings Persistence', () => {
     await dro.toggleInchMm();
     await expect(await dro.isMmUnits()).toBe(true);
 
-    // Wait for debounced save (settings have 300ms debounce)
-    await dro.page.waitForTimeout(500);
+    // Fast forward to ensure any debounced saves complete (settings have 300ms debounce)
+    await dro.page.clock.fastForward(500);
 
     // Reload the page using dro.reload() to preserve localStorage
     await dro.reload();
@@ -54,11 +57,14 @@ test.describe('US-036: Settings Persistence', () => {
    * Settings are stored in localStorage.
    */
   test('should store settings in localStorage', async ({ dro }) => {
+    // Install clock to control time-based operations
+    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+
     // Toggle unit to mm
     await dro.toggleInchMm();
 
-    // Wait for debounced save
-    await dro.page.waitForTimeout(500);
+    // Fast forward to ensure debounced save completes
+    await dro.page.clock.fastForward(500);
 
     // Check localStorage
     const settings = await dro.page.evaluate(() => {
@@ -92,6 +98,9 @@ test.describe('US-036: Settings Persistence', () => {
    * Settings persistence across multiple toggles.
    */
   test('should persist settings through multiple changes', async ({ dro }) => {
+    // Install clock to control time-based operations
+    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+
     // Start with defaults (inch)
     await expect(await dro.isInchUnits()).toBe(true);
 
@@ -99,15 +108,15 @@ test.describe('US-036: Settings Persistence', () => {
     await dro.toggleInchMm();
     await expect(await dro.isMmUnits()).toBe(true);
 
-    // Wait for save
-    await dro.page.waitForTimeout(300);
+    // Fast forward to ensure save completes
+    await dro.page.clock.fastForward(300);
 
     // Toggle back to inch
     await dro.toggleInchMm();
     await expect(await dro.isInchUnits()).toBe(true);
 
-    // Wait for save
-    await dro.page.waitForTimeout(300);
+    // Fast forward to ensure save completes
+    await dro.page.clock.fastForward(300);
 
     // Reload
     await dro.reload();
