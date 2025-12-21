@@ -31,7 +31,7 @@ import {
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
-import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
 
 /**
  * Duration in milliseconds for the bolt hole intro message ("b hoLE") before auto-advancing.
@@ -307,7 +307,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
         if (value === null) return null;
-        const newData = { ...boltData, centerX: value };
+        // Convert from display unit to mm for internal storage
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, centerX: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'bolt-hole-circle-center-y',
@@ -323,7 +325,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
         if (value === null) return null;
-        const newData = { ...boltData, centerY: value };
+        // Convert from display unit to mm for internal storage
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, centerY: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'bolt-hole-circle-radius',
@@ -339,7 +343,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
         if (value === null || value <= 0) return null;
-        const newData = { ...boltData, radius: value };
+        // Convert from display unit to mm for internal storage
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, radius: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'bolt-hole-circle-angle',
