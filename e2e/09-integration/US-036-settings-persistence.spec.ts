@@ -31,8 +31,8 @@ test.describe('US-036: Settings Persistence', () => {
     await dro.toggleInchMm();
     await expect(await dro.isMmUnits()).toBe(true);
 
-    // Fast forward to ensure any debounced saves complete (settings have 300ms debounce)
-    await dro.page.clock.fastForward(500);
+    // Fast forward to allow async operations to complete
+    await dro.page.clock.fastForward(100);
 
     // Reload the page using dro.reload() to preserve localStorage
     await dro.reload();
@@ -63,8 +63,8 @@ test.describe('US-036: Settings Persistence', () => {
     // Toggle unit to mm
     await dro.toggleInchMm();
 
-    // Fast forward to ensure debounced save completes
-    await dro.page.clock.fastForward(500);
+    // Fast forward to allow async operations to complete
+    await dro.page.clock.fastForward(100);
 
     // Check localStorage
     const settings = await dro.page.evaluate(() => {
@@ -108,15 +108,15 @@ test.describe('US-036: Settings Persistence', () => {
     await dro.toggleInchMm();
     await expect(await dro.isMmUnits()).toBe(true);
 
-    // Fast forward to ensure save completes
-    await dro.page.clock.fastForward(300);
+    // Fast forward to allow async operations to complete
+    await dro.page.clock.fastForward(100);
 
     // Toggle back to inch
     await dro.toggleInchMm();
     await expect(await dro.isInchUnits()).toBe(true);
 
-    // Fast forward to ensure save completes
-    await dro.page.clock.fastForward(300);
+    // Fast forward to allow async operations to complete
+    await dro.page.clock.fastForward(100);
 
     // Reload
     await dro.reload();
