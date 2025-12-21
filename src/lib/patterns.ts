@@ -39,7 +39,7 @@ export function parseNumericValue(
     );
   }
 
-  const match = trimmedContent.match(EXTRACT_NUMBER_FROM_END_PATTERN);
+  const match = EXTRACT_NUMBER_FROM_END_PATTERN.exec(trimmedContent);
 
   if (!match) {
     throw new Error(`Expected numeric value${context}, but no numeric match found in: ${textContent}`);

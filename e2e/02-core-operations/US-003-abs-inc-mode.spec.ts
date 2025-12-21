@@ -251,7 +251,7 @@ test.describe('US-003: ABS/INC Mode', () => {
 
     // Zero X in INC mode
     await dro.zeroAxis('X');
-    await dro.waitForAxisValue('X', 0, 1);
+    await dro.waitForAxisValue('X', 0);
 
     // Switch back to ABS
     await dro.toggleAbsInc();
