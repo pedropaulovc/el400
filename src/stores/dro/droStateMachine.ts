@@ -213,6 +213,10 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
+/** Check if FN LED should be active (function menu or bolt hole modes) */
+export const isFnLedActive = (s: DROStateName): boolean =>
+  isFunctionActive(s) || isBoltHoleActive(s);
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────

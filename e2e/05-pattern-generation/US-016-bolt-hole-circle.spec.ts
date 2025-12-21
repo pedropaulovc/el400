@@ -27,32 +27,45 @@ test.describe('US-016: Bolt Hole Circle', () => {
   test('complete bolt hole circle workflow: enter parameters and navigate holes', async ({
     dro,
   }) => {
+    // Set initial encoder position to non-zero values
+    await dro.simulateEncoderAbsoluteMove('X', 5);
+    await dro.simulateEncoderAbsoluteMove('Y', 3);
+
     // Verify starting in ABS mode
     expect(await dro.isAbsMode()).toBe(true);
 
     // Activate bolt hole mode
     await dro.page.click('[data-testid="btn-bolt-circle"]');
 
-    // Assert intro display: X shows "b hoLE", Y shows 0.0000
+    // Assert intro display: X shows "b hoLE", Y shows 0, Z shows empty
     await dro.waitForAxisPureTextValue('X', 'b hoLE', 500);
-    await dro.waitForAxisPureNumberValue('Y', 0, 4, 500); // explicit precision for custom timeout
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Wait for intro to complete and verify menu display (intro is 1000ms + buffer)
     await dro.waitForAxisPureTextValue('X', 'CirCLE', 3000);
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Confirm CIRCLE mode selection (default)
     await dro.enterButton.click();
 
-    // Should now be in center-x entry: X shows prompt, Y shows buffer value
-    await dro.waitForAxisPureTextValue('X', 'Cnt X');
+    // Should now be in center-x entry: X shows buffer value, Y shows prompt
+    await dro.waitForAxisPureNumberValue('X', 0);
+    await dro.waitForAxisPureTextValue('Y', 'EntCnt0');
+    await dro.waitForAxisPureTextValue('Z', '');
 
-    // Enter center X = 12.5 (Y displays numeric value)
+    // Enter center X = 12.5 (X displays numeric value)
     await dro.enterNumber('12.5');
-    await dro.waitForAxisPureNumberValue('Y', 12.5);
+    await dro.waitForAxisPureNumberValue('X', 12.5);
+    await dro.waitForAxisPureTextValue('Y', 'EntCnt0');
+    await dro.waitForAxisPureTextValue('Z', '');
     await dro.enterButton.click();
 
     // Should now be in center-y entry
-    await dro.waitForAxisPureTextValue('X', 'Cnt Y');
+    await dro.waitForAxisPureTextValue('X', 'EntCnt1');
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Enter center Y = -7.25 (with negative)
     await dro.enterNumber('-7');
@@ -71,6 +84,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Should now be in radius entry
     await dro.waitForAxisPureTextValue('X', 'rAdiUS');
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Enter radius = 25.75
     await dro.enterNumber('25.75');
@@ -79,6 +94,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Should now be in angle entry
     await dro.waitForAxisPureTextValue('X', 'AnGLE');
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Enter starting angle = 45 (integer - no decimals)
     await dro.enterNumber('45');
@@ -87,6 +104,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Should now be in holes entry
     await dro.waitForAxisPureTextValue('X', 'hoLES');
+    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureTextValue('Z', '');
 
     // Enter hole count = 8 (integer - no decimals)
     await dro.key8.click();
@@ -96,8 +115,36 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Should now be in INC mode (distance-to-go) showing distance to hole 1
     expect(await dro.isIncMode()).toBe(true);
 
-    // Navigate to next hole with key 6
+    // Calculate expected distance-to-go from initial position (5mm, 3mm) to hole 1
+    // Hole 1 (45°): X = 12.5 + 25.75*cos(45°) = 30.708mm, Y = -7.25 + 25.75*sin(45°) = 10.958mm
+    // Distance: X = 30.708 - 5 = 25.708mm = 1.01213", Y = 10.958 - 3 = 7.958mm = 0.31331"
+    await dro.waitForAxisPureNumberValue('X', 1.01213, 3);
+    await dro.waitForAxisPureNumberValue('Y', 0.31331, 3);
+
+    // Simulate moving halfway to hole 1
+    await dro.simulateEncoderRelativeMove('X', 12.854); // 25.708mm / 2
+    await dro.simulateEncoderRelativeMove('Y', 3.979);  // 7.958mm / 2
+
+    // Assert distance-to-go is now half (remaining distance)
+    await dro.waitForAxisPureNumberValue('X', 0.50606, 3); // ~12.854mm in inches
+    await dro.waitForAxisPureNumberValue('Y', 0.15666, 3); // ~3.979mm in inches
+
+    // Simulate moving the remaining half to reach hole 1
+    await dro.simulateEncoderRelativeMove('X', 12.854);
+    await dro.simulateEncoderRelativeMove('Y', 3.979);
+
+    // Assert we've arrived at hole 1 (distance-to-go is 0)
+    await dro.waitForAxisPureNumberValue('X', 0);
+    await dro.waitForAxisPureNumberValue('Y', 0);
+
+    // Navigate to next hole (hole 2) with key 6
     await dro.key6.click();
+
+    // Assert distance from hole 1 to hole 2 (Thread 1)
+    // Hole 2 (90°): X = 12.5mm, Y = 18.5mm
+    // Distance from hole 1 (30.708mm, 10.958mm) to hole 2: X = -18.208mm = -0.71685", Y = 7.542mm = 0.29693"
+    await dro.waitForAxisPureNumberValue('X', -0.71685, 3);
+    await dro.waitForAxisPureNumberValue('Y', 0.29693, 3);
 
     // Navigate to previous hole with key 4
     await dro.key4.click();
@@ -105,8 +152,13 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Exit bolt hole mode with Clear
     await dro.clearButton.click();
 
-    // Should return to idle (INC mode preserved)
-    expect(await dro.isIncMode()).toBe(true);
+    // Should return to idle in ABS mode
+    expect(await dro.isAbsMode()).toBe(true);
+
+    // Verify final absolute position matches initial position (5mm, 3mm) plus total movement (25.708mm, 7.958mm)
+    // Final position: (30.708mm, 10.958mm) = (1.20898", 0.43142")
+    await dro.waitForAxisPureNumberValue('X', 1.20898, 3);
+    await dro.waitForAxisPureNumberValue('Y', 0.43142, 3);
   });
 
   test('C key clears input buffer completely then exits to idle', async ({ dro }) => {

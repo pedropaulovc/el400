@@ -42,7 +42,7 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateName: 'bolt-hole-intro',
         stateData: INITIAL_BOLT_HOLE_DATA,
         vMem,
-        display: createDisplay('b hoLE', 0, 0),
+        display: createDisplay('b hoLE', 0, ''),
       };
     default:
       return null;
