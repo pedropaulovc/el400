@@ -1207,7 +1207,9 @@ describe('useBoltHoleIntro hook', () => {
   it('should dispatch BOLT_HOLE_INTRO_TIMEOUT after intro duration when in intro state', () => {
     const mockDispatch = vi.fn();
 
-    renderHook(() => useBoltHoleIntro(mockDispatch, 'bolt-hole-intro'));
+    renderHook(() => {
+      useBoltHoleIntro(mockDispatch, 'bolt-hole-intro');
+    });
 
     // Dispatch should not be called immediately
     expect(mockDispatch).not.toHaveBeenCalled();
@@ -1225,7 +1227,9 @@ describe('useBoltHoleIntro hook', () => {
   it('should not dispatch when not in intro state', () => {
     const mockDispatch = vi.fn();
 
-    renderHook(() => useBoltHoleIntro(mockDispatch, 'idle'));
+    renderHook(() => {
+      useBoltHoleIntro(mockDispatch, 'idle');
+    });
 
     // Fast-forward time
     act(() => {
@@ -1240,7 +1244,9 @@ describe('useBoltHoleIntro hook', () => {
     const mockDispatch = vi.fn();
 
     const { rerender } = renderHook(
-      ({ state }) => useBoltHoleIntro(mockDispatch, state),
+      ({ state }) => {
+        useBoltHoleIntro(mockDispatch, state);
+      },
       { initialProps: { state: 'bolt-hole-intro' as const } }
     );
 
@@ -1264,7 +1270,9 @@ describe('useBoltHoleIntro hook', () => {
     const mockDispatch = vi.fn();
 
     const { rerender } = renderHook(
-      ({ state }) => useBoltHoleIntro(mockDispatch, state),
+      ({ state }) => {
+        useBoltHoleIntro(mockDispatch, state);
+      },
       { initialProps: { state: 'idle' as const } }
     );
 
