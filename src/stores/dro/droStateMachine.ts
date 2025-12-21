@@ -260,5 +260,5 @@ export const INITIAL_DRO_STATE_PAYLOAD: DROStatePayloadInit = {
   stateName: INITIAL_DRO_STATE,
   stateData: INITIAL_DRO_STATE_DATA,
   vMem: INITIAL_VOLATILE_MEMORY_STATE,
-  display: BOOT_DISPLAY, // Initial state is 'boot', so display boot message
+  display: createDisplay('', '', ''), // Blank until boot sequence sets display
 };

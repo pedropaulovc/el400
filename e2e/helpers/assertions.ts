@@ -32,10 +32,11 @@ export async function expectPureNumberValue(
   display: Locator,
   expectedValue: number,
   tolerance = 0.0001,
-  axis = 'unknown'
+  axis = 'unknown',
+  precision = 4
 ) {
   const text = await display.textContent();
-  const actualValue = parseNumericValue(text || '', axis);
+  const actualValue = parseNumericValue(text || '', axis, precision);
   const diff = Math.abs(actualValue - expectedValue);
 
   expect(diff, `Expected ${expectedValue}, got ${actualValue}`).toBeLessThanOrEqual(tolerance);
