@@ -210,6 +210,65 @@ describe('Bolt Hole Circle Integration', () => {
       }
     });
 
+    it('completes parameter entry in mm mode with values stored directly', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+
+      // Toggle to mm mode
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
+
+      // Enter bolt hole mode
+      await enterBoltHoleMode(user);
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-menu-select');
+
+      // Confirm CIRCLE mode
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-x');
+
+      // Enter center X = 12.7mm
+      await enterValue(user, '12.7');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-y');
+      // In center-y state: X shows prompt, Y shows buffer (0 for empty)
+      expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(0);
+
+      // Enter center Y = -7.62mm
+      await enterValue(user, '-7.62');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
+
+      // Enter radius = 25.4mm
+      await enterValue(user, '25.4');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-angle');
+
+      // Enter angle = 45
+      await enterValue(user, '45');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
+
+      // Enter hole count = 4
+      await enterValue(user, '4');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
+
+      // Verify state data (stored in mm without conversion)
+      const stateData = useDROStore.getState().stateData;
+      expect(stateData.stateDataType).toBe('bolt-hole');
+      if (stateData.stateDataType === 'bolt-hole') {
+        // Values stored as-is in mm mode (no conversion)
+        expect(stateData.centerX).toBeCloseTo(12.7, 4);
+        expect(stateData.centerY).toBeCloseTo(-7.62, 4);
+        expect(stateData.radius).toBeCloseTo(25.4, 4);
+        expect(stateData.startAngle).toBe(45);
+        expect(stateData.holeCount).toBe(4);
+        expect(stateData.currentHole).toBe(1);
+      }
+
+      // Verify display shows distance-to-go in mm
+      // Hole 1 at 45°: X = 12.7 + 25.4*cos(45°) = 30.66mm, Y = -7.62 + 25.4*sin(45°) = 10.34mm
+      // From origin (0, 0) to hole 1: distance = (30.66mm, 10.34mm)
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(30.66, 2);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(10.34, 2);
+    });
+
     it('rejects invalid radius (zero)', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       renderSimulator();
