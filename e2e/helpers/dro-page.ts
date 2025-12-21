@@ -134,7 +134,7 @@ export class DROPage {
     // Wait for Socket.IO connection and boot sequence to complete
     // Initial display is blank until useEffect runs and sets display
     if (skipBoot) {
-      await this.waitForAxisValue('X', 0, 2, 500, 4);
+      await this.waitForAxisValue('X', 0);
     }
   }
 
@@ -189,14 +189,12 @@ export class DROPage {
    *
    * @param axis - The axis to check
    * @param expected - The expected value
-   * @param precision - Number of decimal places for comparison (default: 2)
    * @param timeout - Maximum time to wait in ms (default: 500)
    * @param displayPrecision - Number of decimal places expected in display (default: 4)
    */
   async waitForAxisValue(
     axis: 'X' | 'Y' | 'Z',
     expected: number,
-    precision = 2,
     timeout = 500,
     displayPrecision = 4
   ): Promise<void> {
@@ -209,7 +207,7 @@ export class DROPage {
           return NaN;
         }
       }, { timeout })
-      .toBeCloseTo(expected, precision);
+      .toBeCloseTo(expected, displayPrecision);
   }
 
   /**

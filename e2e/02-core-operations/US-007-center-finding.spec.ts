@@ -40,7 +40,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderAbsoluteMove('X', 0);
 
     // Verify position is displayed: 0mm = 0 inches
-    await dro.waitForAxisValue('X', 0, 1);
+    await dro.waitForAxisValue('X', 0);
 
     // Store Point 1 using key 6 (Right/Store)
     await dro.key6.click();
@@ -49,7 +49,7 @@ test.describe('US-007: Center Finding', () => {
     await dro.simulateEncoderAbsoluteMove('X', 100);
     
     // Verify current position is displayed in inches: 100mm = ~3.937 inches
-    await dro.waitForAxisValue('X', 3.937, 1);
+    await dro.waitForAxisValue('X', 3.937);
     
     // Store Point 2
     await dro.key6.click();
@@ -57,7 +57,7 @@ test.describe('US-007: Center Finding', () => {
     // Center should be at 50mm. Distance to go from 100mm is -50mm
     // In inch display mode: center = ~1.9685 inches, current = ~3.937 inches
     // Distance to go: 1.9685 - 3.937 = ~-1.9685 inches
-    await dro.waitForAxisValue('X', -1.9685, 1);
+    await dro.waitForAxisValue('X', -1.9685);
     
     // Fn LED should still be on after center calculation
     expect(await dro.isFnModeActive()).toBe(true);
@@ -123,8 +123,8 @@ test.describe('US-007: Center Finding', () => {
     // Circle center should be at (0, 0, 0)
     // Distance to go from Point 3 (-10, 0, 0) to center (0, 0, 0) is (10, 0, 0)
     // In inch mode: 10mm = ~0.3937 inches, 0mm = 0 inches
-    await dro.waitForAxisValue('X', 0.3937, 1);
-    await dro.waitForAxisValue('Y', 0, 1);
+    await dro.waitForAxisValue('X', 0.3937);
+    await dro.waitForAxisValue('Y', 0);
     
     // Fn LED should still be on after center calculation
     expect(await dro.isFnModeActive()).toBe(true);
@@ -143,9 +143,9 @@ test.describe('US-007: Center Finding', () => {
     
     // Press C to cancel
     await dro.clearButton.click();
-    
+
     // Display should return to normal position display
-    await dro.waitForAxisValue('X', 0, 1);
+    await dro.waitForAxisValue('X', 0);
     
     // Fn LED should be off
     expect(await dro.isFnModeActive()).toBe(false);
