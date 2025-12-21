@@ -23,6 +23,9 @@ test.describe('US-035: External Machine Connection', () => {
 
     const dro = new DROPage(page);
 
+    // Wait for display to be ready (polling until X shows 0)
+    await dro.waitForAxisValue('X', 0);
+
     // In manual mode, values should be zeros and controllable via keypad
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {
       x: 0,
@@ -62,6 +65,9 @@ test.describe('US-035: External Machine Connection', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const dro = new DROPage(page);
+
+    // Wait for display to be ready
+    await dro.waitForAxisValue('X', 0);
 
     // Manual entry should work for all axes
     await dro.selectAxis('X');

@@ -14,6 +14,9 @@ test.describe('US-001: First Use and Power-Up Display', () => {
    * AC 1.1-1.4: Power-up shows model/version and transitions to counting mode
    */
   test('Power-up displays model and version before counting mode', async ({ dro }) => {
+    // Install clock before navigation to control setTimeout in boot sequence
+    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+
     // Show boot message for this test
     await dro.goto({ skipBootMessage: false });
 
@@ -21,7 +24,8 @@ test.describe('US-001: First Use and Power-Up Display', () => {
     await expectPureTextValue(dro.yDisplay, 'vEr 1.0.0');
     await expectPureTextValue(dro.zDisplay, '');
 
-    await dro.page.waitForTimeout(1000);
+    // Advance clock by boot message duration (1000ms) to trigger auto-dismiss
+    await dro.page.clock.fastForward(1000);
 
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {
       x: 0,
@@ -72,6 +76,9 @@ test.describe('US-001: First Use and Power-Up Display', () => {
    * AC 1.5: No error messages or warnings appear on startup
    */
   test('AC 1.5: No error messages on startup', async ({ page }) => {
+    // Install clock before navigation
+    await page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+
     await page.goto('/');
     // Check for error message elements
     const errorMessages = page.getByRole('alert');
@@ -85,8 +92,8 @@ test.describe('US-001: First Use and Power-Up Display', () => {
       }
     });
 
-    // Wait a bit to ensure no errors appear
-    await page.waitForTimeout(1000);
+    // Advance clock to allow time for errors to appear
+    await page.clock.fastForward(1000);
     expect(consoleErrors).toHaveLength(0);
   });
 });
