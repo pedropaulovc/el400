@@ -118,16 +118,16 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Calculate expected distance-to-go from initial position (5mm, 3mm) to hole 1
     // Hole 1 (45°): X = 12.5 + 25.75*cos(45°) = 30.708mm, Y = -7.25 + 25.75*sin(45°) = 10.958mm
     // Distance: X = 30.708 - 5 = 25.708mm = 1.01213", Y = 10.958 - 3 = 7.958mm = 0.31331"
-    await dro.waitForAxisPureNumberValue('X', 1.01213, 3);
-    await dro.waitForAxisPureNumberValue('Y', 0.31331, 3);
+    await dro.waitForAxisPureNumberValue('X', 1.01213);
+    await dro.waitForAxisPureNumberValue('Y', 0.31331);
 
     // Simulate moving halfway to hole 1
     await dro.simulateEncoderRelativeMove('X', 12.854); // 25.708mm / 2
     await dro.simulateEncoderRelativeMove('Y', 3.979);  // 7.958mm / 2
 
     // Assert distance-to-go is now half (remaining distance)
-    await dro.waitForAxisPureNumberValue('X', 0.50606, 3); // ~12.854mm in inches
-    await dro.waitForAxisPureNumberValue('Y', 0.15666, 3); // ~3.979mm in inches
+    await dro.waitForAxisPureNumberValue('X', 0.50606); // ~12.854mm in inches
+    await dro.waitForAxisPureNumberValue('Y', 0.15666); // ~3.979mm in inches
 
     // Simulate moving the remaining half to reach hole 1
     await dro.simulateEncoderRelativeMove('X', 12.854);
@@ -143,8 +143,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Assert distance from hole 1 to hole 2 (Thread 1)
     // Hole 2 (90°): X = 12.5mm, Y = 18.5mm
     // Distance from hole 1 (30.708mm, 10.958mm) to hole 2: X = -18.208mm = -0.71685", Y = 7.542mm = 0.29693"
-    await dro.waitForAxisPureNumberValue('X', -0.71685, 3);
-    await dro.waitForAxisPureNumberValue('Y', 0.29693, 3);
+    await dro.waitForAxisPureNumberValue('X', -0.71685);
+    await dro.waitForAxisPureNumberValue('Y', 0.29693);
 
     // Navigate to previous hole with key 4
     await dro.key4.click();
@@ -157,8 +157,8 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Verify final absolute position matches initial position (5mm, 3mm) plus total movement (25.708mm, 7.958mm)
     // Final position: (30.708mm, 10.958mm) = (1.20898", 0.43142")
-    await dro.waitForAxisPureNumberValue('X', 1.20898, 3);
-    await dro.waitForAxisPureNumberValue('Y', 0.43142, 3);
+    await dro.waitForAxisPureNumberValue('X', 1.20898);
+    await dro.waitForAxisPureNumberValue('Y', 0.43142);
   });
 
   test('C key clears input buffer completely then exits to idle', async ({ dro }) => {
