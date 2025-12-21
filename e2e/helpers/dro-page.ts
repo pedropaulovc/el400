@@ -131,10 +131,10 @@ export class DROPage {
     await this.page.goto(url);
     await this.page.waitForLoadState('domcontentloaded');
 
-    // Wait for Socket.IO connection (initial state received)
-    // Only wait when boot message is skipped - otherwise display shows "EL400" text first
+    // Wait for Socket.IO connection and boot sequence to complete
+    // Initial display is blank until useEffect runs and sets display
     if (skipBoot) {
-      await this.waitForAxisValue('X', 0, 0);
+      await this.waitForAxisValue('X', 0, 2, 500, 4);
     }
   }
 
@@ -147,12 +147,13 @@ export class DROPage {
   }
 
   /**
-   * Get the current numeric value displayed for an axis
+   * Get the current numeric value displayed for an axis.
+   * Throws if the display shows text instead of a number.
    */
-  async getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z'): Promise<number> {
+  async getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision = 4): Promise<number> {
     const display = axis === 'X' ? this.xDisplay : axis === 'Y' ? this.yDisplay : this.zDisplay;
-    const text = await display.textContent();
-    return parseNumericValue(text || '', axis);
+    const text = (await display.textContent()) || '';
+    return parseNumericValue(text, axis, precision);
   }
 
   /**
@@ -190,15 +191,24 @@ export class DROPage {
    * @param expected - The expected value
    * @param precision - Number of decimal places for comparison (default: 2)
    * @param timeout - Maximum time to wait in ms (default: 500)
+   * @param displayPrecision - Number of decimal places expected in display (default: 4)
    */
   async waitForAxisValue(
     axis: 'X' | 'Y' | 'Z',
     expected: number,
     precision = 2,
-    timeout = 500
+    timeout = 500,
+    displayPrecision = 4
   ): Promise<void> {
     await expect
-      .poll(() => this.getAxisDisplayPureNumberValue(axis), { timeout })
+      .poll(async () => {
+        try {
+          return await this.getAxisDisplayPureNumberValue(axis, displayPrecision);
+        } catch {
+          // Return NaN during polling to keep retrying until display shows valid number
+          return NaN;
+        }
+      }, { timeout })
       .toBeCloseTo(expected, precision);
   }
 
@@ -306,15 +316,24 @@ export class DROPage {
    * @param expected - The expected numeric value
    * @param precision - Number of decimal places for comparison (default: 4)
    * @param timeout - Maximum time to wait in ms (default: 500)
+   * @param displayPrecision - Number of decimal places expected in display (default: 4)
    */
   async waitForAxisPureNumberValue(
     axis: 'X' | 'Y' | 'Z',
     expected: number,
     precision = 4,
-    timeout = 500
+    timeout = 500,
+    displayPrecision = 4
   ): Promise<void> {
     await expect
-      .poll(() => this.getAxisDisplayPureNumberValue(axis), { timeout })
+      .poll(async () => {
+        try {
+          return await this.getAxisDisplayPureNumberValue(axis, displayPrecision);
+        } catch {
+          // Return NaN during polling to keep retrying until display shows valid number
+          return NaN;
+        }
+      }, { timeout })
       .toBeCloseTo(expected, precision);
   }
 
