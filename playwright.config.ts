@@ -16,10 +16,10 @@ function getWorktreePort(): number {
 }
 
 const E2E_PORT = getWorktreePort();
-const E2E_MOCK_PORT = E2E_PORT + 1000;
+const E2E_MOCK_CNCJS_PORT = E2E_PORT + 1000;
 
 // Export ports so fixtures.ts can use them
-export { E2E_PORT, E2E_MOCK_PORT };
+export { E2E_PORT, E2E_MOCK_CNCJS_PORT };
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -86,8 +86,8 @@ export default defineConfig({
       timeout: 120 * 1000,
     },
     {
-      command: `npx cross-env E2E_MOCK_PORT=${E2E_MOCK_PORT} npx tsx e2e/mock-cncjs-server.ts`,
-      url: `http://localhost:${E2E_MOCK_PORT}/health`,
+      command: `npx cross-env E2E_MOCK_CNCJS_PORT=${E2E_MOCK_CNCJS_PORT} npx tsx e2e/mock-cncjs-server.ts`,
+      url: `http://localhost:${E2E_MOCK_CNCJS_PORT}/health`,
       reuseExistingServer: !process.env['CI'],
       timeout: 10 * 1000,
     },

@@ -13,7 +13,7 @@ function getWorktreePort(): number {
 }
 
 const E2E_PORT = getWorktreePort();
-const MOCK_CNCJS_PORT = E2E_PORT + 1000;
+const E2E_MOCK_CNCJS_PORT = E2E_PORT + 1000;
 
 /**
  * Custom fixtures for EL400 DRO E2E tests
@@ -50,7 +50,7 @@ export const test = base.extend<DROFixtures>({
     await page.goto('/');
     await page.evaluate(() => { localStorage.clear(); });
 
-    const dro = new DROPage(page, MOCK_CNCJS_PORT);
+    const dro = new DROPage(page, E2E_MOCK_CNCJS_PORT);
     // Navigate with default settings (boot message skipped)
     await dro.goto();
     // eslint-disable-next-line react-hooks/rules-of-hooks

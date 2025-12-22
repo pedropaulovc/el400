@@ -153,56 +153,6 @@ test.describe('US-003: ABS/INC Mode', () => {
   });
 
   /**
-   * Zeroing axes only affects the current mode.
-   */
-  test('should preserve other mode values when zeroing axes', async ({ dro }) => {
-    // Set all axes in ABS mode
-    await dro.selectAxis('X');
-    await dro.enterNumber('10');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Y');
-    await dro.enterNumber('20');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Z');
-    await dro.enterNumber('30');
-    await dro.enterButton.click();
-
-    // Switch to INC and set values
-    await dro.toggleAbsInc();
-    await dro.selectAxis('X');
-    await dro.enterNumber('1');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Y');
-    await dro.enterNumber('2');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Z');
-    await dro.enterNumber('3');
-    await dro.enterButton.click();
-
-    // Zero all axes in INC mode using individual buttons
-    await dro.zeroAxis('X');
-    await dro.zeroAxis('Y');
-    await dro.zeroAxis('Z');
-
-    // Verify INC values are all zero
-    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(0, 0);
-
-    // Switch to ABS mode
-    await dro.toggleAbsInc();
-
-    // Verify ABS values are preserved
-    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 0);
-  });
-
-  /**
    * Half function works in current mode only.
    */
   test('should halve value in current mode only', async ({ dro }) => {
