@@ -195,45 +195,6 @@ describe('axisOperationsReducer', () => {
     });
   });
 
-  describe('zero all axes - manual mode (abs)', () => {
-    it('should zero all manual absolute values in abs mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = axisOperationsReducer(state, { eventName: 'BTN_ZERO_ALL' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues).toEqual({ X: 0, Y: 0, Z: 0 });
-      expect(result?.vMem.activeAxis).toBeNull();
-      expect(result?.vMem.inputBuffer).toBe('');
-    });
-  });
-
-  describe('zero all axes - connected mode (abs)', () => {
-    it('should set all work offsets to machine positions in connected mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: 100, y: 200, z: 300 });
-      const result = axisOperationsReducer(state, { eventName: 'BTN_ZERO_ALL' }, context);
-
-      expect(result?.vMem.workOffsets).toEqual({ X: 100, Y: 200, Z: 300 });
-    });
-  });
-
-  describe('zero all axes - inc mode', () => {
-    it('should zero all incremental values in inc mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'inc',
-        incrementalValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = axisOperationsReducer(state, { eventName: 'BTN_ZERO_ALL' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.incrementalValues).toEqual({ X: 0, Y: 0, Z: 0 });
-    });
-  });
-
   describe('KEY_ENTER value entry - manual mode (abs)', () => {
     it('should set axis value from input buffer', () => {
       const state = idleStateWithVMem({
@@ -403,19 +364,6 @@ describe('axisOperationsReducer', () => {
       expect(result?.display).toBeDefined();
       // X should be 0 after zeroing
       expect(result?.display.X).toBe(0);
-    });
-
-    it('should compute display after zeroing all axes', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = axisOperationsReducer(state, { eventName: 'BTN_ZERO_ALL' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.display).toBeDefined();
-      expect(result?.display.X).toBe(0);
-      expect(result?.display.Y).toBe(0);
-      expect(result?.display.Z).toBe(0);
     });
 
     it('should compute display after entering value', () => {

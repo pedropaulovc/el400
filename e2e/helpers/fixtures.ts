@@ -1,7 +1,19 @@
 import { test as base } from '@playwright/test';
 import { DROPage } from './dro-page';
+import * as crypto from 'crypto';
 
-const MOCK_CNCJS_PORT = 8765;
+// Port is derived the same way as in playwright.config.ts (deterministic based on cwd)
+function getWorktreePort(): number {
+  if (process.env['E2E_PORT']) {
+    return parseInt(process.env['E2E_PORT'], 10);
+  }
+  const hash = crypto.createHash('md5').update(process.cwd()).digest('hex');
+  const portOffset = parseInt(hash.slice(0, 4), 16) % 1000;
+  return 9000 + portOffset;
+}
+
+const E2E_PORT = getWorktreePort();
+const MOCK_CNCJS_PORT = E2E_PORT + 1000;
 
 /**
  * Custom fixtures for EL400 DRO E2E tests

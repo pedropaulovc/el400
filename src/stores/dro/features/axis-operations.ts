@@ -7,7 +7,7 @@
 
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
-import type { Axis, AxisValues } from '../../../types/volatileMemory';
+import type { Axis } from '../../../types/volatileMemory';
 import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
 import { computeNormalDisplay } from '../utils/displayComputation';
@@ -57,40 +57,6 @@ function zeroAxis(
   return {
     ...vMem,
     incrementalValues: { ...vMem.incrementalValues, [axis]: 0 },
-  };
-}
-
-/**
- * Zero all axes based on current mode.
- */
-function zeroAllAxes(
-  vMem: DROStatePayload['vMem'],
-  context: DROReducerContext
-): DROStatePayload['vMem'] {
-  const { millState } = context;
-  const zeroValues: AxisValues = { X: 0, Y: 0, Z: 0 };
-
-  if (vMem.mode === 'abs') {
-    if (millState.connected) {
-      // Set all work offsets to current machine positions
-      return {
-        ...vMem,
-        workOffsets: {
-          X: millState.position.x,
-          Y: millState.position.y,
-          Z: millState.position.z,
-        },
-      };
-    }
-    return {
-      ...vMem,
-      manualAbsoluteValues: zeroValues,
-    };
-  }
-
-  return {
-    ...vMem,
-    incrementalValues: zeroValues,
   };
 }
 
@@ -213,19 +179,6 @@ export const axisOperationsReducer: FeatureReducer = (
     case 'BTN_ZERO_Z': {
       const newVMem = {
         ...zeroAxis(vMem, 'Z', context),
-        inputBuffer: '',
-        activeAxis: null,
-      };
-      return {
-        ...state,
-        vMem: newVMem,
-        display: computeNormalDisplay(newVMem, context),
-      };
-    }
-
-    case 'BTN_ZERO_ALL': {
-      const newVMem = {
-        ...zeroAllAxes(vMem, context),
         inputBuffer: '',
         activeAxis: null,
       };

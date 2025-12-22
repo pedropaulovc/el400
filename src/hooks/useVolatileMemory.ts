@@ -97,10 +97,6 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     dispatch({ eventName });
   }, [dispatch]);
 
-  const zeroAll = useCallback(() => {
-    dispatch({ eventName: 'BTN_ZERO_ALL' });
-  }, [dispatch]);
-
   const setAxisValue = useCallback((axis: Axis, value: number) => {
     // Dispatch axis selection first
     const selectEvent = `BTN_SELECT_${axis}` as const;
@@ -133,7 +129,6 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     toggleMode,
     setMode,
     zeroAxis,
-    zeroAll,
     setAxisValue,
     selectAxis,
     halfAxis,
@@ -147,7 +142,6 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     toggleMode,
     setMode,
     zeroAxis,
-    zeroAll,
     setAxisValue,
     selectAxis,
     halfAxis,

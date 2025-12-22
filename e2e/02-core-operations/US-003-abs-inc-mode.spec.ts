@@ -153,9 +153,9 @@ test.describe('US-003: ABS/INC Mode', () => {
   });
 
   /**
-   * Zero All only affects the current mode.
+   * Zeroing axes only affects the current mode.
    */
-  test('should preserve other mode values when zeroing all', async ({ dro }) => {
+  test('should preserve other mode values when zeroing axes', async ({ dro }) => {
     // Set all axes in ABS mode
     await dro.selectAxis('X');
     await dro.enterNumber('10');
@@ -183,8 +183,10 @@ test.describe('US-003: ABS/INC Mode', () => {
     await dro.enterNumber('3');
     await dro.enterButton.click();
 
-    // Zero all in INC mode
-    await dro.zeroAllButton.click();
+    // Zero all axes in INC mode using individual buttons
+    await dro.zeroAxis('X');
+    await dro.zeroAxis('Y');
+    await dro.zeroAxis('Z');
 
     // Verify INC values are all zero
     expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);

@@ -32,7 +32,7 @@ export class DROPage {
   readonly x0Button: Locator;
   readonly y0Button: Locator;
   readonly z0Button: Locator;
-  readonly zeroAllButton: Locator;
+  readonly presetButton: Locator;
 
   // Keypad buttons
   readonly key0: Locator;
@@ -84,7 +84,7 @@ export class DROPage {
     this.x0Button = page.getByTestId('axis-zero-x');
     this.y0Button = page.getByTestId('axis-zero-y');
     this.z0Button = page.getByTestId('axis-zero-z');
-    this.zeroAllButton = page.getByTestId('btn-zero-all');
+    this.presetButton = page.getByTestId('btn-preset');
 
     // Initialize keypad using data-testid
     this.key0 = page.getByTestId('key-0');
