@@ -8,6 +8,7 @@ import { useDROStore } from '../../stores/droStore';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../types/millState';
 import {
   DeepProfiler,
@@ -69,9 +70,7 @@ function resetStoresForTest(): void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
     },
   });

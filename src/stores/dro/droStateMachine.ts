@@ -72,7 +72,10 @@ export type DROStateName =
   | 'preset-input-x'
   | 'preset-input-y'
   | 'preset-input-z'
-  | 'distance-to-go';
+  | 'distance-to-go'
+  // Settings menu states
+  | 'settings-select-axis'
+  | 'settings-menu';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -90,7 +93,8 @@ export type DROStateData =
   | BoltHoleData
   | ArcData
   | CalculatorData
-  | PresetData;
+  | PresetData
+  | SettingsData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -138,6 +142,35 @@ export interface PresetData extends BaseDROStateData {
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+}
+
+/** Settings menu parameter types */
+export type SettingsParameter =
+  | 'SCALE_TYPE'      // LINEAR/ANGULAR
+  | 'SC'              // Scale resolution
+  | 'DP'              // Display resolution
+  | 'RAD_DIA'         // Radius/Diameter
+  | 'DIRECTION'       // LEFT/RIGHT
+  | 'CALIB'           // Error compensation
+  | 'ZERO_AP'         // Zero approach warning
+  | 'BP_DIST'         // Backplane distance
+  | 'BP_TOLR'         // Backplane tolerance
+  | 'BEEP'            // Keypad beep
+  | 'SLEEP_T'         // Sleep timer
+  | 'SAV_CHG'         // Save changes
+  | 'RST_DEF'         // Restore defaults
+  | 'END';            // Exit menu
+
+export interface SettingsData extends BaseDROStateData {
+  readonly stateDataType: 'settings';
+  /** Currently selected axis for configuration */
+  selectedAxis: 'X' | 'Y' | 'Z' | null;
+  /** Current menu parameter */
+  currentParameter: SettingsParameter;
+  /** Index in parameter list (for scrolling) */
+  parameterIndex: number;
+  /** Temporary config changes (not saved until SAV CHG) */
+  tempConfig: Partial<import('../../types/nonVolatileMemory').NonVolatileMemory>;
 }
 
 /** Stored point for center finding operations */
@@ -191,7 +224,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
-  | { eventName: 'BTN_BOLT_HOLE' };
+  | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_WRENCH' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -238,6 +272,10 @@ export const isFnLedActive = (s: DROStateName): boolean =>
 export const isPresetActive = (s: DROStateName): boolean =>
   s.startsWith('preset-') || s === 'distance-to-go';
 
+/** Check if settings menu is active */
+export const isSettingsActive = (s: DROStateName): boolean =>
+  s.startsWith('settings-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -278,6 +316,14 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+};
+
+export const INITIAL_SETTINGS_DATA: SettingsData = {
+  stateDataType: 'settings',
+  selectedAxis: null,
+  currentParameter: 'SCALE_TYPE',
+  parameterIndex: 0,
+  tempConfig: {},
 };
 
 /**

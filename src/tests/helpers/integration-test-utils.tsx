@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EL400Simulator from '../../components/EL400Simulator';
 import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
-import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
+import { NON_VOLATILE_MEMORY_STORAGE_KEY, DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMillStore } from '../../stores/millStore';
 import { useDROStore } from '../../stores/droStore';
@@ -85,9 +85,7 @@ export function resetStores(): void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip', // Skip boot for faster tests
     },
   });

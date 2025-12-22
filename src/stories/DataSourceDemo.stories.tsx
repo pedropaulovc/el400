@@ -5,6 +5,7 @@ import { useMillStore } from "../stores/millStore";
 import { useDROStore, useDispatch } from "../stores/droStore";
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../stores/dro/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
+import { DEFAULT_NON_VOLATILE_MEMORY } from "../types/nonVolatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillAdapter } from "../adapters/MockMillAdapter";
 import type { Axis } from "../types/volatileMemory";
@@ -17,9 +18,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
     },
   });

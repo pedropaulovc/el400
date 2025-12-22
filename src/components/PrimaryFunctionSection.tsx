@@ -15,6 +15,11 @@ const PrimaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_INCH_MM' });
   };
 
+  const handleSettings = () => {
+    // settingsReducer handles entry into settings menu
+    dispatch({ eventName: 'BTN_WRENCH' });
+  };
+
   return (
     <div className="relative" style={{ width: '412px' }}>
       <h2 className="sr-only">Primary functions</h2>
@@ -26,7 +31,7 @@ const PrimaryFunctionSection = () => {
           }}
         >
           <div className="flex justify-between w-full">
-            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
+            <DROButton onClick={handleSettings} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
               <Icon name="setup" /><span className="sr-only">Settings</span>
             </DROButton>
             <DROButton onClick={() => { dispatch({ eventName: 'BTN_ABS_INC' }); }} size="icon" className="p-0" data-testid="btn-abs-inc" title="Abs/Inc">

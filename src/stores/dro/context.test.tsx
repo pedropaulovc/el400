@@ -17,6 +17,7 @@ import { useMillStore } from '../millStore';
 import { useSettingsStore } from '../settingsStore';
 import { INITIAL_DRO_STATE_PAYLOAD, INITIAL_DRO_STATE_DATA } from './droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
@@ -28,9 +29,7 @@ function resetStores(initialState?: DROShape) {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
     },
   });
