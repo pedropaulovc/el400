@@ -65,9 +65,9 @@ test.describe('US-005: Axis Reset and Set', () => {
   });
 
   /**
-   * Zero all axes at once.
+   * Zero all axes using individual zero buttons.
    */
-  test('should zero all axes', async ({ dro }) => {
+  test('should zero all axes using individual buttons', async ({ dro }) => {
     // Set all axes to non-zero
     await dro.selectAxis('X');
     await dro.enterNumber('10');
@@ -86,8 +86,10 @@ test.describe('US-005: Axis Reset and Set', () => {
     expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 0);
     expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 0);
 
-    // Zero all
-    await dro.zeroAllButton.click();
+    // Zero each axis individually
+    await dro.zeroAxis('X');
+    await dro.zeroAxis('Y');
+    await dro.zeroAxis('Z');
 
     // Verify all zero
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {

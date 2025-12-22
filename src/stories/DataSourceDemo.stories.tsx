@@ -143,14 +143,6 @@ function VolatileMemoryDemo() {
         ))}
       </div>
 
-      {/* Zero All Button */}
-      <button
-        onClick={() => { vMem.zeroAll(); }}
-        className="w-full px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
-      >
-        Zero All ({vMem.mode.toUpperCase()})
-      </button>
-
       {/* Memory State Debug */}
       <div className="mt-6 pt-4 border-t border-gray-700">
         <h3 className="text-gray-400 text-xs uppercase mb-3">Memory State (Debug)</h3>
