@@ -3,198 +3,104 @@ import { test, expect } from '../helpers/fixtures';
 /**
  * E2E Tests: US-008 Distance-to-Go (Preset)
  *
- * Tests the preset target entry and distance-to-go display feature.
+ * These are end-to-end tests covering the complete user journey.
+ * Most functionality is tested via integration tests in preset.integration.test.tsx
  *
  * @see project/user-stories/03-data-management/US-008-distance-to-go.md
  */
 test.describe('US-008: Distance-to-Go (Preset)', () => {
   /**
-   * AC 8.1: Pressing the Preset key initiates the function, display shows SELECT.
+   * Complete user journey: set preset targets, execute, verify distance updates
+   * with encoder movement, and exit.
+   *
+   * Covers: AC 8.1, 8.2, 8.3, 8.4
    */
-  test('should show SELECT on all axes when pressing Preset', async ({ dro }) => {
-    await dro.presetButton.click();
-
-    // All axes should show SELECT (rendered as 'SELECt' in seven-segment display)
+  test('complete distance-to-go workflow with encoder movement', async ({ dro }) => {
+    // AC 8.1: Press Distance-to-Go, display shows SELECT
+    await dro.distanceToGoButton.click();
     await expect(dro.xDisplay).toHaveText('SELECt');
     await expect(dro.yDisplay).toHaveText('SELECt');
     await expect(dro.zDisplay).toHaveText('SELECt');
-  });
 
-  /**
-   * AC 8.2: Pressing an axis key allows entering a numeric value for that axis.
-   */
-  test('should allow entering preset value for X axis', async ({ dro }) => {
-    await dro.presetButton.click();
+    // AC 8.2: Select X axis and enter target value (100 inches)
     await dro.selectAxis('X');
-
-    // X should show input mode (buffer shows 0)
-    await expect(dro.xDisplay).toContainText('0');
-    await expect(dro.yDisplay).toHaveText('SELECt');
-
-    // Enter value
     await dro.enterNumber('100');
-    await expect(dro.xDisplay).toHaveText('100');
-
-    // Press enter to store
     await dro.enterButton.click();
 
-    // X should now show the stored value (with precision), Y and Z still SELECT
-    const xValue = await dro.getAxisDisplayPureNumberValue('X');
-    expect(xValue).toBeCloseTo(100, 1);
-    await expect(dro.yDisplay).toHaveText('SELECt');
-    await expect(dro.zDisplay).toHaveText('SELECt');
-  });
-
-  /**
-   * AC 8.2 + 8.3: Can set multiple axes and execute with second Preset press.
-   */
-  test('should allow setting multiple axes before executing', async ({ dro }) => {
-    await dro.presetButton.click();
-
-    // Set X
-    await dro.selectAxis('X');
-    await dro.enterNumber('50');
-    await dro.enterButton.click();
-
-    // Set Y
+    // AC 8.2: Select Y axis and enter target value (50 inches)
     await dro.selectAxis('Y');
-    await dro.enterNumber('25');
+    await dro.enterNumber('50');
     await dro.enterButton.click();
 
-    // Press Preset to execute
-    await dro.presetButton.click();
+    // Verify Z still shows SELECT (not set)
+    await expect(dro.zDisplay).toHaveText('SELECt');
 
-    // Now in distance-to-go mode - display shows distance remaining
+    // AC 8.3: Press Distance-to-Go again to execute
+    await dro.distanceToGoButton.click();
+
+    // AC 8.4: Display shows distance remaining
     // Current position is 0, so distance = preset value
-    const xValue = await dro.getAxisDisplayPureNumberValue('X');
-    const yValue = await dro.getAxisDisplayPureNumberValue('Y');
-
-    expect(xValue).toBeCloseTo(50, 1);
-    expect(yValue).toBeCloseTo(25, 1);
-  });
-
-  /**
-   * AC 8.4: The display shows the distance remaining to reach the preset position.
-   */
-  test('should show distance-to-go that updates with machine position', async ({ dro }) => {
-    // Set preset target for X axis
-    await dro.presetButton.click();
-    await dro.selectAxis('X');
-    await dro.enterNumber('100');
-    await dro.enterButton.click();
-    await dro.presetButton.click();
-
-    // Initial distance: 100 (target) - 0 (current) = 100
     let xValue = await dro.getAxisDisplayPureNumberValue('X');
-    expect(xValue).toBeCloseTo(100, 1);
+    let yValue = await dro.getAxisDisplayPureNumberValue('Y');
+    let zValue = await dro.getAxisDisplayPureNumberValue('Z');
 
-    // Simulate machine moving to 25.4mm (1 inch)
+    expect(xValue).toBeCloseTo(100, 1);
+    expect(yValue).toBeCloseTo(50, 1);
+    expect(zValue).toBeCloseTo(0, 1); // Z has no preset, shows normal position
+
+    // Simulate machine moving (25.4mm = 1 inch towards target)
     await dro.simulateEncoderAbsoluteMove('X', 25.4);
 
-    // Wait for display to update
-    await dro.waitForAxisPureNumberValue('X', 99, 0, 1000);
-  });
+    // Distance should decrease: 100 - 1 = 99
+    await dro.waitForAxisValue('X', 99);
 
-  /**
-   * AC 8.4: Distance decreases as machine approaches target.
-   */
-  test('should show zero when at target position', async ({ dro }) => {
-    // Set preset target for X axis at 1 inch (25.4mm)
-    await dro.presetButton.click();
-    await dro.selectAxis('X');
-    await dro.enterNumber('1');
-    await dro.enterButton.click();
-    await dro.presetButton.click();
+    // Move to target position (100 inches = 2540mm)
+    await dro.simulateEncoderAbsoluteMove('X', 2540);
 
-    // Simulate machine at target position
-    await dro.simulateEncoderAbsoluteMove('X', 25.4);
+    // Distance should be 0 when at target
+    await dro.waitForAxisValue('X', 0);
 
-    // Wait for display to show 0
-    await dro.waitForAxisPureNumberValue('X', 0, 1, 1000);
-  });
-
-  /**
-   * Test: Exit from distance-to-go with Clear key.
-   */
-  test('should exit to idle on Clear key', async ({ dro }) => {
-    await dro.presetButton.click();
-    await dro.selectAxis('X');
-    await dro.enterNumber('100');
-    await dro.enterButton.click();
-    await dro.presetButton.click();
-
-    // Now in distance-to-go mode
-    let xValue = await dro.getAxisDisplayPureNumberValue('X');
-    expect(xValue).toBeCloseTo(100, 1);
-
-    // Press Clear to exit
+    // Exit with Clear key
     await dro.clearButton.click();
 
-    // Should return to idle, showing normal position (0)
-    await dro.waitForAxisValue('X', 0);
+    // Should return to idle, showing normal position
+    await dro.waitForAxisValue('X', 100); // 2540mm displayed as 100 inches
   });
 
   /**
-   * Test: Cancel preset entry with Clear key.
+   * Test re-entering preset mode to modify targets.
+   *
+   * Covers: AC 8.2 (modify existing presets)
    */
-  test('should cancel preset entry on Clear key', async ({ dro }) => {
-    await dro.presetButton.click();
-    await expect(dro.xDisplay).toHaveText('SELECt');
-
-    // Press Clear to exit
-    await dro.clearButton.click();
-
-    // Should return to idle, showing normal position (0)
-    await dro.waitForAxisValue('X', 0);
-  });
-
-  /**
-   * Test: Can re-enter preset mode to modify targets.
-   */
-  test('should allow modifying targets by pressing Preset again', async ({ dro }) => {
-    // Set initial preset
-    await dro.presetButton.click();
+  test('modify preset targets after initial execution', async ({ dro }) => {
+    // Set initial preset X=50
+    await dro.distanceToGoButton.click();
     await dro.selectAxis('X');
     await dro.enterNumber('50');
     await dro.enterButton.click();
-    await dro.presetButton.click();
+    await dro.distanceToGoButton.click();
 
-    // Verify distance-to-go
+    // Verify initial distance
     let xValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xValue).toBeCloseTo(50, 1);
 
-    // Press Preset to re-enter modification mode
-    await dro.presetButton.click();
+    // Re-enter preset mode to modify
+    await dro.distanceToGoButton.click();
 
-    // Should show the current preset value (with precision formatting)
+    // X should show current preset value
     xValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xValue).toBeCloseTo(50, 1);
 
-    // Modify X
+    // Modify X to 100
     await dro.selectAxis('X');
     await dro.enterNumber('100');
     await dro.enterButton.click();
 
     // Execute again
-    await dro.presetButton.click();
+    await dro.distanceToGoButton.click();
 
-    // Should now show new distance
+    // Should show new distance
     xValue = await dro.getAxisDisplayPureNumberValue('X');
     expect(xValue).toBeCloseTo(100, 1);
-  });
-
-  /**
-   * Test: Handle negative preset values.
-   */
-  test('should handle negative preset values', async ({ dro }) => {
-    await dro.presetButton.click();
-    await dro.selectAxis('X');
-    await dro.enterNumber('-50');
-    await dro.enterButton.click();
-    await dro.presetButton.click();
-
-    // Current position is 0, distance to -50 = -50
-    const xValue = await dro.getAxisDisplayPureNumberValue('X');
-    expect(xValue).toBeCloseTo(-50, 1);
   });
 });

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useMillStore } from "../stores/millStore";
-import { useDROStore } from "../stores/droStore";
+import { useDROStore, useDispatch } from "../stores/droStore";
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../stores/dro/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
@@ -56,9 +56,14 @@ function VolatileMemoryDemo() {
   const millState = useMillStore((s) => s.millState);
   const nvMem = useSettingsStore((s) => s.nvMem);
   const updateNvMem = useSettingsStore((s) => s.updateNvMem);
+  const dispatch = useDispatch();
 
   const handleZeroAxis = (axis: Axis) => {
     vMem.zeroAxis(axis);
+  };
+
+  const handleDistanceToGo = () => {
+    dispatch({ eventName: 'BTN_PRESET' });
   };
 
   return (
@@ -112,6 +117,12 @@ function VolatileMemoryDemo() {
           className="px-4 py-2 rounded bg-blue-600 text-white ml-auto"
         >
           Toggle Unit
+        </button>
+        <button
+          onClick={handleDistanceToGo}
+          className="px-4 py-2 rounded bg-purple-600 text-white"
+        >
+          Distance to Go
         </button>
       </div>
 
