@@ -1,4 +1,25 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as crypto from 'crypto';
+
+/**
+ * Use a unique port for each worktree to avoid conflicts.
+ * Port is derived from a hash of the current working directory.
+ */
+function getWorktreePort(): number {
+  if (process.env['E2E_PORT']) {
+    return parseInt(process.env['E2E_PORT'], 10);
+  }
+  // Create a deterministic port based on the working directory
+  const hash = crypto.createHash('md5').update(process.cwd()).digest('hex');
+  const portOffset = parseInt(hash.slice(0, 4), 16) % 1000;
+  return 9000 + portOffset;
+}
+
+const E2E_PORT = getWorktreePort();
+const E2E_MOCK_PORT = E2E_PORT + 1000;
+
+// Export ports so fixtures.ts can use them
+export { E2E_PORT, E2E_MOCK_PORT };
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -19,7 +40,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:8080',
+    baseURL: `http://localhost:${E2E_PORT}`,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     /* Take screenshot on failure */
@@ -59,14 +80,14 @@ export default defineConfig({
   /* Run your local dev server and mock CNCjs server before starting the tests */
   webServer: [
     {
-      command: 'npm run dev',
-      url: 'http://localhost:8080',
+      command: `npm run dev -- --port ${E2E_PORT}`,
+      url: `http://localhost:${E2E_PORT}`,
       reuseExistingServer: !process.env['CI'],
       timeout: 120 * 1000,
     },
     {
-      command: 'npx tsx e2e/mock-cncjs-server.ts',
-      url: 'http://localhost:8765/health',
+      command: `npx cross-env E2E_MOCK_PORT=${E2E_MOCK_PORT} npx tsx e2e/mock-cncjs-server.ts`,
+      url: `http://localhost:${E2E_MOCK_PORT}/health`,
       reuseExistingServer: !process.env['CI'],
       timeout: 10 * 1000,
     },
