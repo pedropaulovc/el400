@@ -38,8 +38,8 @@ const PrimaryFunctionSection = () => {
             <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-center" title="Reference">
               <Icon name="reference" /><span className="sr-only">Reference</span>
             </DROButton>
-            <DROButton onClick={() => { dispatch({ eventName: 'BTN_PRESET' }); }} size="icon" className="p-0" data-testid="btn-preset" title="Preset">
-              <Icon name="preset" /><span className="sr-only">Preset</span>
+            <DROButton onClick={() => { dispatch({ eventName: 'BTN_PRESET' }); }} size="icon" className="p-0" data-testid="btn-distance-to-go" title="Distance to Go">
+              <Icon name="preset" /><span className="sr-only">Distance to Go</span>
             </DROButton>
           </div>
         </div>
