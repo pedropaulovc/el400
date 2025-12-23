@@ -8,7 +8,7 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 |----------|----------|
 | State Machine | `src/stores/dro/` (Zustand + reducer) |
 | Feature Reducers | `src/stores/dro/features/` - boot, idle, keypad, calculator, etc. |
-| Adapters | `src/adapters/` - CNCjs, Mock, NoOp |
+| Adapters | `src/adapters/` - CNCjs, Mock, NoOp, LocalSocketIO (debug) |
 | Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
 | Components | `src/components/` - EL400Simulator root |
 | User Stories | `project/user-stories/*` |
@@ -52,6 +52,8 @@ Zustand Stores
 MillAdapter interface
       ↑
 CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
+      ↑
+(CncjsMillAdapter can use LocalSocketIOServer in debug mode)
 ```
 
 ### Stores
@@ -84,10 +86,22 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 ### URL Config
 
 ```
-/?source=cncjs&host=192.168.1.100&port=8000
-/?source=mock
-/?source=manual  (default)
+/?source=cncjs&host=192.168.1.100&port=8000  # Remote CNCjs connection
+/?source=mock                                  # Mock adapter (testing)
+/?source=debug                                 # In-browser debug mode with control panel
+/?source=manual                                # NoOp adapter (default)
 ```
+
+**Debug Mode** (`?source=debug`):
+- Runs LocalSocketIOServer entirely in browser (no backend needed)
+- CncjsMillAdapter connects to in-browser server instead of remote WebSocket
+- Debug control panel provides:
+  - Position jog controls (X/Y/Z with configurable step sizes)
+  - Probe trigger/clear toggle
+  - Reset to origin
+  - Event log of all operations
+- Works on GitHub Pages (pure static deployment)
+- E2E tests continue to use Node.js mock server (unchanged)
 
 ## DRO State Names
 
@@ -114,7 +128,7 @@ interface MillState {
   position: { x: number; y: number; z: number };
   probe: { pinState: string; triggered: boolean };
   connected: boolean;
-  controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
+  controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'debug' | 'noop';
 }
 
 interface NonVolatileMemory {
@@ -137,9 +151,16 @@ src/stores/dro/
 
 src/adapters/
 ├── MillAdapter.ts         # Interface
-├── CncjsMillAdapter.ts    # WebSocket to CNCjs
+├── CncjsMillAdapter.ts    # WebSocket to CNCjs (+ local mode support)
+├── LocalSocketIOServer.ts # In-browser Socket.IO server emulation (debug mode)
 ├── MockMillAdapter.ts     # Test/dev simulation
 └── NoOpMillAdapter.ts     # Manual mode fallback
+
+src/components/debug/
+├── DebugControlPanel.tsx  # Main debug panel (jog, probe, log)
+├── DebugJogControls.tsx   # X/Y/Z jog controls with step size
+├── DebugProbeControl.tsx  # Probe trigger/clear toggle
+└── DebugEventLog.tsx      # Event log display
 ```
 
 ## Feature Reducer Pattern
