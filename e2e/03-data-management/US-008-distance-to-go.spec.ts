@@ -38,6 +38,9 @@ test.describe('US-008: Distance-to-Go (Preset)', () => {
     // AC 8.3: Press Distance-to-Go again to execute
     await dro.distanceToGoButton.click();
 
+    // AC 8.5: INC LED turns on when displaying distance-to-go
+    expect(await dro.isIncMode()).toBe(true);
+
     // AC 8.4: Display shows distance remaining
     // Current position is 0, so distance = preset value
     let xValue = await dro.getAxisDisplayPureNumberValue('X');
@@ -52,16 +55,19 @@ test.describe('US-008: Distance-to-Go (Preset)', () => {
     await dro.simulateEncoderAbsoluteMove('X', 25.4);
 
     // Distance should decrease: 100 - 1 = 99
-    await dro.waitForAxisValue('X', 99);
+    await dro.waitForAxisValue('X', 99, 2000); // Allow more time for event propagation
 
     // Move to target position (100 inches = 2540mm)
     await dro.simulateEncoderAbsoluteMove('X', 2540);
 
     // Distance should be 0 when at target
-    await dro.waitForAxisValue('X', 0);
+    await dro.waitForAxisValue('X', 0, 2000); // Allow more time for event propagation
 
     // Exit with Clear key
     await dro.clearButton.click();
+
+    // AC 8.7: ABS mode should be restored (INC LED off, ABS LED on)
+    expect(await dro.isAbsMode()).toBe(true);
 
     // Should return to idle, showing normal position
     await dro.waitForAxisValue('X', 100); // 2540mm displayed as 100 inches

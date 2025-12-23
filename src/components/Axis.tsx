@@ -1,6 +1,6 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
-import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useStateName } from "../stores/droStore";
 
 export type AxisDisplayValue = number | string;
 
@@ -71,10 +71,22 @@ const Axis = ({ axis }: AxisProps) => {
   // Each axis subscribes to its own value only
   const useAxisValue = axisHooks[axis];
   const value = useAxisValue();
+  const stateName = useStateName();
+
+  // Check if in function mode (distance-to-go displays leading decimal on 2nd digit)
+  const isFunctionMode = stateName === 'distance-to-go';
 
   const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
     ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value))
     : formatTextValue(value);
+
+  // Add leading decimal to 2nd digit when in function mode
+  if (isFunctionMode && digits.length >= 2) {
+    const secondDigit = digits[1];
+    if (secondDigit) {
+      digits[1] = { ...secondDigit, hasDecimal: true };
+    }
+  }
 
   return (
     <div
