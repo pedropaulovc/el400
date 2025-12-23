@@ -3,18 +3,16 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { DebugControlPanel } from './DebugControlPanel';
 import { useMillStore } from '../../stores/millStore';
-import { CncjsMillAdapter } from '../../adapters/CncjsMillAdapter';
-import { DebugServer } from '../../debug/DebugServer';
+import { DebugMillAdapter } from '../../adapters/DebugMillAdapter';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
 
 function renderDebugPanel() {
-  const localServer = new DebugServer();
-  const adapter = new CncjsMillAdapter({ localServer });
+  const adapter = new DebugMillAdapter();
 
   // Setup mill store with debug adapter
   useMillStore.setState({
-    millState: { ...createDefaultMillState('cncjs'), connected: true },
+    millState: { ...createDefaultMillState('debug'), connected: true },
     connection: adapter,
     isConnecting: false,
     error: null,
@@ -29,7 +27,7 @@ function renderDebugPanel() {
         <DebugControlPanel />
       </BrowserRouter>
     ),
-    localServer,
+    server: adapter.getServer(),
     adapter,
   };
 }
@@ -69,7 +67,7 @@ describe('DebugControlPanel Integration', () => {
     });
 
     it('updates position when jog button is clicked', () => {
-      const { localServer } = renderDebugPanel();
+      const { server } = renderDebugPanel();
 
       // Click jog X+ button
       screen.getByTestId('jog-x-positive').click();
@@ -77,12 +75,12 @@ describe('DebugControlPanel Integration', () => {
       // Advance timers past the broadcast interval
       vi.advanceTimersByTime(150);
 
-      const state = localServer.getState();
+      const state = server.getState();
       expect(state.position.x).toBe(1);
     });
 
     it('toggles probe state when probe button is clicked', () => {
-      const { localServer } = renderDebugPanel();
+      const { server } = renderDebugPanel();
 
       // Click probe toggle
       screen.getByTestId('probe-toggle').click();
@@ -90,23 +88,23 @@ describe('DebugControlPanel Integration', () => {
       // Advance timers
       vi.advanceTimersByTime(150);
 
-      const state = localServer.getState();
+      const state = server.getState();
       expect(state.probeState).toBe('P');
     });
 
     it('resets position to origin when reset button is clicked', () => {
-      const { localServer } = renderDebugPanel();
+      const { server } = renderDebugPanel();
 
       // Move to a position first
       screen.getByTestId('jog-x-positive').click();
       vi.advanceTimersByTime(150);
-      expect(localServer.getState().position.x).toBe(1);
+      expect(server.getState().position.x).toBe(1);
 
       // Reset
       screen.getByTestId('jog-reset').click();
       vi.advanceTimersByTime(150);
 
-      const state = localServer.getState();
+      const state = server.getState();
       expect(state.position.x).toBe(0);
       expect(state.position.y).toBe(0);
       expect(state.position.z).toBe(0);

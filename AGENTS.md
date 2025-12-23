@@ -8,7 +8,7 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 |----------|----------|
 | State Machine | `src/stores/dro/` (Zustand + reducer) |
 | Feature Reducers | `src/stores/dro/features/` - boot, idle, keypad, calculator, etc. |
-| Adapters | `src/adapters/` - CNCjs, Mock, NoOp, LocalSocketIO (debug) |
+| Adapters | `src/adapters/` - CNCjs, Debug, Mock, NoOp |
 | Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
 | Components | `src/components/` - EL400Simulator root |
 | User Stories | `project/user-stories/*` |
@@ -51,9 +51,9 @@ Zustand Stores
       ↑
 MillAdapter interface
       ↑
-CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
-      ↑
-(CncjsMillAdapter can use DebugServer in debug mode)
+CncjsMillAdapter | DebugMillAdapter | MockMillAdapter | NoOpMillAdapter
+      ↑                    ↑
+   Socket.IO          DebugServer (in-browser)
 ```
 
 ### Stores
@@ -93,15 +93,9 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 ```
 
 **Debug Mode** (`?source=debug`):
-- Runs DebugServer entirely in browser (no backend needed)
-- CncjsMillAdapter connects to in-browser debug server instead of remote WebSocket
-- Debug control panel provides:
-  - Position jog controls (X/Y/Z with configurable step sizes)
-  - Probe trigger/clear toggle
-  - Reset to origin
-  - Event log of all operations
-- Works on GitHub Pages (pure static deployment)
-- E2E tests continue to use Node.js mock server (unchanged)
+- Uses DebugMillAdapter with in-browser DebugServer (no backend)
+- Control panel: jog controls, probe toggle, event log
+- Works on GitHub Pages (static deployment)
 
 ## DRO State Names
 
@@ -151,7 +145,8 @@ src/stores/dro/
 
 src/adapters/
 ├── MillAdapter.ts         # Interface
-├── CncjsMillAdapter.ts    # WebSocket to CNCjs (+ local mode support)
+├── CncjsMillAdapter.ts    # WebSocket to remote CNCjs server
+├── DebugMillAdapter.ts    # In-browser debug mode (uses DebugServer)
 ├── MockMillAdapter.ts     # Test/dev simulation
 └── NoOpMillAdapter.ts     # Manual mode fallback
 
@@ -161,7 +156,6 @@ src/debug/
 
 src/components/debug/
 ├── DebugControlPanel.tsx  # Main debug panel (jog, probe, log)
-├── DebugJogControls.tsx   # X/Y/Z jog controls with step size
 ├── DebugProbeControl.tsx  # Probe trigger/clear toggle
 └── DebugEventLog.tsx      # Event log display
 ```

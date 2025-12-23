@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CncjsMillAdapter } from '../../adapters/CncjsMillAdapter';
+import { DebugMillAdapter } from '../../adapters/DebugMillAdapter';
 import { useMillStore } from '../../stores/millStore';
 import { DebugProbeControl } from './DebugProbeControl';
 import { DebugEventLog, type LogEntry } from './DebugEventLog';
@@ -10,6 +10,31 @@ interface DebugControlPanelProps {
 
 const STEP_SIZES = [0.001, 0.01, 0.1, 1] as const;
 
+function UnavailablePanel({ onClose }: { onClose?: () => void }) {
+  return (
+    <div className="fixed right-0 top-0 h-full w-80 bg-white text-gray-800 shadow-xl border-l border-gray-300 overflow-y-auto">
+      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+        <div className="text-yellow-500 text-4xl mb-3">⚠</div>
+        <h2 className="text-lg font-bold mb-2">Debug Panel Unavailable</h2>
+        <p className="text-gray-500 mb-3 text-sm">
+          Debug panel only available in debug mode.
+        </p>
+        <p className="text-xs text-gray-400 font-mono">
+          Add <code className="bg-gray-100 px-1.5 py-0.5 rounded">?source=debug</code> to URL
+        </p>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="mt-4 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors"
+          >
+            Close
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   const millStore = useMillStore();
   const millState = millStore.millState;
@@ -19,61 +44,16 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
 
   const addLogEntry = useCallback((type: LogEntry['type'], message: string) => {
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-    setEventLog(prev => [...prev, { timestamp, type, message }]);
+    setEventLog(prev => [...prev, { timestamp, type, message }].slice(-50));
   }, []);
 
-  // Type guard: only works with CncjsMillAdapter in local mode
+  // Type guard: only works with DebugMillAdapter
   const adapter = millStore.connection;
-  if (!(adapter instanceof CncjsMillAdapter)) {
-    return (
-      <div className="fixed right-0 top-0 h-full w-80 bg-white text-gray-800 shadow-xl border-l border-gray-300 overflow-y-auto">
-        <div className="flex flex-col items-center justify-center h-full text-center p-6">
-          <div className="text-yellow-500 text-4xl mb-3">⚠</div>
-          <h2 className="text-lg font-bold mb-2">Debug Panel Unavailable</h2>
-          <p className="text-gray-500 mb-3 text-sm">
-            Debug panel only available in debug mode.
-          </p>
-          <p className="text-xs text-gray-400 font-mono">
-            Add <code className="bg-gray-100 px-1.5 py-0.5 rounded">?source=debug</code> to URL
-          </p>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="mt-4 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors"
-            >
-              Close
-            </button>
-          )}
-        </div>
-      </div>
-    );
+  if (!(adapter instanceof DebugMillAdapter)) {
+    return onClose ? <UnavailablePanel onClose={onClose} /> : <UnavailablePanel />;
   }
 
-  const server = adapter.getLocalServer();
-  if (!server) {
-    return (
-      <div className="fixed right-0 top-0 h-full w-80 bg-white text-gray-800 shadow-xl border-l border-gray-300 overflow-y-auto">
-        <div className="flex flex-col items-center justify-center h-full text-center p-6">
-          <div className="text-yellow-500 text-4xl mb-3">⚠</div>
-          <h2 className="text-lg font-bold mb-2">Debug Panel Unavailable</h2>
-          <p className="text-gray-500 mb-3 text-sm">
-            Debug panel only available in debug mode.
-          </p>
-          <p className="text-xs text-gray-400 font-mono">
-            Add <code className="bg-gray-100 px-1.5 py-0.5 rounded">?source=debug</code> to URL
-          </p>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="mt-4 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm transition-colors"
-            >
-              Close
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const server = adapter.getServer();
 
   const handleJog = (axis: 'x' | 'y' | 'z', delta: number) => {
     const currentPos = millState.position;
@@ -176,6 +156,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               onClick={() => { handleDiagonalJog(-stepSize, stepSize); }}
               className={`${btnClass} text-xs`}
               title="X- Y+"
+              aria-label="Jog X minus Y plus"
             >
               ↖
             </button>
@@ -190,6 +171,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               onClick={() => { handleDiagonalJog(stepSize, stepSize); }}
               className={`${btnClass} text-xs`}
               title="X+ Y+"
+              aria-label="Jog X plus Y plus"
             >
               ↗
             </button>
@@ -245,6 +227,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               onClick={() => { handleDiagonalJog(-stepSize, -stepSize); }}
               className={`${btnClass} text-xs`}
               title="X- Y-"
+              aria-label="Jog X minus Y minus"
             >
               ↙
             </button>
@@ -259,6 +242,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               onClick={() => { handleDiagonalJog(stepSize, -stepSize); }}
               className={`${btnClass} text-xs`}
               title="X+ Y-"
+              aria-label="Jog X plus Y minus"
             >
               ↘
             </button>
