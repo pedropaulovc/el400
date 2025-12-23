@@ -23,7 +23,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   const adapter = millStore.connection;
   if (!(adapter instanceof CncjsMillAdapter)) {
     return (
-      <div className="fixed right-0 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto p-6">
+      <div className="fixed right-4 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto p-6">
         <div className="flex flex-col items-center justify-center h-full text-center">
           <div className="text-yellow-500 text-6xl mb-4">⚠</div>
           <h2 className="text-xl font-bold mb-2">Debug Panel Unavailable</h2>
@@ -50,7 +50,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   const server = adapter.getLocalServer();
   if (!server) {
     return (
-      <div className="fixed right-0 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto p-6">
+      <div className="fixed right-4 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto p-6">
         <div className="flex flex-col items-center justify-center h-full text-center">
           <div className="text-yellow-500 text-6xl mb-4">⚠</div>
           <h2 className="text-xl font-bold mb-2">Debug Panel Unavailable</h2>
@@ -93,7 +93,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   };
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto">
+    <div className="fixed right-4 top-0 h-full w-96 bg-gray-900 text-white shadow-xl overflow-y-auto">
       {/* Header */}
       <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between z-10">
         <h2 className="text-xl font-bold">Debug Controls</h2>
