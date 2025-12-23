@@ -66,7 +66,13 @@ export type DROStateName =
   | 'bolt-hole-circle-radius'
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
-  | 'bolt-hole-circle-navigate';
+  | 'bolt-hole-circle-navigate'
+  // Preset / Distance-to-Go states (US-008)
+  | 'preset-select'
+  | 'preset-input-x'
+  | 'preset-input-y'
+  | 'preset-input-z'
+  | 'distance-to-go';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -83,7 +89,8 @@ export type DROStateData =
   | CenterFindingData
   | BoltHoleData
   | ArcData
-  | CalculatorData;
+  | CalculatorData
+  | PresetData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -121,6 +128,16 @@ export interface CalculatorData extends BaseDROStateData {
   firstValue: number | null;
   operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
   currentValue: number | string;
+}
+
+export interface PresetData extends BaseDROStateData {
+  readonly stateDataType: 'preset';
+  presetTargets: {
+    X: number | null;  // Target in mm (null = not set)
+    Y: number | null;
+    Z: number | null;
+  };
+  activeInputAxis: 'X' | 'Y' | 'Z' | null;
 }
 
 /** Stored point for center finding operations */
@@ -166,7 +183,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_X' }
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
-  | { eventName: 'BTN_ZERO_ALL' }
+  | { eventName: 'BTN_DISTANCE_TO_GO' }
   // Axis selection buttons (select without zeroing)
   // In calculator mode, BTN_SELECT_Y cycles operations
   | { eventName: 'BTN_SELECT_X' }
@@ -217,6 +234,10 @@ export const isBoltHoleActive = (s: DROStateName): boolean =>
 export const isFnLedActive = (s: DROStateName): boolean =>
   isFunctionActive(s) || isBoltHoleActive(s);
 
+/** Check if preset/distance-to-go mode is active */
+export const isPresetActive = (s: DROStateName): boolean =>
+  s.startsWith('preset-') || s === 'distance-to-go';
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -247,6 +268,16 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   startAngle: null,
   holeCount: null,
   currentHole: 1,
+};
+
+export const INITIAL_PRESET_DATA: PresetData = {
+  stateDataType: 'preset',
+  presetTargets: {
+    X: null,
+    Y: null,
+    Z: null,
+  },
+  activeInputAxis: null,
 };
 
 /**

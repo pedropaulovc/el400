@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = resolve(__filename, '..');
 
-const PORT = 8765;
+const PORT = process.env['E2E_MOCK_CNCJS_PORT'] ? parseInt(process.env['E2E_MOCK_CNCJS_PORT'], 10) : 8765;
 
 // State per session (sessionId -> { position, probeState })
 const sessions = new Map<string, { position: { x: number; y: number; z: number }; probeState?: { pinState: string } }>();

@@ -1,5 +1,4 @@
 import { test, expect } from '../helpers/fixtures';
-import { expectAxisValues } from '../helpers/assertions';
 
 /**
  * E2E Tests: US-005 Axis Reset and Set
@@ -62,39 +61,6 @@ test.describe('US-005: Axis Reset and Set', () => {
 
     // Verify X is zero
     expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
-  });
-
-  /**
-   * Zero all axes at once.
-   */
-  test('should zero all axes', async ({ dro }) => {
-    // Set all axes to non-zero
-    await dro.selectAxis('X');
-    await dro.enterNumber('10');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Y');
-    await dro.enterNumber('20');
-    await dro.enterButton.click();
-
-    await dro.selectAxis('Z');
-    await dro.enterNumber('30');
-    await dro.enterButton.click();
-
-    // Verify values
-    expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 0);
-    expect(await dro.getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 0);
-
-    // Zero all
-    await dro.zeroAllButton.click();
-
-    // Verify all zero
-    await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {
-      x: 0,
-      y: 0,
-      z: 0,
-    });
   });
 
   /**

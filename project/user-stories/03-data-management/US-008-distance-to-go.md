@@ -9,12 +9,13 @@
 **So that** I can move the machine to a specific coordinate by zeroing the display
 
 ## Acceptance Criteria
-- [ ] **AC 8.1:** Pressing the `Preset` (→0) key initiates the function, display shows `SELECT`.
-- [ ] **AC 8.2:** Pressing an axis key allows entering a numeric value for that axis.
-- [ ] **AC 8.3:** Pressing `Preset` again executes the function.
-- [ ] **AC 8.4:** The display shows the distance remaining to reach the preset position (Distance-to-Go).
-- [ ] **AC 8.5:** This function works in Incremental mode and does not disturb the Absolute datum.
+- [x] **AC 8.1:** Pressing `Distance-to-Go` key initiates the function (only available in ABS mode), display shows `SELECT`.
+- [x] **AC 8.2:** Pressing an axis key allows entering a numeric value for that axis.
+- [x] **AC 8.3:** Pressing `Distance-to-Go` again executes the function.
+- [x] **AC 8.4:** The display shows the distance remaining to reach the preset position (Distance-to-Go).
+- [x] **AC 8.5:** When displaying distance-to-go, INC LED turns on and a leading decimal appears on the 2nd digit to indicate function mode.
 - [ ] **AC 8.6:** Near Zero Warning (US-024) is automatically enabled.
+- [x] **AC 8.7:** When exiting distance-to-go mode, the leading decimal disappears and DRO returns to ABS mode.
 
 ## E2E Test Scenarios
 ```typescript

@@ -19,7 +19,7 @@ describe('PrimaryFunctionSection', () => {
       expect(screen.getByTestId('btn-abs-inc').querySelector('.sr-only')).toHaveTextContent('Abs/Inc');
       expect(screen.getByTestId('btn-toggle-unit').querySelector('.sr-only')).toHaveTextContent('Toggle units');
       expect(screen.getByTestId('btn-center').querySelector('.sr-only')).toHaveTextContent('Reference');
-      expect(screen.getByTestId('btn-zero-all').querySelector('.sr-only')).toHaveTextContent('Zero all axes');
+      expect(screen.getByTestId('btn-distance-to-go').querySelector('.sr-only')).toHaveTextContent('Distance to Go');
     });
   });
 });

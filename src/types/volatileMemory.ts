@@ -63,7 +63,6 @@ export interface VolatileMemoryActions {
   toggleMode: () => void;
   setMode: (mode: DatumMode) => void;
   zeroAxis: (axis: Axis) => void;
-  zeroAll: () => void;
   setAxisValue: (axis: Axis, value: number) => void;
   selectAxis: (axis: Axis | null) => void;
   halfAxis: (axis: Axis) => void;

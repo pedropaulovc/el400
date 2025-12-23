@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useMillStore } from "../stores/millStore";
-import { useDROStore } from "../stores/droStore";
+import { useDROStore, useDispatch } from "../stores/droStore";
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from "../stores/dro/droStateMachine";
 import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
@@ -56,9 +56,14 @@ function VolatileMemoryDemo() {
   const millState = useMillStore((s) => s.millState);
   const nvMem = useSettingsStore((s) => s.nvMem);
   const updateNvMem = useSettingsStore((s) => s.updateNvMem);
+  const dispatch = useDispatch();
 
   const handleZeroAxis = (axis: Axis) => {
     vMem.zeroAxis(axis);
+  };
+
+  const handleDistanceToGo = () => {
+    dispatch({ eventName: 'BTN_DISTANCE_TO_GO' });
   };
 
   return (
@@ -113,6 +118,12 @@ function VolatileMemoryDemo() {
         >
           Toggle Unit
         </button>
+        <button
+          onClick={handleDistanceToGo}
+          className="px-4 py-2 rounded bg-purple-600 text-white"
+        >
+          Distance to Go
+        </button>
       </div>
 
       {/* Axis Display with Zero Buttons */}
@@ -142,14 +153,6 @@ function VolatileMemoryDemo() {
           </div>
         ))}
       </div>
-
-      {/* Zero All Button */}
-      <button
-        onClick={() => { vMem.zeroAll(); }}
-        className="w-full px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
-      >
-        Zero All ({vMem.mode.toUpperCase()})
-      </button>
 
       {/* Memory State Debug */}
       <div className="mt-6 pt-4 border-t border-gray-700">
