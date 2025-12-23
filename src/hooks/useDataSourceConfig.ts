@@ -19,10 +19,10 @@ const DEFAULT_CONFIG: DataSourceConfig = {
 
 /**
  * Parse and validate controller type from URL param.
- * Only 'cncjs' and 'linuxcnc' are recognized; everything else defaults to 'noop'.
+ * Only 'cncjs', 'linuxcnc', and 'debug' are recognized; everything else defaults to 'noop'.
  */
 function parseControllerType(value: string | null): ControllerType {
-  if (value === 'cncjs' || value === 'linuxcnc') {
+  if (value === 'cncjs' || value === 'linuxcnc' || value === 'debug') {
     return value;
   }
   return 'noop';
