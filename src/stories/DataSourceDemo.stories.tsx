@@ -63,7 +63,7 @@ function VolatileMemoryDemo() {
   };
 
   const handleDistanceToGo = () => {
-    dispatch({ eventName: 'BTN_PRESET' });
+    dispatch({ eventName: 'BTN_DISTANCE_TO_GO' });
   };
 
   return (

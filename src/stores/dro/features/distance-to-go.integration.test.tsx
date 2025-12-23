@@ -8,7 +8,7 @@ import {
 } from '../../../tests/helpers/integration-test-utils';
 import { useDROStore } from '../../droStore';
 
-describe('Distance-to-Go (Preset) Integration', () => {
+describe('Distance-to-Go Integration', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -36,6 +36,27 @@ describe('Distance-to-Go (Preset) Integration', () => {
       expect(getAxisDisplayPureTextValue('Y')).toBe('SELECt');
       expect(getAxisDisplayPureTextValue('Z')).toBe('SELECt');
     });
+
+    it('should only be available in ABS mode', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      // Switch to INC mode
+      await user.click(screen.getByTestId('btn-abs-inc'));
+      expect(useDROStore.getState().vMem.mode).toBe('inc');
+
+      // Try to enter distance-to-go - should not work
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+      expect(useDROStore.getState().stateName).toBe('idle');
+
+      // Switch back to ABS mode
+      await user.click(screen.getByTestId('btn-abs-inc'));
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
+
+      // Now it should work
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+      expect(useDROStore.getState().stateName).toBe('preset-select');
+    });
   });
 
   describe('AC 8.2: Entering preset values', () => {
@@ -57,9 +78,8 @@ describe('Distance-to-Go (Preset) Integration', () => {
       await user.click(screen.getByTestId('key-0'));
       await user.click(screen.getByTestId('key-0'));
 
-      // Verify display shows input buffer (as raw text without precision)
-      const valueElement = screen.getByTestId('axis-value-x');
-      expect(valueElement.textContent).toBe('100');
+      // Verify display shows input buffer (integer value without precision)
+      expect(getAxisDisplayPureNumberValue('X', 0)).toBe(100);
 
       // Press enter to store
       await user.click(screen.getByTestId('key-enter'));
@@ -143,7 +163,7 @@ describe('Distance-to-Go (Preset) Integration', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 0);
     });
 
-    it('should exit distance-to-go mode with Clear key', async () => {
+    it('should exit distance-to-go mode with Clear key and restore ABS mode', async () => {
       const user = userEvent.setup();
       renderSimulator();
 
@@ -157,12 +177,63 @@ describe('Distance-to-Go (Preset) Integration', () => {
       await user.click(screen.getByTestId('btn-distance-to-go'));
 
       expect(useDROStore.getState().stateName).toBe('distance-to-go');
+      expect(useDROStore.getState().vMem.mode).toBe('inc'); // INC LED is on
 
       // Press Clear to exit
       await user.click(screen.getByTestId('key-clear'));
 
-      // Should return to idle
+      // Should return to idle and restore ABS mode
       expect(useDROStore.getState().stateName).toBe('idle');
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
+    });
+  });
+
+  describe('INC LED behavior', () => {
+    it('should turn on INC LED when displaying distance-to-go', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      // Initially in ABS mode
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
+
+      // Set up preset
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+      await user.click(screen.getByTestId('axis-select-x'));
+      await user.click(screen.getByTestId('key-5'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Still in ABS mode during setup
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
+
+      // Execute to show distance-to-go
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+
+      // INC LED should now be on
+      expect(useDROStore.getState().stateName).toBe('distance-to-go');
+      expect(useDROStore.getState().vMem.mode).toBe('inc');
+    });
+
+    it('should restore ABS mode when re-entering preset-select', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      // Set up and execute
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+      await user.click(screen.getByTestId('axis-select-x'));
+      await user.click(screen.getByTestId('key-5'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter'));
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+
+      expect(useDROStore.getState().vMem.mode).toBe('inc');
+
+      // Re-enter preset-select to modify targets
+      await user.click(screen.getByTestId('btn-distance-to-go'));
+
+      // Should restore ABS mode
+      expect(useDROStore.getState().stateName).toBe('preset-select');
+      expect(useDROStore.getState().vMem.mode).toBe('abs');
     });
   });
 

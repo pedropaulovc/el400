@@ -1,12 +1,13 @@
 /**
- * Preset / Distance-to-Go Feature Reducer (US-008)
+ * Distance-to-Go Feature Reducer (US-008)
  *
- * Allows the operator to preset target positions and display distance remaining.
+ * Allows the operator to set target positions and display distance remaining.
  * Workflow:
- * 1. Press Preset → display shows SELECT
+ * 1. Press Distance-to-Go (only available in ABS mode) → display shows SELECT
  * 2. Press axis key → enter target value for that axis
- * 3. Press Preset again → execute, display shows distance-to-go
- * 4. Works in incremental mode without disturbing absolute datum
+ * 3. Press Distance-to-Go again → execute, display shows distance remaining
+ * 4. INC LED turns on during distance-to-go display with leading decimal indicator
+ * 5. When exiting, returns to ABS mode
  */
 
 import type { FeatureReducer, DROReducerContext } from '../types';
@@ -26,7 +27,6 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
-  computeAxisPositionMm,
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
@@ -97,9 +97,30 @@ function computePresetInputDisplay(
 }
 
 /**
+ * Get the absolute machine position for an axis (ignores mode setting).
+ * Distance-to-go always uses absolute positions from the mill state.
+ */
+function getAbsolutePositionMm(
+  axis: Axis,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): number {
+  const { workOffsets, manualAbsoluteValues } = vMem;
+  const { millState } = context;
+
+  if (millState.connected) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    return millState.position[axisKey] - workOffsets[axis];
+  }
+  return manualAbsoluteValues[axis];
+}
+
+/**
  * Compute display for distance-to-go state.
  * Shows (preset - currentPosition) for each axis with a preset.
  * Axes without presets show normal position.
+ *
+ * Note: Always uses absolute position from mill state, regardless of vMem.mode.
  */
 function computeDistanceToGoDisplay(
   vMem: VolatileMemoryState,
@@ -111,13 +132,15 @@ function computeDistanceToGoDisplay(
 
   const computeAxisDisplay = (axis: Axis): number => {
     const target = presetTargets[axis];
+    // Always use absolute position for distance-to-go (ignores mode setting)
+    const currentMm = getAbsolutePositionMm(axis, vMem, context);
+
     if (target === null) {
-      // No preset for this axis - show normal position
-      return fromMmToAnyUnit(computeAxisPositionMm(axis, vMem, context), nvMem.defaultUnit);
+      // No preset for this axis - show normal absolute position
+      return fromMmToAnyUnit(currentMm, nvMem.defaultUnit);
     }
 
     // Compute distance-to-go: target - current position
-    const currentMm = computeAxisPositionMm(axis, vMem, context);
     const distanceMm = target - currentMm;
     return fromMmToAnyUnit(distanceMm, nvMem.defaultUnit);
   };
@@ -130,14 +153,18 @@ function computeDistanceToGoDisplay(
 }
 
 /**
- * Preset feature reducer.
- * Handles all preset/distance-to-go state transitions and events.
+ * Distance-to-Go feature reducer.
+ * Handles all distance-to-go state transitions and events.
  */
-export const presetReducer: FeatureReducer = (state, event, context) => {
+export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
   const { stateName, stateData, vMem } = state;
 
-  // Handle BTN_PRESET from idle → preset-select
-  if (stateName === 'idle' && event.eventName === 'BTN_PRESET') {
+  // Handle BTN_DISTANCE_TO_GO from idle → preset-select (only in ABS mode)
+  if (stateName === 'idle' && event.eventName === 'BTN_DISTANCE_TO_GO') {
+    // Distance-to-go is only available in ABS mode
+    if (vMem.mode !== 'abs') {
+      return null;
+    }
     const newPresetData = { ...INITIAL_PRESET_DATA };
     return {
       stateName: 'preset-select',
@@ -187,8 +214,8 @@ export const presetReducer: FeatureReducer = (state, event, context) => {
       };
     }
 
-    // BTN_PRESET → execute (only if at least one axis has a preset)
-    if (event.eventName === 'BTN_PRESET') {
+    // BTN_DISTANCE_TO_GO → execute (only if at least one axis has a preset)
+    if (event.eventName === 'BTN_DISTANCE_TO_GO') {
       const { presetTargets } = presetData;
       const hasAnyPreset =
         presetTargets.X !== null || presetTargets.Y !== null || presetTargets.Z !== null;
@@ -197,7 +224,7 @@ export const presetReducer: FeatureReducer = (state, event, context) => {
         return {
           stateName: 'distance-to-go',
           stateData: presetData,
-          vMem: { ...vMem, inputBuffer: '' },
+          vMem: { ...vMem, inputBuffer: '', mode: 'inc' }, // INC LED turns on
           display: computeDistanceToGoDisplay(vMem, presetData, context),
         };
       }
@@ -310,22 +337,23 @@ export const presetReducer: FeatureReducer = (state, event, context) => {
       };
     }
 
-    // KEY_CLEAR → exit to idle
+    // KEY_CLEAR → exit to idle, restore ABS mode
     if (event.eventName === 'KEY_CLEAR') {
+      const newVMem = { ...vMem, inputBuffer: '', mode: 'abs' as const };
       return {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
-        vMem: { ...vMem, inputBuffer: '' },
-        display: computeNormalDisplay(vMem, context),
+        vMem: newVMem,
+        display: computeNormalDisplay(newVMem, context),
       };
     }
 
-    // BTN_PRESET → re-enter preset-select to modify targets
-    if (event.eventName === 'BTN_PRESET') {
+    // BTN_DISTANCE_TO_GO → re-enter preset-select to modify targets
+    if (event.eventName === 'BTN_DISTANCE_TO_GO') {
       return {
         stateName: 'preset-select',
         stateData: presetData,
-        vMem: { ...vMem, inputBuffer: '' },
+        vMem: { ...vMem, inputBuffer: '', mode: 'abs' },
         display: computePresetSelectDisplay(presetData, context),
       };
     }
