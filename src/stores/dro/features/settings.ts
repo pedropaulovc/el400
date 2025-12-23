@@ -288,7 +288,7 @@ function modifyParameter(
       const scaleValues = [1, 2, 5, 10, 20];
       const scIndex = scaleValues.indexOf(currentSC);
       const nextSC =
-        scIndex === -1 ? 5 : scaleValues[(scIndex + 1) % scaleValues.length];
+        scIndex === -1 ? 5 : (scaleValues[(scIndex + 1) % scaleValues.length] ?? 5);
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -308,7 +308,7 @@ function modifyParameter(
       const dpValues = [1, 2, 5, 10, 50];
       const dpIndex = dpValues.indexOf(currentDP);
       const nextDP =
-        dpIndex === -1 ? 5 : dpValues[(dpIndex + 1) % dpValues.length];
+        dpIndex === -1 ? 5 : (dpValues[(dpIndex + 1) % dpValues.length] ?? 5);
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -327,7 +327,7 @@ function modifyParameter(
       const sleepValues = [0, 5, 10, 15, 30, 60, 120];
       const sleepIndex = sleepValues.indexOf(currentSleep);
       const nextSleep =
-        sleepIndex === -1 ? 0 : sleepValues[(sleepIndex + 1) % sleepValues.length];
+        sleepIndex === -1 ? 0 : (sleepValues[(sleepIndex + 1) % sleepValues.length] ?? 0);
       newTempConfig = {
         ...newTempConfig,
         sleepTimer: nextSleep,
