@@ -89,15 +89,9 @@
     "@types/react": "^19.2.3",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
-<<<<<<< HEAD
     "@vitest/browser": "^4.0.16",
     "@vitest/browser-playwright": "^4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
-=======
-    "@vitest/browser": "^4.0.15",
-    "@vitest/browser-playwright": "^4.0.15",
-    "@vitest/coverage-v8": "^4.0.15",
->>>>>>> origin/dependabot/npm_and_yarn/vitest/ui-4.0.16
     "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.23",
     "concurrently": "^9.2.1",
