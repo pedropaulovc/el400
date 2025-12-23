@@ -1,8 +1,41 @@
-import { EventEmitter } from 'events';
-
 interface SessionState {
   position: { x: number; y: number; z: number };
   probeState: string;
+}
+
+/**
+ * Simple browser-compatible EventEmitter
+ */
+class EventEmitter {
+  private listeners = new Map<string, Set<(...args: unknown[]) => void>>();
+
+  on(event: string, listener: (...args: unknown[]) => void): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.add(listener);
+    }
+  }
+
+  off(event: string, listener: (...args: unknown[]) => void): void {
+    this.listeners.get(event)?.delete(listener);
+  }
+
+  emit(event: string, ...args: unknown[]): void {
+    this.listeners.get(event)?.forEach(listener => {
+      listener(...args);
+    });
+  }
+
+  removeAllListeners(event?: string): void {
+    if (event) {
+      this.listeners.delete(event);
+    } else {
+      this.listeners.clear();
+    }
+  }
 }
 
 /**
@@ -17,7 +50,7 @@ export class LocalSocketIOServer extends EventEmitter {
     position: { x: 0, y: 0, z: 0 },
     probeState: '',
   };
-  private broadcastInterval: NodeJS.Timeout | null = null;
+  private broadcastInterval: number | null = null;
 
   constructor() {
     super();
@@ -101,7 +134,7 @@ export class LocalSocketIOServer extends EventEmitter {
     // Periodic broadcasting every 100ms (matches mock server behavior)
     this.broadcastInterval = setInterval(() => {
       this.broadcastState();
-    }, 100);
+    }, 100) as unknown as number;
   }
 
   /**
