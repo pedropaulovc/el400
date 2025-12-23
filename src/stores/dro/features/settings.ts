@@ -74,48 +74,48 @@ function getParameterDisplayText(
   switch (param) {
     case 'SCALE_TYPE':
       if (!axis) return 'LinEAr';
-      return currentConfig.axisConfig?.[axis]?.scaleType === 'angular'
+      return currentConfig.axisConfig[axis].scaleType === 'angular'
         ? 'AnGULAr'
         : 'LinEAr';
 
     case 'SC':
       if (!axis) return '5';
-      return String(currentConfig.axisConfig?.[axis]?.scaleResolution ?? 5);
+      return String(currentConfig.axisConfig[axis].scaleResolution);
 
     case 'DP':
       if (!axis) return '5';
-      return String(currentConfig.axisConfig?.[axis]?.displayResolution ?? 5);
+      return String(currentConfig.axisConfig[axis].displayResolution);
 
     case 'RAD_DIA':
       if (!axis) return 'rAdiU5';
-      return currentConfig.axisConfig?.[axis]?.radiusDiameter === 'diameter'
+      return currentConfig.axisConfig[axis].radiusDiameter === 'diameter'
         ? 'diA'
         : 'rAdiU5';
 
     case 'DIRECTION':
       if (!axis) return 'LEFt';
-      return currentConfig.axisConfig?.[axis]?.scaleDirection === 'right'
+      return currentConfig.axisConfig[axis].scaleDirection === 'right'
         ? 'riGht'
         : 'LEFt';
 
     case 'CALIB':
       if (!axis) return 'oFF';
-      return currentConfig.axisConfig?.[axis]?.errorCompensationEnabled ? 'on' : 'oFF';
+      return currentConfig.axisConfig[axis].errorCompensationEnabled ? 'on' : 'oFF';
 
     case 'ZERO_AP':
       return currentConfig.zeroApproachEnabled ? 'bU22 on' : 'oFF';
 
     case 'BP_DIST':
-      return String(currentConfig.zeroApproachDistance ?? 0.002);
+      return String(currentConfig.zeroApproachDistance);
 
     case 'BP_TOLR':
-      return String(currentConfig.zeroApproachTolerance ?? 0.0);
+      return String(currentConfig.zeroApproachTolerance);
 
     case 'BEEP':
       return currentConfig.beepEnabled ? 'on' : 'oFF';
 
     case 'SLEEP_T':
-      return String(currentConfig.sleepTimer ?? 0).padStart(3, '0');
+      return String(currentConfig.sleepTimer).padStart(3, '0');
 
     case 'SAV_CHG':
       return '5Av chG';
@@ -127,7 +127,7 @@ function getParameterDisplayText(
       return 'End';
 
     default:
-      return PARAMETER_DISPLAY_TEXT[param] ?? '';
+      return PARAMETER_DISPLAY_TEXT[param];
   }
 }
 
@@ -145,7 +145,7 @@ function computeSettingsMenuDisplay(
   data: SettingsData,
   context: DROReducerContext
 ): ReturnType<typeof createDisplay> {
-  const paramText = PARAMETER_DISPLAY_TEXT[data.currentParameter] ?? '';
+  const paramText = PARAMETER_DISPLAY_TEXT[data.currentParameter];
   const valueText = getParameterDisplayText(data.currentParameter, data, context);
 
   return createDisplay(paramText, valueText, '');
@@ -198,10 +198,10 @@ function modifyParameter(
   let newTempConfig = { ...data.tempConfig };
 
   switch (param) {
-    case 'SCALE_TYPE':
+    case 'SCALE_TYPE': {
       if (!axis) break;
       const currentScaleType =
-        currentConfig.axisConfig?.[axis]?.scaleType ?? 'linear';
+        currentConfig.axisConfig[axis].scaleType;
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -213,11 +213,12 @@ function modifyParameter(
         },
       };
       break;
+    }
 
-    case 'DIRECTION':
+    case 'DIRECTION': {
       if (!axis) break;
       const currentDirection =
-        currentConfig.axisConfig?.[axis]?.scaleDirection ?? 'left';
+        currentConfig.axisConfig[axis].scaleDirection;
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -229,11 +230,12 @@ function modifyParameter(
         },
       };
       break;
+    }
 
-    case 'RAD_DIA':
+    case 'RAD_DIA': {
       if (!axis) break;
       const currentRadDia =
-        currentConfig.axisConfig?.[axis]?.radiusDiameter ?? 'radius';
+        currentConfig.axisConfig[axis].radiusDiameter;
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -245,11 +247,12 @@ function modifyParameter(
         },
       };
       break;
+    }
 
-    case 'CALIB':
+    case 'CALIB': {
       if (!axis) break;
       const currentCalib =
-        currentConfig.axisConfig?.[axis]?.errorCompensationEnabled ?? false;
+        currentConfig.axisConfig[axis].errorCompensationEnabled;
       newTempConfig = {
         ...newTempConfig,
         axisConfig: {
@@ -261,6 +264,7 @@ function modifyParameter(
         },
       };
       break;
+    }
 
     case 'ZERO_AP':
       newTempConfig = {
@@ -278,9 +282,9 @@ function modifyParameter(
 
     // For numeric values, would need input buffer handling
     // For now, just cycle through common values
-    case 'SC':
+    case 'SC': {
       if (!axis) break;
-      const currentSC = currentConfig.axisConfig?.[axis]?.scaleResolution ?? 5;
+      const currentSC = currentConfig.axisConfig[axis].scaleResolution;
       const scaleValues = [1, 2, 5, 10, 20];
       const scIndex = scaleValues.indexOf(currentSC);
       const nextSC =
@@ -291,15 +295,16 @@ function modifyParameter(
           ...currentConfig.axisConfig,
           [axis]: {
             ...currentConfig.axisConfig[axis],
-            scaleResolution: nextSC ?? 5,
+            scaleResolution: nextSC,
           },
         },
       };
       break;
+    }
 
-    case 'DP':
+    case 'DP': {
       if (!axis) break;
-      const currentDP = currentConfig.axisConfig?.[axis]?.displayResolution ?? 5;
+      const currentDP = currentConfig.axisConfig[axis].displayResolution;
       const dpValues = [1, 2, 5, 10, 50];
       const dpIndex = dpValues.indexOf(currentDP);
       const nextDP =
@@ -310,23 +315,25 @@ function modifyParameter(
           ...currentConfig.axisConfig,
           [axis]: {
             ...currentConfig.axisConfig[axis],
-            displayResolution: nextDP ?? 5,
+            displayResolution: nextDP,
           },
         },
       };
       break;
+    }
 
-    case 'SLEEP_T':
-      const currentSleep = currentConfig.sleepTimer ?? 0;
+    case 'SLEEP_T': {
+      const currentSleep = currentConfig.sleepTimer;
       const sleepValues = [0, 5, 10, 15, 30, 60, 120];
       const sleepIndex = sleepValues.indexOf(currentSleep);
       const nextSleep =
         sleepIndex === -1 ? 0 : sleepValues[(sleepIndex + 1) % sleepValues.length];
       newTempConfig = {
         ...newTempConfig,
-        sleepTimer: nextSleep ?? 0,
+        sleepTimer: nextSleep,
       };
       break;
+    }
 
     // SAV_CHG, RST_DEF, END handled separately
     default:
