@@ -33,7 +33,7 @@ export interface ProbeState {
 /**
  * Supported controller types
  */
-export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
+export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'debug' | 'noop';
 
 /**
  * Mill state from connection
