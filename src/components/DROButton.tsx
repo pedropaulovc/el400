@@ -12,7 +12,7 @@ const initAudio = async (): Promise<void> => {
   audioContext ??= new AudioContext();
   
   try {
-    const response = await fetch('/sounds/button-click.wav');
+    const response = await fetch(`${import.meta.env.BASE_URL}sounds/button-click.wav`);
     const arrayBuffer = await response.arrayBuffer();
     audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   } catch (e) {
