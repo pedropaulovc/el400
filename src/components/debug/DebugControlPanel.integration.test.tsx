@@ -4,12 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { DebugControlPanel } from './DebugControlPanel';
 import { useMillStore } from '../../stores/millStore';
 import { CncjsMillAdapter } from '../../adapters/CncjsMillAdapter';
-import { LocalSocketIOServer } from '../../adapters/LocalSocketIOServer';
+import { DebugServer } from '../../debug/DebugServer';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
 
 function renderDebugPanel() {
-  const localServer = new LocalSocketIOServer();
+  const localServer = new DebugServer();
   const adapter = new CncjsMillAdapter({ localServer });
 
   // Setup mill store with debug adapter

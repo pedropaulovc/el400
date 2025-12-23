@@ -39,13 +39,13 @@ class EventEmitter {
 }
 
 /**
- * LocalSocketIOServer - In-browser Socket.IO server emulation
+ * DebugServer - In-browser debug server for demo mode
  *
- * Emulates a Socket.IO server that runs entirely in the browser.
+ * Emulates a CNC controller server that runs entirely in the browser.
  * Maintains session-based state and broadcasts controller:state events.
  * Compatible with CncjsMillAdapter's Socket.IO client semantics.
  */
-export class LocalSocketIOServer extends EventEmitter {
+export class DebugServer extends EventEmitter {
   private sessionState: SessionState = {
     position: { x: 0, y: 0, z: 0 },
     probeState: '',
