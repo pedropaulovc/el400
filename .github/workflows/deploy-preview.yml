@@ -32,8 +32,10 @@ jobs:
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+          external_repository: pedropaulovc/pedropaulovc.github.io
           publish_dir: ./dist
+          destination_dir: el400
           keep_files: true
 
   deploy-preview:
@@ -53,9 +55,10 @@ jobs:
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+          external_repository: pedropaulovc/pedropaulovc.github.io
           publish_dir: ./dist
-          destination_dir: pr-${{ github.event.pull_request.number }}
+          destination_dir: el400/pr-${{ github.event.pull_request.number }}
           keep_files: true
 
       - name: Comment on PR
@@ -75,15 +78,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: gh-pages
+          repository: pedropaulovc/pedropaulovc.github.io
+          ref: main
+          token: ${{ secrets.PAGES_DEPLOY_TOKEN }}
 
       - name: Remove preview directory
         run: |
-          if [ -d "pr-${{ github.event.pull_request.number }}" ]; then
-            rm -rf pr-${{ github.event.pull_request.number }}
+          if [ -d "el400/pr-${{ github.event.pull_request.number }}" ]; then
+            rm -rf el400/pr-${{ github.event.pull_request.number }}
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "Clean up PR #${{ github.event.pull_request.number }} preview" || echo "Nothing to commit"
+            git commit -m "Clean up el400 PR #${{ github.event.pull_request.number }} preview" || echo "Nothing to commit"
             git push
           fi
