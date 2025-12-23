@@ -9,17 +9,12 @@ import type { MillAdapter } from './MillAdapter';
 import type { MillStateListener, MillState, MillPosition } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createProbeState, createDefaultMillState } from '../types/millState';
-import { DebugServer } from '../debug/DebugServer';
 
 export interface CncjsMillAdapterOptions {
-  // Remote connection (existing)
-  host?: string;
-  port?: number;
+  host: string;
+  port: number;
   token?: string | undefined;
   sessionId?: string | undefined;
-
-  // Local connection (new)
-  localServer?: DebugServer;
 }
 
 export type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
@@ -175,7 +170,6 @@ export class CncjsMillAdapter implements MillAdapter {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
-  private localServer: DebugServer | null = null;
   private listeners = new Set<MillStateListener>();
   private dispatch: Dispatch<DROEventPayload> | null = null;
   private state: MillState = {
@@ -187,44 +181,14 @@ export class CncjsMillAdapter implements MillAdapter {
 
   constructor(options: CncjsMillAdapterOptions) {
     this.options = options;
-    this.localServer = options.localServer ?? null;
   }
 
   setDispatch(dispatch: Dispatch<DROEventPayload> | null): void {
     this.dispatch = dispatch;
   }
 
-  private setupLocalConnection(): void {
-    if (!this.localServer) {
-      throw new Error('Local server not provided');
-    }
-
-    // Listen to local server events directly
-    this.localServer.on('controller:state', (data: unknown) => {
-      // Use GRBL normalization for local server (it follows GRBL format)
-      const normalized = normalizeGrbl(data as CncjsControllerState);
-      this.updateState({
-        ...normalized,
-        connected: true,
-      });
-    });
-
-    // Immediately set connected state
-    this.updateState({ connected: true });
-  }
-
   async connect(): Promise<void> {
-    // Local mode: connect to in-browser server
-    if (this.localServer) {
-      this.setupLocalConnection();
-      return Promise.resolve();
-    }
-
-    // Remote mode: connect via Socket.IO (existing logic)
     const { host, port, token, sessionId } = this.options;
-    if (!host || !port) {
-      return Promise.reject(new Error('Host and port required for remote connection'));
-    }
     const url = `http://${host}:${String(port)}`;
 
     return new Promise((resolve, reject) => {
@@ -287,12 +251,6 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket.disconnect();
       this.socket = null;
     }
-    if (this.localServer) {
-      // Ensure local server stops broadcasting and releases resources
-      this.localServer.removeAllListeners('controller:state');
-      this.localServer.destroy();
-      this.localServer = null;
-    }
     this.updateState({ connected: false });
   }
 
@@ -312,14 +270,6 @@ export class CncjsMillAdapter implements MillAdapter {
 
   getCurrentControllerType(): CncjsControllerType {
     return this.currentControllerType;
-  }
-
-  /**
-   * Get the local server instance (null if using remote connection)
-   * Used by debug panel to access server controls
-   */
-  getLocalServer(): DebugServer | null {
-    return this.localServer;
   }
 
   private updateState(partial: Partial<MillState>): void {
