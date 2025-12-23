@@ -6,7 +6,7 @@ import NotFound from "./pages/NotFound";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { CncjsMillAdapter } from "./adapters/CncjsMillAdapter";
 import { NoOpMillAdapter } from "./adapters/NoOpMillAdapter";
-import { LocalSocketIOServer } from "./adapters/LocalSocketIOServer";
+import { DebugServer } from "./debug/DebugServer";
 import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
 import { initializeMillStore } from "./stores";
@@ -24,7 +24,7 @@ function createAdapter(config: DataSourceConfig): MillAdapter {
   }
   if (config.type === 'debug') {
     // Create local server and pass to CncjsMillAdapter
-    const localServer = new LocalSocketIOServer();
+    const localServer = new DebugServer();
     return new CncjsMillAdapter({ localServer });
   }
   return new NoOpMillAdapter();

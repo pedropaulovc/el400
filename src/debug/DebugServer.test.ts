@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { LocalSocketIOServer } from './LocalSocketIOServer';
+import { DebugServer } from './DebugServer';
 
-describe('LocalSocketIOServer', () => {
-  let server: LocalSocketIOServer;
+describe('DebugServer', () => {
+  let server: DebugServer;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    server = new LocalSocketIOServer();
+    server = new DebugServer();
   });
 
   afterEach(() => {
@@ -23,7 +23,7 @@ describe('LocalSocketIOServer', () => {
 
     it('should broadcast initial state on creation', () => {
       const handler = vi.fn();
-      const newServer = new LocalSocketIOServer();
+      const newServer = new DebugServer();
       newServer.on('controller:state', handler);
 
       // Initial broadcast happens in constructor, but handler is attached after

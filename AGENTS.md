@@ -53,7 +53,7 @@ MillAdapter interface
       ↑
 CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
       ↑
-(CncjsMillAdapter can use LocalSocketIOServer in debug mode)
+(CncjsMillAdapter can use DebugServer in debug mode)
 ```
 
 ### Stores
@@ -93,8 +93,8 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 ```
 
 **Debug Mode** (`?source=debug`):
-- Runs LocalSocketIOServer entirely in browser (no backend needed)
-- CncjsMillAdapter connects to in-browser server instead of remote WebSocket
+- Runs DebugServer entirely in browser (no backend needed)
+- CncjsMillAdapter connects to in-browser debug server instead of remote WebSocket
 - Debug control panel provides:
   - Position jog controls (X/Y/Z with configurable step sizes)
   - Probe trigger/clear toggle
@@ -152,9 +152,12 @@ src/stores/dro/
 src/adapters/
 ├── MillAdapter.ts         # Interface
 ├── CncjsMillAdapter.ts    # WebSocket to CNCjs (+ local mode support)
-├── LocalSocketIOServer.ts # In-browser Socket.IO server emulation (debug mode)
 ├── MockMillAdapter.ts     # Test/dev simulation
 └── NoOpMillAdapter.ts     # Manual mode fallback
+
+src/debug/
+├── DebugServer.ts         # In-browser debug server for demo mode
+└── DebugServer.test.ts    # Debug server unit tests
 
 src/components/debug/
 ├── DebugControlPanel.tsx  # Main debug panel (jog, probe, log)

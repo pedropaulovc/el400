@@ -9,7 +9,7 @@ import type { MillAdapter } from './MillAdapter';
 import type { MillStateListener, MillState, MillPosition } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createProbeState, createDefaultMillState } from '../types/millState';
-import { LocalSocketIOServer } from './LocalSocketIOServer';
+import { DebugServer } from '../debug/DebugServer';
 
 export interface CncjsMillAdapterOptions {
   // Remote connection (existing)
@@ -19,7 +19,7 @@ export interface CncjsMillAdapterOptions {
   sessionId?: string | undefined;
 
   // Local connection (new)
-  localServer?: LocalSocketIOServer;
+  localServer?: DebugServer;
 }
 
 export type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
@@ -175,7 +175,7 @@ export class CncjsMillAdapter implements MillAdapter {
   readonly controllerType = 'cncjs' as const;
 
   private socket: Socket | null = null;
-  private localServer: LocalSocketIOServer | null = null;
+  private localServer: DebugServer | null = null;
   private listeners = new Set<MillStateListener>();
   private dispatch: Dispatch<DROEventPayload> | null = null;
   private state: MillState = {
@@ -318,7 +318,7 @@ export class CncjsMillAdapter implements MillAdapter {
    * Get the local server instance (null if using remote connection)
    * Used by debug panel to access server controls
    */
-  getLocalServer(): LocalSocketIOServer | null {
+  getLocalServer(): DebugServer | null {
     return this.localServer;
   }
 
