@@ -36,7 +36,6 @@ jobs:
           external_repository: pedropaulovc/pedropaulovc.github.io
           publish_dir: ./dist
           destination_dir: el400
-          keep_files: true
 
   deploy-preview:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
@@ -59,7 +58,6 @@ jobs:
           external_repository: pedropaulovc/pedropaulovc.github.io
           publish_dir: ./dist
           destination_dir: el400/pr-${{ github.event.pull_request.number }}
-          keep_files: true
 
       - name: Find Comment
         uses: peter-evans/find-comment@v3
