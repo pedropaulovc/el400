@@ -8,14 +8,14 @@ interface DebugControlPanelProps {
   onClose?: () => void;
 }
 
-const STEP_SIZES = [1, 0.1, 0.01, 0.001] as const;
+const STEP_SIZES = [0.001, 0.01, 0.1, 1] as const;
 
 export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   const millStore = useMillStore();
   const millState = millStore.millState;
   const [eventLog, setEventLog] = useState<LogEntry[]>([]);
   const [stepSize, setStepSize] = useState(1);
-  const [showLog, setShowLog] = useState(false);
+  const [showLog, setShowLog] = useState(true);
 
   const addLogEntry = useCallback((type: LogEntry['type'], message: string) => {
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -81,6 +81,14 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
 
     addLogEntry('success', `Jog ${axis.toUpperCase()}${delta > 0 ? '+' : '-'}${Math.abs(delta).toFixed(3)} → ${newValue.toFixed(3)}`);
     server.moveRelative(axis, delta);
+  };
+
+  const handleDiagonalJog = (xDelta: number, yDelta: number) => {
+    const xSign = xDelta > 0 ? '+' : '-';
+    const ySign = yDelta > 0 ? '+' : '-';
+    addLogEntry('success', `Jog X${xSign}Y${ySign} (${Math.abs(xDelta).toFixed(3)})`);
+    server.moveRelative('x', xDelta);
+    server.moveRelative('y', yDelta);
   };
 
   const handleReset = () => {
@@ -160,11 +168,17 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           </tbody>
         </table>
 
-        {/* Jog Controls Grid - CNCjs Style */}
+        {/* Jog Controls Grid - CNCjs Style with Diagonals */}
         <div className="space-y-1.5">
-          {/* Row 1: Y+ and Z+ */}
+          {/* Row 1: X-Y+, Y+, X+Y+, Z+ */}
           <div className="grid grid-cols-5 gap-1">
-            <div /> {/* Empty */}
+            <button
+              onClick={() => handleDiagonalJog(-stepSize, stepSize)}
+              className={`${btnClass} text-xs`}
+              title="X- Y+"
+            >
+              ↖
+            </button>
             <button
               onClick={() => handleJog('y', stepSize)}
               className={btnClass}
@@ -172,7 +186,13 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
             >
               Y+
             </button>
-            <div /> {/* Empty */}
+            <button
+              onClick={() => handleDiagonalJog(stepSize, stepSize)}
+              className={`${btnClass} text-xs`}
+              title="X+ Y+"
+            >
+              ↗
+            </button>
             <button
               onClick={() => handleJog('z', stepSize)}
               className={btnClass}
@@ -183,7 +203,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
             <div /> {/* Empty */}
           </div>
 
-          {/* Row 2: X-, X/Y, X+, Z center */}
+          {/* Row 2: X-, X/Y, X+, 0Z */}
           <div className="grid grid-cols-5 gap-1">
             <button
               onClick={() => handleJog('x', -stepSize)}
@@ -219,9 +239,15 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
             <div /> {/* Empty */}
           </div>
 
-          {/* Row 3: Y- and Z- */}
+          {/* Row 3: X-Y-, Y-, X+Y-, Z- */}
           <div className="grid grid-cols-5 gap-1">
-            <div /> {/* Empty */}
+            <button
+              onClick={() => handleDiagonalJog(-stepSize, -stepSize)}
+              className={`${btnClass} text-xs`}
+              title="X- Y-"
+            >
+              ↙
+            </button>
             <button
               onClick={() => handleJog('y', -stepSize)}
               className={btnClass}
@@ -229,7 +255,13 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
             >
               Y-
             </button>
-            <div /> {/* Empty */}
+            <button
+              onClick={() => handleDiagonalJog(stepSize, -stepSize)}
+              className={`${btnClass} text-xs`}
+              title="X+ Y-"
+            >
+              ↘
+            </button>
             <button
               onClick={() => handleJog('z', -stepSize)}
               className={btnClass}
