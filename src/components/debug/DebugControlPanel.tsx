@@ -112,7 +112,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
         <span className="font-semibold text-gray-700">Axes</span>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setShowLog(!showLog)}
+            onClick={() => { setShowLog(!showLog); }}
             className="p-1.5 hover:bg-gray-200 rounded text-gray-500"
             title="Toggle Event Log"
           >
@@ -173,28 +173,28 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           {/* Row 1: X-Y+, Y+, X+Y+, Z+ */}
           <div className="grid grid-cols-5 gap-1">
             <button
-              onClick={() => handleDiagonalJog(-stepSize, stepSize)}
+              onClick={() => { handleDiagonalJog(-stepSize, stepSize); }}
               className={`${btnClass} text-xs`}
               title="X- Y+"
             >
               ↖
             </button>
             <button
-              onClick={() => handleJog('y', stepSize)}
+              onClick={() => { handleJog('y', stepSize); }}
               className={btnClass}
               data-testid="jog-y-positive"
             >
               Y+
             </button>
             <button
-              onClick={() => handleDiagonalJog(stepSize, stepSize)}
+              onClick={() => { handleDiagonalJog(stepSize, stepSize); }}
               className={`${btnClass} text-xs`}
               title="X+ Y+"
             >
               ↗
             </button>
             <button
-              onClick={() => handleJog('z', stepSize)}
+              onClick={() => { handleJog('z', stepSize); }}
               className={btnClass}
               data-testid="jog-z-positive"
             >
@@ -206,7 +206,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           {/* Row 2: X-, X/Y, X+, 0Z */}
           <div className="grid grid-cols-5 gap-1">
             <button
-              onClick={() => handleJog('x', -stepSize)}
+              onClick={() => { handleJog('x', -stepSize); }}
               className={btnClass}
               data-testid="jog-x-negative"
             >
@@ -221,7 +221,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               X/Y/Z
             </button>
             <button
-              onClick={() => handleJog('x', stepSize)}
+              onClick={() => { handleJog('x', stepSize); }}
               className={btnClass}
               data-testid="jog-x-positive"
             >
@@ -242,28 +242,28 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           {/* Row 3: X-Y-, Y-, X+Y-, Z- */}
           <div className="grid grid-cols-5 gap-1">
             <button
-              onClick={() => handleDiagonalJog(-stepSize, -stepSize)}
+              onClick={() => { handleDiagonalJog(-stepSize, -stepSize); }}
               className={`${btnClass} text-xs`}
               title="X- Y-"
             >
               ↙
             </button>
             <button
-              onClick={() => handleJog('y', -stepSize)}
+              onClick={() => { handleJog('y', -stepSize); }}
               className={btnClass}
               data-testid="jog-y-negative"
             >
               Y-
             </button>
             <button
-              onClick={() => handleDiagonalJog(stepSize, -stepSize)}
+              onClick={() => { handleDiagonalJog(stepSize, -stepSize); }}
               className={`${btnClass} text-xs`}
               title="X+ Y-"
             >
               ↘
             </button>
             <button
-              onClick={() => handleJog('z', -stepSize)}
+              onClick={() => { handleJog('z', -stepSize); }}
               className={btnClass}
               data-testid="jog-z-negative"
             >
@@ -278,7 +278,7 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           {STEP_SIZES.map((size) => (
             <button
               key={size}
-              onClick={() => setStepSize(size)}
+              onClick={() => { setStepSize(size); }}
               className={`flex-1 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
                 stepSize === size
                   ? 'bg-blue-500 text-white border-blue-500'
@@ -290,13 +290,13 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
           ))}
           <div className="flex items-center gap-1 ml-2">
             <button
-              onClick={() => setStepSize(Math.max(0.001, stepSize / 10))}
+              onClick={() => { setStepSize(Math.max(0.001, stepSize / 10)); }}
               className="px-2 py-1.5 text-xs bg-white border border-gray-300 hover:bg-gray-100 rounded"
             >
               −
             </button>
             <button
-              onClick={() => setStepSize(Math.min(100, stepSize * 10))}
+              onClick={() => { setStepSize(Math.min(100, stepSize * 10)); }}
               className="px-2 py-1.5 text-xs bg-white border border-gray-300 hover:bg-gray-100 rounded"
             >
               +
