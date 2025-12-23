@@ -8,7 +8,7 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 |----------|----------|
 | State Machine | `src/stores/dro/` (Zustand + reducer) |
 | Feature Reducers | `src/stores/dro/features/` - boot, idle, keypad, calculator, etc. |
-| Adapters | `src/adapters/` - CNCjs, Mock, NoOp |
+| Adapters | `src/adapters/` - CNCjs, Debug, Mock, NoOp |
 | Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
 | Components | `src/components/` - EL400Simulator root |
 | User Stories | `project/user-stories/*` |
@@ -51,7 +51,9 @@ Zustand Stores
       ↑
 MillAdapter interface
       ↑
-CncjsMillAdapter | MockMillAdapter | NoOpMillAdapter
+CncjsMillAdapter | DebugMillAdapter | MockMillAdapter | NoOpMillAdapter
+      ↑                    ↑
+   Socket.IO          DebugServer (in-browser)
 ```
 
 ### Stores
@@ -84,10 +86,16 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 ### URL Config
 
 ```
-/?source=cncjs&host=192.168.1.100&port=8000
-/?source=mock
-/?source=manual  (default)
+/?source=cncjs&host=192.168.1.100&port=8000  # Remote CNCjs connection
+/?source=mock                                  # Mock adapter (testing)
+/?source=debug                                 # In-browser debug mode with control panel
+/?source=manual                                # NoOp adapter (default)
 ```
+
+**Debug Mode** (`?source=debug`):
+- Uses DebugMillAdapter with in-browser DebugServer (no backend)
+- Control panel: jog controls, probe toggle, event log
+- Works on GitHub Pages (static deployment)
 
 ## DRO State Names
 
@@ -114,7 +122,7 @@ interface MillState {
   position: { x: number; y: number; z: number };
   probe: { pinState: string; triggered: boolean };
   connected: boolean;
-  controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'noop';
+  controllerType: 'cncjs' | 'linuxcnc' | 'mock' | 'debug' | 'noop';
 }
 
 interface NonVolatileMemory {
@@ -137,9 +145,19 @@ src/stores/dro/
 
 src/adapters/
 ├── MillAdapter.ts         # Interface
-├── CncjsMillAdapter.ts    # WebSocket to CNCjs
+├── CncjsMillAdapter.ts    # WebSocket to remote CNCjs server
+├── DebugMillAdapter.ts    # In-browser debug mode (uses DebugServer)
 ├── MockMillAdapter.ts     # Test/dev simulation
 └── NoOpMillAdapter.ts     # Manual mode fallback
+
+src/debug/
+├── DebugServer.ts         # In-browser debug server for demo mode
+└── DebugServer.test.ts    # Debug server unit tests
+
+src/components/debug/
+├── DebugControlPanel.tsx  # Main debug panel (jog, probe, log)
+├── DebugProbeControl.tsx  # Probe trigger/clear toggle
+└── DebugEventLog.tsx      # Event log display
 ```
 
 ## Feature Reducer Pattern

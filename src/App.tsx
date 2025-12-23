@@ -5,6 +5,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { useDataSourceConfig } from "./hooks/useDataSourceConfig";
 import { CncjsMillAdapter } from "./adapters/CncjsMillAdapter";
+import { DebugMillAdapter } from "./adapters/DebugMillAdapter";
 import { NoOpMillAdapter } from "./adapters/NoOpMillAdapter";
 import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
@@ -14,11 +15,15 @@ const queryClient = new QueryClient();
 
 /**
  * Creates an adapter based on URL config.
- * Returns CncjsMillAdapter when source=cncjs, otherwise NoOpMillAdapter.
+ * Returns CncjsMillAdapter for source=cncjs, DebugMillAdapter for source=debug,
+ * otherwise NoOpMillAdapter.
  */
 function createAdapter(config: DataSourceConfig): MillAdapter {
   if (config.type === 'cncjs') {
     return new CncjsMillAdapter({ host: config.host, port: config.port, sessionId: config.sessionId });
+  }
+  if (config.type === 'debug') {
+    return new DebugMillAdapter();
   }
   return new NoOpMillAdapter();
 }

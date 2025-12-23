@@ -1,6 +1,11 @@
 import EL400Simulator from "@/components/EL400Simulator";
+import { DebugControlPanel } from "@/components/debug/DebugControlPanel";
+import { useDataSourceConfig } from "@/hooks/useDataSourceConfig";
 
 const Index = () => {
+  const config = useDataSourceConfig();
+  const showDebug = config.type === 'debug';
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#8a8a70]">
       <div className="origin-center" style={{ transform: 'scale(1.2)' }}>
@@ -10,6 +15,7 @@ const Index = () => {
           Click axis buttons to select, then use keypad to enter values
         </p>
       </div>
+      {showDebug && <DebugControlPanel />}
     </main>
   );
 };
