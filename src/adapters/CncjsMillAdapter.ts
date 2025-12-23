@@ -200,9 +200,9 @@ export class CncjsMillAdapter implements MillAdapter {
     }
 
     // Listen to local server events directly
-    this.localServer.on('controller:state', (controllerState: CncjsControllerState) => {
+    this.localServer.on('controller:state', (data: unknown) => {
       // Use GRBL normalization for local server (it follows GRBL format)
-      const normalized = normalizeGrbl(controllerState);
+      const normalized = normalizeGrbl(data as CncjsControllerState);
       this.updateState({
         ...normalized,
         connected: true,
