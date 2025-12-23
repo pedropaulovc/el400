@@ -16,7 +16,10 @@ export function DebugEventLog({ entries, maxEntries = 100 }: DebugEventLogProps)
 
   // Auto-scroll to bottom when new entries are added
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // scrollIntoView may not be available in test environments (jsdom)
+    if (logEndRef.current && typeof logEndRef.current.scrollIntoView === 'function') {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [entries]);
 
   const displayEntries = entries.slice(-maxEntries);

@@ -26,6 +26,10 @@ describe('LocalSocketIOServer', () => {
       const newServer = new LocalSocketIOServer();
       newServer.on('controller:state', handler);
 
+      // Initial broadcast happens in constructor, but handler is attached after
+      // Advance timers to catch the next periodic broadcast
+      vi.advanceTimersByTime(100);
+
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           status: expect.objectContaining({
