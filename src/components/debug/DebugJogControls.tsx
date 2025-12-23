@@ -12,6 +12,9 @@ export function DebugJogControls({ onJog, onReset }: DebugJogControlsProps) {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue > 0) {
       setStepSize(prev => ({ ...prev, [axis]: numValue }));
+    } else if (value === '') {
+      // Set default when field is cleared
+      setStepSize(prev => ({ ...prev, [axis]: 1 }));
     }
   };
 
@@ -22,9 +25,10 @@ export function DebugJogControls({ onJog, onReset }: DebugJogControlsProps) {
       {/* X Axis */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-300">X Axis</label>
+          <label htmlFor="debug-step-x" className="text-sm text-gray-300">X Axis</label>
           <div className="flex items-center gap-2">
             <input
+              id="debug-step-x"
               type="number"
               value={stepSize.x}
               onChange={(e) => { handleStepChange('x', e.target.value); }}
@@ -56,9 +60,10 @@ export function DebugJogControls({ onJog, onReset }: DebugJogControlsProps) {
       {/* Y Axis */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-300">Y Axis</label>
+          <label htmlFor="debug-step-y" className="text-sm text-gray-300">Y Axis</label>
           <div className="flex items-center gap-2">
             <input
+              id="debug-step-y"
               type="number"
               value={stepSize.y}
               onChange={(e) => { handleStepChange('y', e.target.value); }}
@@ -90,9 +95,10 @@ export function DebugJogControls({ onJog, onReset }: DebugJogControlsProps) {
       {/* Z Axis */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-300">Z Axis</label>
+          <label htmlFor="debug-step-z" className="text-sm text-gray-300">Z Axis</label>
           <div className="flex items-center gap-2">
             <input
+              id="debug-step-z"
               type="number"
               value={stepSize.z}
               onChange={(e) => { handleStepChange('z', e.target.value); }}

@@ -288,7 +288,10 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket = null;
     }
     if (this.localServer) {
+      // Ensure local server stops broadcasting and releases resources
       this.localServer.removeAllListeners('controller:state');
+      this.localServer.destroy();
+      this.localServer = null;
     }
     this.updateState({ connected: false });
   }
