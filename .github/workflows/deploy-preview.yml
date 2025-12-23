@@ -61,16 +61,26 @@ jobs:
           destination_dir: el400/pr-${{ github.event.pull_request.number }}
           keep_files: true
 
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Preview Deployment'
+
       - name: Comment on PR
         uses: peter-evans/create-or-update-comment@v4
         with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             ## Preview Deployment
 
-            :rocket: **Preview:** https://gh.vza.net/el400/pr-${{ github.event.pull_request.number }}/
+            :rocket: **Preview:** https://gh.vza.net/el400/pr-${{ github.event.pull_request.number }}/?source=debug
 
             _Updated for commit ${{ github.event.pull_request.head.sha }}_
+          edit-mode: replace
 
   cleanup-preview:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
