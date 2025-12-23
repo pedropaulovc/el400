@@ -27,36 +27,36 @@ export function DebugEventLog({ entries, maxEntries = 100 }: DebugEventLogProps)
   const getTypeColor = (type: LogEntry['type']) => {
     switch (type) {
       case 'success':
-        return 'text-green-400';
+        return 'text-green-600';
       case 'warning':
-        return 'text-yellow-400';
+        return 'text-amber-600';
       case 'error':
-        return 'text-red-400';
+        return 'text-red-600';
       default:
-        return 'text-gray-300';
+        return 'text-gray-600';
     }
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Event Log</h3>
-        <span className="text-xs text-gray-500">
-          {displayEntries.length} / {maxEntries} entries
+        <span className="text-xs font-medium text-gray-500">Event Log</span>
+        <span className="text-xs text-gray-400">
+          {displayEntries.length}/{maxEntries}
         </span>
       </div>
 
       <div
-        className="h-64 overflow-y-auto bg-gray-950 border border-gray-700 rounded p-2 font-mono text-xs"
+        className="h-40 overflow-y-auto bg-gray-50 border border-gray-200 rounded p-1.5 font-mono text-xs"
         data-testid="event-log-container"
       >
         {displayEntries.length === 0 ? (
-          <div className="text-gray-500 text-center py-8">No events yet</div>
+          <div className="text-gray-400 text-center py-6">No events</div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {displayEntries.map((entry, index) => (
-              <div key={index} className="flex gap-2" data-testid="event-log-entry">
-                <span className="text-gray-600 shrink-0">{entry.timestamp}</span>
+              <div key={index} className="flex gap-1.5" data-testid="event-log-entry">
+                <span className="text-gray-400 shrink-0">{entry.timestamp}</span>
                 <span className={`${getTypeColor(entry.type)} break-all`}>
                   {entry.message}
                 </span>

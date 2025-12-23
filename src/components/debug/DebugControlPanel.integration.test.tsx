@@ -47,10 +47,25 @@ describe('DebugControlPanel Integration', () => {
     it('displays debug panel with position controls in debug mode', () => {
       renderDebugPanel();
 
-      expect(screen.getByText(/Current Position/i)).toBeInTheDocument();
-      expect(screen.getByText(/Jog Controls/i)).toBeInTheDocument();
-      expect(screen.getByText(/Probe Control/i)).toBeInTheDocument();
-      expect(screen.getByText(/Event Log/i)).toBeInTheDocument();
+      // Header
+      expect(screen.getByText('Axes')).toBeInTheDocument();
+
+      // Position table headers
+      expect(screen.getByText('Axis')).toBeInTheDocument();
+      expect(screen.getByText('Position')).toBeInTheDocument();
+
+      // Axis labels
+      expect(screen.getByText('X')).toBeInTheDocument();
+      expect(screen.getByText('Y')).toBeInTheDocument();
+      expect(screen.getByText('Z')).toBeInTheDocument();
+
+      // Probe control
+      expect(screen.getByText(/Probe:/i)).toBeInTheDocument();
+
+      // Jog buttons
+      expect(screen.getByTestId('jog-x-positive')).toBeInTheDocument();
+      expect(screen.getByTestId('jog-y-positive')).toBeInTheDocument();
+      expect(screen.getByTestId('jog-z-positive')).toBeInTheDocument();
     });
 
     it('updates position when jog button is clicked', () => {

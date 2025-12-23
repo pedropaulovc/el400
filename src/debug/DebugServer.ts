@@ -74,6 +74,14 @@ export class DebugServer extends EventEmitter {
   }
 
   /**
+   * Set a single axis position to a specific value
+   */
+  setPosition(axis: 'x' | 'y' | 'z', value: number): void {
+    this.sessionState.position[axis] = value;
+    this.broadcastState();
+  }
+
+  /**
    * Set probe state
    */
   setProbe(triggered: boolean): void {
