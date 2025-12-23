@@ -30,9 +30,30 @@ import {
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
+import { useSettingsStore } from '../../settingsStore';
 
 /** Display text for preset-select state */
 const SELECT_TEXT = 'SELECt';
+
+/**
+ * Toggle unit between inch and mm, updating settings store.
+ * Returns the new unit and updated context.
+ */
+function toggleUnit(context: DROReducerContext): {
+  newUnit: 'inch' | 'mm';
+  updatedContext: DROReducerContext;
+} {
+  const currentUnit = context.nvMem.defaultUnit;
+  const newUnit: 'inch' | 'mm' = currentUnit === 'inch' ? 'mm' : 'inch';
+  useSettingsStore.getState().updateNvMem({ defaultUnit: newUnit });
+  return {
+    newUnit,
+    updatedContext: {
+      ...context,
+      nvMem: { ...context.nvMem, defaultUnit: newUnit },
+    },
+  };
+}
 
 /** States that accept numeric input for preset values */
 const PRESET_INPUT_STATES: DROStateName[] = [
@@ -242,6 +263,15 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
       };
     }
 
+    // BTN_INCH_MM → toggle unit and recompute display
+    if (event.eventName === 'BTN_INCH_MM') {
+      const { updatedContext } = toggleUnit(context);
+      return {
+        ...state,
+        display: computePresetSelectDisplay(presetData, updatedContext),
+      };
+    }
+
     return null;
   }
 
@@ -324,6 +354,15 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
       };
     }
 
+    // BTN_INCH_MM → toggle unit and recompute display
+    if (event.eventName === 'BTN_INCH_MM') {
+      const { updatedContext } = toggleUnit(context);
+      return {
+        ...state,
+        display: computePresetInputDisplay(inputAxis, vMem.inputBuffer, presetData, updatedContext),
+      };
+    }
+
     return null;
   }
 
@@ -355,6 +394,15 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
         stateData: presetData,
         vMem: { ...vMem, inputBuffer: '', mode: 'abs' },
         display: computePresetSelectDisplay(presetData, context),
+      };
+    }
+
+    // BTN_INCH_MM → toggle unit and recompute display
+    if (event.eventName === 'BTN_INCH_MM') {
+      const { updatedContext } = toggleUnit(context);
+      return {
+        ...state,
+        display: computeDistanceToGoDisplay(vMem, presetData, updatedContext),
       };
     }
 

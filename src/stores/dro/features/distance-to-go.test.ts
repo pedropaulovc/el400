@@ -373,4 +373,69 @@ describe('distanceToGoReducer', () => {
       expect((result?.stateData as PresetData).presetTargets.X).toBeCloseTo(38.1, 1); // 1.5 inches = 38.1mm
     });
   });
+
+  describe('inch-mm toggle in distance-to-go states', () => {
+    it('should toggle unit in preset-select state', () => {
+      const presetData: PresetData = {
+        ...INITIAL_PRESET_DATA,
+        presetTargets: { X: 25.4, Y: null, Z: null }, // 1 inch stored in mm
+      };
+      const state = createTestState('preset-select', presetData);
+      const context: DROReducerContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'inch' },
+      };
+
+      const result = distanceToGoReducer(state, { eventName: 'BTN_INCH_MM' }, context);
+
+      expect(result?.stateName).toBe('preset-select');
+      // Display should show value in mm now (25.4mm = 1 inch)
+      expect(result?.display.X).toBeCloseTo(25.4, 1);
+    });
+
+    it('should toggle unit in preset-input state', () => {
+      const presetData: PresetData = {
+        ...INITIAL_PRESET_DATA,
+        presetTargets: { X: null, Y: 50.8, Z: null }, // Y has value (2 inches in mm)
+        activeInputAxis: 'X',
+      };
+      const state = stateWithBuffer('preset-input-x', presetData, '5');
+      const context: DROReducerContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'inch' },
+      };
+
+      const result = distanceToGoReducer(state, { eventName: 'BTN_INCH_MM' }, context);
+
+      expect(result?.stateName).toBe('preset-input-x');
+      // Input buffer should remain unchanged (raw value)
+      expect(result?.display.X).toBe('5');
+      // Y should now display in mm
+      expect(result?.display.Y).toBeCloseTo(50.8, 1);
+    });
+
+    it('should toggle unit in distance-to-go state', () => {
+      const presetData: PresetData = {
+        ...INITIAL_PRESET_DATA,
+        presetTargets: { X: 2540, Y: null, Z: null }, // Target: 100 inches in mm
+      };
+      const state = createTestState('distance-to-go', presetData);
+
+      // Machine at 50 inches (1270mm)
+      const context: DROReducerContext = {
+        millState: {
+          ...createDefaultMillState('mock'),
+          connected: true,
+          position: { x: 1270, y: 0, z: 0 },
+        },
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'inch' },
+      };
+
+      const result = distanceToGoReducer(state, { eventName: 'BTN_INCH_MM' }, context);
+
+      expect(result?.stateName).toBe('distance-to-go');
+      // Distance = 2540 - 1270 = 1270mm (displayed in mm after toggle)
+      expect(result?.display.X).toBeCloseTo(1270, 0);
+    });
+  });
 });
