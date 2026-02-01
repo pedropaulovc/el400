@@ -5,7 +5,52 @@
 
 version: 2
 updates:
-  - package-ecosystem:  "npm"
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      storybook:
+        patterns:
+          - "@storybook/*"
+          - "storybook"
+          - "eslint-plugin-storybook"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/*"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vite-plugin-*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-plugin-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+      types:
+        patterns:
+          - "@types/*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "tailwindcss-*"
+          - "@tailwindcss/*"
+          - "autoprefixer"
+          - "postcss"
+      react:
+        patterns:
+          - "react"
+          - "react-*"
