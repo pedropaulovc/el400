@@ -14,7 +14,6 @@ updates:
         patterns:
           - "@storybook/*"
           - "storybook"
-          - "eslint-plugin-storybook"
       vitest:
         patterns:
           - "vitest"
@@ -47,10 +46,11 @@ updates:
         patterns:
           - "tailwindcss"
           - "tailwindcss-*"
+          - "tailwind-*"
           - "@tailwindcss/*"
           - "autoprefixer"
           - "postcss"
       react:
         patterns:
           - "react"
-          - "react-*"
+          - "react-dom"
