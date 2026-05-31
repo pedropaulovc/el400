@@ -19,6 +19,7 @@ import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
 import { boltHoleReducer } from './features/bolt-hole';
 import { distanceToGoReducer } from './features/distance-to-go';
+import { setupReducer } from './features/setup';
 
 /**
  * All feature reducers in priority order.
@@ -33,6 +34,7 @@ const featureReducers: FeatureReducer[] = [
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   boltHoleReducer, // Handles bolt hole circle pattern generation
   distanceToGoReducer, // Handles distance-to-go (US-008)
+  setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
   // vMem/nvMem reducers for idle state operations
   absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)
   inchMmReducer, // Handles BTN_INCH_MM with nvMem.defaultUnit toggle
