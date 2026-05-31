@@ -15,7 +15,7 @@ import {
   isCalculatorActive,
 } from '../droStateMachine';
 import { appendDigit, appendDecimal, toggleSign, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
-import { createDisplay, computeNormalDisplay, type AxisDisplayValue } from '../utils/displayComputation';
+import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
 
 /** Calculator operation text displayed in Y window */
 const CALC_OPERATION_MAP: Record<string, string> = {
@@ -29,7 +29,7 @@ const CALC_OPERATION_MAP: Record<string, string> = {
 /** Compute calculator display: X=currentValue, Y=operation text, Z=blank */
 function computeCalculatorDisplay(stateName: DROStateName, calcData: CalculatorData): ReturnType<typeof createDisplay> {
   return createDisplay(
-    calcData.currentValue as AxisDisplayValue,
+    calcData.currentValue,
     CALC_OPERATION_MAP[stateName] ?? '',
     ''
   );
