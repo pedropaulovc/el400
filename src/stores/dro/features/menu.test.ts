@@ -209,12 +209,12 @@ describe('menuReducer', () => {
       expect(result?.stateData.stateDataType).toBe('center-finding');
     });
 
-    it('should return to idle from linear menu (not yet implemented)', () => {
+    it('should enter linear bolt hole axis selection from linear menu (US-029)', () => {
       const state = createTestState('function-menu-linear');
       const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
-      expect(result?.stateName).toBe('idle');
-      expect(result?.stateData.stateDataType).toBe('none');
+      expect(result?.stateName).toBe('linear-bolt-hole-axis');
+      expect(result?.stateData.stateDataType).toBe('linear-bolt-hole');
     });
 
     it('should return to idle from polar menu (not yet implemented)', () => {

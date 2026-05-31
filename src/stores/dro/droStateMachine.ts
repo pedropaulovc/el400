@@ -67,6 +67,11 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Linear bolt hole states (US-029)
+  | 'linear-bolt-hole-axis'
+  | 'linear-bolt-hole-pitch'
+  | 'linear-bolt-hole-holes'
+  | 'linear-bolt-hole-navigate'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -88,6 +93,7 @@ export type DROStateData =
   | EmptyData
   | CenterFindingData
   | BoltHoleData
+  | LinearBoltHoleData
   | ArcData
   | CalculatorData
   | PresetData;
@@ -115,6 +121,18 @@ export interface BoltHoleData extends BaseDROStateData {
   radius: number | null;
   startAngle: number | null;
   holeCount: number | null;
+  currentHole: number;
+}
+
+export interface LinearBoltHoleData extends BaseDROStateData {
+  readonly stateDataType: 'linear-bolt-hole';
+  /** Axis along which the linear pattern is generated (null until selected) */
+  axis: 'X' | 'Y' | 'Z' | null;
+  /** Spacing between holes, stored in mm (null until entered) */
+  pitch: number | null;
+  /** Total number of holes in the pattern (null until entered) */
+  holeCount: number | null;
+  /** 1-indexed current hole the user is navigating to */
   currentHole: number;
 }
 
@@ -230,9 +248,13 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
+/** Check if linear bolt hole mode is active (US-029) */
+export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
+  s.startsWith('linear-bolt-hole-');
+
 /** Check if FN LED should be active (function menu or bolt hole modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
-  isFunctionActive(s) || isBoltHoleActive(s);
+  isFunctionActive(s) || isBoltHoleActive(s) || isLinearBoltHoleActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -266,6 +288,14 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  holeCount: null,
+  currentHole: 1,
+};
+
+export const INITIAL_LINEAR_BOLT_HOLE_DATA: LinearBoltHoleData = {
+  stateDataType: 'linear-bolt-hole',
+  axis: null,
+  pitch: null,
   holeCount: null,
   currentHole: 1,
 };
