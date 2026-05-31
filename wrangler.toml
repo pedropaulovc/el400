@@ -1,0 +1,16 @@
+# Cloudflare Worker (static assets) configuration.
+# Production: main branch -> https://el400.vza.net
+# Previews:   every PR/branch -> a *.el400.<subdomain>.workers.dev preview URL
+#             (provisioned automatically by Workers Builds)
+#
+# Deployed by Workers Builds on each push:
+#   Build command:   npm run build
+#   Deploy command:  npx wrangler deploy
+name = "el400"
+compatibility_date = "2026-05-30"
+
+# Static-assets-only Worker (no server-side `main`): serves the Vite build in ./dist.
+[assets]
+directory = "./dist"
+# SPA fallback so React Router deep links resolve to index.html.
+not_found_handling = "single-page-application"
