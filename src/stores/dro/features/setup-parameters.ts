@@ -29,8 +29,13 @@
  * pressed (AC 39.7).
  */
 
-import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import type {
+  NonVolatileMemory,
+  AxisDirection,
+  ZDepthSense,
+} from '../../../types/nonVolatileMemory';
 import { DEFAULT_SCALE_RESOLUTION } from '../../../types/nonVolatileMemory';
+import { useSettingsStore } from '../../settingsStore';
 
 /** Scope of a setup parameter: per-axis values differ per X/Y/Z; global apply to all. */
 export type SetupParameterScope = 'per-axis' | 'global';
@@ -74,6 +79,16 @@ export interface SetupParameter {
    * choice that should be shown first. Terminal items return ''.
    */
   readonly readValue: (ctx: SetupReadContext) => string;
+  /**
+   * Optional commit-on-change hook. When present, the setup shell persists the
+   * chosen value to nvMem the moment the user cycles the choice (left/right),
+   * instead of buffering it in the discard-on-exit draft. This is the surgical
+   * per-parameter persistence path used by parameters whose effect must take
+   * hold immediately (e.g. Direction, US-002); it is NOT the generic SAU CHG
+   * save engine (US-027), which remains unimplemented. Parameters WITHOUT a
+   * `commit` keep the draft-only semantics (changes discarded on exit).
+   */
+  readonly commit?: (ctx: SetupReadContext, value: string) => void;
 }
 
 /** The SC (scale resolution) parameter id -- used as its per-axis draft key. */
@@ -97,6 +112,12 @@ export const SCALE_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
   { value: '20', label: 'SC 20.0' },
   { value: '50', label: 'SC 50.0' },
 ];
+
+/** The per-axis counting-direction parameter id (US-002) -- its draft key. */
+export const DIRECTION_ID = 'direction';
+
+/** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
+export const Z_DEPTH_ID = 'z-depth';
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -166,6 +187,44 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // Reads the committed taper-on axis (US-045). Full commit wiring lands with
     // setup save (US-027); the value is seeded from nvMem here.
     readValue: (ctx) => ctx.nvMem.taperOnAxis,
+  },
+  {
+    id: DIRECTION_ID,
+    label: 'dir LEF',
+    scope: 'per-axis',
+    choices: [
+      { value: 'normal', label: 'dir LEF' },
+      { value: 'reversed', label: 'dir rGt' },
+    ],
+    // Seed from the selected axis's committed counting direction. On the SELECT
+    // prompt (axis null) fall back to X.
+    readValue: (ctx) => ctx.nvMem.axisDirection[ctx.axis ?? 'X'],
+    // Commit-on-change (US-002): persist the per-axis direction immediately so
+    // the readout sign flips on exit and on every later position update.
+    commit: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        axisDirection: {
+          ...ctx.nvMem.axisDirection,
+          [axis]: value as AxisDirection,
+        },
+      });
+    },
+  },
+  {
+    id: Z_DEPTH_ID,
+    label: 'dEP nEG',
+    scope: 'global',
+    choices: [
+      { value: 'depth-negative', label: 'dEP nEG' },
+      { value: 'depth-positive', label: 'dEP PoS' },
+    ],
+    // Global Z depth-sense preference (AC 2.4).
+    readValue: (ctx) => ctx.nvMem.zDepthSense,
+    // Commit-on-change (US-002): persist immediately, same path as Direction.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ zDepthSense: value as ZDepthSense });
+    },
   },
   {
     id: SETUP_END_ID,

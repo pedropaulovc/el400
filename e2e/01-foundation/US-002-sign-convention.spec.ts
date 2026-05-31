@@ -30,7 +30,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
   for (const axis of ['X', 'Y'] as const) {
     test(`AC 2.1: tool's-eye +${axis} (table-left) is positive under default Direction`, async ({ dro }) => {
       await dro.toggleInchMm(); // work in mm so magnitudes match the spec
-      await expect(await dro.isMmUnits()).toBe(true);
+      expect(await dro.isMmUnits()).toBe(true);
 
       await dro.zeroAxis(axis);
       await dro.waitForAxisValue(axis, 0);
@@ -50,7 +50,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
    */
   test('AC 2.1: table-right under default Direction is negative', async ({ dro }) => {
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    expect(await dro.isMmUnits()).toBe(true);
 
     await dro.zeroAxis('X');
     await dro.waitForAxisValue('X', 0);
@@ -67,7 +67,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
    */
   test('AC 2.2: Direction = riGht flips the sign of the same motion', async ({ dro }) => {
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    expect(await dro.isMmUnits()).toBe(true);
 
     await dro.setAxisDirection('X', 'riGht');
     await dro.zeroAxis('X');
@@ -85,7 +85,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
    */
   test('AC 2.2: toggling Direction back to LEFT restores the standard sign', async ({ dro }) => {
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    expect(await dro.isMmUnits()).toBe(true);
 
     await dro.setAxisDirection('X', 'riGht');
     await dro.zeroAxis('X');
@@ -104,7 +104,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
    */
   test('AC 2.2: Direction is per-axis — flipping X leaves Y standard', async ({ dro }) => {
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    expect(await dro.isMmUnits()).toBe(true);
 
     await dro.setAxisDirection('X', 'riGht');
 
@@ -128,7 +128,7 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
    */
   test('AC 2.6: negative shows a leading minus, positive shows none', async ({ dro }) => {
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    expect(await dro.isMmUnits()).toBe(true);
 
     await dro.zeroAxis('Y');
     await dro.waitForAxisValue('Y', 0);
