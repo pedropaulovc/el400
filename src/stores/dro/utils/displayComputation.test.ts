@@ -148,6 +148,95 @@ describe('computeDisplayPosition — Direction transform', () => {
   });
 });
 
+describe('datum and Direction are independent, composable transforms (AC 2.3)', () => {
+  /** Connected context at a fixed machine point, with a chosen datum (workOffset). */
+  function datumCtx(machineX: number, datumX: number, nvMem: NonVolatileMemory) {
+    const ctx: DROReducerContext = {
+      millState: {
+        ...createDefaultMillState('cncjs'),
+        connected: true,
+        position: { x: machineX, y: 0, z: 0 },
+      },
+      nvMem,
+    };
+    const vMem: VolatileMemoryState = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'abs',
+      workOffsets: { X: datumX, Y: 0, Z: 0 },
+    };
+    return { ctx, vMem };
+  }
+
+  describe('pure datum effect — sign comes from the datum, Direction stays normal', () => {
+    const normal = makeNvMem({ axisDirection: { X: 'normal' } });
+    const MACHINE_X = 10;
+
+    it('a datum on the - side of the point reads POSITIVE', () => {
+      // Zero at machine 4: the point sits at +6 from that datum.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 4, normal);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(6);
+    });
+
+    it('a datum on the + side of the SAME point reads NEGATIVE', () => {
+      // Zero at machine 15: the same point now sits at -5 from that datum.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, normal);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-5);
+    });
+
+    it('the sign flip came purely from the datum: Direction was normal in both', () => {
+      // directionSign('X', normal) === +1, so the negative above is datum-only.
+      const { ctx } = datumCtx(MACHINE_X, 15, normal);
+      expect(ctx.nvMem.axisDirection.X).toBe('normal');
+    });
+  });
+
+  describe('Direction multiplies on top of the datum-derived magnitude', () => {
+    const reversed = makeNvMem({ axisDirection: { X: 'reversed' } });
+    const MACHINE_X = 10;
+
+    it('a +6 (from datum 4) becomes -6 under reversed Direction', () => {
+      const { ctx, vMem } = datumCtx(MACHINE_X, 4, reversed);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-6);
+    });
+
+    it('a -5 (from datum 15) becomes +5 under reversed Direction', () => {
+      // Independent of which datum produced the magnitude: reversed just multiplies.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, reversed);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(5);
+    });
+
+    it('reversed display value is exactly -1x the normal display value, same datum', () => {
+      const { ctx: nCtx, vMem: nVMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
+      const { ctx: rCtx, vMem: rVMem } = datumCtx(MACHINE_X, 4, reversed);
+      const normalVal = computeDisplayPosition('X', nVMem, nCtx);
+      const reversedVal = computeDisplayPosition('X', rVMem, rCtx);
+      expect(reversedVal).toBe(-normalVal);
+    });
+  });
+
+  describe('orthogonality — Direction does not change WHICH datum you measure from', () => {
+    const MACHINE_X = 10;
+
+    it('the datum-relative magnitude (computeAxisPositionMm) is identical under normal and reversed', () => {
+      const { ctx: nCtx, vMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
+      const { ctx: rCtx } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'reversed' } }));
+      // Same datum (4), same point (10): the measured-from magnitude is 6 for both;
+      // only the displayed SIGN differs. This proves the two transforms are orthogonal.
+      expect(computeAxisPositionMm('X', vMem, nCtx)).toBe(6);
+      expect(computeAxisPositionMm('X', vMem, rCtx)).toBe(6);
+    });
+
+    it('changing Direction leaves the chosen datum (workOffset) untouched', () => {
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, makeNvMem({ axisDirection: { X: 'reversed' } }));
+      // The datum is still 15 regardless of Direction; the magnitude measured from
+      // it is -5, and the displayed value is +5 — datum unchanged, sign multiplied.
+      expect(vMem.workOffsets.X).toBe(15);
+      expect(computeAxisPositionMm('X', vMem, ctx)).toBe(-5);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(5);
+    });
+  });
+});
+
 describe('computeAxisPositionMm — datum-only, unaffected by Direction', () => {
   it('returns the raw post-datum mm regardless of axisDirection', () => {
     const reversedCtx = manualContext(
