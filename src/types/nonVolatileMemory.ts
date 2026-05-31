@@ -33,6 +33,29 @@ export interface ScaleResolutionByAxis {
 export type TaperOnAxis = 'X' | 'Z' | 'Zprime';
 
 /**
+ * Per-axis counting direction (manual section 6.2 `dir`). `'normal'` follows the
+ * tool's-eye standard convention (displayed value increases as the tool moves in
+ * the positive machine direction); `'reversed'` flips the displayed sign. Setup
+ * menu labels map `'normal'→LEFT` and `'reversed'→riGht`.
+ */
+export type AxisDirection = 'normal' | 'reversed';
+
+/** Per-axis counting direction. */
+export interface AxisDirectionByAxis {
+  X: AxisDirection;
+  Y: AxisDirection;
+  Z: AxisDirection;
+}
+
+/**
+ * Z depth-sense preference (AC 2.4). `'depth-negative'` is the standard
+ * convention (cutting deeper makes Z more negative); `'depth-positive'` inverts
+ * the Z display sign so increasing cutting depth increases the displayed value.
+ * Composes with the per-axis Direction inside `directionSign`.
+ */
+export type ZDepthSense = 'depth-negative' | 'depth-positive';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -48,7 +71,18 @@ export interface NonVolatileMemory {
   scaleResolution: ScaleResolutionByAxis;
   /** Axis on which the Taper function displays the angle (Section 6.2). */
   taperOnAxis: TaperOnAxis;
+  /** Per-axis counting direction - dir parameter (US-002, manual section 6.2) */
+  axisDirection: AxisDirectionByAxis;
+  /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
+  zDepthSense: ZDepthSense;
 }
+
+/** Mill default counting direction: normal (standard convention) on every axis. */
+export const DEFAULT_AXIS_DIRECTION: AxisDirectionByAxis = {
+  X: 'normal',
+  Y: 'normal',
+  Z: 'normal',
+};
 
 /** Mill default scale resolution: 5 micron on every axis (manual section 6.2). */
 export const DEFAULT_SCALE_RESOLUTION: ScaleResolutionByAxis = {
@@ -67,6 +101,8 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   bootMessageMode: 'show',
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
   taperOnAxis: 'X',
+  axisDirection: DEFAULT_AXIS_DIRECTION,
+  zDepthSense: 'depth-negative',
 };
 
 /**

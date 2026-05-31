@@ -6,8 +6,31 @@
  */
 
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
+import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+
+/**
+ * Pure counting-direction sign for an axis (US-002).
+ *
+ * The displayed position is `rawPositionMm × directionSign(axis, nvMem)`. This is
+ * a display-only transform applied AFTER the datum offset is subtracted; it never
+ * mutates stored machine position, offsets, or macro coordinate math.
+ *
+ * - Base sign comes from the per-axis Direction: `'reversed' → -1`, else `+1`.
+ * - For Z, the depth-sense preference composes on top: `'depth-positive'` inverts
+ *   the Z sign so increasing cutting depth increases the displayed value. A Z axis
+ *   that is both `'reversed'` and `'depth-positive'` double-inverts back to `+1`.
+ *
+ * @param axis - The axis to compute the sign for
+ * @param nvMem - Non-volatile memory (counting direction + Z depth-sense)
+ * @returns +1 (standard) or -1 (flipped)
+ */
+export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
+  const base = nvMem.axisDirection[axis] === 'reversed' ? -1 : 1;
+  const depthFactor = axis === 'Z' && nvMem.zDepthSense === 'depth-positive' ? -1 : 1;
+  return (base * depthFactor) as 1 | -1;
+}
 
 /**
  * Display value for a single axis - can be a number or text string

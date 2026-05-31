@@ -48,6 +48,50 @@ describe('settingsStore', () => {
       const state = useSettingsStore.getState();
       expect(state.nvMem.bootMessageMode).toBe('show');
     });
+
+    it('has normal axis direction on every axis by default', () => {
+      const state = useSettingsStore.getState();
+      expect(state.nvMem.axisDirection).toEqual({
+        X: 'normal',
+        Y: 'normal',
+        Z: 'normal',
+      });
+    });
+
+    it('has depth-negative Z depth-sense by default', () => {
+      const state = useSettingsStore.getState();
+      expect(state.nvMem.zDepthSense).toBe('depth-negative');
+    });
+  });
+
+  describe('persisted-state merge (forward compatibility)', () => {
+    it('fills in new direction fields for an old persisted blob lacking them', () => {
+      // Simulate a persisted blob from before US-002 added axisDirection/zDepthSense.
+      const legacyPersisted = {
+        nvMem: {
+          beepEnabled: false,
+          defaultUnit: 'mm',
+          precision: 3,
+          bootMessageMode: 'skip',
+          scaleResolution: { X: '5', Y: '5', Z: '5' },
+          taperOnAxis: 'X',
+        },
+      };
+
+      const merged = useSettingsStore.persist
+        .getOptions()
+        .merge!(legacyPersisted, useSettingsStore.getState());
+
+      // New fields default; existing persisted values are preserved.
+      expect(merged.nvMem.axisDirection).toEqual({
+        X: 'normal',
+        Y: 'normal',
+        Z: 'normal',
+      });
+      expect(merged.nvMem.zDepthSense).toBe('depth-negative');
+      expect(merged.nvMem.beepEnabled).toBe(false);
+      expect(merged.nvMem.defaultUnit).toBe('mm');
+    });
   });
 
   describe('updateNvMem', () => {
