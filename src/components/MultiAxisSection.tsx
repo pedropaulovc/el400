@@ -3,7 +3,7 @@ import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
 import { useDefaultUnit, useNvMem } from "../stores/settingsStore";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, isFnLedActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, isFnLedActive } from "../stores/dro";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -49,6 +49,12 @@ const MultiAxisSection = () => {
 
   // Bolt hole intro timing - auto-advances after delay
   useBoltHoleIntro(dispatch, droState);
+
+  // Angle hole intro timing - auto-advances after delay
+  useAngleHoleIntro(dispatch, droState);
+
+  // Grid intro timing - auto-advances after delay
+  useGridIntro(dispatch, droState);
 
   // LED indicators
   const mode = useMode();

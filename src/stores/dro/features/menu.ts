@@ -10,9 +10,11 @@ import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CENTER_FINDING_DATA,
   INITIAL_POLAR_DATA,
+  INITIAL_LINEAR_BOLT_HOLE_DATA,
   isFunctionMenuSelectionState,
 } from '../droStateMachine';
 import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
+import { computeLinearAxisSelectDisplay } from './linear-bolt-hole';
 
 /** Menu text displayed for each function menu state */
 export const MENU_TEXT_MAP: Record<string, string> = {
@@ -78,6 +80,14 @@ function handleMenuEnter(
         vMem,
         display: computeNormalDisplay(vMem, context),
       };
+    case 'function-menu-linear':
+      // Enter linear bolt hole: first select the axis for the pattern (US-029)
+      return {
+        stateName: 'linear-bolt-hole-axis',
+        stateData: INITIAL_LINEAR_BOLT_HOLE_DATA,
+        vMem,
+        display: computeLinearAxisSelectDisplay(),
+      };
     case 'function-menu-polar':
       // Polar (US-030): enter plane selection (X-Y / X-Z / Y-Z)
       return {
@@ -85,14 +95,6 @@ function handleMenuEnter(
         stateData: INITIAL_POLAR_DATA,
         vMem,
         display: createDisplay('h-Y', '', ''),
-      };
-    case 'function-menu-linear':
-      // TODO: implement linear
-      return {
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-        vMem,
-        display: computeNormalDisplay(vMem, context),
       };
     default:
       return {

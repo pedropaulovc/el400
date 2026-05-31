@@ -25,6 +25,14 @@ const SecondaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_BOLT_HOLE' });
   };
 
+  const handleAngleHole = () => {
+    dispatch({ eventName: 'BTN_ANGLE_HOLE' });
+  };
+
+  const handleGrid = () => {
+    dispatch({ eventName: 'BTN_GRID' });
+  };
+
   return (
     <>
       <h2 className="sr-only">Secondary functions</h2>
@@ -39,10 +47,10 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">
               <Icon name="arc-contouring-function" /><span className="sr-only">Arc contour</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-angle-hole" title="Angle hole">
+            <DROButton onClick={handleAngleHole} variant="dark" size="secondary" className="p-0" data-testid="btn-angle-hole" title="Angle hole">
               <Icon name="angle-hole-function" /><span className="sr-only">Angle hole</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-grid-hole" title="Grid hole">
+            <DROButton onClick={handleGrid} variant="dark" size="secondary" className="p-0" data-testid="btn-grid-hole" title="Grid hole">
               <Icon name="grid-hole-function" /><span className="sr-only">Grid hole</span>
             </DROButton>
           </div>

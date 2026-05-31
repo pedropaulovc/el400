@@ -18,6 +18,9 @@ import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
 import { boltHoleReducer } from './features/bolt-hole';
+import { angleHoleReducer } from './features/angle-hole';
+import { linearBoltHoleReducer } from './features/linear-bolt-hole';
+import { gridReducer } from './features/grid';
 import { distanceToGoReducer } from './features/distance-to-go';
 import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
@@ -34,6 +37,9 @@ const featureReducers: FeatureReducer[] = [
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   boltHoleReducer, // Handles bolt hole circle pattern generation
+  angleHoleReducer, // Handles angle hole (linear hole pattern) generation
+  linearBoltHoleReducer, // Handles linear bolt hole pattern generation (US-029)
+  gridReducer, // Handles grid drilling pattern generation (US-020)
   distanceToGoReducer, // Handles distance-to-go (US-008)
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
   // vMem/nvMem reducers for idle state operations
