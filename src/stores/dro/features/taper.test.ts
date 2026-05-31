@@ -74,19 +74,21 @@ describe('taperReducer', () => {
       expect(result!.display.Z as number).toBeCloseTo(5 / 25.4, 4);
     });
 
-    it('taper on Z: angle on Z = atan(dZ/dX), radius on X = dZ', () => {
-      const ctx = contextWith('Z', 50, 0, 5);
+    it('taper on Z: angle on Z = atan(dX/dZ), radius on X = dX', () => {
+      // Realistic taper: dX = 5mm radius travel, dZ = 50mm length travel.
+      const ctx = contextWith('Z', 5, 0, 50);
       const result = taperReducer(
         activeState({ x: 0, y: 0, z: 0 }),
         { eventName: 'MILL_STATE_CHANGED' },
         ctx
       );
       expect(result).not.toBeNull();
-      // taper on Z -> radius axis is X, length axis is Z.
-      // angle = atan(dRadiusAxis / dLengthAxis) = atan(dX/dZ) = atan(50/5)
-      expect(result!.display.Z as number).toBeCloseTo((Math.atan2(50, 5) * 180) / Math.PI, 3);
-      // radius shown on X = dX travel
-      expect(result!.display.X as number).toBeCloseTo(50 / 25.4, 4);
+      // taper on Z -> radius axis is X, length axis is Z; only the display
+      // routing differs from taper-on-X (angle now on Z, radius now on X).
+      // half-angle = atan(dX/dZ) = atan(5/50) = 5.7106 deg on Z
+      expect(result!.display.Z as number).toBeCloseTo(5.7106, 3);
+      // radius shown on X = dX travel = 5mm (default inch unit -> convert)
+      expect(result!.display.X as number).toBeCloseTo(5 / 25.4, 4);
     });
 
     it("taper on Z' pairs radius on X (lathe 4th-axis variant)", () => {

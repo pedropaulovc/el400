@@ -30,6 +30,8 @@ test.describe('US-039: Setup Menu Navigation', () => {
     // Scroll up to End and exit (AC 39.7).
     await dro.key8.click(); // EnF on
     await dro.waitForAxisPureTextValue('X', 'EnF on');
+    await dro.key8.click(); // tAPEr on (shows current value label, seeded to X)
+    await dro.waitForAxisPureTextValue('X', 'tAPEr X');
     await dro.key8.click(); // End
     await dro.waitForAxisPureTextValue('X', 'End');
     await dro.enterButton.click();
@@ -47,6 +49,7 @@ test.describe('US-039: Setup Menu Navigation', () => {
 
     // Scroll up through every item back to the first (wrap-around).
     await dro.key8.click(); // EnF on
+    await dro.key8.click(); // tAPEr on
     await dro.key8.click(); // End
     await dro.waitForAxisPureTextValue('X', 'End');
     await dro.key8.click(); // wraps to first

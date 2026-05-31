@@ -2,12 +2,12 @@
  * Taper Calculation Feature Reducer (US-045)
  *
  * Lathe-class function (manual Section 9.2.2). From two ends of a tapered job
- * the DRO derives the taper Radius (R) and included Angle (theta). The user
+ * the DRO derives the taper Radius (R) and half-angle (theta). The user
  * touches one end, (optionally) zeroes the axes, enters the function, then
  * moves to the other end; the angle and radius update live.
  *
  * Geometry: the cross-slide axis (X) measures the radius travel and the bed
- * axis (Z) measures the length travel. The included angle is
+ * axis (Z) measures the length travel. The taper half-angle is
  *   theta = atan(deltaX / deltaZ)
  * measured from the position captured when the function was entered.
  *
@@ -41,7 +41,7 @@ function toDegrees(radians: number): number {
 }
 
 /**
- * Compute the taper Radius (mm) and Angle (degrees) from the travel since the
+ * Compute the taper Radius (mm) and half-angle (degrees) from the travel since the
  * function was entered.
  *
  * - radius = travel on the radius axis (X)
