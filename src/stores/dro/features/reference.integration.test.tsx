@@ -3,7 +3,9 @@
  *
  * Drives the rendered simulator via data-testids and asserts the displayed
  * values. Reference-mark crossing is delivered through the same dispatch the
- * mill connection uses, after positioning the (connected) mill.
+ * mill connection uses (MILL_STATE_CHANGED) after positioning the (connected)
+ * mill — the real-user jog path — and is additionally exercised through the
+ * explicit ENCODER_REF_MARK_CROSSED latch.
  *
  * @see project/user-stories/03-data-management/US-012-datum-recall.md
  */
@@ -39,6 +41,29 @@ function crossReferenceMark(axis: 'X' | 'Y' | 'Z', machinePos: number) {
     });
     useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
     useDROStore.getState().dispatch({ eventName: 'ENCODER_REF_MARK_CROSSED', axis });
+  });
+}
+
+/**
+ * Real-user path only: jog the (connected) mill so the selected axis lands at
+ * `machinePos`, emitting MILL_STATE_CHANGED — exactly what a debug-panel jog or
+ * a connected mill does. No explicit reference hook is fired here, so this
+ * proves the running app latches the datum from machine motion alone.
+ */
+function jogAcrossMark(axis: 'X' | 'Y' | 'Z', machinePos: number) {
+  act(() => {
+    useMillStore.setState({
+      millState: {
+        ...createDefaultMillState('mock'),
+        connected: true,
+        position: {
+          x: axis === 'X' ? machinePos : 0,
+          y: axis === 'Y' ? machinePos : 0,
+          z: axis === 'Z' ? machinePos : 0,
+        },
+      },
+    });
+    useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
   });
 }
 
@@ -98,12 +123,13 @@ describe('Reference / Datum recall integration', () => {
     await user.click(screen.getByTestId('axis-select-x'));
     expect(useDROStore.getState().stateName).toBe('reference-home-waiting');
 
-    crossReferenceMark('X', 37.5);
+    // Jog so the axis lands on the mark (10mm) — Home datum reads 0 there.
+    crossReferenceMark('X', 10);
 
     expect(useDROStore.getState().stateName).toBe('idle');
-    // At the mark, Home datum reads 0
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
-    expect(useDROStore.getState().vMem.workOffsets.X).toBeCloseTo(37.5, 4);
+    // Datum referenced to the mark: offset = mark - 0 = 10.
+    expect(useDROStore.getState().vMem.workOffsets.X).toBeCloseTo(10, 4);
   });
 
   it('AC 12.3/12.4 nC rEF: crossing mark recalls stored machine reference', async () => {
@@ -118,10 +144,76 @@ describe('Reference / Datum recall integration', () => {
     await user.click(screen.getByTestId('axis-select-x'));
     expect(useDROStore.getState().stateName).toBe('reference-machine-waiting');
 
-    crossReferenceMark('X', 100);
+    // Land on the mark (10mm) so the recalled value shows at the crossing point.
+    crossReferenceMark('X', 10);
 
     expect(useDROStore.getState().stateName).toBe('idle');
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(MACHINE_REFERENCE_VALUES_MM.X, 4);
+    // offset = mark - storedRef, so the count past the mark stays correct.
+    expect(useDROStore.getState().vMem.workOffsets.X).toBeCloseTo(
+      10 - MACHINE_REFERENCE_VALUES_MM.X,
+      4
+    );
+  });
+
+  it('AC 12.3 real-user trigger: jogging the axis across the mark latches the datum (no hook)', async () => {
+    const user = userEvent.setup();
+    renderSimulator();
+
+    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
+
+    await user.click(screen.getByTestId('btn-reference'));
+    await user.click(screen.getByTestId('key-6')); // -> nC rEF
+    await user.click(screen.getByTestId('key-enter'));
+    await user.click(screen.getByTestId('axis-select-x'));
+    expect(useDROStore.getState().stateName).toBe('reference-machine-waiting');
+
+    // Jog so the axis lands on the mark (10mm) via MILL_STATE_CHANGED only —
+    // the real-user path (no explicit hook). Display reads the stored value.
+    jogAcrossMark('X', 10);
+
+    expect(useDROStore.getState().stateName).toBe('idle');
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(MACHINE_REFERENCE_VALUES_MM.X, 4);
+    expect(useDROStore.getState().vMem.workOffsets.X).toBeCloseTo(
+      10 - MACHINE_REFERENCE_VALUES_MM.X,
+      4
+    );
+  });
+
+  it('AC 12.3 real-user trigger: jogging short of the mark keeps waiting (no latch)', async () => {
+    const user = userEvent.setup();
+    renderSimulator();
+
+    await user.click(screen.getByTestId('btn-reference'));
+    await user.click(screen.getByTestId('key-enter')); // honE
+    await user.click(screen.getByTestId('axis-select-x'));
+    expect(useDROStore.getState().stateName).toBe('reference-home-waiting');
+
+    // Jog only to 5mm — short of the 10mm mark; must stay waiting.
+    jogAcrossMark('X', 5);
+    expect(useDROStore.getState().stateName).toBe('reference-home-waiting');
+
+    // Continue past the mark — now it latches.
+    jogAcrossMark('X', 12);
+    expect(useDROStore.getState().stateName).toBe('idle');
+  });
+
+  it('AC 12.6: the waiting axis digits blink while waiting for the mark', async () => {
+    const user = userEvent.setup();
+    renderSimulator();
+
+    await user.click(screen.getByTestId('btn-reference'));
+    await user.click(screen.getByTestId('key-enter')); // honE
+    await user.click(screen.getByTestId('axis-select-x'));
+    expect(useDROStore.getState().stateName).toBe('reference-home-waiting');
+
+    // The selected axis (X) digits carry the blink marker; others do not.
+    const xDigits = document.querySelector('[data-testid="axis-display-x"] [data-blinking="true"]');
+    expect(xDigits).not.toBeNull();
+    expect(xDigits?.className).toContain('animate-blink');
+
+    const yDigits = document.querySelector('[data-testid="axis-display-y"] [data-blinking="true"]');
+    expect(yDigits).toBeNull();
   });
 
   it('forces ABS mode when entered from INC (§7.7)', async () => {

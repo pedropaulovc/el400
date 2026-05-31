@@ -112,6 +112,18 @@ export const useStateName = () => useDROStore((s) => s.stateName);
 /** Get DRO state data (calculator, center-finding, etc.) */
 export const useStateData = () => useDROStore((s) => s.stateData);
 
+/**
+ * Reference waiting blink (manual §7.7.1): returns the axis whose zero should
+ * blink while waiting for the encoder reference mark, or null when not waiting.
+ */
+export const useReferenceWaitingAxis = (): 'X' | 'Y' | 'Z' | null =>
+  useDROStore((s) => {
+    if (s.stateName !== 'reference-home-waiting' && s.stateName !== 'reference-machine-waiting') {
+      return null;
+    }
+    return s.stateData.stateDataType === 'reference' ? s.stateData.selectedAxis : null;
+  });
+
 /** Get full volatile memory state */
 export const useVMem = () => useDROStore((s) => s.vMem);
 

@@ -408,4 +408,23 @@ export class DROPage {
       { key: hookKey, a: axis }
     );
   }
+
+  /**
+   * Real-user jog path (US-012): move the mock encoder so the axis lands on the
+   * reference-mark machine position, WITHOUT invoking the in-app test hook.
+   *
+   * The mock CNCjs server emits a position update, the app dispatches
+   * MILL_STATE_CHANGED, and the reference reducer detects the jog crossing the
+   * mark and latches the datum — exactly as a human jogging a connected mill (or
+   * the debug panel) would trigger it. This proves the latch needs no test hook.
+   *
+   * @param axis - The axis to jog
+   * @param markMachinePositionMm - Machine position of the mark in mm
+   */
+  async jogAcrossEncoderRefMark(
+    axis: 'X' | 'Y' | 'Z',
+    markMachinePositionMm: number
+  ): Promise<void> {
+    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
+  }
 }

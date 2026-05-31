@@ -17,11 +17,16 @@
  *   reference-menu-home    --ENT--> reference-home-select
  *   reference-menu-machine --ENT--> reference-machine-select
  *   reference-*-select --BTN_SELECT_axis--> reference-*-waiting (blinking 0)
- *   reference-*-waiting --ENCODER_REF_MARK_CROSSED--> idle (datum set)
+ *   reference-*-waiting --(jog across mark)--> idle (datum set)
  *
- * Reference-mark crossing is modeled by the ENCODER_REF_MARK_CROSSED event: the
- * current machine position is treated as the mark location, and the axis work
- * offset is set so the displayed ABS value becomes the desired reference value.
+ * Reference-mark crossing: while waiting, each MILL_STATE_CHANGED tick checks
+ * whether the selected axis jogged across REFERENCE_MARK_POSITION_MM. When the
+ * jog segment spans the mark, the datum latches — so a real user jogging in
+ * debug mode (or a connected mill) triggers the recall by moving the axis. The
+ * explicit ENCODER_REF_MARK_CROSSED event provides the same latch for the
+ * debug-panel "Cross Ref Mark" control and for tests; it treats the current
+ * machine position as the mark. Either way the axis work offset (and manual
+ * value) is set so the displayed ABS value becomes the desired reference value.
  */
 
 import type { FeatureReducer, DROReducerContext } from '../types';
@@ -62,6 +67,30 @@ export const MACHINE_REFERENCE_VALUES_MM: Record<Axis, number> = {
   Z: 25.4,
 };
 
+/**
+ * Machine position (mm) of the encoder reference mark per axis.
+ *
+ * The encoder's index pulse has no physical analog in the simulator, so we
+ * model it at a fixed machine coordinate. While waiting, jogging the selected
+ * axis across this coordinate latches the datum — reachable from the debug
+ * origin (0,0,0) by jogging out to the mark.
+ */
+export const REFERENCE_MARK_POSITION_MM: Record<Axis, number> = {
+  X: 10,
+  Y: 10,
+  Z: 10,
+};
+
+/**
+ * True when the jog segment [from, to] spans the mark coordinate (inclusive of
+ * the endpoint), i.e. the axis crossed or landed on the reference mark.
+ */
+function segmentCrossesMark(from: number, to: number, mark: number): boolean {
+  const lo = Math.min(from, to);
+  const hi = Math.max(from, to);
+  return lo <= mark && mark <= hi && from !== to;
+}
+
 /** Read the machine position for an axis from context. */
 function machinePosition(axis: Axis, context: DROReducerContext): number {
   const { position } = context.millState;
@@ -101,22 +130,26 @@ function exitToIdle(
 }
 
 /**
- * Set the datum for the selected axis so the displayed ABS value becomes
- * `referenceValue` at the current (mark) machine position, then return to idle.
+ * Set the datum for the selected axis so the displayed ABS value reads
+ * `referenceValue` when the axis is at `markMachinePos` (the reference mark),
+ * then return to idle.
  *
  * Both representations are updated so the datum is reflected regardless of
  * connection state (mirrors axis-operations setAxisValueMm):
- * - connected: ABS display = machinePos - workOffset, so set the work offset.
+ * - connected: ABS display = machinePos - workOffset. Set the offset relative
+ *   to the MARK so counting stays correct as the axis moves past the mark.
  * - disconnected (NoOp/manual, the default source): ABS display reads
- *   manualAbsoluteValues, so set that to the reference value directly.
+ *   manualAbsoluteValues, which has no live machine position, so it shows the
+ *   reference value at the moment of crossing.
  */
 function applyDatum(
   axis: Axis,
   referenceValue: number,
+  markMachinePos: number,
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): DROStatePayload {
-  const offset = machinePosition(axis, context) - referenceValue;
+  const offset = markMachinePos - referenceValue;
   const newVMem: VolatileMemoryState = {
     ...vMem,
     workOffsets: { ...vMem.workOffsets, [axis]: offset },
@@ -199,7 +232,8 @@ export const referenceReducer: FeatureReducer = (current, event, context) => {
         : 'reference-machine-waiting';
     return {
       stateName: waitingState,
-      stateData: { ...refData, selectedAxis: axis },
+      // Arm crossing detection from the axis's current machine position.
+      stateData: { ...refData, selectedAxis: axis, markArmedFromPos: machinePosition(axis, context) },
       vMem,
       display: computeWaitingDisplay(axis),
     };
@@ -207,23 +241,34 @@ export const referenceReducer: FeatureReducer = (current, event, context) => {
 
   // ── Waiting for the encoder reference mark ─────────────────────────
   if (state === 'reference-home-waiting' || state === 'reference-machine-waiting') {
-    // Position updates while waiting must not move us out of the waiting state.
+    const axis = refData.selectedAxis;
+    const referenceValue =
+      axis !== null && state === 'reference-machine-waiting'
+        ? MACHINE_REFERENCE_VALUES_MM[axis]
+        : 0;
+
+    // Jogging the selected axis across the mark latches the datum. This is the
+    // real-user path: a connected mill or debug-panel jog emits MILL_STATE_CHANGED.
     if (eventName === 'MILL_STATE_CHANGED') {
+      if (axis === null) return current;
+      const fromPos = refData.markArmedFromPos;
+      const toPos = machinePosition(axis, context);
+      const mark = REFERENCE_MARK_POSITION_MM[axis];
+      if (fromPos !== null && segmentCrossesMark(fromPos, toPos, mark)) {
+        return applyDatum(axis, referenceValue, mark, vMem, context);
+      }
+      // No crossing yet: keep the blinking zero and advance the sampled position.
       return {
         ...current,
-        display: computeWaitingDisplay(refData.selectedAxis),
+        stateData: { ...refData, markArmedFromPos: toPos },
+        display: computeWaitingDisplay(axis),
       };
     }
+
+    // Explicit latch (debug-panel control / tests): treat current pos as the mark.
     if (eventName === 'ENCODER_REF_MARK_CROSSED') {
-      // Only the selected axis triggers datum capture.
-      if (refData.selectedAxis === null || event.axis !== refData.selectedAxis) {
-        return current;
-      }
-      const referenceValue =
-        state === 'reference-machine-waiting'
-          ? MACHINE_REFERENCE_VALUES_MM[refData.selectedAxis]
-          : 0;
-      return applyDatum(refData.selectedAxis, referenceValue, vMem, context);
+      if (axis === null || event.axis !== axis) return current;
+      return applyDatum(axis, referenceValue, machinePosition(axis, context), vMem, context);
     }
     return current;
   }

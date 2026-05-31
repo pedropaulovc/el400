@@ -241,6 +241,12 @@ export interface ReferenceData extends BaseDROStateData {
   readonly stateDataType: 'reference';
   referenceMode: 'HOME' | 'MACHINE_RECALL';
   selectedAxis: 'X' | 'Y' | 'Z' | null;
+  /**
+   * Machine position (mm) of the selected axis at the last sampled tick while
+   * waiting for the mark. Used to detect the jog segment crossing the encoder
+   * reference mark. null until an axis is selected.
+   */
+  markArmedFromPos: number | null;
 }
 
 /** Stored point for center finding operations */
@@ -456,6 +462,7 @@ export const INITIAL_REFERENCE_DATA: ReferenceData = {
   stateDataType: 'reference',
   referenceMode: 'HOME',
   selectedAxis: null,
+  markArmedFromPos: null,
 };
 
 /**

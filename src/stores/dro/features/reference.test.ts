@@ -6,14 +6,17 @@
  * - §7.7.2.2 Recall Machine Reference ("nC rEF"): datum at a fixed distance
  *   from the mark.
  *
- * The reference mark crossing is modeled by the ENCODER_REF_MARK_CROSSED event:
- * the current machine position is taken as the mark location and the work
- * offset is set so the displayed ABS value matches the desired reference value.
+ * Reference mark crossing happens two ways, both covered here:
+ * - Real-user path: jogging the selected axis across REFERENCE_MARK_POSITION_MM
+ *   emits MILL_STATE_CHANGED; the reducer latches when the segment spans the mark.
+ * - Explicit latch (debug control / E2E hook): ENCODER_REF_MARK_CROSSED treats
+ *   the current machine position as the mark.
  */
 import { describe, it, expect } from 'vitest';
 import { referenceReducer } from './reference';
 import {
   MACHINE_REFERENCE_VALUES_MM,
+  REFERENCE_MARK_POSITION_MM,
   REFERENCE_TEXT,
 } from './reference';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
@@ -161,6 +164,59 @@ describe('referenceReducer', () => {
       // Still waiting; offset unchanged
       expect(result?.stateName).toBe('reference-home-waiting');
       expect(result?.vMem.workOffsets.X).toBe(0);
+    });
+  });
+
+  describe('AC 12.3 (real-user path): jogging across the mark via MILL_STATE_CHANGED', () => {
+    const MARK = REFERENCE_MARK_POSITION_MM.X; // 10mm
+
+    it('HOME: jog segment spanning the mark latches datum to 0 at the mark', () => {
+      // Armed just below the mark (e.g. jogged out to 9mm).
+      const state = createTestState(
+        'reference-home-waiting',
+        refData({ referenceMode: 'HOME', selectedAxis: 'X', markArmedFromPos: 9 })
+      );
+      // Next tick: machine reaches the mark (10mm).
+      const result = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, connectedContext(MARK, 0, 0));
+      expect(result?.stateName).toBe('idle');
+      // Datum referenced to the mark: offset = mark - 0 = 10; display at mark = 0.
+      expect(result?.vMem.workOffsets.X).toBeCloseTo(MARK, 4);
+    });
+
+    it('MACHINE_RECALL: jog across the mark restores the stored value at the mark', () => {
+      const state = createTestState(
+        'reference-machine-waiting',
+        refData({ referenceMode: 'MACHINE_RECALL', selectedAxis: 'X', markArmedFromPos: 8 })
+      );
+      const result = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, connectedContext(12, 0, 0));
+      expect(result?.stateName).toBe('idle');
+      // offset = mark - storedRef so display reads storedRef when axis is at the mark.
+      expect(result?.vMem.workOffsets.X).toBeCloseTo(MARK - MACHINE_REFERENCE_VALUES_MM.X, 4);
+    });
+
+    it('stays waiting and advances the sampled position when the jog has not reached the mark', () => {
+      const state = createTestState(
+        'reference-home-waiting',
+        refData({ referenceMode: 'HOME', selectedAxis: 'X', markArmedFromPos: 0 })
+      );
+      const result = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, connectedContext(5, 0, 0));
+      expect(result?.stateName).toBe('reference-home-waiting');
+      // Sampled position advanced so a later tick can detect the crossing.
+      const d = result?.stateData;
+      expect(d?.stateDataType).toBe('reference');
+      if (d?.stateDataType === 'reference') {
+        expect(d.markArmedFromPos).toBe(5);
+      }
+    });
+
+    it('does not latch when a non-selected axis jogs across its mark', () => {
+      const state = createTestState(
+        'reference-home-waiting',
+        refData({ referenceMode: 'HOME', selectedAxis: 'X', markArmedFromPos: 0 })
+      );
+      // X stays at 0 (below mark); only Y moves past 10.
+      const result = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, connectedContext(0, 12, 0));
+      expect(result?.stateName).toBe('reference-home-waiting');
     });
   });
 
