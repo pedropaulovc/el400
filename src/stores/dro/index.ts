@@ -54,5 +54,11 @@ export {
   BOLT_HOLE_INTRO_DURATION_MS,
 } from './features/bolt-hole';
 
+// Re-export angle hole feature
+export {
+  useAngleHoleIntro,
+  ANGLE_HOLE_INTRO_DURATION_MS,
+} from './features/angle-hole';
+
 // Re-export bolt hole types and guards
-export { isBoltHoleActive, isFnLedActive } from './droStateMachine';
+export { isBoltHoleActive, isAngleHoleActive, isFnLedActive } from './droStateMachine';
