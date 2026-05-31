@@ -121,6 +121,54 @@ test.describe('US-002: Sign Convention and Axis Direction', () => {
   });
 
   /**
+   * AC 2.2 (persistence): the flipped Direction must apply to EVERY subsequent
+   * encoder update, not just the first move after the toggle. A one-shot impl
+   * that flipped only the next reading would pass the basic flip test but fail
+   * here on the second, cumulative jog.
+   */
+  test('AC 2.2: flipped Direction persists across successive jogs', async ({ dro }) => {
+    await dro.toggleInchMm();
+    expect(await dro.isMmUnits()).toBe(true);
+
+    await dro.setAxisDirection('X', 'riGht');
+    await dro.zeroAxis('X');
+    await dro.waitForAxisValue('X', 0);
+
+    // First jog: table-left 3 -> standard +3, flipped -3.
+    await dro.simulateTableMove('X', 'left', 3);
+    await dro.waitForAxisValue('X', -3);
+
+    // Second jog (no re-toggle): another table-left 5, cumulative table-left 8.
+    // Flip must still apply -> -8, proving it is a persisted setting.
+    await dro.simulateTableMove('X', 'left', 5);
+    await dro.waitForAxisValue('X', -8);
+
+    // A table-right jog under the flip moves the reading toward zero / positive.
+    await dro.simulateTableMove('X', 'right', 10);
+    await dro.waitForAxisValue('X', 2);
+  });
+
+  /**
+   * AC 2.2 (units): a Direction flip composes correctly with the inch/mm unit
+   * transform. Done entirely in the DEFAULT inch unit so a flipped 25.4 mm move
+   * must read exactly -1.0000 inch — catching an impl that applies the sign in
+   * the wrong order relative to unit conversion or only handles mm.
+   */
+  test('AC 2.2: Direction flip is correct in inch units', async ({ dro }) => {
+    // Stay in the default inch unit (US-001 AC 1.3); confirm it.
+    expect(await dro.isInchUnits()).toBe(true);
+
+    await dro.setAxisDirection('X', 'riGht');
+    await dro.zeroAxis('X');
+    await dro.waitForAxisValue('X', 0);
+
+    // 25.4 mm table-left = +1 inch standard; flipped -> -1.0000 inch.
+    await dro.simulateTableMove('X', 'left', 25.4);
+    await dro.waitForAxisPureNumberValue('X', -1, 4);
+    expect((await dro.getAxisRawText('X')).startsWith('-')).toBe(true);
+  });
+
+  /**
    * AC 2.6: a negative value is shown with a leading '-'; positive values have
    * no sign. Verified on the raw display text, and the negative is produced by a
    * real motion (table-right under default Direction) — tying 2.6 to the sign
