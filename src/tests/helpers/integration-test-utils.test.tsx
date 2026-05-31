@@ -25,7 +25,7 @@ function injectMockAxisDisplay(axis: 'x' | 'y' | 'z', content: string) {
 function cleanupMockElements() {
   ['x', 'y', 'z'].forEach(axis => {
     const element = document.querySelector(`[data-testid="axis-value-${axis}"]`);
-    if (element && element.parentNode === document.body) {
+    if (element?.parentNode === document.body) {
       document.body.removeChild(element);
     }
   });
