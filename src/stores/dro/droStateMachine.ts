@@ -77,7 +77,10 @@ export type DROStateName =
   | 'preset-input-x'
   | 'preset-input-y'
   | 'preset-input-z'
-  | 'distance-to-go';
+  | 'distance-to-go'
+  // Setup menu states (US-039)
+  | 'setup-select'
+  | 'setup-parameter';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -96,7 +99,8 @@ export type DROStateData =
   | LinearBoltHoleData
   | ArcData
   | CalculatorData
-  | PresetData;
+  | PresetData
+  | SetupData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -158,6 +162,20 @@ export interface PresetData extends BaseDROStateData {
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
 }
 
+export interface SetupData extends BaseDROStateData {
+  readonly stateDataType: 'setup';
+  /** Axis being configured; null while showing the SELECT prompt. */
+  selectedAxis: 'X' | 'Y' | 'Z' | null;
+  /** Index into SETUP_PARAMETERS of the highlighted item. */
+  currentParamIndex: number;
+  /**
+   * Uncommitted parameter values keyed by "<axis|GLOBAL>:<paramId>".
+   * Per-axis params are scoped to selectedAxis; global params use the GLOBAL
+   * key. Committed only on SAU CHG exit (US-027); discarded on End (AC 39.8).
+   */
+  draftValues: Record<string, string>;
+}
+
 /** Stored point for center finding operations */
 export interface StoredPoint {
   X: number;
@@ -202,6 +220,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
   | { eventName: 'BTN_DISTANCE_TO_GO' }
+  | { eventName: 'BTN_SETUP' }
   // Axis selection buttons (select without zeroing)
   // In calculator mode, BTN_SELECT_Y cycles operations
   | { eventName: 'BTN_SELECT_X' }
@@ -260,6 +279,10 @@ export const isFnLedActive = (s: DROStateName): boolean =>
 export const isPresetActive = (s: DROStateName): boolean =>
   s.startsWith('preset-') || s === 'distance-to-go';
 
+/** Check if setup menu is active (any setup-* state) */
+export const isSetupActive = (s: DROStateName): boolean =>
+  s.startsWith('setup-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -308,6 +331,13 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+};
+
+export const INITIAL_SETUP_DATA: SetupData = {
+  stateDataType: 'setup',
+  selectedAxis: null,
+  currentParamIndex: 0,
+  draftValues: {},
 };
 
 /**

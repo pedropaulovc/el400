@@ -107,6 +107,7 @@ States are a **flat collection** (not nested). Each feature may define multiple 
 - Calculator: `calculator-idle`, `calculator-add`, `calculator-sub`, `calculator-multi`, `calculator-div`
 - Function Menu: `function-menu-center`, `function-menu-circle`, `function-menu-line`, `function-menu-linear`, `function-menu-polar`
 - Center Finding: `function-menu-center-line-point-1/2`, `function-menu-center-line-result`, `function-menu-center-circle-point-1/2/3`, `function-menu-center-circle-result`
+- Setup Menu: `setup-select` (SELECT prompt), `setup-parameter` (axis chosen, navigating params). Parameters live in a registry (`src/stores/dro/features/setup-parameters.ts`) — add a new setup option by appending one `SetupParameter` entry there; the navigation shell needs no changes. See the file header for the recipe.
 
 ## Core Types
 
