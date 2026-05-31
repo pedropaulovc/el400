@@ -43,6 +43,9 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  // Polar coordinate display states (US-030)
+  | 'polar-select-plane'
+  | 'polar-coordinates'
   // Center line states (2 points)
   | 'function-menu-center-line-point-1'
   | 'function-menu-center-line-point-2'
@@ -58,6 +61,13 @@ export type DROStateName =
   | 'calculator-sub'
   | 'calculator-multi'
   | 'calculator-div'
+  // Calculator trig states (unary operations - US-014)
+  | 'calculator-sin'
+  | 'calculator-cos'
+  | 'calculator-tan'
+  | 'calculator-asin'
+  | 'calculator-acos'
+  | 'calculator-atan'
   // Bolt hole circle states
   | 'bolt-hole-intro'
   | 'bolt-hole-menu-select'
@@ -78,6 +88,37 @@ export type DROStateName =
   | 'arc-contour-cut-type'
   | 'arc-contour-max-cut'
   | 'arc-contour-navigate'
+  // Angle hole (linear hole pattern) states (US-019)
+  | 'angle-hole-intro'
+  | 'angle-hole-start-x'
+  | 'angle-hole-start-y'
+  | 'angle-hole-pitch'
+  | 'angle-hole-angle'
+  | 'angle-hole-holes'
+  | 'angle-hole-navigate'
+  // Bolt hole arc states (US-017)
+  | 'bolt-hole-arc-center-x'
+  | 'bolt-hole-arc-center-y'
+  | 'bolt-hole-arc-radius'
+  | 'bolt-hole-arc-start-angle'
+  | 'bolt-hole-arc-end-angle'
+  | 'bolt-hole-arc-holes'
+  | 'bolt-hole-arc-navigate'
+  // Linear bolt hole states (US-029)
+  | 'linear-bolt-hole-axis'
+  | 'linear-bolt-hole-pitch'
+  | 'linear-bolt-hole-holes'
+  | 'linear-bolt-hole-navigate'
+  // Grid drilling states (US-020)
+  | 'grid-intro'
+  | 'grid-start-x'
+  | 'grid-start-y'
+  | 'grid-pitch-x'
+  | 'grid-pitch-y'
+  | 'grid-angle'
+  | 'grid-holes-x'
+  | 'grid-holes-y'
+  | 'grid-navigate'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -102,9 +143,13 @@ export type DROStateData =
   | EmptyData
   | CenterFindingData
   | BoltHoleData
+  | AngleHoleData
+  | LinearBoltHoleData
+  | GridData
   | ArcData
   | CalculatorData
   | PresetData
+  | PolarData
   | SetupData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -129,8 +174,44 @@ export interface BoltHoleData extends BaseDROStateData {
   centerY: number | null;
   radius: number | null;
   startAngle: number | null;
+  /** End angle of the arc (ARC mode only); null in CIRCLE mode */
+  endAngle: number | null;
   holeCount: number | null;
   currentHole: number;
+}
+
+export interface AngleHoleData extends BaseDROStateData {
+  readonly stateDataType: 'angle-hole';
+  startX: number | null;
+  startY: number | null;
+  pitch: number | null;
+  lineAngle: number | null;
+  holeCount: number | null;
+  currentHole: number;
+}
+
+export interface LinearBoltHoleData extends BaseDROStateData {
+  readonly stateDataType: 'linear-bolt-hole';
+  /** Axis along which the linear pattern is generated (null until selected) */
+  axis: 'X' | 'Y' | 'Z' | null;
+  /** Spacing between holes, stored in mm (null until entered) */
+  pitch: number | null;
+  /** Total number of holes in the pattern (null until entered) */
+  holeCount: number | null;
+  /** 1-indexed current hole the user is navigating to */
+  currentHole: number;
+}
+
+export interface GridData extends BaseDROStateData {
+  readonly stateDataType: 'grid';
+  startX: number | null;   // mm
+  startY: number | null;   // mm
+  pitchX: number | null;   // mm, spacing along grid X axis
+  pitchY: number | null;   // mm, spacing along grid Y axis
+  angle: number | null;    // degrees, tilt of grid X axis from machine +X
+  holesX: number | null;   // columns
+  holesY: number | null;   // rows
+  currentHole: number;     // 1-indexed, row-major
 }
 
 /** Cut offset type for arc contouring (which side of the radius the tool runs). */
@@ -150,10 +231,19 @@ export interface ArcData extends BaseDROStateData {
   currentPoint: number;
 }
 
+/** Binary calculator operations (require two operands) */
+export type CalculatorBinaryOperation = 'ADD' | 'SUB' | 'MULTI' | 'DIV';
+
+/** Unary trig calculator operations (operate on a single operand) - US-014 */
+export type CalculatorTrigOperation = 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN';
+
+/** All calculator operations cycled through with the Y key */
+export type CalculatorOperation = CalculatorBinaryOperation | CalculatorTrigOperation;
+
 export interface CalculatorData extends BaseDROStateData {
   readonly stateDataType: 'calculator';
   firstValue: number | null;
-  operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
+  operation: CalculatorOperation | null;
   currentValue: number | string;
 }
 
@@ -165,6 +255,14 @@ export interface PresetData extends BaseDROStateData {
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+}
+
+/** Plane selected for polar coordinate display (US-030) */
+export type PolarPlane = 'X-Y' | 'X-Z' | 'Y-Z';
+
+export interface PolarData extends BaseDROStateData {
+  readonly stateDataType: 'polar';
+  plane: PolarPlane;
 }
 
 export interface SetupData extends BaseDROStateData {
@@ -200,6 +298,8 @@ export type DROEventPayload =
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
+  | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'GRID_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -235,7 +335,9 @@ export type DROEventPayload =
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
-  | { eventName: 'BTN_ARC_CONTOUR' };
+  | { eventName: 'BTN_ARC_CONTOUR' }
+  | { eventName: 'BTN_ANGLE_HOLE' }
+  | { eventName: 'BTN_GRID' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -266,6 +368,10 @@ export const isResultState = (s: DROStateName): boolean => s.endsWith('-result')
 export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
+/** Check if polar coordinate mode is active (US-030) */
+export const isPolarActive = (s: DROStateName): boolean =>
+  s.startsWith('polar-');
+
 /** Check if calculator mode is active */
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
@@ -278,9 +384,27 @@ export const isBoltHoleActive = (s: DROStateName): boolean =>
 export const isArcContourActive = (s: DROStateName): boolean =>
   s.startsWith('arc-contour-');
 
-/** Check if FN LED should be active (function menu, bolt hole, or arc contour modes) */
+/** Check if angle hole (linear hole pattern) mode is active */
+export const isAngleHoleActive = (s: DROStateName): boolean =>
+  s.startsWith('angle-hole-');
+
+/** Check if linear bolt hole mode is active (US-029) */
+export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
+  s.startsWith('linear-bolt-hole-');
+
+/** Check if grid drilling mode is active (US-020) */
+export const isGridActive = (s: DROStateName): boolean =>
+  s.startsWith('grid-');
+
+/** Check if FN LED should be active (function menu or pattern modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
-  isFunctionActive(s) || isBoltHoleActive(s) || isArcContourActive(s);
+  isFunctionActive(s) ||
+  isBoltHoleActive(s) ||
+  isArcContourActive(s) ||
+  isAngleHoleActive(s) ||
+  isLinearBoltHoleActive(s) ||
+  isGridActive(s) ||
+  isPolarActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -318,6 +442,7 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  endAngle: null,
   holeCount: null,
   currentHole: 1,
 };
@@ -336,6 +461,36 @@ export const INITIAL_ARC_DATA: ArcData = {
   currentPoint: 1,
 };
 
+export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
+  stateDataType: 'angle-hole',
+  startX: null,
+  startY: null,
+  pitch: null,
+  lineAngle: null,
+  holeCount: null,
+  currentHole: 1,
+};
+
+export const INITIAL_LINEAR_BOLT_HOLE_DATA: LinearBoltHoleData = {
+  stateDataType: 'linear-bolt-hole',
+  axis: null,
+  pitch: null,
+  holeCount: null,
+  currentHole: 1,
+};
+
+export const INITIAL_GRID_DATA: GridData = {
+  stateDataType: 'grid',
+  startX: null,
+  startY: null,
+  pitchX: null,
+  pitchY: null,
+  angle: null,
+  holesX: null,
+  holesY: null,
+  currentHole: 1,
+};
+
 export const INITIAL_PRESET_DATA: PresetData = {
   stateDataType: 'preset',
   presetTargets: {
@@ -344,6 +499,11 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+};
+
+export const INITIAL_POLAR_DATA: PolarData = {
+  stateDataType: 'polar',
+  plane: 'X-Y',
 };
 
 export const INITIAL_SETUP_DATA: SetupData = {

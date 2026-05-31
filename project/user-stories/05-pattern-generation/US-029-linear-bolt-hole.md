@@ -10,13 +10,13 @@
 **So that** I can drill equally spaced holes on one axis
 
 ## Acceptance Criteria
-- [ ] **AC 29.1:** Press `Fn` -> navigate to `LinEAr`, press `ent↵`.
-- [ ] **AC 29.2:** Select Axis (X, Y, or Z).
-- [ ] **AC 29.3:** Enter `PitCh` (spacing between holes).
-- [ ] **AC 29.4:** Enter number of holes.
-- [ ] **AC 29.5:** Display shows simple incremental distance to next hole.
-- [ ] **AC 29.6:** Press `6►` to advance to next hole position.
-- [ ] **AC 29.7:** Press `C` to exit function.
+- [x] **AC 29.1:** Press `Fn` -> navigate to `LinEAr`, press `ent↵`.
+- [x] **AC 29.2:** Select Axis (X, Y, or Z).
+- [x] **AC 29.3:** Enter `PitCh` (spacing between holes).
+- [x] **AC 29.4:** Enter number of holes.
+- [x] **AC 29.5:** Display shows simple incremental distance to next hole.
+- [x] **AC 29.6:** Press `6►` to advance to next hole position.
+- [x] **AC 29.7:** Press `C` to exit function.
 
 ## E2E Test Scenarios
 ```typescript

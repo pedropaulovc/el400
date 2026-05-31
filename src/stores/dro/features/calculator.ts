@@ -8,7 +8,13 @@
  */
 
 import type { FeatureReducer } from '../types';
-import type { CalculatorData, DROStateName } from '../droStateMachine';
+import type {
+  CalculatorData,
+  DROStateName,
+  CalculatorOperation,
+  CalculatorBinaryOperation,
+  CalculatorTrigOperation,
+} from '../droStateMachine';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CALCULATOR_DATA,
@@ -24,6 +30,13 @@ const CALC_OPERATION_MAP: Record<string, string> = {
   'calculator-sub': 'SUb',
   'calculator-multi': 'mULtI',
   'calculator-div': 'dIv',
+  // Trig labels match the EL400 seven-segment glyphs from the manual
+  'calculator-sin': 'S in',
+  'calculator-cos': 'CoS',
+  'calculator-tan': 'tAn',
+  'calculator-asin': 'AS in',
+  'calculator-acos': 'ACoS',
+  'calculator-atan': 'AtAn',
 };
 
 /** Compute calculator display: X=currentValue, Y=operation text, Z=blank */
@@ -35,19 +48,45 @@ function computeCalculatorDisplay(stateName: DROStateName, calcData: CalculatorD
   );
 }
 
-/**
- * Calculator operations cycle: ADD -> SUB -> MULTI -> DIV -> ADD
- */
-const OPERATION_CYCLE: ('ADD' | 'SUB' | 'MULTI' | 'DIV')[] = ['ADD', 'SUB', 'MULTI', 'DIV'];
+/** Error string shown for domain errors and infinite results (matches US-013) */
+const INFINITE_VALUE = 'inF vAL';
 
-function getNextOperation(current: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null): 'ADD' | 'SUB' | 'MULTI' | 'DIV' {
+/**
+ * Calculator operations cycle (Y key), per manual function list:
+ * ADD -> SUB -> MULTI -> DIV -> SIN -> COS -> TAN -> ASIN -> ACOS -> ATAN -> ADD
+ */
+const OPERATION_CYCLE: CalculatorOperation[] = [
+  'ADD', 'SUB', 'MULTI', 'DIV',
+  'SIN', 'COS', 'TAN', 'ASIN', 'ACOS', 'ATAN',
+];
+
+const TRIG_OPERATIONS: ReadonlySet<CalculatorOperation> = new Set<CalculatorOperation>([
+  'SIN', 'COS', 'TAN', 'ASIN', 'ACOS', 'ATAN',
+]);
+
+function isTrigOperation(op: CalculatorOperation): op is CalculatorTrigOperation {
+  return TRIG_OPERATIONS.has(op);
+}
+
+function getNextOperation(current: CalculatorOperation | null): CalculatorOperation {
   if (current === null) return 'ADD';
   const idx = OPERATION_CYCLE.indexOf(current);
   const nextIdx = (idx + 1) % OPERATION_CYCLE.length;
   return OPERATION_CYCLE[nextIdx] ?? 'ADD';
 }
 
-function performCalculation(first: number, second: number, operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV'): number | string {
+const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+
+/**
+ * Round away floating-point noise (e.g. cos(90) = 6.12e-17 -> 0) while
+ * keeping well within the display's 4-decimal precision.
+ */
+function cleanResult(value: number): number {
+  return Math.round(value * 1e10) / 1e10;
+}
+
+function performBinaryCalculation(first: number, second: number, operation: CalculatorBinaryOperation): number | string {
   switch (operation) {
     case 'ADD':
       return first + second;
@@ -56,7 +95,37 @@ function performCalculation(first: number, second: number, operation: 'ADD' | 'S
     case 'MULTI':
       return first * second;
     case 'DIV':
-      return second !== 0 ? first / second : 'inF vAL'; // Division by zero shows error
+      return second !== 0 ? first / second : INFINITE_VALUE; // Division by zero shows error
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Apply a unary trig function. Direct functions take degrees and return a
+ * ratio; inverse functions take a ratio and return degrees. Domain errors
+ * (asin/acos out of [-1, 1]) and tangent asymptotes return the error string.
+ */
+function performTrigCalculation(value: number, operation: CalculatorTrigOperation): number | string {
+  switch (operation) {
+    case 'SIN':
+      return cleanResult(Math.sin(value * DEG_TO_RAD));
+    case 'COS':
+      return cleanResult(Math.cos(value * DEG_TO_RAD));
+    case 'TAN': {
+      // Tangent is undefined at 90 deg + k*180 deg
+      const normalized = ((value % 180) + 180) % 180;
+      if (Math.abs(normalized - 90) < 1e-9) return INFINITE_VALUE;
+      return cleanResult(Math.tan(value * DEG_TO_RAD));
+    }
+    case 'ASIN':
+      if (value < -1 || value > 1) return INFINITE_VALUE;
+      return cleanResult(Math.asin(value) * RAD_TO_DEG);
+    case 'ACOS':
+      if (value < -1 || value > 1) return INFINITE_VALUE;
+      return cleanResult(Math.acos(value) * RAD_TO_DEG);
+    case 'ATAN':
+      return cleanResult(Math.atan(value) * RAD_TO_DEG);
     default:
       return 0;
   }
@@ -111,7 +180,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
         ...calcData,
         operation: nextOp,
       };
-      const nextStateName = `calculator-${nextOp.toLowerCase()}` as 'calculator-add' | 'calculator-sub' | 'calculator-multi' | 'calculator-div';
+      const nextStateName = `calculator-${nextOp.toLowerCase()}` as DROStateName;
       return {
         stateName: nextStateName,
         stateData: nextState,
@@ -156,6 +225,29 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
     }
 
     case 'KEY_ENTER': {
+      // Trig functions are unary: operate on the buffer value (or the current
+      // value when the buffer is empty, allowing chaining on a prior result).
+      if (calcData.operation !== null && isTrigOperation(calcData.operation)) {
+        const bufferValue = getBufferValue(vMem.inputBuffer);
+        const operand = bufferValue ?? (typeof calcData.currentValue === 'number' ? calcData.currentValue : null);
+        if (operand === null) {
+          return null; // Nothing to operate on
+        }
+        const trigResult = performTrigCalculation(operand, calcData.operation);
+        const trigCalcData: CalculatorData = {
+          ...calcData,
+          firstValue: null,
+          operation: null,
+          currentValue: trigResult,
+        };
+        return {
+          stateName: 'calculator-idle',
+          stateData: trigCalcData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeCalculatorDisplay('calculator-idle', trigCalcData),
+        };
+      }
+
       // Parse value from input buffer
       const newValue = getBufferValue(vMem.inputBuffer);
       if (newValue === null) {
@@ -190,7 +282,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
             display: computeCalculatorDisplay('calculator-idle', resetCalcData),
           };
         }
-        const result = performCalculation(calcData.firstValue, newValue, calcData.operation);
+        const result = performBinaryCalculation(calcData.firstValue, newValue, calcData.operation);
         const resultCalcData: CalculatorData = {
           ...calcData,
           firstValue: null,
