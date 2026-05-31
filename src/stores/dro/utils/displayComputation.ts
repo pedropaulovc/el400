@@ -27,9 +27,11 @@ import { fromMmToAnyUnit } from '../../../utils/unitConversion';
  * @returns +1 (standard) or -1 (flipped)
  */
 export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
-  const base = nvMem.axisDirection[axis] === 'reversed' ? -1 : 1;
-  const depthFactor = axis === 'Z' && nvMem.zDepthSense === 'depth-positive' ? -1 : 1;
-  return (base * depthFactor) as 1 | -1;
+  const reversed = nvMem.axisDirection[axis] === 'reversed';
+  const depthInverted = axis === 'Z' && nvMem.zDepthSense === 'depth-positive';
+  // XOR: a single inversion flips the sign; both (reversed Z + depth-positive)
+  // cancel back to +1.
+  return reversed !== depthInverted ? -1 : 1;
 }
 
 /**
