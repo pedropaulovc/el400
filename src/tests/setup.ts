@@ -57,7 +57,7 @@ class MockAudioContext {
   state = 'running';
   createBufferSource = vi.fn(() => new MockAudioBufferSourceNode());
   createGain = vi.fn(() => new MockGainNode());
-  decodeAudioData = vi.fn().mockResolvedValue({} as AudioBuffer);
+  decodeAudioData = vi.fn().mockResolvedValue({});
   resume = vi.fn().mockResolvedValue(undefined);
   destination = {};
 }
