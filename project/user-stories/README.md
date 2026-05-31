@@ -4,10 +4,20 @@ Comprehensive user stories merged from Claude and Gemini sources, deduplicated a
 
 ## Overview
 
-**Total Stories:** 36
-**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini), plus accessibility requirements and integration features
+**Total Stories:** 46
+**Source:** Merged from MagXact-MX-100M-Manual.md (Claude) and EL400OpManual.md (Gemini), plus accessibility requirements and integration features, then cross-checked against the README's official spec references
 **Purpose:** Guide implementation of EL400 DRO simulator features
 **Format:** Each story includes acceptance criteria, E2E test scenarios, and TODO markers for discrepancies
+
+> **Crosscheck (2026-05-30):** All stories were re-checked against the DRO specifications
+> referenced in the project README — the [EL400 Operation Manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-operation-manual/ocr/markdown.md),
+> the [MagXact MX-100M Manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/magxact-mx100m-mill-dro-manual/ocr/markdown.md),
+> and the [EL400 video walkthrough manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-dro-overview-video/MANUAL.md).
+> This added the missing-file **US-002**, indexed the previously-orphaned **US-037/US-038**,
+> and created **US-039–US-046** for documented features that had no story (setup navigation,
+> counting mode, radius/diameter, encoder-fail warning, keypad lock, OEM mode, taper, self-
+> diagnostics). Axes summing (§9.1.8) is **not** storied — it requires a 4th axis, which is out
+> of scope. See **Crosscheck Coverage** and **Deliberately Out of Scope** below.
 
 ---
 
@@ -24,7 +34,7 @@ This directory contains the merged and deduplicated user stories from:
 - **Gemini-only** (5 stories): Added as US-029 to US-033
 
 ### Key Discrepancies Flagged with TODO Markers
-- **US-001**: 4-axis Z/U toggle support clarification needed
+- **US-001**: 4-axis Z/U toggle — **resolved: no 4-axis support** (simulator is X/Y/Z only)
 - **US-007 + US-015**: Relationship between manual and macro center-finding
 - **US-009/010/011**: SDM trilogy structure (Claude) vs combined approach (Gemini)
 - **US-012**: "MC REF" vs "nC rEF" vs "honE" terminology
@@ -72,13 +82,14 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
-### 04. Calculations (3 stories)
+### 04. Calculations (4 stories)
 
 | ID | Title | Priority | Source | File |
 |----|-------|----------|--------|------|
 | US-013 | Basic Calculator Functions | P3 | Claude + Gemini | [US-013-basic-calculator.md](04-calculations/US-013-basic-calculator.md) |
 | US-014 | Trigonometric Calculator Functions | P3 | Claude + Gemini | [US-014-trig-functions.md](04-calculations/US-014-trig-functions.md) |
 | US-015 | Center of Circle (Macro) | P3 | Claude + Gemini | [US-015-center-circle-macro.md](04-calculations/US-015-center-circle-macro.md) |
+| US-045 | Taper Calculation Function | P4 | Crosscheck (README feature table + §9.2.2) | [US-045-taper-calculation.md](04-calculations/US-045-taper-calculation.md) |
 
 **Summary:** Built-in calculator and geometric calculation macros.
 
@@ -100,7 +111,7 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
-### 06. Configuration (11 stories)
+### 06. Configuration (15 stories)
 
 | ID | Title | Priority | Source | File |
 |----|-------|----------|--------|------|
@@ -113,27 +124,36 @@ This directory contains the merged and deduplicated user stories from:
 | US-027 | Setup Menu - Save Changes | P5 | Claude only | [US-027-save-changes.md](06-configuration/US-027-save-changes.md) |
 | US-028 | Setup Menu - Restore Factory Defaults | P5 | Claude only | [US-028-restore-defaults.md](06-configuration/US-028-restore-defaults.md) |
 | US-031 | Error Compensation | P5 | Gemini only | [US-031-error-compensation.md](06-configuration/US-031-error-compensation.md) |
+| US-039 | Setup Menu Navigation and Axis Selection | P5 | Crosscheck (§6.1, video §1.2–1.3) | [US-039-setup-navigation.md](06-configuration/US-039-setup-navigation.md) |
+| US-040 | Setup Menu - Counting Mode (Linear vs Angular) | P5 | Crosscheck (§6.2, video §1.4) | [US-040-counting-mode.md](06-configuration/US-040-counting-mode.md) |
+| US-041 | Setup Menu - Radius / Diameter Display Mode | P5 | Crosscheck (§6.2, video §1.7) | [US-041-radius-diameter-mode.md](06-configuration/US-041-radius-diameter-mode.md) |
+| US-042 | Setup Menu - Encoder Fail Warning (ENF) | P5 | Crosscheck (§6.2, video §1.10) | [US-042-encoder-fail-warning.md](06-configuration/US-042-encoder-fail-warning.md) |
+| US-043 | Setup Menu - Keypad Lock (LoC) | P5 | Crosscheck (§6.2, video §1.12) | [US-043-keypad-lock.md](06-configuration/US-043-keypad-lock.md) |
+| US-044 | Setup Menu - OEM Mode (Custom Defaults) | P5 | Crosscheck (§6.2, video §1.18) | [US-044-oem-mode.md](06-configuration/US-044-oem-mode.md) |
 
 **Summary:** System configuration, setup, and maintenance features.
 
 ---
 
-### 07. Auxiliary (2 stories)
+### 07. Auxiliary (3 stories)
 
 | ID | Title | Priority | Source | File |
 |----|-------|----------|--------|------|
 | US-032 | Touch Probe | P4 | Gemini only | [US-032-touch-probe.md](07-auxiliary/US-032-touch-probe.md) |
 | US-033 | Six Output & Serial Communication | P5 | Gemini only | [US-033-outputs-serial.md](07-auxiliary/US-033-outputs-serial.md) |
+| US-046 | Self-Diagnostics Mode | P5 | Crosscheck (§11.1) | [US-046-self-diagnostics.md](07-auxiliary/US-046-self-diagnostics.md) |
 
-**Summary:** Auxiliary hardware and communication features.
+**Summary:** Auxiliary hardware, diagnostics, and communication features.
 
 ---
 
-### 08. Accessibility (1 story)
+### 08. Accessibility (3 stories)
 
 | ID | Title | Priority | Source | File |
 |----|-------|----------|--------|------|
 | US-034 | Forced Colors Mode (High Contrast) Support | P0 | Accessibility requirements | [US-034-forced-colors-mode.md](08-accessibility/US-034-forced-colors-mode.md) |
+| US-037 | Keyboard Navigation | P1 | Accessibility requirements | [US-037-keyboard-navigation.md](08-accessibility/US-037-keyboard-navigation.md) |
+| US-038 | Keyboard Shortcuts | P2 | Accessibility / power-user features | [US-038-keyboard-shortcuts.md](08-accessibility/US-038-keyboard-shortcuts.md) |
 
 **Summary:** Accessibility features for users with visual impairments and assistive technologies.
 
@@ -155,11 +175,11 @@ This directory contains the merged and deduplicated user stories from:
 | Priority | Description | Count | Stories |
 |----------|-------------|-------|---------|
 | **P0** | Must-have foundation | 3 | US-001, US-002, US-034 |
-| **P1** | Essential DRO features | 6 | US-003, US-004, US-005, US-006, US-035, US-036 |
-| **P2** | Advanced navigation | 6 | US-007, US-008, US-009, US-010, US-011, US-012 |
+| **P1** | Essential DRO features | 7 | US-003, US-004, US-005, US-006, US-035, US-036, US-037 |
+| **P2** | Advanced navigation | 7 | US-007, US-008, US-009, US-010, US-011, US-012, US-038 |
 | **P3** | Value-added calculations | 3 | US-013, US-014, US-015 |
-| **P4** | Specialized milling/auxiliary | 9 | US-016, US-017, US-018, US-019, US-020, US-029, US-030, US-032 |
-| **P5** | Setup and customization | 9 | US-021 through US-028, US-031, US-033 |
+| **P4** | Specialized milling/auxiliary | 9 | US-016, US-017, US-018, US-019, US-020, US-029, US-030, US-032, US-045 |
+| **P5** | Setup and customization | 16 | US-021 through US-028, US-031, US-033, US-039, US-040, US-041, US-042, US-043, US-044, US-046 |
 
 ---
 
@@ -240,11 +260,81 @@ This directory contains the merged and deduplicated user stories from:
 
 ---
 
-### Phase 7: Configuration (P5) - 9 stories
+### Phase 7: Configuration (P5) - 16 stories
 **Goal:** System setup and customization
 
 - [ ] US-021 through US-028: All setup menu features
 - [ ] US-031: Error compensation (advanced)
 - [ ] US-033: Six Output & Serial (advanced)
+- [ ] US-039–US-044: Setup navigation, counting mode, radius/diameter, encoder-fail, keypad lock, OEM mode
+- [ ] US-046: Self-diagnostics
 
 **Deliverable:** Fully configurable DRO with persistence
+
+---
+
+## Crosscheck Coverage (vs. README spec references)
+
+Mapping of every documented EL400/MagXact feature to its user story. Sources: EL400 Operation
+Manual (OCR §-numbers), MagXact MX-100M manual, and the EL400 video walkthrough manual.
+
+| Spec feature | Section | Story |
+|---|---|---|
+| Power-up / version / lamp test | §5.4, video §1.1 | US-001 |
+| Sign convention & axis direction | MagXact "Coordinates", §6.2 | US-002 |
+| ABS / INC mode | §7.1 | US-003 |
+| Inch / metric | §7.2 | US-004 |
+| Axis reset (zero) + axis set (known value) | §7.3, §7.4 | US-005 |
+| Half function | §7.5 | US-006 |
+| Center of circle + center of line (manual) | §8.4, §8.5 | US-007, US-015 |
+| Preset / distance-to-go | §8.1, video §2.4 | US-008 |
+| SDM — learn / program / run | §8.2.1–8.2.3 | US-009, US-010, US-011 |
+| Reference point + machine reference (set/recall) | §7.7–7.7.2 | US-012 |
+| Calculator (arithmetic + trig) | §7.6 | US-013, US-014 |
+| Bolt circle (full / arc) | §9.1.1, §9.1.2 | US-016, US-017 |
+| Arc contouring | §9.1.3 | US-018 |
+| Angle hole | §9.1.4 | US-019 |
+| Grid | §9.1.5 | US-020 |
+| Linear bolt hole | §9.1.6 | US-029 |
+| Polar coordinates | §9.1.7 | US-030 |
+| Scale resolution `SC` | §6.2, video §1.5 | US-021 |
+| Display resolution `dP` | §6.2, video §1.6 | US-022 |
+| Scale direction `LEFT`/`riGht` | §6.2, video §1.8 | US-023 |
+| Zero approach / near-zero warning | §6.2, §8.3, video §1.13 | US-024 |
+| Button beep | §6.2, video §1.14 | US-025 |
+| Sleep timer | §6.2, video §1.15 | US-026 |
+| Save change `SAU CHG` | §6.2, video §1.16 | US-027 |
+| Reset OEM (restore defaults) | §6.2, video §1.17 | US-028 |
+| Error compensation (LEC/SLEC/angular) | §6.3 | US-031 |
+| Touch probe | §10.1, video §2.13 | US-032 |
+| Six output + serial comms | §10.2, §10.3 | US-033 |
+| **Setup navigation & axis select** | §6.1, video §1.2–1.3, §1.19 | **US-039** ✚ |
+| **Counting mode (linear/angular)** | §6.2, video §1.4 | **US-040** ✚ |
+| **Radius / diameter mode** | §6.2, video §1.7 | **US-041** ✚ |
+| **Encoder-fail warning `ENF` / `no SIG`** | §6.2, video §1.10 | **US-042** ✚ |
+| **Keypad lock `LoC`** | §6.2, video §1.12 | **US-043** ✚ |
+| **OEM mode (custom defaults)** | §6.2, video §1.18 | **US-044** ✚ |
+| **Taper calculation** | §9.2.2, README feature table | **US-045** ✚ |
+| **Self-diagnostics mode** | §11.1 | **US-046** ✚ |
+| Forced-colors / keyboard nav / shortcuts | ACCESSIBILITY.md | US-034, US-037, US-038 |
+| External machine connection / persistence | ARCHITECTURE.md | US-035, US-036 |
+
+✚ = added by the 2026-05-30 crosscheck.
+
+### Deliberately Out of Scope
+
+The EL400 manual documents functions for **lathe** and **EDM** machine modes. The simulator
+targets a **milling-machine** X/Y/Z DRO, so the following are intentionally not given stories
+(noted here for completeness so the crosscheck is auditable):
+
+- **Lathe — Tool Offset** (§9.2.1, 9 offsets). *Note:* `AGENTS.md` lists a "Tool offset" UI slot
+  in `SecondaryFunctionSection`; if lathe support is ever in scope, promote this to a story.
+- **Lathe — Axes Addition** (§9.2.3) and **Vectoring** (§9.2.4) — compound-slide combinations.
+- **EDM — Pre-Set Depth (PSD)** and EDM bolt/arc/angle variants (§9.3).
+- **Axes Summing** (§9.1.8) — sums Z + U on a **4-axis** mill. The simulator is **X/Y/Z only and
+  will not support a 4th axis**, so this function is out of scope.
+- **Hardware/wiring** details: mounting (§5.1), power supply (§5.2), encoder connectors (§5.3),
+  pin-out tables, and the troubleshooting guideline table (§11.2) — reference material, not behavior.
+
+Taper (§9.2.2) is the one lathe-class function kept (now **US-045**) because the project README's
+feature-comparison table explicitly markets "Taper Calculations" as an EL400 capability.
