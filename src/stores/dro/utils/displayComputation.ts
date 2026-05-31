@@ -97,7 +97,10 @@ export function computeDisplayPosition(
   context: DROReducerContext
 ): number {
   const rawMm = computeAxisPositionMm(axis, vMem, context);
-  return fromMmToAnyUnit(rawMm, context.nvMem.defaultUnit);
+  // Counting direction is a display-only transform applied AFTER datum subtraction;
+  // it never mutates stored machine position, offsets, or macro coordinate math.
+  const signedMm = rawMm * directionSign(axis, context.nvMem);
+  return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
 }
 
 /**

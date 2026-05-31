@@ -468,21 +468,28 @@ export class DROPage {
    * Direction parameter, cycle its choice to the requested label, then exit.
    *
    * Mirrors the `gotoSC` navigation pattern in US-021. No window hooks, no forced
-   * state — only the buttons an operator presses. The committed value contract
-   * (src/types/nonVolatileMemory.ts) maps `'normal' -> LEFT`, `'reversed' -> riGht`.
+   * state — only the buttons an operator presses.
+   *
+   * Label contract (manual section 6.2 `dir`, pinned in the spec under
+   * "Setup-Menu Label Contract"): the seven-segment panel has no uppercase `T`
+   * glyph, so the manual's "LEFT" renders as `LEFt` (lowercase t). The Direction
+   * parameter's choice labels are `LEFt` (normal / LEFT) and `riGht` (reversed /
+   * riGht). This helper accepts the operator-facing 'LEFT' | 'riGht' wording from
+   * the spec scenarios and maps it to those exact 7-segment labels.
    *
    * @param axis - Axis whose Direction is being configured
-   * @param target - Desired Direction label as shown on the device
+   * @param target - Desired Direction in the spec's operator wording
    */
   async setAxisDirection(axis: 'X' | 'Y' | 'Z', target: 'LEFT' | 'riGht'): Promise<void> {
+    const targetLabel = target === 'LEFT' ? 'LEFt' : 'riGht';
     await this.settingsButton.click();
     await this.waitForAxisPureTextValue('X', 'SELECt');
     await this.selectAxis(axis);
     // Scroll (down) through the parameter list until the Direction parameter is
-    // highlighted. The Direction parameter renders one of its choice labels
-    // (LEFT / riGht), optionally with a `dir ` prefix; recognise it by either
-    // direction word appearing in the highlighted label.
-    const isDirectionLabel = (t: string) => /LEFT|riGht/.test(t);
+    // highlighted. It renders one of its two choice labels; recognise it by
+    // matching exactly `LEFt` or `riGht`. (Do NOT match the global Z-depth param,
+    // whose labels are `dEP nEG` / `dEP PoS`.)
+    const isDirectionLabel = (t: string) => t === 'LEFt' || t === 'riGht';
     let guard = 0;
     while (!isDirectionLabel(await this.getAxisRawText(axis))) {
       await this.key2.click();
@@ -492,7 +499,7 @@ export class DROPage {
       }
     }
     // Cycle the choice (left/right keys) until the requested label is shown.
-    const matchesTarget = (t: string) => t.includes(target);
+    const matchesTarget = (t: string) => t === targetLabel;
     guard = 0;
     while (!matchesTarget(await this.getAxisRawText(axis))) {
       await this.key6.click();

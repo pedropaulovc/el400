@@ -56,6 +56,16 @@ describe('US-002: Sign Convention', () => {
   preference, so generated hole coordinates land where the figures show.
 - Accessibility: announce sign to screen readers (US-037) — "negative three point two five".
 
+## Setup-Menu Label Contract (pinned)
+The seven-segment glyph set has no uppercase `T` (lowercase `t` only), so the manual's "LEFT"
+renders as `LEFt`. Pinned, renderable labels (single source of truth for impl + E2E helpers):
+- Per-axis **Direction** parameter (`axisDirection`): choice value `'normal'` → label **`LEFt`**;
+  value `'reversed'` → label **`riGht`**. The parameter's own highlight label is `LEFt`.
+- Global **Z depth-sense** parameter (`zDepthSense`): value `'depth-negative'` → label
+  **`dEP nEG`**; value `'depth-positive'` → label **`dEP PoS`**.
+The E2E `setAxisDirection` helper locates the Direction parameter by matching a label of exactly
+`LEFt` or `riGht` (note lowercase `t`).
+
 ## Related Stories
 - US-005: Zeroing Individual Axes (datum choice)
 - US-023: Scale Direction (Left/Right parameter)
