@@ -190,11 +190,11 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
   },
   {
     id: DIRECTION_ID,
-    label: 'dir LEF',
+    label: 'LEFt',
     scope: 'per-axis',
     choices: [
-      { value: 'normal', label: 'dir LEF' },
-      { value: 'reversed', label: 'dir rGt' },
+      { value: 'normal', label: 'LEFt' },
+      { value: 'reversed', label: 'riGht' },
     ],
     // Seed from the selected axis's committed counting direction. On the SELECT
     // prompt (axis null) fall back to X.

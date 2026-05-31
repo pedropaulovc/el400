@@ -66,7 +66,7 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(direction).toBeDefined();
     expect(direction.scope).toBe('per-axis');
     expect(direction.choices.map((c) => c.value)).toEqual(['normal', 'reversed']);
-    expect(direction.choices.map((c) => c.label)).toEqual(['dir LEF', 'dir rGt']);
+    expect(direction.choices.map((c) => c.label)).toEqual(['LEFt', 'riGht']);
     expect(typeof direction.commit).toBe('function');
   });
 

@@ -232,7 +232,7 @@ describe('setupReducer - commit-on-change parameters (US-002)', () => {
     const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
     expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
     // Label updates to the reversed choice using the freshly committed nvMem.
-    expect(xText(result)).toBe('dir rGt');
+    expect(xText(result)).toBe('riGht');
   });
 
   it('cycling direction on Y does not change X (per-axis commit)', () => {
@@ -246,7 +246,7 @@ describe('setupReducer - commit-on-change parameters (US-002)', () => {
     const state = paramState({ selectedAxis: 'X', currentParamIndex: directionIdx });
     const result = setupReducer(state, { eventName: 'KEY_4_LEFT' }, liveCtx());
     expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
-    expect(xText(result)).toBe('dir rGt');
+    expect(xText(result)).toBe('riGht');
   });
 
   it('cycling the z-depth param commits the global zDepthSense', () => {
