@@ -1,6 +1,6 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
 import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
-import { useDisplayX, useDisplayY, useDisplayZ, useStateName } from "../stores/droStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis } from "../stores/droStore";
 
 export type AxisDisplayValue = number | string;
 
@@ -72,6 +72,9 @@ const Axis = ({ axis }: AxisProps) => {
   const useAxisValue = axisHooks[axis];
   const value = useAxisValue();
   const stateName = useStateName();
+  // Reference waiting (§7.7.1): the selected axis's zero blinks until the mark is crossed.
+  const blinkAxis = useReferenceWaitingAxis();
+  const isBlinking = blinkAxis === axis;
 
   // Check if in function mode (distance-to-go displays leading decimal on 2nd digit)
   const isFunctionMode = stateName === 'distance-to-go';
@@ -94,7 +97,7 @@ const Axis = ({ axis }: AxisProps) => {
       aria-hidden="true"
       data-testid={`axis-display-${axis.toLowerCase()}`}
     >
-      <div className="flex items-center -space-x-1">
+      <div className={`flex items-center -space-x-1${isBlinking ? ' animate-blink' : ''}`} data-blinking={isBlinking ? 'true' : undefined}>
         {digits.map((digit, index) => (
           <div key={index} className="w-12 h-20">
             <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />

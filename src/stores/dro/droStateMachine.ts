@@ -137,7 +137,14 @@ export type DROStateName =
   | 'setup-parameter'
   // Taper calculation (lathe function, US-045)
   | 'function-menu-taper'
-  | 'taper-active';
+  | 'taper-active'
+  // Reference / Datum recall states (US-012)
+  | 'reference-menu-home'
+  | 'reference-menu-machine'
+  | 'reference-home-select'
+  | 'reference-home-waiting'
+  | 'reference-machine-select'
+  | 'reference-machine-waiting';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -162,7 +169,8 @@ export type DROStateData =
   | PresetData
   | PolarData
   | SetupData
-  | TaperData;
+  | TaperData
+  | ReferenceData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -341,6 +349,29 @@ export interface TaperData extends BaseDROStateData {
   entryZ: number;
 }
 
+/**
+ * Reference / Datum recall context (US-012, manual §7.7).
+ *
+ * referenceMode distinguishes the two datum-setting flows:
+ * - 'HOME': Reference Point (§7.7.1) - datum is set AT the encoder reference mark.
+ * - 'MACHINE_RECALL': Machine Reference recall (§7.7.2.2) - datum is at a fixed
+ *   distance (the stored machine-reference value) from the reference mark.
+ *
+ * selectedAxis is the axis the operator chose to reference; null until picked.
+ * While waiting, a blinking zero is shown next to that axis.
+ */
+export interface ReferenceData extends BaseDROStateData {
+  readonly stateDataType: 'reference';
+  referenceMode: 'HOME' | 'MACHINE_RECALL';
+  selectedAxis: 'X' | 'Y' | 'Z' | null;
+  /**
+   * Machine position (mm) of the selected axis at the last sampled tick while
+   * waiting for the mark. Used to detect the jog segment crossing the encoder
+   * reference mark. null until an axis is selected.
+   */
+  markArmedFromPos: number | null;
+}
+
 /** Stored point for center finding operations */
 export interface StoredPoint {
   X: number;
@@ -401,7 +432,10 @@ export type DROEventPayload =
   | { eventName: 'BTN_ARC_CONTOUR' }
   | { eventName: 'BTN_ANGLE_HOLE' }
   | { eventName: 'BTN_GRID' }
-  | { eventName: 'BTN_SDM' };
+  | { eventName: 'BTN_SDM' }
+  // Reference / Datum recall (US-012)
+  | { eventName: 'BTN_REFERENCE' }
+  | { eventName: 'ENCODER_REF_MARK_CROSSED'; axis: 'X' | 'Y' | 'Z' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -486,6 +520,10 @@ export const isSetupActive = (s: DROStateName): boolean =>
 /** Check if taper calculation mode is active (US-045) */
 export const isTaperActive = (s: DROStateName): boolean =>
   s === 'taper-active';
+
+/** Check if reference / datum recall mode is active (any reference-* state) */
+export const isReferenceActive = (s: DROStateName): boolean =>
+  s.startsWith('reference-');
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
@@ -599,6 +637,13 @@ export const INITIAL_TAPER_DATA: TaperData = {
   entryX: 0,
   entryY: 0,
   entryZ: 0,
+};
+
+export const INITIAL_REFERENCE_DATA: ReferenceData = {
+  stateDataType: 'reference',
+  referenceMode: 'HOME',
+  selectedAxis: null,
+  markArmedFromPos: null,
 };
 
 /**

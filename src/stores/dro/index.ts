@@ -78,5 +78,12 @@ export {
   SDM_INTRO_DURATION_MS,
 } from './features/sdm';
 
+// Re-export reference / datum recall feature (US-012)
+export {
+  useReferenceMarkTestHook,
+  REFERENCE_MARK_HOOK,
+  MACHINE_REFERENCE_VALUES_MM,
+} from './features/reference';
+
 // Re-export bolt hole / arc / angle hole / grid / SDM types and guards
 export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';

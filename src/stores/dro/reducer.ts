@@ -26,6 +26,7 @@ import { sdmReducer } from './features/sdm';
 import { distanceToGoReducer } from './features/distance-to-go';
 import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
+import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
 
 /**
@@ -47,6 +48,7 @@ const featureReducers: FeatureReducer[] = [
   sdmReducer, // Handles Sub Datum Memory learn/program/run (US-009/010/011)
   distanceToGoReducer, // Handles distance-to-go (US-008)
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
+  referenceReducer, // Handles Reference / datum recall (US-012) - before idle so it owns BTN_REFERENCE
   taperReducer, // Handles taper calculation live derivation (US-045)
   // vMem/nvMem reducers for idle state operations
   absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)

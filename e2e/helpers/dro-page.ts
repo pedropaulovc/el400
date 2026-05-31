@@ -55,7 +55,7 @@ export class DROPage {
   readonly settingsButton: Locator;
   readonly absIncButton: Locator;
   readonly toggleUnitButton: Locator;
-  readonly centerButton: Locator;
+  readonly referenceButton: Locator;
   readonly functionButton: Locator;
   readonly boltHoleButton: Locator;
   readonly angleHoleButton: Locator;
@@ -109,7 +109,7 @@ export class DROPage {
     this.settingsButton = page.getByTestId('btn-settings');
     this.absIncButton = page.getByTestId('btn-abs-inc');
     this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
-    this.centerButton = page.getByTestId('btn-center');
+    this.referenceButton = page.getByTestId('btn-reference');
     this.functionButton = page.getByTestId('btn-function');
     this.boltHoleButton = page.getByTestId('btn-bolt-circle');
     this.angleHoleButton = page.getByTestId('btn-angle-hole');
@@ -380,6 +380,55 @@ export class DROPage {
     if (!response.ok) {
       throw new Error(`Failed to simulate relative encoder move: ${response.statusText}`);
     }
+  }
+
+  /**
+   * Simulate crossing the encoder reference mark for an axis (US-012).
+   *
+   * Moves the mock encoder to the reference-mark machine position, then invokes
+   * the in-app test hook that latches the mark. This mirrors the operator
+   * jogging the axis across the encoder's index pulse on real hardware.
+   *
+   * @param axis - The axis whose reference mark is crossed
+   * @param markMachinePositionMm - Machine position of the mark in mm (default 0)
+   */
+  async simulateEncoderRefMark(
+    axis: 'X' | 'Y' | 'Z',
+    markMachinePositionMm = 0
+  ): Promise<void> {
+    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
+    // Wait for the position update to propagate to the DRO store, then latch.
+    const hookKey = '__el400CrossReferenceMark';
+    await this.page.waitForFunction(
+      (key) => typeof (window as unknown as Record<string, unknown>)[key] === 'function',
+      hookKey
+    );
+    await this.page.evaluate(
+      ({ key, a }) => {
+        const fn = (window as unknown as Record<string, ((axis: string) => void) | undefined>)[key];
+        if (fn) fn(a);
+      },
+      { key: hookKey, a: axis }
+    );
+  }
+
+  /**
+   * Real-user jog path (US-012): move the mock encoder so the axis lands on the
+   * reference-mark machine position, WITHOUT invoking the in-app test hook.
+   *
+   * The mock CNCjs server emits a position update, the app dispatches
+   * MILL_STATE_CHANGED, and the reference reducer detects the jog crossing the
+   * mark and latches the datum — exactly as a human jogging a connected mill (or
+   * the debug panel) would trigger it. This proves the latch needs no test hook.
+   *
+   * @param axis - The axis to jog
+   * @param markMachinePositionMm - Machine position of the mark in mm
+   */
+  async jogAcrossEncoderRefMark(
+    axis: 'X' | 'Y' | 'Z',
+    markMachinePositionMm: number
+  ): Promise<void> {
+    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
   }
 
   /**
