@@ -3,9 +3,6 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useDispatch } from "../stores/dro";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {};
-
 const SecondaryFunctionSection = () => {
   const dispatch = useDispatch();
 
@@ -35,6 +32,10 @@ const SecondaryFunctionSection = () => {
 
   const handleGrid = () => {
     dispatch({ eventName: 'BTN_GRID' });
+  };
+
+  const handleSdm = () => {
+    dispatch({ eventName: 'BTN_SDM' });
   };
 
   return (
@@ -67,7 +68,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={handleHalf} variant="dark" size="secondary" className="p-0" data-testid="btn-half" title="Half">
               <Icon name="half-function" /><span className="sr-only">Half</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
+            <DROButton onClick={handleSdm} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
               <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
             <DROButton onClick={handleFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function" title="Function">

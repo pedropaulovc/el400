@@ -9,11 +9,17 @@
 **So that** I can store a machining sequence without manually entering coordinates
 
 ## Acceptance Criteria
-- [ ] **AC 9.1:** Enter SDM Learn mode: Press `SDM` -> navigate to `rUn` -> `LEArn`.
-- [ ] **AC 9.2:** Select starting Step Number (e.g., 1).
-- [ ] **AC 9.3:** Move machine to desired position.
-- [ ] **AC 9.4:** Press `6►` to store the current position as the sub-datum for the current step and automatically advance to the next step.
-- [ ] **AC 9.5:** Can store up to 1000 steps.
+- [x] **AC 9.1:** Enter SDM Learn mode: Press `SDM` -> navigate to `LEArn` (left/right arrows) -> Enter.
+- [x] **AC 9.2:** Select starting Step Number on the Y display (defaults to 1), confirm with Enter.
+- [x] **AC 9.3:** Move machine to desired position.
+- [x] **AC 9.4:** Press `X` to store the current position as the sub-datum for the current step and automatically advance to the next step.
+- [x] **AC 9.5:** Can store up to 1000 steps.
+
+> **Spec discrepancy (resolved in favour of the manual):** AC 9.4 originally said
+> press `6►` to store. The manual §8.2.2 specifies the `X` key: the first press
+> shows the current step number, the second press stores the live position and
+> advances. Per the manual-wins rule, storing is bound to the `X` axis-select
+> button. The first-press/second-press two-step capture is also from the manual.
 
 ## E2E Test Scenarios
 ```typescript

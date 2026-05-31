@@ -72,5 +72,11 @@ export {
   GRID_INTRO_DURATION_MS,
 } from './features/grid';
 
-// Re-export bolt hole / arc / angle hole / grid types and guards
-export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive } from './droStateMachine';
+// Re-export Sub Datum Memory feature (US-009)
+export {
+  useSdmIntro,
+  SDM_INTRO_DURATION_MS,
+} from './features/sdm';
+
+// Re-export bolt hole / arc / angle hole / grid / SDM types and guards
+export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';

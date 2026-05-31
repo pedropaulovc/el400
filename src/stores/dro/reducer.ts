@@ -22,6 +22,7 @@ import { arcContourReducer } from './features/arc-contour';
 import { angleHoleReducer } from './features/angle-hole';
 import { linearBoltHoleReducer } from './features/linear-bolt-hole';
 import { gridReducer } from './features/grid';
+import { sdmReducer } from './features/sdm';
 import { distanceToGoReducer } from './features/distance-to-go';
 import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
@@ -42,6 +43,7 @@ const featureReducers: FeatureReducer[] = [
   angleHoleReducer, // Handles angle hole (linear hole pattern) generation
   linearBoltHoleReducer, // Handles linear bolt hole pattern generation (US-029)
   gridReducer, // Handles grid drilling pattern generation (US-020)
+  sdmReducer, // Handles Sub Datum Memory learn/program/run (US-009/010/011)
   distanceToGoReducer, // Handles distance-to-go (US-008)
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
   // vMem/nvMem reducers for idle state operations

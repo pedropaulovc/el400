@@ -7,7 +7,7 @@
  */
 
 import type { FeatureReducer } from '../types';
-import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ARC_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ARC_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA, INITIAL_SDM_DATA } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
 import { MENU_TEXT_MAP } from './menu';
 
@@ -76,6 +76,13 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateData: INITIAL_GRID_DATA,
         vMem,
         display: createDisplay('Grid', 0, ''),
+      };
+    case 'BTN_SDM':
+      return {
+        stateName: 'sdm-intro',
+        stateData: INITIAL_SDM_DATA,
+        vMem,
+        display: createDisplay('Sdm', '', ''),
       };
     default:
       return null;
