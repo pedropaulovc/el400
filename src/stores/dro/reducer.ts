@@ -23,6 +23,7 @@ import { linearBoltHoleReducer } from './features/linear-bolt-hole';
 import { gridReducer } from './features/grid';
 import { distanceToGoReducer } from './features/distance-to-go';
 import { setupReducer } from './features/setup';
+import { referenceReducer } from './features/reference';
 
 /**
  * All feature reducers in priority order.
@@ -41,6 +42,7 @@ const featureReducers: FeatureReducer[] = [
   gridReducer, // Handles grid drilling pattern generation (US-020)
   distanceToGoReducer, // Handles distance-to-go (US-008)
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
+  referenceReducer, // Handles Reference / datum recall (US-012) - before idle so it owns BTN_REFERENCE
   // vMem/nvMem reducers for idle state operations
   absIncReducer, // Handles BTN_ABS_INC with vMem.mode toggle (from idle or abs-inc-mode)
   inchMmReducer, // Handles BTN_INCH_MM with nvMem.defaultUnit toggle

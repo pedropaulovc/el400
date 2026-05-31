@@ -378,4 +378,34 @@ export class DROPage {
       throw new Error(`Failed to simulate relative encoder move: ${response.statusText}`);
     }
   }
+
+  /**
+   * Simulate crossing the encoder reference mark for an axis (US-012).
+   *
+   * Moves the mock encoder to the reference-mark machine position, then invokes
+   * the in-app test hook that latches the mark. This mirrors the operator
+   * jogging the axis across the encoder's index pulse on real hardware.
+   *
+   * @param axis - The axis whose reference mark is crossed
+   * @param markMachinePositionMm - Machine position of the mark in mm (default 0)
+   */
+  async simulateEncoderRefMark(
+    axis: 'X' | 'Y' | 'Z',
+    markMachinePositionMm = 0
+  ): Promise<void> {
+    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
+    // Wait for the position update to propagate to the DRO store, then latch.
+    const hookKey = '__el400CrossReferenceMark';
+    await this.page.waitForFunction(
+      (key) => typeof (window as unknown as Record<string, unknown>)[key] === 'function',
+      hookKey
+    );
+    await this.page.evaluate(
+      ({ key, a }) => {
+        const fn = (window as unknown as Record<string, ((axis: string) => void) | undefined>)[key];
+        if (fn) fn(a);
+      },
+      { key: hookKey, a: axis }
+    );
+  }
 }

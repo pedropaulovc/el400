@@ -66,5 +66,12 @@ export {
   GRID_INTRO_DURATION_MS,
 } from './features/grid';
 
+// Re-export reference / datum recall feature (US-012)
+export {
+  useReferenceMarkTestHook,
+  REFERENCE_MARK_HOOK,
+  MACHINE_REFERENCE_VALUES_MM,
+} from './features/reference';
+
 // Re-export bolt hole / angle hole / grid types and guards
 export { isBoltHoleActive, isAngleHoleActive, isGridActive, isFnLedActive } from './droStateMachine';

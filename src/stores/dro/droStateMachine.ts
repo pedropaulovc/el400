@@ -98,7 +98,14 @@ export type DROStateName =
   | 'distance-to-go'
   // Setup menu states (US-039)
   | 'setup-select'
-  | 'setup-parameter';
+  | 'setup-parameter'
+  // Reference / Datum recall states (US-012)
+  | 'reference-menu-home'
+  | 'reference-menu-machine'
+  | 'reference-home-select'
+  | 'reference-home-waiting'
+  | 'reference-machine-select'
+  | 'reference-machine-waiting';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -120,7 +127,8 @@ export type DROStateData =
   | ArcData
   | CalculatorData
   | PresetData
-  | SetupData;
+  | SetupData
+  | ReferenceData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -218,6 +226,23 @@ export interface SetupData extends BaseDROStateData {
   draftValues: Record<string, string>;
 }
 
+/**
+ * Reference / Datum recall context (US-012, manual §7.7).
+ *
+ * referenceMode distinguishes the two datum-setting flows:
+ * - 'HOME': Reference Point (§7.7.1) - datum is set AT the encoder reference mark.
+ * - 'MACHINE_RECALL': Machine Reference recall (§7.7.2.2) - datum is at a fixed
+ *   distance (the stored machine-reference value) from the reference mark.
+ *
+ * selectedAxis is the axis the operator chose to reference; null until picked.
+ * While waiting, a blinking zero is shown next to that axis.
+ */
+export interface ReferenceData extends BaseDROStateData {
+  readonly stateDataType: 'reference';
+  referenceMode: 'HOME' | 'MACHINE_RECALL';
+  selectedAxis: 'X' | 'Y' | 'Z' | null;
+}
+
 /** Stored point for center finding operations */
 export interface StoredPoint {
   X: number;
@@ -274,7 +299,10 @@ export type DROEventPayload =
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
   | { eventName: 'BTN_ANGLE_HOLE' }
-  | { eventName: 'BTN_GRID' };
+  | { eventName: 'BTN_GRID' }
+  // Reference / Datum recall (US-012)
+  | { eventName: 'BTN_REFERENCE' }
+  | { eventName: 'ENCODER_REF_MARK_CROSSED'; axis: 'X' | 'Y' | 'Z' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -340,6 +368,10 @@ export const isPresetActive = (s: DROStateName): boolean =>
 /** Check if setup menu is active (any setup-* state) */
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
+
+/** Check if reference / datum recall mode is active (any reference-* state) */
+export const isReferenceActive = (s: DROStateName): boolean =>
+  s.startsWith('reference-');
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
@@ -418,6 +450,12 @@ export const INITIAL_SETUP_DATA: SetupData = {
   selectedAxis: null,
   currentParamIndex: 0,
   draftValues: {},
+};
+
+export const INITIAL_REFERENCE_DATA: ReferenceData = {
+  stateDataType: 'reference',
+  referenceMode: 'HOME',
+  selectedAxis: null,
 };
 
 /**
