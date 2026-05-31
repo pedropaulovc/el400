@@ -58,6 +58,13 @@ export type DROStateName =
   | 'calculator-sub'
   | 'calculator-multi'
   | 'calculator-div'
+  // Calculator trig states (unary operations - US-014)
+  | 'calculator-sin'
+  | 'calculator-cos'
+  | 'calculator-tan'
+  | 'calculator-asin'
+  | 'calculator-acos'
+  | 'calculator-atan'
   // Bolt hole circle states
   | 'bolt-hole-intro'
   | 'bolt-hole-menu-select'
@@ -127,10 +134,19 @@ export interface ArcData extends BaseDROStateData {
   // TODO: define arc-specific fields when implementing arc feature
 }
 
+/** Binary calculator operations (require two operands) */
+export type CalculatorBinaryOperation = 'ADD' | 'SUB' | 'MULTI' | 'DIV';
+
+/** Unary trig calculator operations (operate on a single operand) - US-014 */
+export type CalculatorTrigOperation = 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN';
+
+/** All calculator operations cycled through with the Y key */
+export type CalculatorOperation = CalculatorBinaryOperation | CalculatorTrigOperation;
+
 export interface CalculatorData extends BaseDROStateData {
   readonly stateDataType: 'calculator';
   firstValue: number | null;
-  operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
+  operation: CalculatorOperation | null;
   currentValue: number | string;
 }
 
