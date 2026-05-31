@@ -43,6 +43,9 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  // Polar coordinate display states (US-030)
+  | 'polar-select-plane'
+  | 'polar-coordinates'
   // Center line states (2 points)
   | 'function-menu-center-line-point-1'
   | 'function-menu-center-line-point-2'
@@ -94,6 +97,7 @@ export type DROStateData =
   | ArcData
   | CalculatorData
   | PresetData
+  | PolarData
   | SetupData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -142,6 +146,14 @@ export interface PresetData extends BaseDROStateData {
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+}
+
+/** Plane selected for polar coordinate display (US-030) */
+export type PolarPlane = 'X-Y' | 'X-Z' | 'Y-Z';
+
+export interface PolarData extends BaseDROStateData {
+  readonly stateDataType: 'polar';
+  plane: PolarPlane;
 }
 
 export interface SetupData extends BaseDROStateData {
@@ -241,6 +253,10 @@ export const isResultState = (s: DROStateName): boolean => s.endsWith('-result')
 export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
+/** Check if polar coordinate mode is active (US-030) */
+export const isPolarActive = (s: DROStateName): boolean =>
+  s.startsWith('polar-');
+
 /** Check if calculator mode is active */
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
@@ -249,9 +265,9 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
-/** Check if FN LED should be active (function menu or bolt hole modes) */
+/** Check if FN LED should be active (function menu, bolt hole, or polar modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
-  isFunctionActive(s) || isBoltHoleActive(s);
+  isFunctionActive(s) || isBoltHoleActive(s) || isPolarActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -301,6 +317,11 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+};
+
+export const INITIAL_POLAR_DATA: PolarData = {
+  stateDataType: 'polar',
+  plane: 'X-Y',
 };
 
 export const INITIAL_SETUP_DATA: SetupData = {

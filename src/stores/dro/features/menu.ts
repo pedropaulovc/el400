@@ -9,6 +9,7 @@ import type { DROStateName } from '../droStateMachine';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CENTER_FINDING_DATA,
+  INITIAL_POLAR_DATA,
   isFunctionMenuSelectionState,
 } from '../droStateMachine';
 import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
@@ -77,9 +78,16 @@ function handleMenuEnter(
         vMem,
         display: computeNormalDisplay(vMem, context),
       };
-    case 'function-menu-linear':
     case 'function-menu-polar':
-      // TODO: implement linear and polar
+      // Polar (US-030): enter plane selection (X-Y / X-Z / Y-Z)
+      return {
+        stateName: 'polar-select-plane',
+        stateData: INITIAL_POLAR_DATA,
+        vMem,
+        display: createDisplay('h-Y', '', ''),
+      };
+    case 'function-menu-linear':
+      // TODO: implement linear
       return {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
