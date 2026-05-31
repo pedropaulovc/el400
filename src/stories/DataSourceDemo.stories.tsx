@@ -21,6 +21,8 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       defaultUnit: 'inch',
       precision: 4,
       bootMessageMode: 'skip',
+      scaleResolution: { X: '5', Y: '5', Z: '5' },
+      taperOnAxis: 'X',
     },
   });
 

@@ -43,6 +43,9 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  // Polar coordinate display states (US-030)
+  | 'polar-select-plane'
+  | 'polar-coordinates'
   // Center line states (2 points)
   | 'function-menu-center-line-point-1'
   | 'function-menu-center-line-point-2'
@@ -58,6 +61,13 @@ export type DROStateName =
   | 'calculator-sub'
   | 'calculator-multi'
   | 'calculator-div'
+  // Calculator trig states (unary operations - US-014)
+  | 'calculator-sin'
+  | 'calculator-cos'
+  | 'calculator-tan'
+  | 'calculator-asin'
+  | 'calculator-acos'
+  | 'calculator-atan'
   // Bolt hole circle states
   | 'bolt-hole-intro'
   | 'bolt-hole-menu-select'
@@ -67,6 +77,17 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Arc contouring (step drilling) states (US-018)
+  | 'arc-contour-intro'
+  | 'arc-contour-center-x'
+  | 'arc-contour-center-y'
+  | 'arc-contour-radius'
+  | 'arc-contour-start-angle'
+  | 'arc-contour-end-angle'
+  | 'arc-contour-tool-diameter'
+  | 'arc-contour-cut-type'
+  | 'arc-contour-max-cut'
+  | 'arc-contour-navigate'
   // Angle hole (linear hole pattern) states (US-019)
   | 'angle-hole-intro'
   | 'angle-hole-start-x'
@@ -75,6 +96,14 @@ export type DROStateName =
   | 'angle-hole-angle'
   | 'angle-hole-holes'
   | 'angle-hole-navigate'
+  // Bolt hole arc states (US-017)
+  | 'bolt-hole-arc-center-x'
+  | 'bolt-hole-arc-center-y'
+  | 'bolt-hole-arc-radius'
+  | 'bolt-hole-arc-start-angle'
+  | 'bolt-hole-arc-end-angle'
+  | 'bolt-hole-arc-holes'
+  | 'bolt-hole-arc-navigate'
   // Linear bolt hole states (US-029)
   | 'linear-bolt-hole-axis'
   | 'linear-bolt-hole-pitch'
@@ -90,6 +119,13 @@ export type DROStateName =
   | 'grid-holes-x'
   | 'grid-holes-y'
   | 'grid-navigate'
+  // Sub Datum Memory (SDM) states (US-009 Learn; extended by US-010/US-011)
+  | 'sdm-intro'
+  | 'sdm-menu-program'
+  | 'sdm-menu-learn'
+  | 'sdm-menu-run'
+  | 'sdm-learn-step'
+  | 'sdm-learn-position'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -99,6 +135,9 @@ export type DROStateName =
   // Setup menu states (US-039)
   | 'setup-select'
   | 'setup-parameter'
+  // Taper calculation (lathe function, US-045)
+  | 'function-menu-taper'
+  | 'taper-active'
   // Reference / Datum recall states (US-012)
   | 'reference-menu-home'
   | 'reference-menu-machine'
@@ -124,10 +163,13 @@ export type DROStateData =
   | AngleHoleData
   | LinearBoltHoleData
   | GridData
+  | SdmData
   | ArcData
   | CalculatorData
   | PresetData
+  | PolarData
   | SetupData
+  | TaperData
   | ReferenceData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -152,6 +194,8 @@ export interface BoltHoleData extends BaseDROStateData {
   centerY: number | null;
   radius: number | null;
   startAngle: number | null;
+  /** End angle of the arc (ARC mode only); null in CIRCLE mode */
+  endAngle: number | null;
   holeCount: number | null;
   currentHole: number;
 }
@@ -190,15 +234,74 @@ export interface GridData extends BaseDROStateData {
   currentHole: number;     // 1-indexed, row-major
 }
 
+/**
+ * Maximum number of sub-datum steps the SDM can store (manual §8.2).
+ * Steps are 1-indexed, so valid step numbers are 1..MAX_SDM_STEPS.
+ */
+export const MAX_SDM_STEPS = 1000;
+
+/**
+ * Which of the three SDM sub-functions is selected (manual §8.2).
+ * Only LEARN is implemented in US-009; PROGRAM (US-010) and RUN (US-011)
+ * reuse this same data model.
+ */
+export type SdmMode = 'PROGRAM' | 'LEARN' | 'RUN';
+
+/**
+ * Two-press capture phase for Learn mode (manual §8.2.2): the first X press
+ * shows the current step number, the second stores the position and advances.
+ * Modelled as a string enum (not a boolean) so it can safely cross functions.
+ */
+export type SdmLearnPhase = 'awaiting-first-press' | 'step-shown';
+
+/**
+ * Sub Datum Memory state data. Shared across the SDM trilogy
+ * (US-009 Learn, US-010 Program, US-011 Run).
+ *
+ * `points` is a sparse map keyed by 1-indexed step number; a step is only
+ * present once a position has been stored for it. Each entry holds X/Y/Z
+ * coordinates in millimetres (internal storage unit).
+ */
+export interface SdmData extends BaseDROStateData {
+  readonly stateDataType: 'sdm';
+  sdmMode: SdmMode;
+  points: Record<number, StoredPoint>;
+  /** 1-indexed step currently being learned/programmed/run. */
+  currentStep: number;
+  /** Learn-mode two-press capture phase (unused outside learn states). */
+  learnPhase: SdmLearnPhase;
+}
+
+/** Cut offset type for arc contouring (which side of the radius the tool runs). */
+export type ArcCutType = 'INT' | 'EXT' | 'MID';
+
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
-  // TODO: define arc-specific fields when implementing arc feature
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  endAngle: number | null;
+  toolDiameter: number | null;
+  cutType: ArcCutType;
+  maxCut: number | null;
+  pointCount: number | null;
+  currentPoint: number;
 }
+
+/** Binary calculator operations (require two operands) */
+export type CalculatorBinaryOperation = 'ADD' | 'SUB' | 'MULTI' | 'DIV';
+
+/** Unary trig calculator operations (operate on a single operand) - US-014 */
+export type CalculatorTrigOperation = 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN';
+
+/** All calculator operations cycled through with the Y key */
+export type CalculatorOperation = CalculatorBinaryOperation | CalculatorTrigOperation;
 
 export interface CalculatorData extends BaseDROStateData {
   readonly stateDataType: 'calculator';
   firstValue: number | null;
-  operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
+  operation: CalculatorOperation | null;
   currentValue: number | string;
 }
 
@@ -210,6 +313,14 @@ export interface PresetData extends BaseDROStateData {
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+}
+
+/** Plane selected for polar coordinate display (US-030) */
+export type PolarPlane = 'X-Y' | 'X-Z' | 'Y-Z';
+
+export interface PolarData extends BaseDROStateData {
+  readonly stateDataType: 'polar';
+  plane: PolarPlane;
 }
 
 export interface SetupData extends BaseDROStateData {
@@ -224,6 +335,18 @@ export interface SetupData extends BaseDROStateData {
    * key. Committed only on SAU CHG exit (US-027); discarded on End (AC 39.8).
    */
   draftValues: Record<string, string>;
+}
+
+export interface TaperData extends BaseDROStateData {
+  readonly stateDataType: 'taper';
+  /**
+   * Machine position (mm) captured when the function was entered. The taper
+   * Radius and Angle are derived from the travel relative to this point, so the
+   * user can (but need not) zero the axes beforehand per the manual procedure.
+   */
+  entryX: number;
+  entryY: number;
+  entryZ: number;
 }
 
 /**
@@ -267,8 +390,10 @@ export type DROEventPayload =
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
+  | { eventName: 'SDM_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -304,8 +429,10 @@ export type DROEventPayload =
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_ARC_CONTOUR' }
   | { eventName: 'BTN_ANGLE_HOLE' }
   | { eventName: 'BTN_GRID' }
+  | { eventName: 'BTN_SDM' }
   // Reference / Datum recall (US-012)
   | { eventName: 'BTN_REFERENCE' }
   | { eventName: 'ENCODER_REF_MARK_CROSSED'; axis: 'X' | 'Y' | 'Z' };
@@ -339,6 +466,10 @@ export const isResultState = (s: DROStateName): boolean => s.endsWith('-result')
 export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
+/** Check if polar coordinate mode is active (US-030) */
+export const isPolarActive = (s: DROStateName): boolean =>
+  s.startsWith('polar-');
+
 /** Check if calculator mode is active */
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
@@ -346,6 +477,10 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 /** Check if bolt hole mode is active */
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
+
+/** Check if arc contouring mode is active */
+export const isArcContourActive = (s: DROStateName): boolean =>
+  s.startsWith('arc-contour-');
 
 /** Check if angle hole (linear hole pattern) mode is active */
 export const isAngleHoleActive = (s: DROStateName): boolean =>
@@ -359,13 +494,20 @@ export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
 export const isGridActive = (s: DROStateName): boolean =>
   s.startsWith('grid-');
 
+/** Check if Sub Datum Memory mode is active (US-009/010/011) */
+export const isSdmActive = (s: DROStateName): boolean =>
+  s.startsWith('sdm-');
+
 /** Check if FN LED should be active (function menu or pattern modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
   isFunctionActive(s) ||
   isBoltHoleActive(s) ||
+  isArcContourActive(s) ||
   isAngleHoleActive(s) ||
   isLinearBoltHoleActive(s) ||
-  isGridActive(s);
+  isGridActive(s) ||
+  isPolarActive(s) ||
+  isTaperActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -374,6 +516,10 @@ export const isPresetActive = (s: DROStateName): boolean =>
 /** Check if setup menu is active (any setup-* state) */
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
+
+/** Check if taper calculation mode is active (US-045) */
+export const isTaperActive = (s: DROStateName): boolean =>
+  s === 'taper-active';
 
 /** Check if reference / datum recall mode is active (any reference-* state) */
 export const isReferenceActive = (s: DROStateName): boolean =>
@@ -407,8 +553,23 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  endAngle: null,
   holeCount: null,
   currentHole: 1,
+};
+
+export const INITIAL_ARC_DATA: ArcData = {
+  stateDataType: 'arc',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  endAngle: null,
+  toolDiameter: null,
+  cutType: 'INT',
+  maxCut: null,
+  pointCount: null,
+  currentPoint: 1,
 };
 
 export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
@@ -441,6 +602,14 @@ export const INITIAL_GRID_DATA: GridData = {
   currentHole: 1,
 };
 
+export const INITIAL_SDM_DATA: SdmData = {
+  stateDataType: 'sdm',
+  sdmMode: 'LEARN',
+  points: {},
+  currentStep: 1,
+  learnPhase: 'awaiting-first-press',
+};
+
 export const INITIAL_PRESET_DATA: PresetData = {
   stateDataType: 'preset',
   presetTargets: {
@@ -451,11 +620,23 @@ export const INITIAL_PRESET_DATA: PresetData = {
   activeInputAxis: null,
 };
 
+export const INITIAL_POLAR_DATA: PolarData = {
+  stateDataType: 'polar',
+  plane: 'X-Y',
+};
+
 export const INITIAL_SETUP_DATA: SetupData = {
   stateDataType: 'setup',
   selectedAxis: null,
   currentParamIndex: 0,
   draftValues: {},
+};
+
+export const INITIAL_TAPER_DATA: TaperData = {
+  stateDataType: 'taper',
+  entryX: 0,
+  entryY: 0,
+  entryZ: 0,
 };
 
 export const INITIAL_REFERENCE_DATA: ReferenceData = {

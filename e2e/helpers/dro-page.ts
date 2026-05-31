@@ -119,7 +119,7 @@ export class DROPage {
    * Navigate to the DRO simulator connected to the mock CNCjs server.
    * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { skipBootMessage?: boolean }) {
+  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime' }) {
     const params = new URLSearchParams();
     params.set('source', 'cncjs');
     params.set('host', 'localhost');
@@ -129,6 +129,9 @@ export class DROPage {
     const skipBoot = options?.skipBootMessage !== false;
     if (skipBoot) {
       params.set('bootMessageMode', 'skip');
+    }
+    if (options?.taperOn) {
+      params.set('taperOn', options.taperOn);
     }
 
     const url = `/?${params.toString()}`;
@@ -426,5 +429,29 @@ export class DROPage {
     markMachinePositionMm: number
   ): Promise<void> {
     await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
+  }
+
+  /**
+   * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
+   * URL param, then re-establish the connection. Call before entering the
+   * Taper function (US-045).
+   */
+  async setTaperOnAxis(axis: 'X' | 'Z' | 'Zprime'): Promise<void> {
+    await this.goto({ taperOn: axis });
+  }
+
+  /**
+   * Enter the Taper function via the function menu: open the menu, step right
+   * to the `tAPEr` entry, then confirm. Mirrors the lathe-function entry path
+   * used for polar coordinates.
+   */
+  async enterTaperFunction(): Promise<void> {
+    await this.functionButton.click();
+    // Ring: center, circle, line, linear, polar, taper => 5 right presses.
+    for (let i = 0; i < 5; i++) {
+      await this.key6.click();
+    }
+    await this.waitForAxisPureTextValue('X', 'tAPEr');
+    await this.enterButton.click();
   }
 }

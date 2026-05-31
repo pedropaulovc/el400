@@ -3,9 +3,6 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useDispatch } from "../stores/dro";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {};
-
 const SecondaryFunctionSection = () => {
   const dispatch = useDispatch();
 
@@ -25,12 +22,20 @@ const SecondaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_BOLT_HOLE' });
   };
 
+  const handleArcContour = () => {
+    dispatch({ eventName: 'BTN_ARC_CONTOUR' });
+  };
+
   const handleAngleHole = () => {
     dispatch({ eventName: 'BTN_ANGLE_HOLE' });
   };
 
   const handleGrid = () => {
     dispatch({ eventName: 'BTN_GRID' });
+  };
+
+  const handleSdm = () => {
+    dispatch({ eventName: 'BTN_SDM' });
   };
 
   return (
@@ -44,7 +49,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={handleBoltHole} variant="dark" size="secondary" className="p-0" data-testid="btn-bolt-circle" title="Bolt hole">
               <Icon name="bolt-hole-pcd-function" /><span className="sr-only">Bolt hole</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">
+            <DROButton onClick={handleArcContour} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">
               <Icon name="arc-contouring-function" /><span className="sr-only">Arc contour</span>
             </DROButton>
             <DROButton onClick={handleAngleHole} variant="dark" size="secondary" className="p-0" data-testid="btn-angle-hole" title="Angle hole">
@@ -63,7 +68,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={handleHalf} variant="dark" size="secondary" className="p-0" data-testid="btn-half" title="Half">
               <Icon name="half-function" /><span className="sr-only">Half</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
+            <DROButton onClick={handleSdm} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
               <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
             <DROButton onClick={handleFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function" title="Function">

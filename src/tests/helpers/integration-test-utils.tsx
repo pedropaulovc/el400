@@ -89,6 +89,8 @@ export function resetStores(): void {
       defaultUnit: 'inch',
       precision: 4,
       bootMessageMode: 'skip', // Skip boot for faster tests
+      scaleResolution: { X: '5', Y: '5', Z: '5' },
+      taperOnAxis: 'X',
     },
   });
 

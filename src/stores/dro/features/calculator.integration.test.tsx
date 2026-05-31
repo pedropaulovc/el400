@@ -5,6 +5,7 @@ import {
   renderSimulator,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
+  enterValue,
 } from '../../../tests/helpers/integration-test-utils';
 
 describe('Calculator Integration', () => {
@@ -227,7 +228,27 @@ describe('Calculator Integration', () => {
       await user.click(screen.getByTestId('axis-select-y'));
       expect(getAxisDisplayPureTextValue('Y')).toBe('dIv');
 
-      // Should wrap around
+      // US-014: DIV now advances into the trig functions (SIN..ATAN) before
+      // wrapping back to ADD.
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('S in');
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('CoS');
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('tAn');
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('AS in');
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('ACoS');
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('AtAn');
+
+      // Wrap back to ADD after the final trig function
       await user.click(screen.getByTestId('axis-select-y'));
       expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
     });
@@ -258,4 +279,82 @@ describe('Calculator Integration', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(129, 4);
     });
   });
+
+  describe('US-014: Trigonometric Functions', () => {
+    async function calcTrig(
+      user: ReturnType<typeof userEvent.setup>,
+      value: string,
+      cyclesToOperation: number
+    ) {
+      await user.click(screen.getByTestId('btn-calculator'));
+      await enterValue(user, value);
+      for (let i = 0; i < cyclesToOperation; i++) {
+        await user.click(screen.getByTestId('axis-select-y'));
+      }
+    }
+
+    it('AC14.1: sin(30) = 0.5000 shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      // ADD,SUB,MULTI,DIV,SIN -> 5 cycles to reach SIN
+      await calcTrig(user, '30', 5);
+      expect(getAxisDisplayPureTextValue('Y')).toBe('S in');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0.5, 4);
+    });
+
+    it('AC14.2: cos(60) = 0.5000 shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '60', 6); // ...,COS
+      expect(getAxisDisplayPureTextValue('Y')).toBe('CoS');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0.5, 4);
+    });
+
+    it('AC14.3: tan(45) = 1.0000 shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '45', 7); // ...,TAN
+      expect(getAxisDisplayPureTextValue('Y')).toBe('tAn');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1.0, 4);
+    });
+
+    it('AC14.4/AC14.8: asin(0.5) = 30 degrees shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '0.5', 8); // ...,ASIN
+      expect(getAxisDisplayPureTextValue('Y')).toBe('AS in');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(30, 4);
+    });
+
+    it('AC14.5: acos(0.5) = 60 degrees shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '0.5', 9); // ...,ACOS
+      expect(getAxisDisplayPureTextValue('Y')).toBe('ACoS');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(60, 4);
+    });
+
+    it('AC14.6: atan(1) = 45 degrees shown on X', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '1', 10); // ...,ATAN
+      expect(getAxisDisplayPureTextValue('Y')).toBe('AtAn');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(45, 4);
+    });
+
+    it('domain error: asin(2) shows "inF vAL"', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+      await calcTrig(user, '2', 8); // ASIN
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('inF vAL');
+    });
+  });
+
 });

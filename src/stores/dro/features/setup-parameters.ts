@@ -14,9 +14,13 @@
  *    a `scope` ('per-axis' or 'global'), and a `choices` list (the values the
  *    left/right keys cycle through). Each choice has a `value` (stored in the
  *    draft) and the `label` shown on the display.
- * 3. Provide `readValue(ctx)` to seed the current value from committed state
- *    (nvMem for now) and -- when the owning story implements commit -- wire the
- *    chosen value into `SAU CHG` handling (US-027).
+ * 3. Provide `readValue(ctx)` to seed the current value from committed state.
+ *    `ctx.nvMem` is the persisted store; for `per-axis` params, `ctx.axis` is
+ *    the axis being configured (null on the SELECT prompt -- fall back to X),
+ *    so seed from the right per-axis slot (see `scale-resolution` / SC, the
+ *    first real per-axis nvMem-backed parameter, for the pattern). When the
+ *    owning story implements commit, wire the chosen value into `SAU CHG`
+ *    handling (US-027).
  * 4. That's it. The shell handles highlight rendering, up/down item navigation
  *    with wrap-around, and left/right choice cycling with wrap-around
  *    automatically.
@@ -26,9 +30,13 @@
  */
 
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import { DEFAULT_SCALE_RESOLUTION } from '../../../types/nonVolatileMemory';
 
 /** Scope of a setup parameter: per-axis values differ per X/Y/Z; global apply to all. */
 export type SetupParameterScope = 'per-axis' | 'global';
+
+/** Axis a per-axis parameter is being read for; null while on the SELECT prompt. */
+export type SetupAxis = 'X' | 'Y' | 'Z' | null;
 
 /** A single selectable choice for a parameter (the values left/right cycle through). */
 export interface SetupParameterChoice {
@@ -41,6 +49,11 @@ export interface SetupParameterChoice {
 /** Read-only view of committed state a parameter may seed its current value from. */
 export interface SetupReadContext {
   readonly nvMem: NonVolatileMemory;
+  /**
+   * Axis currently being configured (per-axis params seed from this slot); null
+   * on the SELECT prompt, where per-axis params fall back to the X value.
+   */
+  readonly axis: SetupAxis;
 }
 
 /** Definition of one setup parameter in the navigable list. */
@@ -62,6 +75,28 @@ export interface SetupParameter {
    */
   readonly readValue: (ctx: SetupReadContext) => string;
 }
+
+/** The SC (scale resolution) parameter id -- used as its per-axis draft key. */
+export const SCALE_RESOLUTION_ID = 'scale-resolution';
+
+/**
+ * SC choices: the nine measuring-system resolutions in microns, ascending
+ * (manual section 6.2 / specs: 0.1/0.2/0.5/1/2/5/10/20/50 micron). Labels carry
+ * the `SC` prefix and a one-decimal micron value as shown on the device
+ * ("SC 5.0"). Exported so sibling resolution stories (e.g. dP, US-022) can reuse
+ * the identical option set.
+ */
+export const SCALE_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0.1', label: 'SC 0.1' },
+  { value: '0.2', label: 'SC 0.2' },
+  { value: '0.5', label: 'SC 0.5' },
+  { value: '1', label: 'SC 1.0' },
+  { value: '2', label: 'SC 2.0' },
+  { value: '5', label: 'SC 5.0' },
+  { value: '10', label: 'SC 10.0' },
+  { value: '20', label: 'SC 20.0' },
+  { value: '50', label: 'SC 50.0' },
+];
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -101,6 +136,36 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     ],
     // Proof: read a real global nvMem flag (beepEnabled stands in until US-042).
     readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
+  },
+  {
+    id: SCALE_RESOLUTION_ID,
+    label: 'SC 5.0',
+    scope: 'per-axis',
+    choices: SCALE_RESOLUTION_CHOICES,
+    // Seed from the selected axis's committed scale resolution (nvMem). On the
+    // SELECT prompt (axis null) fall back to X. Guard against a stale persisted
+    // value that is no longer a valid choice by defaulting to the mill default.
+    readValue: (ctx) => {
+      const axis = ctx.axis ?? 'X';
+      const committed = ctx.nvMem.scaleResolution[axis];
+      // Defend against a stale persisted value no longer in the choice set by
+      // falling back to the mill default for that axis.
+      const isValid = SCALE_RESOLUTION_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : DEFAULT_SCALE_RESOLUTION[axis];
+    },
+  },
+  {
+    id: 'taper-on',
+    label: 'tAPEr on',
+    scope: 'global',
+    choices: [
+      { value: 'X', label: 'tAPEr X' },
+      { value: 'Z', label: 'tAPEr Z' },
+      { value: 'Zprime', label: 'tAPEr Z1' },
+    ],
+    // Reads the committed taper-on axis (US-045). Full commit wiring lands with
+    // setup save (US-027); the value is seeded from nvMem here.
+    readValue: (ctx) => ctx.nvMem.taperOnAxis,
   },
   {
     id: SETUP_END_ID,

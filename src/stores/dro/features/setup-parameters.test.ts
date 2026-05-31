@@ -38,12 +38,24 @@ describe('SETUP_PARAMETERS registry', () => {
   });
 
   it('readValue returns a valid choice value for choice-bearing params', () => {
-    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY };
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
     for (const p of SETUP_PARAMETERS) {
       if (p.choices.length === 0) continue;
       const seeded = p.readValue(ctx);
       expect(p.choices.map((c) => c.value)).toContain(seeded);
     }
+  });
+
+  it('exposes a tAPEr on parameter with X / Z / Z\' choices (AC 45.1)', () => {
+    const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
+    expect(taper).toBeDefined();
+    expect(taper.label).toBe('tAPEr on');
+    expect(taper.choices.map((c) => c.value)).toEqual(['X', 'Z', 'Zprime']);
+  });
+
+  it('taper-on seeds its current value from nvMem.taperOnAxis (AC 45.1)', () => {
+    const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
+    expect(taper.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, taperOnAxis: 'Z' }, axis: 'X' as const })).toBe('Z');
   });
 });
 

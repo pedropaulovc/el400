@@ -7,7 +7,7 @@
  */
 
 import type { FeatureReducer } from '../types';
-import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ARC_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA, INITIAL_SDM_DATA } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
 import { MENU_TEXT_MAP } from './menu';
 
@@ -44,6 +44,17 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         vMem,
         display: createDisplay('b hoLE', 0, ''),
       };
+    case 'BTN_ARC_CONTOUR':
+      // Must be in ABS mode to run the arc contouring macro
+      if (vMem.mode !== 'abs') {
+        return null;
+      }
+      return {
+        stateName: 'arc-contour-intro',
+        stateData: INITIAL_ARC_DATA,
+        vMem,
+        display: createDisplay('ArC Cnt', 0, ''),
+      };
     case 'BTN_ANGLE_HOLE':
       // Must be in ABS mode to run angle hole macro
       if (vMem.mode !== 'abs') {
@@ -65,6 +76,13 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateData: INITIAL_GRID_DATA,
         vMem,
         display: createDisplay('Grid', 0, ''),
+      };
+    case 'BTN_SDM':
+      return {
+        stateName: 'sdm-intro',
+        stateData: INITIAL_SDM_DATA,
+        vMem,
+        display: createDisplay('Sdm', '', ''),
       };
     default:
       return null;
