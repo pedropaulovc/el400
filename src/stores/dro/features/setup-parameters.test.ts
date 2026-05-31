@@ -38,7 +38,7 @@ describe('SETUP_PARAMETERS registry', () => {
   });
 
   it('readValue returns a valid choice value for choice-bearing params', () => {
-    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY };
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
     for (const p of SETUP_PARAMETERS) {
       if (p.choices.length === 0) continue;
       const seeded = p.readValue(ctx);

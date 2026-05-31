@@ -21,6 +21,7 @@
 import type { DROReducerContext, DROStatePayload, FeatureReducer } from '../types';
 import type { DROEventPayload, SetupData } from '../droStateMachine';
 import type { VolatileMemoryState } from '../../../types/volatileMemory';
+import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_SETUP_DATA,
@@ -49,13 +50,19 @@ function draftKey(param: SetupParameter, axis: SetupData['selectedAxis']): strin
   return `${scopeKey}:${param.id}`;
 }
 
+/** Build the read context for the parameter currently being viewed. */
+function readContextFor(data: SetupData, nvMem: NonVolatileMemory): SetupReadContext {
+  return { nvMem, axis: data.selectedAxis };
+}
+
 /**
  * Current draft value for a parameter: the stored draft if present, otherwise
- * the committed value seeded from nvMem via the parameter's readValue.
+ * the committed value seeded from nvMem via the parameter's readValue (which is
+ * scoped to the selected axis for per-axis params like SC).
  */
-function currentValue(param: SetupParameter, data: SetupData, readCtx: SetupReadContext): string {
+function currentValue(param: SetupParameter, data: SetupData, nvMem: NonVolatileMemory): string {
   const key = draftKey(param, data.selectedAxis);
-  return data.draftValues[key] ?? param.readValue(readCtx);
+  return data.draftValues[key] ?? param.readValue(readContextFor(data, nvMem));
 }
 
 /** Display for the SELECT prompt: X shows SELECT, Y/Z blank. */
@@ -67,9 +74,9 @@ function computeSelectDisplay(): DisplayState {
  * Display while navigating parameters: X shows the chosen value's label for the
  * highlighted parameter, Y/Z blank.
  */
-function computeParameterDisplay(data: SetupData, readCtx: SetupReadContext): DisplayState {
+function computeParameterDisplay(data: SetupData, nvMem: NonVolatileMemory): DisplayState {
   const param = getParameterAt(data.currentParamIndex);
-  const value = currentValue(param, data, readCtx);
+  const value = currentValue(param, data, nvMem);
   return createDisplay(labelForValue(param, value), '', '');
 }
 
@@ -96,7 +103,7 @@ function reduceSelect(
   eventName: DROEventPayload['eventName'],
   data: SetupData,
   vMem: VolatileMemoryState,
-  readCtx: SetupReadContext,
+  nvMem: NonVolatileMemory,
   context: DROReducerContext
 ): DROStatePayload | null {
   // Axis selection -> first parameter highlighted (AC 39.2).
@@ -107,7 +114,7 @@ function reduceSelect(
       stateName: 'setup-parameter',
       stateData: newData,
       vMem,
-      display: computeParameterDisplay(newData, readCtx),
+      display: computeParameterDisplay(newData, nvMem),
     };
   }
 
@@ -124,7 +131,7 @@ function reduceParameter(
   eventName: DROEventPayload['eventName'],
   data: SetupData,
   vMem: VolatileMemoryState,
-  readCtx: SetupReadContext,
+  nvMem: NonVolatileMemory,
   context: DROReducerContext
 ): DROStatePayload | null {
   // Re-pressing the setup key returns to the SELECT prompt (AC 39.6).
@@ -149,7 +156,7 @@ function reduceParameter(
       stateName: 'setup-parameter',
       stateData: newData,
       vMem,
-      display: computeParameterDisplay(newData, readCtx),
+      display: computeParameterDisplay(newData, nvMem),
     };
   }
 
@@ -160,7 +167,7 @@ function reduceParameter(
     if (param.choices.length === 0) return null;
 
     const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
-    const idx = choiceIndexOf(param, currentValue(param, data, readCtx));
+    const idx = choiceIndexOf(param, currentValue(param, data, nvMem));
     const nextChoice = param.choices[wrapChoiceIndex(param, idx, delta)];
     if (nextChoice === undefined) return null;
     const key = draftKey(param, data.selectedAxis);
@@ -172,7 +179,7 @@ function reduceParameter(
       stateName: 'setup-parameter',
       stateData: newData,
       vMem,
-      display: computeParameterDisplay(newData, readCtx),
+      display: computeParameterDisplay(newData, nvMem),
     };
   }
 
@@ -194,8 +201,6 @@ function reduceParameter(
 export const setupReducer: FeatureReducer = (statePayload, eventPayload, context) => {
   const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
-  const readCtx: SetupReadContext = { nvMem: context.nvMem };
-
   // Entry from idle: the wrench/setup key opens the SELECT prompt (AC 39.1).
   if (state === 'idle') {
     if (eventName !== 'BTN_SETUP') return null;
@@ -212,8 +217,8 @@ export const setupReducer: FeatureReducer = (statePayload, eventPayload, context
   const setupData = data.stateDataType === 'setup' ? data : INITIAL_SETUP_DATA;
 
   if (state === 'setup-select') {
-    return reduceSelect(eventName, setupData, vMem, readCtx, context);
+    return reduceSelect(eventName, setupData, vMem, context.nvMem, context);
   }
 
-  return reduceParameter(eventName, setupData, vMem, readCtx, context);
+  return reduceParameter(eventName, setupData, vMem, context.nvMem, context);
 };
