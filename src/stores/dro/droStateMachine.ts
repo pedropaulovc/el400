@@ -67,6 +67,14 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Angle hole (linear hole pattern) states (US-019)
+  | 'angle-hole-intro'
+  | 'angle-hole-start-x'
+  | 'angle-hole-start-y'
+  | 'angle-hole-pitch'
+  | 'angle-hole-angle'
+  | 'angle-hole-holes'
+  | 'angle-hole-navigate'
   // Linear bolt hole states (US-029)
   | 'linear-bolt-hole-axis'
   | 'linear-bolt-hole-pitch'
@@ -96,6 +104,7 @@ export type DROStateData =
   | EmptyData
   | CenterFindingData
   | BoltHoleData
+  | AngleHoleData
   | LinearBoltHoleData
   | ArcData
   | CalculatorData
@@ -124,6 +133,16 @@ export interface BoltHoleData extends BaseDROStateData {
   centerY: number | null;
   radius: number | null;
   startAngle: number | null;
+  holeCount: number | null;
+  currentHole: number;
+}
+
+export interface AngleHoleData extends BaseDROStateData {
+  readonly stateDataType: 'angle-hole';
+  startX: number | null;
+  startY: number | null;
+  pitch: number | null;
+  lineAngle: number | null;
   holeCount: number | null;
   currentHole: number;
 }
@@ -194,6 +213,7 @@ export type DROEventPayload =
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -228,7 +248,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
-  | { eventName: 'BTN_BOLT_HOLE' };
+  | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_ANGLE_HOLE' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -267,13 +288,20 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
+/** Check if angle hole (linear hole pattern) mode is active */
+export const isAngleHoleActive = (s: DROStateName): boolean =>
+  s.startsWith('angle-hole-');
+
 /** Check if linear bolt hole mode is active (US-029) */
 export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('linear-bolt-hole-');
 
-/** Check if FN LED should be active (function menu or bolt hole modes) */
+/** Check if FN LED should be active (function menu or pattern modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
-  isFunctionActive(s) || isBoltHoleActive(s) || isLinearBoltHoleActive(s);
+  isFunctionActive(s) ||
+  isBoltHoleActive(s) ||
+  isAngleHoleActive(s) ||
+  isLinearBoltHoleActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -311,6 +339,16 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  holeCount: null,
+  currentHole: 1,
+};
+
+export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
+  stateDataType: 'angle-hole',
+  startX: null,
+  startY: null,
+  pitch: null,
+  lineAngle: null,
   holeCount: null,
   currentHole: 1,
 };
