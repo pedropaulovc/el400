@@ -665,3 +665,83 @@ describe('useGridIntro hook', () => {
     expect(mockDispatch).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * AC 2.5 — macro canonical-convention guard (generalises the bolt-hole proof).
+ *
+ * The grid macro computes its X/Y distance-to-go directly from stored mm
+ * (holePos - currentPos), never via the signed display path, so the generated
+ * hole coordinates and their distance-to-go are invariant to the operator's
+ * per-axis Direction / Z depth-sense preference. The Z field is the live
+ * tool-depth passthrough and therefore follows the Z preference (spec
+ * Implementation Note) — not an AC 2.5 violation.
+ */
+describe('gridReducer - AC 2.5 macro canonical convention', () => {
+  function ctxWith(nvOverrides: Partial<typeof DEFAULT_TEST_CONTEXT.nvMem>) {
+    return {
+      ...mmContext,
+      nvMem: { ...mmContext.nvMem, ...nvOverrides },
+    };
+  }
+
+  const NORMAL = { X: 'normal', Y: 'normal', Z: 'normal' } as const;
+  const REVERSED = { X: 'reversed', Y: 'reversed', Z: 'reversed' } as const;
+
+  // 3x3 grid, hole 5 (centre), with a non-zero current position so distances
+  // are non-trivial in both axes (a zero distance would mask a sign flip).
+  const navigateState: DROStatePayload = {
+    stateName: 'grid-navigate',
+    stateData: {
+      ...INITIAL_GRID_DATA,
+      startX: 0,
+      startY: 0,
+      pitchX: 10,
+      pitchY: 8,
+      angle: 0,
+      holesX: 3,
+      holesY: 3,
+      currentHole: 5,
+    },
+    vMem: {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'inc',
+      manualAbsoluteValues: { X: 3, Y: -4, Z: 9 },
+      incrementalValues: { X: 3, Y: -4, Z: 9 },
+    },
+    display: INITIAL_DISPLAY_STATE,
+  };
+
+  function navigateDisplay(nvOverrides: Partial<typeof DEFAULT_TEST_CONTEXT.nvMem>) {
+    const result = gridReducer(navigateState, { eventName: 'MILL_STATE_CHANGED' }, ctxWith(nvOverrides));
+    if (result === null) throw new Error('grid navigate reducer returned null');
+    return result.display;
+  }
+
+  it('X/Y distance-to-go is invariant to per-axis Direction (all reversed)', () => {
+    const normal = navigateDisplay({ axisDirection: NORMAL });
+    const reversed = navigateDisplay({ axisDirection: REVERSED });
+    expect(reversed.X).toBe(normal.X);
+    expect(reversed.Y).toBe(normal.Y);
+  });
+
+  it('X/Y distance-to-go is invariant to the Z depth-sense preference', () => {
+    const normal = navigateDisplay({ zDepthSense: 'depth-negative' });
+    const depthPos = navigateDisplay({ zDepthSense: 'depth-positive' });
+    expect(depthPos.X).toBe(normal.X);
+    expect(depthPos.Y).toBe(normal.Y);
+  });
+
+  it('generated X/Y distances are the expected canonical values', () => {
+    // 3x3, hole 5 = row 1, col 1 => (pitchX, pitchY) = (10, 8). current = (3, -4).
+    // distance-to-go = (7, 12).
+    const display = navigateDisplay({ axisDirection: NORMAL });
+    expect(typeof display.X === 'number' ? display.X : NaN).toBeCloseTo(7, 4);
+    expect(typeof display.Y === 'number' ? display.Y : NaN).toBeCloseTo(12, 4);
+  });
+
+  it('Z field is the live passthrough and follows the Z preference (NOT AC 2.5 scope)', () => {
+    const normalZ = navigateDisplay({ axisDirection: NORMAL }).Z;
+    const zReversed = navigateDisplay({ axisDirection: { X: 'normal', Y: 'normal', Z: 'reversed' } }).Z;
+    expect(zReversed).toBe(-(normalZ as number));
+  });
+});

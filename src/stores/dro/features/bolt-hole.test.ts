@@ -1574,3 +1574,105 @@ describe('useBoltHoleIntro hook', () => {
     expect(mockDispatch).toHaveBeenCalledWith({ eventName: 'BOLT_HOLE_INTRO_TIMEOUT' });
   });
 });
+
+/**
+ * AC 2.5 — macro canonical-convention guard.
+ *
+ * Macros compute against the standard sign convention (Figure 1) regardless of
+ * the operator's per-axis Direction / Z depth-sense preference, because they read
+ * stored mm and compute distance-to-go directly (holePos - currentPos), never the
+ * signed display path (`computeDisplayPosition`/`directionSign`). So the X/Y hole
+ * coordinates a macro GENERATES — and their distance-to-go readout — are invariant
+ * to nvMem.axisDirection / nvMem.zDepthSense. Generated holes therefore land where
+ * the figures show, no matter how the scales were installed or how the operator
+ * prefers to count.
+ *
+ * The Z field of a 2D drill macro is the operator's live tool-depth readout passed
+ * through (not a generated coordinate), so per the spec Implementation Note it
+ * correctly DOES follow the Z preference — that is asserted separately below, and
+ * is explicitly NOT an AC 2.5 violation.
+ */
+describe('boltHoleReducer - AC 2.5 macro canonical convention', () => {
+  // mm units so the asserted distances are raw millimetres (no inch conversion).
+  function ctxWith(nvOverrides: Partial<typeof DEFAULT_TEST_CONTEXT.nvMem>) {
+    return {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const, ...nvOverrides },
+    };
+  }
+
+  const NORMAL = { X: 'normal', Y: 'normal', Z: 'normal' } as const;
+  const REVERSED = { X: 'reversed', Y: 'reversed', Z: 'reversed' } as const;
+
+  // A fully-specified circle pattern with a non-trivial current position so the
+  // X/Y distance-to-go is non-zero (a zero distance would mask a sign flip).
+  const navigateState: DROStatePayload = {
+    stateName: 'bolt-hole-circle-navigate',
+    stateData: {
+      ...INITIAL_BOLT_HOLE_DATA,
+      centerX: 44.45,
+      centerY: 31.75,
+      radius: 24.13,
+      startAngle: 30,
+      holeCount: 6,
+      currentHole: 1,
+    },
+    vMem: {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'inc',
+      manualAbsoluteValues: { X: 10, Y: -5, Z: 9 },
+      incrementalValues: { X: 10, Y: -5, Z: 9 },
+    },
+    display: INITIAL_DISPLAY_STATE,
+  };
+
+  /** Drive a next-hole press and return the resulting distance-to-go display. */
+  function navigateDisplay(nvOverrides: Partial<typeof DEFAULT_TEST_CONTEXT.nvMem>) {
+    const result = boltHoleReducer(navigateState, { eventName: 'KEY_6_RIGHT' }, ctxWith(nvOverrides));
+    if (result === null) throw new Error('navigate reducer returned null');
+    return result.display;
+  }
+
+  it('X/Y distance-to-go is invariant to per-axis Direction (all reversed)', () => {
+    const normal = navigateDisplay({ axisDirection: NORMAL });
+    const reversed = navigateDisplay({ axisDirection: REVERSED });
+    expect(reversed.X).toBe(normal.X);
+    expect(reversed.Y).toBe(normal.Y);
+  });
+
+  it('X/Y distance-to-go is invariant to single-axis Direction flips', () => {
+    const normal = navigateDisplay({ axisDirection: NORMAL });
+    const xRev = navigateDisplay({ axisDirection: { X: 'reversed', Y: 'normal', Z: 'normal' } });
+    const yRev = navigateDisplay({ axisDirection: { X: 'normal', Y: 'reversed', Z: 'normal' } });
+    expect(xRev.X).toBe(normal.X);
+    expect(yRev.Y).toBe(normal.Y);
+  });
+
+  it('X/Y distance-to-go is invariant to the Z depth-sense preference', () => {
+    const normal = navigateDisplay({ zDepthSense: 'depth-negative' });
+    const depthPos = navigateDisplay({ zDepthSense: 'depth-positive' });
+    expect(depthPos.X).toBe(normal.X);
+    expect(depthPos.Y).toBe(normal.Y);
+  });
+
+  it('generated X/Y distances are the expected canonical values', () => {
+    // Hole 2 of a 6-hole circle, startAngle 30°, so angle = 30 + 60 = 90°.
+    // holePos = center + radius·(cos90°, sin90°) = (44.45, 31.75 + 24.13) = (44.45, 55.88).
+    // current = (10, -5). distance-to-go = (34.45, 60.88).
+    const display = navigateDisplay({ axisDirection: NORMAL });
+    expect(typeof display.X === 'number' ? display.X : NaN).toBeCloseTo(34.45, 4);
+    expect(typeof display.Y === 'number' ? display.Y : NaN).toBeCloseTo(60.88, 4);
+  });
+
+  it('Z field is the live tool-depth passthrough and follows the Z preference (NOT AC 2.5 scope)', () => {
+    // Per the spec Implementation Note: the Z field of a 2D macro is the operator's
+    // live tool-depth readout, not a macro-generated coordinate, so it correctly
+    // honours the Z preference. (reversed-Z and depth-positive each invert it;
+    // together they cancel — the double-inversion documented in directionSign.)
+    const normalZ = navigateDisplay({ axisDirection: NORMAL }).Z;
+    const zReversed = navigateDisplay({ axisDirection: { X: 'normal', Y: 'normal', Z: 'reversed' } }).Z;
+    const depthPos = navigateDisplay({ zDepthSense: 'depth-positive' }).Z;
+    expect(zReversed).toBe(-(normalZ as number));
+    expect(depthPos).toBe(-(normalZ as number));
+  });
+});
