@@ -3,6 +3,14 @@
  */
 
 /**
+ * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`, used by
+ * the Taper Calculation function in Section 9.2.2). The other axis of the pair
+ * shows the radius. 'Zprime' is the lathe 4th-axis variant; on this 3-axis mill
+ * simulator it behaves like 'Z' for the radius pairing.
+ */
+export type TaperOnAxis = 'X' | 'Z' | 'Zprime';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -14,6 +22,8 @@ export interface NonVolatileMemory {
   precision: number;
   /** Whether to show boot message on startup */
   bootMessageMode: 'show' | 'skip';
+  /** Axis on which the Taper function displays the angle (Section 6.2). */
+  taperOnAxis: TaperOnAxis;
 }
 
 /**
@@ -24,6 +34,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   defaultUnit: 'inch',
   precision: 4,
   bootMessageMode: 'show',
+  taperOnAxis: 'X',
 };
 
 /**

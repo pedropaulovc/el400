@@ -73,6 +73,7 @@ function resetStoresForTest(): void {
       defaultUnit: 'inch',
       precision: 4,
       bootMessageMode: 'skip',
+      taperOnAxis: 'X',
     },
   });
 

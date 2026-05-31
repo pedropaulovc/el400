@@ -98,7 +98,10 @@ export type DROStateName =
   | 'distance-to-go'
   // Setup menu states (US-039)
   | 'setup-select'
-  | 'setup-parameter';
+  | 'setup-parameter'
+  // Taper calculation (lathe function, US-045)
+  | 'function-menu-taper'
+  | 'taper-active';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -120,7 +123,8 @@ export type DROStateData =
   | ArcData
   | CalculatorData
   | PresetData
-  | SetupData;
+  | SetupData
+  | TaperData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -216,6 +220,18 @@ export interface SetupData extends BaseDROStateData {
    * key. Committed only on SAU CHG exit (US-027); discarded on End (AC 39.8).
    */
   draftValues: Record<string, string>;
+}
+
+export interface TaperData extends BaseDROStateData {
+  readonly stateDataType: 'taper';
+  /**
+   * Machine position (mm) captured when the function was entered. The taper
+   * Radius and Angle are derived from the travel relative to this point, so the
+   * user can (but need not) zero the axes beforehand per the manual procedure.
+   */
+  entryX: number;
+  entryY: number;
+  entryZ: number;
 }
 
 /** Stored point for center finding operations */
@@ -331,7 +347,8 @@ export const isFnLedActive = (s: DROStateName): boolean =>
   isBoltHoleActive(s) ||
   isAngleHoleActive(s) ||
   isLinearBoltHoleActive(s) ||
-  isGridActive(s);
+  isGridActive(s) ||
+  isTaperActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -340,6 +357,10 @@ export const isPresetActive = (s: DROStateName): boolean =>
 /** Check if setup menu is active (any setup-* state) */
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
+
+/** Check if taper calculation mode is active (US-045) */
+export const isTaperActive = (s: DROStateName): boolean =>
+  s === 'taper-active';
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
@@ -418,6 +439,13 @@ export const INITIAL_SETUP_DATA: SetupData = {
   selectedAxis: null,
   currentParamIndex: 0,
   draftValues: {},
+};
+
+export const INITIAL_TAPER_DATA: TaperData = {
+  stateDataType: 'taper',
+  entryX: 0,
+  entryY: 0,
+  entryZ: 0,
 };
 
 /**

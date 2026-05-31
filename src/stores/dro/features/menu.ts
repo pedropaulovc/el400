@@ -10,10 +10,16 @@ import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CENTER_FINDING_DATA,
   INITIAL_LINEAR_BOLT_HOLE_DATA,
+  INITIAL_TAPER_DATA,
   isFunctionMenuSelectionState,
 } from '../droStateMachine';
-import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
+import {
+  createDisplay,
+  computeNormalDisplay,
+  computeAxisPositionMm,
+} from '../utils/displayComputation';
 import { computeLinearAxisSelectDisplay } from './linear-bolt-hole';
+import { computeTaperDisplay } from './taper';
 
 /** Menu text displayed for each function menu state */
 export const MENU_TEXT_MAP: Record<string, string> = {
@@ -22,6 +28,7 @@ export const MENU_TEXT_MAP: Record<string, string> = {
   'function-menu-line': 'LinE',
   'function-menu-linear': 'LinEAr',
   'function-menu-polar': 'PoLAr',
+  'function-menu-taper': 'tAPEr',
 };
 
 /** Compute menu display: X shows menu text, Y and Z are blank */
@@ -38,6 +45,7 @@ const MENU_RING: DROStateName[] = [
   'function-menu-line',
   'function-menu-linear',
   'function-menu-polar',
+  'function-menu-taper',
 ];
 
 function getNextMenuState(current: DROStateName): DROStateName {
@@ -95,6 +103,22 @@ function handleMenuEnter(
         vMem,
         display: computeNormalDisplay(vMem, context),
       };
+    case 'function-menu-taper': {
+      // Capture the machine position at entry; the taper Radius and Angle are
+      // derived from travel relative to this point (US-045, manual 9.2.2).
+      const taperData = {
+        ...INITIAL_TAPER_DATA,
+        entryX: computeAxisPositionMm('X', vMem, context),
+        entryY: computeAxisPositionMm('Y', vMem, context),
+        entryZ: computeAxisPositionMm('Z', vMem, context),
+      };
+      return {
+        stateName: 'taper-active',
+        stateData: taperData,
+        vMem,
+        display: computeTaperDisplay(taperData, vMem, context),
+      };
+    }
     default:
       return {
         stateName: 'idle',

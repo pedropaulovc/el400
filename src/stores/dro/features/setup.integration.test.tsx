@@ -47,9 +47,12 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
     await user.click(screen.getByTestId('axis-select-x'));
     expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
 
-    // Up advances to EnF, up again to End.
+    // Up advances to EnF, then tAPEr on, then End.
     await user.click(screen.getByTestId('key-8'));
     expect(getAxisDisplayPureTextValue('X')).toBe('EnF on');
+    await user.click(screen.getByTestId('key-8'));
+    // The taper-on item shows its current value's label (seeded to X).
+    expect(getAxisDisplayPureTextValue('X')).toBe('tAPEr X');
     await user.click(screen.getByTestId('key-8'));
     expect(getAxisDisplayPureTextValue('X')).toBe('End');
 
@@ -100,6 +103,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
 
     // Navigate up to End, then press enter.
     await user.click(screen.getByTestId('key-8')); // EnF
+    await user.click(screen.getByTestId('key-8')); // tAPEr on
     await user.click(screen.getByTestId('key-8')); // End
     expect(getAxisDisplayPureTextValue('X')).toBe('End');
     await user.click(screen.getByTestId('key-enter'));

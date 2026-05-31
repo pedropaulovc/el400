@@ -32,6 +32,7 @@ function resetStores(initialState?: DROShape) {
       defaultUnit: 'inch',
       precision: 4,
       bootMessageMode: 'skip',
+      taperOnAxis: 'X',
     },
   });
 
