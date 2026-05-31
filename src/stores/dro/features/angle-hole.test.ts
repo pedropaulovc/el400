@@ -78,6 +78,7 @@ describe('angleHoleReducer', () => {
           centerY: null,
           radius: null,
           startAngle: null,
+          endAngle: null,
           holeCount: null,
           currentHole: 1,
         },

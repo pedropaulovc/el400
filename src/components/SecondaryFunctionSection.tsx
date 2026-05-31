@@ -3,9 +3,6 @@ import Icon from "./Icon";
 import BeveledFrame from "./BeveledFrame";
 import { useDispatch } from "../stores/dro";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {};
-
 const SecondaryFunctionSection = () => {
   const dispatch = useDispatch();
 
@@ -23,6 +20,10 @@ const SecondaryFunctionSection = () => {
 
   const handleBoltHole = () => {
     dispatch({ eventName: 'BTN_BOLT_HOLE' });
+  };
+
+  const handleArcContour = () => {
+    dispatch({ eventName: 'BTN_ARC_CONTOUR' });
   };
 
   const handleAngleHole = () => {
@@ -48,7 +49,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={handleBoltHole} variant="dark" size="secondary" className="p-0" data-testid="btn-bolt-circle" title="Bolt hole">
               <Icon name="bolt-hole-pcd-function" /><span className="sr-only">Bolt hole</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">
+            <DROButton onClick={handleArcContour} variant="dark" size="secondary" className="p-0" data-testid="btn-arc-contour" title="Arc contour">
               <Icon name="arc-contouring-function" /><span className="sr-only">Arc contour</span>
             </DROButton>
             <DROButton onClick={handleAngleHole} variant="dark" size="secondary" className="p-0" data-testid="btn-angle-hole" title="Angle hole">

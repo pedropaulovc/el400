@@ -155,7 +155,7 @@ describe('boltHoleReducer', () => {
       expect(result?.display.Z).toBe('');
     });
 
-    it('should exit to idle when ARC mode is selected (not implemented)', () => {
+    it('should transition to arc center-x entry when ARC mode is confirmed', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-menu-select',
         stateData: { ...INITIAL_BOLT_HOLE_DATA, boltHoleMode: 'ARC' },
@@ -166,7 +166,12 @@ describe('boltHoleReducer', () => {
       const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
       expect(result).not.toBeNull();
-      expect(result?.stateName).toBe('idle');
+      expect(result?.stateName).toBe('bolt-hole-arc-center-x');
+      expect(result?.vMem.inputBuffer).toBe('');
+      // center-x layout: X shows buffer value (0), Y shows prompt
+      expect(result?.display.X).toBe(0);
+      expect(result?.display.Y).toBe('EntCnt0');
+      expect(result?.display.Z).toBe('');
     });
   });
 
@@ -967,6 +972,7 @@ describe('boltHoleReducer', () => {
           centerY: null,
           radius: null,
           startAngle: null,
+          endAngle: null,
           holeCount: null,
           currentHole: 1,
         },
@@ -1191,6 +1197,285 @@ describe('boltHoleReducer', () => {
 
       // Should return the same state unchanged
       expect(result).toBe(state);
+    });
+  });
+});
+
+describe('boltHoleReducer - ARC mode (US-017)', () => {
+  // Arc parameters stored in mm. DEFAULT_TEST_CONTEXT is inch mode, so entered
+  // values are converted; angles are unit-independent.
+  const ARC_BASE = {
+    ...INITIAL_BOLT_HOLE_DATA,
+    boltHoleMode: 'ARC' as const,
+    centerX: 0,
+    centerY: 0,
+    radius: 25.4, // 1 inch in mm
+  };
+
+  describe('parameter entry flow', () => {
+    it('accepts arc center X and advances to center Y', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-center-x',
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, boltHoleMode: 'ARC' },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1.75' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-center-y');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.centerX).toBeCloseTo(44.45, 4); // 1.75in -> mm
+      }
+      expect(result?.display.X).toBe('EntCnt1');
+    });
+
+    it('accepts arc center Y and advances to radius', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-center-y',
+        stateData: { ...INITIAL_BOLT_HOLE_DATA, boltHoleMode: 'ARC', centerX: 44.45 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1.25' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-radius');
+      expect(result?.display.X).toBe('rAdiUS');
+    });
+
+    it('accepts arc radius and advances to start angle', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-radius',
+        stateData: { ...ARC_BASE, radius: null },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0.7' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-start-angle');
+      // Start angle prompt mirrors circle ("AnGLE")
+      expect(result?.display.X).toBe('AnGLE');
+    });
+
+    it('rejects zero or negative arc radius', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-radius',
+        stateData: { ...ARC_BASE, radius: null },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '0' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      expect(boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+    });
+
+    it('accepts start angle and advances to end angle with "End" prompt', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-start-angle',
+        stateData: ARC_BASE,
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '45' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-end-angle');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.startAngle).toBe(45);
+      }
+      expect(result?.display.X).toBe('End');
+    });
+
+    it('accepts end angle and advances to holes', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 45 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '260' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-holes');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.endAngle).toBe(260);
+      }
+      expect(result?.display.X).toBe('hoLES');
+    });
+
+    it('normalizes end angle to 0-359 range', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 0 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '370' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.endAngle).toBe(10); // 370 % 360
+      }
+    });
+
+    it('accepts hole count and switches to arc-navigate + INC mode', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-holes',
+        stateData: { ...ARC_BASE, startAngle: 45, endAngle: 260 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '6', mode: 'abs' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-navigate');
+      expect(result?.vMem.mode).toBe('inc');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.holeCount).toBe(6);
+        expect(result.stateData.currentHole).toBe(1);
+      }
+    });
+
+    it('allows a single hole in arc mode (start == end edge case)', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-holes',
+        stateData: { ...ARC_BASE, startAngle: 45, endAngle: 45 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-navigate');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.holeCount).toBe(1);
+      }
+    });
+
+    it('rejects hole count greater than 999', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-holes',
+        stateData: { ...ARC_BASE, startAngle: 45, endAngle: 260 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '1000' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      expect(boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)).toBeNull();
+    });
+  });
+
+  describe('hole distribution geometry (AC17.8 / AC17.10)', () => {
+    // Helper: drive a navigate state to a given hole and read distance-to-go
+    // display, which equals (holePosition - currentPosition). With center at
+    // origin and current position 0, the display IS the hole position (in mm
+    // when context is mm). We assert angles via positions instead.
+    const mmContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const },
+    };
+
+    function holePositionAt(data: typeof ARC_BASE, hole: number) {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-navigate',
+        stateData: { ...data, currentHole: hole },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, mmContext);
+      return { x: result!.display.X as number, y: result!.display.Y as number };
+    }
+
+    it('distributes 6 holes evenly across 45deg..260deg inclusive', () => {
+      const data = { ...ARC_BASE, radius: 1, startAngle: 45, endAngle: 260, holeCount: 6 };
+      // spacing = (260-45)/(6-1) = 43; angles: 45,88,131,174,217,260
+      const expected = [45, 88, 131, 174, 217, 260];
+      expected.forEach((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        const pos = holePositionAt(data, i + 1);
+        expect(pos.x).toBeCloseTo(Math.cos(rad), 4);
+        expect(pos.y).toBeCloseTo(Math.sin(rad), 4);
+      });
+    });
+
+    it('first and last hole sit exactly on start and end angles', () => {
+      const data = { ...ARC_BASE, radius: 1, startAngle: 10, endAngle: 100, holeCount: 4 };
+      const first = holePositionAt(data, 1);
+      const last = holePositionAt(data, 4);
+      expect(first.x).toBeCloseTo(Math.cos((10 * Math.PI) / 180), 4);
+      expect(last.x).toBeCloseTo(Math.cos((100 * Math.PI) / 180), 4);
+      expect(last.y).toBeCloseTo(Math.sin((100 * Math.PI) / 180), 4);
+    });
+
+    it('spans across 0deg (350deg..10deg) wrapping CCW (AC17.10)', () => {
+      // span = (10-350+360)%360 = 20; spacing = 20/3 = 6.667
+      // angles: 350, 356.67, 363.33->3.33, 370->10
+      const data = { ...ARC_BASE, radius: 1, startAngle: 350, endAngle: 10, holeCount: 4 };
+      const expected = [350, 356.6667, 3.3333, 10];
+      expected.forEach((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        const pos = holePositionAt(data, i + 1);
+        expect(pos.x).toBeCloseTo(Math.cos(rad), 3);
+        expect(pos.y).toBeCloseTo(Math.sin(rad), 3);
+      });
+    });
+
+    it('single hole sits at the start angle', () => {
+      const data = { ...ARC_BASE, radius: 1, startAngle: 45, endAngle: 45, holeCount: 1 };
+      const pos = holePositionAt(data, 1);
+      expect(pos.x).toBeCloseTo(Math.cos((45 * Math.PI) / 180), 4);
+      expect(pos.y).toBeCloseTo(Math.sin((45 * Math.PI) / 180), 4);
+    });
+  });
+
+  describe('hole navigation (AC17.9)', () => {
+    const navState: DROStatePayload = {
+      stateName: 'bolt-hole-arc-navigate',
+      stateData: { ...ARC_BASE, radius: 25.4, startAngle: 0, endAngle: 180, holeCount: 4, currentHole: 1 },
+      vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
+      display: INITIAL_DISPLAY_STATE,
+    };
+
+    it('advances to next hole with KEY_6_RIGHT and stays in arc-navigate', () => {
+      const result = boltHoleReducer(navState, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-navigate');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.currentHole).toBe(2);
+      }
+    });
+
+    it('goes to previous hole with KEY_4_LEFT', () => {
+      const hole3: DROStatePayload = {
+        ...navState,
+        stateData: { ...(navState.stateData as typeof ARC_BASE), currentHole: 3 },
+      };
+      const result = boltHoleReducer(hole3, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.currentHole).toBe(2);
+      }
+    });
+
+    it('wraps from last hole to first with KEY_6_RIGHT', () => {
+      const last: DROStatePayload = {
+        ...navState,
+        stateData: { ...(navState.stateData as typeof ARC_BASE), currentHole: 4 },
+      };
+      const result = boltHoleReducer(last, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.currentHole).toBe(1);
+      }
+    });
+
+    it('exits to idle with KEY_CLEAR from arc-navigate', () => {
+      const result = boltHoleReducer(navState, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('idle');
+    });
+  });
+
+  describe('exit and backspace', () => {
+    it('exits to idle with KEY_CLEAR from arc parameter entry (empty buffer)', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-radius',
+        stateData: { ...ARC_BASE, radius: null },
+        vMem: INITIAL_VOLATILE_MEMORY_STATE,
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('idle');
+    });
+
+    it('backspaces the buffer with KEY_CLEAR in arc end-angle entry', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 0 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '26' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('bolt-hole-arc-end-angle');
+      expect(result?.vMem.inputBuffer).toBe('2');
     });
   });
 });

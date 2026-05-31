@@ -54,6 +54,12 @@ export {
   BOLT_HOLE_INTRO_DURATION_MS,
 } from './features/bolt-hole';
 
+// Re-export arc contouring feature
+export {
+  useArcContourIntro,
+  ARC_CONTOUR_INTRO_DURATION_MS,
+} from './features/arc-contour';
+
 // Re-export angle hole feature
 export {
   useAngleHoleIntro,
@@ -72,5 +78,5 @@ export {
   SDM_INTRO_DURATION_MS,
 } from './features/sdm';
 
-// Re-export bolt hole / angle hole / grid types and guards
-export { isBoltHoleActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';
+// Re-export bolt hole / arc / angle hole / grid / SDM types and guards
+export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';

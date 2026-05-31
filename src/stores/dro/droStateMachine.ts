@@ -43,6 +43,9 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  // Polar coordinate display states (US-030)
+  | 'polar-select-plane'
+  | 'polar-coordinates'
   // Center line states (2 points)
   | 'function-menu-center-line-point-1'
   | 'function-menu-center-line-point-2'
@@ -58,6 +61,13 @@ export type DROStateName =
   | 'calculator-sub'
   | 'calculator-multi'
   | 'calculator-div'
+  // Calculator trig states (unary operations - US-014)
+  | 'calculator-sin'
+  | 'calculator-cos'
+  | 'calculator-tan'
+  | 'calculator-asin'
+  | 'calculator-acos'
+  | 'calculator-atan'
   // Bolt hole circle states
   | 'bolt-hole-intro'
   | 'bolt-hole-menu-select'
@@ -67,6 +77,17 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Arc contouring (step drilling) states (US-018)
+  | 'arc-contour-intro'
+  | 'arc-contour-center-x'
+  | 'arc-contour-center-y'
+  | 'arc-contour-radius'
+  | 'arc-contour-start-angle'
+  | 'arc-contour-end-angle'
+  | 'arc-contour-tool-diameter'
+  | 'arc-contour-cut-type'
+  | 'arc-contour-max-cut'
+  | 'arc-contour-navigate'
   // Angle hole (linear hole pattern) states (US-019)
   | 'angle-hole-intro'
   | 'angle-hole-start-x'
@@ -75,6 +96,14 @@ export type DROStateName =
   | 'angle-hole-angle'
   | 'angle-hole-holes'
   | 'angle-hole-navigate'
+  // Bolt hole arc states (US-017)
+  | 'bolt-hole-arc-center-x'
+  | 'bolt-hole-arc-center-y'
+  | 'bolt-hole-arc-radius'
+  | 'bolt-hole-arc-start-angle'
+  | 'bolt-hole-arc-end-angle'
+  | 'bolt-hole-arc-holes'
+  | 'bolt-hole-arc-navigate'
   // Linear bolt hole states (US-029)
   | 'linear-bolt-hole-axis'
   | 'linear-bolt-hole-pitch'
@@ -128,6 +157,7 @@ export type DROStateData =
   | ArcData
   | CalculatorData
   | PresetData
+  | PolarData
   | SetupData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -152,6 +182,8 @@ export interface BoltHoleData extends BaseDROStateData {
   centerY: number | null;
   radius: number | null;
   startAngle: number | null;
+  /** End angle of the arc (ARC mode only); null in CIRCLE mode */
+  endAngle: number | null;
   holeCount: number | null;
   currentHole: number;
 }
@@ -228,15 +260,36 @@ export interface SdmData extends BaseDROStateData {
   learnPhase: SdmLearnPhase;
 }
 
+/** Cut offset type for arc contouring (which side of the radius the tool runs). */
+export type ArcCutType = 'INT' | 'EXT' | 'MID';
+
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
-  // TODO: define arc-specific fields when implementing arc feature
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  endAngle: number | null;
+  toolDiameter: number | null;
+  cutType: ArcCutType;
+  maxCut: number | null;
+  pointCount: number | null;
+  currentPoint: number;
 }
+
+/** Binary calculator operations (require two operands) */
+export type CalculatorBinaryOperation = 'ADD' | 'SUB' | 'MULTI' | 'DIV';
+
+/** Unary trig calculator operations (operate on a single operand) - US-014 */
+export type CalculatorTrigOperation = 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN';
+
+/** All calculator operations cycled through with the Y key */
+export type CalculatorOperation = CalculatorBinaryOperation | CalculatorTrigOperation;
 
 export interface CalculatorData extends BaseDROStateData {
   readonly stateDataType: 'calculator';
   firstValue: number | null;
-  operation: 'ADD' | 'SUB' | 'MULTI' | 'DIV' | null;
+  operation: CalculatorOperation | null;
   currentValue: number | string;
 }
 
@@ -248,6 +301,14 @@ export interface PresetData extends BaseDROStateData {
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+}
+
+/** Plane selected for polar coordinate display (US-030) */
+export type PolarPlane = 'X-Y' | 'X-Z' | 'Y-Z';
+
+export interface PolarData extends BaseDROStateData {
+  readonly stateDataType: 'polar';
+  plane: PolarPlane;
 }
 
 export interface SetupData extends BaseDROStateData {
@@ -282,6 +343,7 @@ export type DROEventPayload =
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
   | { eventName: 'SDM_INTRO_TIMEOUT' }
@@ -320,6 +382,7 @@ export type DROEventPayload =
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_ARC_CONTOUR' }
   | { eventName: 'BTN_ANGLE_HOLE' }
   | { eventName: 'BTN_GRID' }
   | { eventName: 'BTN_SDM' };
@@ -353,6 +416,10 @@ export const isResultState = (s: DROStateName): boolean => s.endsWith('-result')
 export const isFunctionActive = (s: DROStateName): boolean =>
   s.startsWith('function-menu-');
 
+/** Check if polar coordinate mode is active (US-030) */
+export const isPolarActive = (s: DROStateName): boolean =>
+  s.startsWith('polar-');
+
 /** Check if calculator mode is active */
 export const isCalculatorActive = (s: DROStateName): boolean =>
   s.startsWith('calculator-');
@@ -360,6 +427,10 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 /** Check if bolt hole mode is active */
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
+
+/** Check if arc contouring mode is active */
+export const isArcContourActive = (s: DROStateName): boolean =>
+  s.startsWith('arc-contour-');
 
 /** Check if angle hole (linear hole pattern) mode is active */
 export const isAngleHoleActive = (s: DROStateName): boolean =>
@@ -381,9 +452,11 @@ export const isSdmActive = (s: DROStateName): boolean =>
 export const isFnLedActive = (s: DROStateName): boolean =>
   isFunctionActive(s) ||
   isBoltHoleActive(s) ||
+  isArcContourActive(s) ||
   isAngleHoleActive(s) ||
   isLinearBoltHoleActive(s) ||
-  isGridActive(s);
+  isGridActive(s) ||
+  isPolarActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -421,8 +494,23 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  endAngle: null,
   holeCount: null,
   currentHole: 1,
+};
+
+export const INITIAL_ARC_DATA: ArcData = {
+  stateDataType: 'arc',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  endAngle: null,
+  toolDiameter: null,
+  cutType: 'INT',
+  maxCut: null,
+  pointCount: null,
+  currentPoint: 1,
 };
 
 export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
@@ -471,6 +559,11 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+};
+
+export const INITIAL_POLAR_DATA: PolarData = {
+  stateDataType: 'polar',
+  plane: 'X-Y',
 };
 
 export const INITIAL_SETUP_DATA: SetupData = {

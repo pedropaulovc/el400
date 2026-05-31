@@ -18,11 +18,13 @@ import { keypadReducer } from './features/keypad';
 import { axisOperationsReducer } from './features/axis-operations';
 import { halfReducer } from './features/half';
 import { boltHoleReducer } from './features/bolt-hole';
+import { arcContourReducer } from './features/arc-contour';
 import { angleHoleReducer } from './features/angle-hole';
 import { linearBoltHoleReducer } from './features/linear-bolt-hole';
 import { gridReducer } from './features/grid';
 import { sdmReducer } from './features/sdm';
 import { distanceToGoReducer } from './features/distance-to-go';
+import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 
 /**
@@ -37,6 +39,7 @@ const featureReducers: FeatureReducer[] = [
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   boltHoleReducer, // Handles bolt hole circle pattern generation
+  arcContourReducer, // Handles arc contouring (step drilling) pattern generation
   angleHoleReducer, // Handles angle hole (linear hole pattern) generation
   linearBoltHoleReducer, // Handles linear bolt hole pattern generation (US-029)
   gridReducer, // Handles grid drilling pattern generation (US-020)
@@ -50,11 +53,11 @@ const featureReducers: FeatureReducer[] = [
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
   // State transition reducers
+  polarReducer, // Handles polar coordinate display mode (US-030)
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:
   // linearReducer,
-  // polarReducer,
 ];
 
 /**

@@ -217,12 +217,13 @@ describe('menuReducer', () => {
       expect(result?.stateData.stateDataType).toBe('linear-bolt-hole');
     });
 
-    it('should return to idle from polar menu (not yet implemented)', () => {
+    it('should enter polar plane selection from polar menu (US-030)', () => {
       const state = createTestState('function-menu-polar');
       const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
-      expect(result?.stateName).toBe('idle');
-      expect(result?.stateData.stateDataType).toBe('none');
+      expect(result?.stateName).toBe('polar-select-plane');
+      expect(result?.stateData.stateDataType).toBe('polar');
+      expect(result?.display.X).toBe('h-Y');
     });
   });
 
