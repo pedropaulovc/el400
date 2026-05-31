@@ -48,8 +48,8 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
     expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
 
     // Up advances through the registry to the terminal End item. The exact
-    // middle items grow as setup stories land (SC added by US-021), so walk up
-    // until End rather than hard-coding the count.
+    // middle items grow as setup stories land (SC added by US-021, tAPEr on by
+    // US-045), so walk up until End rather than hard-coding the count.
     await user.click(screen.getByTestId('key-8'));
     expect(getAxisDisplayPureTextValue('X')).toBe('EnF on');
     while (getAxisDisplayPureTextValue('X') !== 'End') {

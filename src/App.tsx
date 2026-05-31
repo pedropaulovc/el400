@@ -10,6 +10,8 @@ import { NoOpMillAdapter } from "./adapters/NoOpMillAdapter";
 import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
 import { initializeMillStore } from "./stores";
+import { useSettingsStore } from "./stores/settingsStore";
+import type { TaperOnAxis } from "./types/nonVolatileMemory";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,17 @@ function AppContent() {
       cleanup();
     };
   }, [connection]);
+
+  // Seed the taper-on axis (Section 6.2 `tAPEr on`) from the URL so the Taper
+  // function (US-045) can be configured without entering the setup menu, e.g.
+  // /?source=cncjs&taperOn=Z. Mirrors how boot reads `bootMessageMode`.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('taperOn');
+    const valid: TaperOnAxis[] = ['X', 'Z', 'Zprime'];
+    if (param && (valid as string[]).includes(param)) {
+      useSettingsStore.getState().updateNvMem({ taperOnAxis: param as TaperOnAxis });
+    }
+  }, []);
 
   // Wait for initialization before rendering
   if (!isInitialized) {

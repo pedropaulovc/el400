@@ -35,6 +35,7 @@ describe('menuReducer', () => {
         'function-menu-line',
         'function-menu-linear',
         'function-menu-polar',
+        'function-menu-taper',
       ];
 
       for (const menuState of menuStates) {
@@ -70,8 +71,14 @@ describe('menuReducer', () => {
       expect(result?.stateName).toBe('function-menu-polar');
     });
 
-    it('should wrap from polar to center', () => {
+    it('should navigate from polar to taper', () => {
       const state = createTestState('function-menu-polar');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('function-menu-taper');
+    });
+
+    it('should wrap from taper to center', () => {
+      const state = createTestState('function-menu-taper');
       const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-center');
     });
@@ -109,10 +116,16 @@ describe('menuReducer', () => {
       expect(result?.stateName).toBe('function-menu-linear');
     });
 
-    it('should wrap from center to polar', () => {
-      const state = createTestState('function-menu-center');
+    it('should navigate from taper to polar', () => {
+      const state = createTestState('function-menu-taper');
       const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-polar');
+    });
+
+    it('should wrap from center to taper', () => {
+      const state = createTestState('function-menu-center');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('function-menu-taper');
     });
   });
 
@@ -124,6 +137,7 @@ describe('menuReducer', () => {
         'function-menu-line',
         'function-menu-linear',
         'function-menu-polar',
+        'function-menu-taper',
       ];
 
       let state = createTestState('function-menu-center');
@@ -145,6 +159,7 @@ describe('menuReducer', () => {
         'function-menu-line',
         'function-menu-linear',
         'function-menu-polar',
+        'function-menu-taper',
       ];
 
       let state = createTestState('function-menu-center');

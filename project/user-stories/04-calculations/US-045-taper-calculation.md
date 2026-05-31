@@ -16,15 +16,15 @@ radius (R), the other supplies the angle (θ°). Which axis shows the angle is c
 `tAPEr on` setup parameter (§6.2).
 
 ## Acceptance Criteria
-- [ ] **AC 45.1:** The taper-on axis (`tAPEr on` = X, Y/Z, or Z′) is configured in the setup menu and selects which axis displays the taper angle.
-- [ ] **AC 45.2:** Procedure: touch the tool to one end of the taper and zero the two relevant axes, then enter the Taper function.
-- [ ] **AC 45.3:** Moving the tool to the other end of the taper displays the taper **angle θ°** on the configured axis and the **radius R** on the paired axis, per the §9.2.2 relation table:
+- [x] **AC 45.1:** The taper-on axis (`tAPEr on` = X, Y/Z, or Z′) is configured in the setup menu and selects which axis displays the taper angle.
+- [x] **AC 45.2:** Procedure: touch the tool to one end of the taper and zero the two relevant axes, then enter the Taper function.
+- [x] **AC 45.3:** Moving the tool to the other end of the taper displays the taper **angle θ°** on the configured axis and the **radius R** on the paired axis, per the §9.2.2 relation table:
     - Taper on X → R on Z, angle on X
     - Taper on Z → R on X, angle on Z
     - Taper on Z′ → R on X, angle on Z′
-- [ ] **AC 45.4:** The angle is the included/half-angle computed as `θ = atan(ΔR / ΔL)` consistent with the manual's geometry.
-- [ ] **AC 45.5:** Pressing `C` exits the Taper function and returns to normal display.
-- [ ] **AC 45.6:** Works in the current unit (US-004) and respects display resolution.
+- [x] **AC 45.4:** The angle is the included/half-angle computed as `θ = atan(ΔR / ΔL)` consistent with the manual's geometry.
+- [x] **AC 45.5:** Pressing `C` exits the Taper function and returns to normal display.
+- [x] **AC 45.6:** Works in the current unit (US-004) and respects display resolution.
 
 ## E2E Test Scenarios
 ```typescript

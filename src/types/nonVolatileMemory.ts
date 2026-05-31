@@ -25,6 +25,14 @@ export interface ScaleResolutionByAxis {
 }
 
 /**
+ * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`, used by
+ * the Taper Calculation function in Section 9.2.2). The other axis of the pair
+ * shows the radius. 'Zprime' is the lathe 4th-axis variant; on this 3-axis mill
+ * simulator it behaves like 'Z' for the radius pairing.
+ */
+export type TaperOnAxis = 'X' | 'Z' | 'Zprime';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -38,6 +46,8 @@ export interface NonVolatileMemory {
   bootMessageMode: 'show' | 'skip';
   /** Per-axis measuring-system (scale) resolution in microns - SC parameter (US-021) */
   scaleResolution: ScaleResolutionByAxis;
+  /** Axis on which the Taper function displays the angle (Section 6.2). */
+  taperOnAxis: TaperOnAxis;
 }
 
 /** Mill default scale resolution: 5 micron on every axis (manual section 6.2). */
@@ -56,6 +66,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   precision: 4,
   bootMessageMode: 'show',
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
+  taperOnAxis: 'X',
 };
 
 /**

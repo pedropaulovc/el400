@@ -45,6 +45,18 @@ describe('SETUP_PARAMETERS registry', () => {
       expect(p.choices.map((c) => c.value)).toContain(seeded);
     }
   });
+
+  it('exposes a tAPEr on parameter with X / Z / Z\' choices (AC 45.1)', () => {
+    const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
+    expect(taper).toBeDefined();
+    expect(taper.label).toBe('tAPEr on');
+    expect(taper.choices.map((c) => c.value)).toEqual(['X', 'Z', 'Zprime']);
+  });
+
+  it('taper-on seeds its current value from nvMem.taperOnAxis (AC 45.1)', () => {
+    const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
+    expect(taper.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, taperOnAxis: 'Z' }, axis: 'X' as const })).toBe('Z');
+  });
 });
 
 describe('wrapItemIndex', () => {

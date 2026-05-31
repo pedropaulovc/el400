@@ -155,6 +155,19 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: 'taper-on',
+    label: 'tAPEr on',
+    scope: 'global',
+    choices: [
+      { value: 'X', label: 'tAPEr X' },
+      { value: 'Z', label: 'tAPEr Z' },
+      { value: 'Zprime', label: 'tAPEr Z1' },
+    ],
+    // Reads the committed taper-on axis (US-045). Full commit wiring lands with
+    // setup save (US-027); the value is seeded from nvMem here.
+    readValue: (ctx) => ctx.nvMem.taperOnAxis,
+  },
+  {
     id: SETUP_END_ID,
     label: 'End',
     scope: 'global',
