@@ -9,6 +9,7 @@ import type { DROStateName } from '../droStateMachine';
 import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_CENTER_FINDING_DATA,
+  INITIAL_POLAR_DATA,
   INITIAL_LINEAR_BOLT_HOLE_DATA,
   INITIAL_TAPER_DATA,
   isFunctionMenuSelectionState,
@@ -96,12 +97,12 @@ function handleMenuEnter(
         display: computeLinearAxisSelectDisplay(),
       };
     case 'function-menu-polar':
-      // TODO: implement polar
+      // Polar (US-030): enter plane selection (X-Y / X-Z / Y-Z)
       return {
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
+        stateName: 'polar-select-plane',
+        stateData: INITIAL_POLAR_DATA,
         vMem,
-        display: computeNormalDisplay(vMem, context),
+        display: createDisplay('h-Y', '', ''),
       };
     case 'function-menu-taper': {
       // Capture the machine position at entry; the taper Radius and Angle are

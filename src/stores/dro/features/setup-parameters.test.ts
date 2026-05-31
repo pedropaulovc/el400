@@ -38,7 +38,7 @@ describe('SETUP_PARAMETERS registry', () => {
   });
 
   it('readValue returns a valid choice value for choice-bearing params', () => {
-    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY };
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
     for (const p of SETUP_PARAMETERS) {
       if (p.choices.length === 0) continue;
       const seeded = p.readValue(ctx);
@@ -55,7 +55,7 @@ describe('SETUP_PARAMETERS registry', () => {
 
   it('taper-on seeds its current value from nvMem.taperOnAxis (AC 45.1)', () => {
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
-    expect(taper.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, taperOnAxis: 'Z' } })).toBe('Z');
+    expect(taper.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, taperOnAxis: 'Z' }, axis: 'X' as const })).toBe('Z');
   });
 });
 
