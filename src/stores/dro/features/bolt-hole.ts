@@ -48,6 +48,13 @@ const BOLT_HOLE_DISPLAY_TEXT: Record<string, string> = {
   'bolt-hole-circle-radius': 'rAdiUS',
   'bolt-hole-circle-angle': 'AnGLE',
   'bolt-hole-circle-holes': 'hoLES',
+  // Arc parameter entry (US-017)
+  'bolt-hole-arc-center-x': 'EntCnt0',
+  'bolt-hole-arc-center-y': 'EntCnt1',
+  'bolt-hole-arc-radius': 'rAdiUS',
+  'bolt-hole-arc-start-angle': 'AnGLE',
+  'bolt-hole-arc-end-angle': 'End',
+  'bolt-hole-arc-holes': 'hoLES',
 };
 
 /** States that accept numeric input for parameter entry */
@@ -57,6 +64,18 @@ const PARAMETER_ENTRY_STATES: DROStateName[] = [
   'bolt-hole-circle-radius',
   'bolt-hole-circle-angle',
   'bolt-hole-circle-holes',
+  'bolt-hole-arc-center-x',
+  'bolt-hole-arc-center-y',
+  'bolt-hole-arc-radius',
+  'bolt-hole-arc-start-angle',
+  'bolt-hole-arc-end-angle',
+  'bolt-hole-arc-holes',
+];
+
+/** Hole-navigation states for the two bolt-hole pattern variants */
+const NAVIGATE_STATES: DROStateName[] = [
+  'bolt-hole-circle-navigate',
+  'bolt-hole-arc-navigate',
 ];
 
 /** Check if current state accepts numeric input */
@@ -64,8 +83,49 @@ function isParameterEntryState(state: DROStateName): boolean {
   return PARAMETER_ENTRY_STATES.includes(state);
 }
 
+/** Check if current state is a hole-navigation state (CIRCLE or ARC) */
+function isNavigateState(state: DROStateName): boolean {
+  return NAVIGATE_STATES.includes(state);
+}
+
+/** The center-x parameter states swap X/Y in the display layout */
+function isCenterXState(state: DROStateName): boolean {
+  return state === 'bolt-hole-circle-center-x' || state === 'bolt-hole-arc-center-x';
+}
+
 /**
- * Calculate the position of a specific hole on the bolt circle.
+ * Compute the angle (degrees, CCW from +X) of a specific hole.
+ *
+ * - CIRCLE: holes are spread evenly across the full 360°.
+ * - ARC: holes are spread evenly from startAngle to endAngle inclusive.
+ *   The arc span is measured CCW and may wrap across 0° (e.g. 350°→10°
+ *   spans 20°). With a single hole the result collapses to startAngle.
+ *
+ * @param boltData - Bolt hole configuration (startAngle/holeCount required)
+ * @param holeNumber - 1-indexed hole number
+ */
+function calculateHoleAngle(boltData: BoltHoleData, holeNumber: number): number {
+  const { boltHoleMode, startAngle, endAngle, holeCount } = boltData;
+  if (startAngle === null || holeCount === null) {
+    return 0;
+  }
+
+  if (boltHoleMode === 'CIRCLE') {
+    return startAngle + (holeNumber - 1) * (360 / holeCount);
+  }
+
+  // ARC mode: distribute across [startAngle, endAngle] inclusive.
+  if (endAngle === null || holeCount <= 1) {
+    return startAngle;
+  }
+  // Span is the CCW sweep from start to end, wrapping across 0° when needed.
+  const span = ((endAngle - startAngle) % 360 + 360) % 360;
+  const spacing = span / (holeCount - 1);
+  return startAngle + (holeNumber - 1) * spacing;
+}
+
+/**
+ * Calculate the position of a specific hole on the bolt circle/arc.
  * @param boltData - Bolt hole configuration
  * @param holeNumber - 1-indexed hole number
  * @returns Position {x, y} in mm
@@ -85,9 +145,7 @@ function calculateHolePosition(
     return { x: 0, y: 0 };
   }
 
-  // Calculate angle for this hole (0-indexed internally)
-  const angleSpacing = 360 / holeCount;
-  const holeAngle = startAngle + (holeNumber - 1) * angleSpacing;
+  const holeAngle = calculateHoleAngle(boltData, holeNumber);
   const angleRad = (holeAngle * Math.PI) / 180;
 
   return {
@@ -157,7 +215,7 @@ function computeParameterEntryDisplay(
   const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
 
   // For center-x, swap X and Y: X shows value, Y shows prompt
-  if (state === 'bolt-hole-circle-center-x') {
+  if (isCenterXState(state)) {
     return createDisplay(bufferValue, promptText, '');
   }
 
@@ -186,7 +244,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
 
   // Handle MILL_STATE_CHANGED - update display when position changes
   if (eventName === 'MILL_STATE_CHANGED') {
-    if (state === 'bolt-hole-circle-navigate') {
+    if (isNavigateState(state)) {
       return {
         ...statePayload,
         display: computeBoltHoleNavigateDisplay(boltData, vMem, context),
@@ -292,12 +350,13 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
             display: computeParameterEntryDisplay('bolt-hole-circle-center-x', newVMem),
           };
         }
-        // ARC mode not yet implemented
+        // ARC mode: same first parameters, then start + end angle (US-017)
+        const newVMem = { ...vMem, inputBuffer: '' };
         return {
-          stateName: 'idle',
-          stateData: INITIAL_DRO_STATE_DATA,
-          vMem,
-          display: computeNormalDisplay(vMem, context),
+          stateName: 'bolt-hole-arc-center-x',
+          stateData: boltData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-center-x', newVMem),
         };
       }
       return null;
@@ -402,7 +461,8 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       return null;
     }
 
-    case 'bolt-hole-circle-navigate': {
+    case 'bolt-hole-circle-navigate':
+    case 'bolt-hole-arc-navigate': {
       const { holeCount, currentHole } = boltData;
 
       if (holeCount === null) {
@@ -419,7 +479,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         const nextHole = currentHole >= holeCount ? 1 : currentHole + 1;
         const newData = { ...boltData, currentHole: nextHole };
         return {
-          stateName: 'bolt-hole-circle-navigate',
+          stateName: state,
           stateData: newData,
           vMem: { ...vMem, inputBuffer: '' },
           display: computeBoltHoleNavigateDisplay(newData, vMem, context),
@@ -431,7 +491,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         const prevHole = currentHole <= 1 ? holeCount : currentHole - 1;
         const newData = { ...boltData, currentHole: prevHole };
         return {
-          stateName: 'bolt-hole-circle-navigate',
+          stateName: state,
           stateData: newData,
           vMem: { ...vMem, inputBuffer: '' },
           display: computeBoltHoleNavigateDisplay(newData, vMem, context),
@@ -460,7 +520,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         if (targetHole !== null && targetHole >= 1 && targetHole <= holeCount) {
           const newData = { ...boltData, currentHole: Math.floor(targetHole) };
           return {
-            stateName: 'bolt-hole-circle-navigate',
+            stateName: state,
             stateData: newData,
             vMem: { ...vMem, inputBuffer: '' },
             display: computeBoltHoleNavigateDisplay(newData, vMem, context),
@@ -482,6 +542,121 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         };
       }
 
+      return null;
+    }
+
+    case 'bolt-hole-arc-center-x': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        if (value === null) return null;
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, centerX: valueMm };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'bolt-hole-arc-center-y',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-center-y', newVMem),
+        };
+      }
+      return null;
+    }
+
+    case 'bolt-hole-arc-center-y': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        if (value === null) return null;
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, centerY: valueMm };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'bolt-hole-arc-radius',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-radius', newVMem),
+        };
+      }
+      return null;
+    }
+
+    case 'bolt-hole-arc-radius': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        if (value === null || value <= 0) return null;
+        const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        const newData = { ...boltData, radius: valueMm };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'bolt-hole-arc-start-angle',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-start-angle', newVMem),
+        };
+      }
+      return null;
+    }
+
+    case 'bolt-hole-arc-start-angle': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        if (value === null) return null;
+        // Normalize angle to 0-359 range (CCW from +X)
+        const normalizedAngle = ((value % 360) + 360) % 360;
+        const newData = { ...boltData, startAngle: normalizedAngle };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'bolt-hole-arc-end-angle',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-end-angle', newVMem),
+        };
+      }
+      return null;
+    }
+
+    case 'bolt-hole-arc-end-angle': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        if (value === null) return null;
+        // Normalize angle to 0-359 range (CCW from +X)
+        const normalizedAngle = ((value % 360) + 360) % 360;
+        const newData = { ...boltData, endAngle: normalizedAngle };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'bolt-hole-arc-holes',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('bolt-hole-arc-holes', newVMem),
+        };
+      }
+      return null;
+    }
+
+    case 'bolt-hole-arc-holes': {
+      if (eventName === 'KEY_ENTER') {
+        const value = getBufferValue(vMem.inputBuffer);
+        // Arc allows a single hole (start == end edge case)
+        if (value === null || value < 1 || value > 999) return null;
+
+        const newData: BoltHoleData = {
+          ...boltData,
+          holeCount: Math.floor(value),
+          currentHole: 1,
+        };
+        // Switch to INC mode for distance-to-go display
+        const newVMem = {
+          ...vMem,
+          mode: 'inc' as const,
+          inputBuffer: '',
+        };
+
+        return {
+          stateName: 'bolt-hole-arc-navigate',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeBoltHoleNavigateDisplay(newData, newVMem, context),
+        };
+      }
       return null;
     }
 

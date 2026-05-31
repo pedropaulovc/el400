@@ -10,12 +10,12 @@
 **So that** I can work with radial drawings
 
 ## Acceptance Criteria
-- [ ] **AC 30.1:** Press `Fn` -> navigate to `PoLAr`, press `ent↵`.
-- [ ] **AC 30.2:** Select Plane: `H-Y` (XY horizontal), `H-Z` (XZ horizontal), or `Y-Z` (YZ vertical).
-- [ ] **AC 30.3:** Display converts Cartesian (X,Y) coordinates to Polar (R, θ).
-- [ ] **AC 30.4:** Radius (R) shows distance from origin.
-- [ ] **AC 30.5:** Angle (θ) shows angle from reference axis.
-- [ ] **AC 30.6:** Press `C` to exit polar mode and return to Cartesian.
+- [x] **AC 30.1:** Press `Fn` -> navigate to `PoLAr`, press `ent↵`.
+- [x] **AC 30.2:** Select Plane: `H-Y` (XY horizontal), `H-Z` (XZ horizontal), or `Y-Z` (YZ vertical).
+- [x] **AC 30.3:** Display converts Cartesian (X,Y) coordinates to Polar (R, θ).
+- [x] **AC 30.4:** Radius (R) shows distance from origin.
+- [x] **AC 30.5:** Angle (θ) shows angle from reference axis.
+- [x] **AC 30.6:** Press `C` to exit polar mode and return to Cartesian.
 
 ## E2E Test Scenarios
 ```typescript
@@ -57,6 +57,12 @@ describe('US-030: Polar Coordinates', () => {
 ```
 
 ## Implementation Notes
+- Plane labels render as `h-Y` / `h-Z` / `Y-Z`. The seven-segment display has no
+  uppercase `H` glyph (only lowercase `h`), so the AC's "H-" prefix is shown as
+  `h-`. A `Z` glyph (sharing the `2` segment pattern, as on real 7-segment
+  hardware) was added to `SevenSegmentDigit` to render the Z-plane labels.
+- Per manual §9.1.7, R is shown on the first plane axis and θ on the second:
+  X-Y → R on X / θ on Y; X-Z → R on X / θ on Z; Y-Z → R on Y / θ on Z.
 - Converts Cartesian (X, Y, Z) to Polar (R, θ)
 - Useful for radial machining operations
 - Supports three planes: XY, XZ, YZ

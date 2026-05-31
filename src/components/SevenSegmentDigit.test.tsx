@@ -38,13 +38,18 @@ describe('SevenSegmentDigit', () => {
       const { container } = render(<SevenSegmentDigit value="E" />);
       expect(container.querySelector('.seven-segment-digit')).toBeInTheDocument();
     });
+
+    it('renders uppercase letter Z (shares the 2 glyph)', () => {
+      const { container } = render(<SevenSegmentDigit value="Z" />);
+      expect(container.querySelector('.seven-segment-digit')).toBeInTheDocument();
+    });
   });
 
   describe('Error handling', () => {
     it('throws error for unsupported character', () => {
       expect(() => {
-        render(<SevenSegmentDigit value="Z" />);
-      }).toThrow('Unsupported character: "Z"');
+        render(<SevenSegmentDigit value="W" />);
+      }).toThrow('Unsupported character: "W"');
     });
 
     it('throws error for lowercase a (when uppercase A is supported)', () => {
