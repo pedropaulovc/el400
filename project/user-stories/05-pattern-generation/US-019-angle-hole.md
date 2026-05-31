@@ -12,16 +12,16 @@
 
 ## Acceptance Criteria
 
-- [ ] AC19.1: Press Angle Hole key
-- [ ] AC19.2: Enter X coordinate of first hole (ENTCNT 0)
-- [ ] AC19.3: Enter Y coordinate of first hole (ENTCNT 1)
-- [ ] AC19.4: Enter PITCH (hole spacing distance)
-- [ ] AC19.5: Enter line ANGLE (0-359 degrees)
-- [ ] AC19.6: Enter number of HOLES
-- [ ] AC19.7: System calculates end point based on holes × pitch
-- [ ] AC19.8: Holes positioned along line at specified angle
-- [ ] AC19.9: 0° = horizontal right, 90° = vertical up
-- [ ] AC19.10: Navigation works (6=next, 4=prev, 2=jump)
+- [x] AC19.1: Press Angle Hole key
+- [x] AC19.2: Enter X coordinate of first hole (ENTCNT 0)
+- [x] AC19.3: Enter Y coordinate of first hole (ENTCNT 1)
+- [x] AC19.4: Enter PITCH (hole spacing distance)
+- [x] AC19.5: Enter line ANGLE (0-359 degrees)
+- [x] AC19.6: Enter number of HOLES
+- [x] AC19.7: System calculates end point based on holes × pitch
+- [x] AC19.8: Holes positioned along line at specified angle
+- [x] AC19.9: 0° = horizontal right, 90° = vertical up
+- [x] AC19.10: Navigation works (6=next, 4=prev, 2=jump)
 
 ## E2E Test Scenarios
 
