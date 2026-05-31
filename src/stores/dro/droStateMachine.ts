@@ -85,6 +85,14 @@ export type DROStateName =
   | 'angle-hole-angle'
   | 'angle-hole-holes'
   | 'angle-hole-navigate'
+  // Bolt hole arc states (US-017)
+  | 'bolt-hole-arc-center-x'
+  | 'bolt-hole-arc-center-y'
+  | 'bolt-hole-arc-radius'
+  | 'bolt-hole-arc-start-angle'
+  | 'bolt-hole-arc-end-angle'
+  | 'bolt-hole-arc-holes'
+  | 'bolt-hole-arc-navigate'
   // Linear bolt hole states (US-029)
   | 'linear-bolt-hole-axis'
   | 'linear-bolt-hole-pitch'
@@ -155,6 +163,8 @@ export interface BoltHoleData extends BaseDROStateData {
   centerY: number | null;
   radius: number | null;
   startAngle: number | null;
+  /** End angle of the arc (ARC mode only); null in CIRCLE mode */
+  endAngle: number | null;
   holeCount: number | null;
   currentHole: number;
 }
@@ -402,6 +412,7 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   centerY: null,
   radius: null,
   startAngle: null,
+  endAngle: null,
   holeCount: null,
   currentHole: 1,
 };

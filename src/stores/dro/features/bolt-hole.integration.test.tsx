@@ -114,7 +114,7 @@ describe('Bolt Hole Circle Integration', () => {
       expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
     });
 
-    it('exits to idle when ARC mode is selected (not implemented)', async () => {
+    it('enters arc center-x entry when ARC mode is confirmed', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       renderSimulator();
 
@@ -122,11 +122,121 @@ describe('Bolt Hole Circle Integration', () => {
 
       // Toggle to ARC mode
       await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('ArC');
 
       // Confirm ARC selection
       await user.click(screen.getByTestId('key-enter'));
 
-      // Should exit to idle (ARC not implemented)
+      // Should begin arc parameter entry at center-x
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-center-x');
+      // center-x layout: X shows buffer (0), Y shows prompt
+      expect(getAxisDisplayPureNumberValue('X')).toBe(0);
+      expect(getAxisDisplayPureTextValue('Y')).toBe('EntCnt0');
+    });
+  });
+
+  describe('Arc Parameter Entry (US-017)', () => {
+    /** Enter ARC mode and confirm, landing on arc center-x entry */
+    async function enterArcMode(user: ReturnType<typeof userEvent.setup>) {
+      await enterBoltHoleMode(user);
+      await user.click(screen.getByTestId('key-6')); // toggle CIRCLE -> ARC
+      await user.click(screen.getByTestId('key-enter')); // confirm ARC
+    }
+
+    it('completes the full arc parameter entry flow in mm mode', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+
+      // mm mode for direct value storage
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+
+      await enterArcMode(user);
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-center-x');
+
+      // Center X = 0
+      await enterValue(user, '0');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-center-y');
+      expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
+
+      // Center Y = 0
+      await enterValue(user, '0');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-radius');
+      expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
+
+      // Radius = 25.4mm
+      await enterValue(user, '25.4');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-start-angle');
+      expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
+
+      // Start angle = 45
+      await enterValue(user, '45');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-end-angle');
+      // End-angle prompt shows "End"
+      expect(getAxisDisplayPureTextValue('X')).toBe('End');
+
+      // End angle = 260
+      await enterValue(user, '260');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-holes');
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+
+      // 6 holes
+      await enterValue(user, '6');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
+      expect(useDROStore.getState().vMem.mode).toBe('inc');
+
+      const stateData = useDROStore.getState().stateData;
+      expect(stateData.stateDataType).toBe('bolt-hole');
+      if (stateData.stateDataType === 'bolt-hole') {
+        expect(stateData.boltHoleMode).toBe('ARC');
+        expect(stateData.startAngle).toBe(45);
+        expect(stateData.endAngle).toBe(260);
+        expect(stateData.holeCount).toBe(6);
+        expect(stateData.currentHole).toBe(1);
+      }
+
+      // Hole 1 sits on the start angle (45deg). Center at origin, radius 25.4mm,
+      // current position 0 -> distance-to-go equals hole position.
+      // X = 25.4*cos45 = 17.96mm, Y = 25.4*sin45 = 17.96mm
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(17.96, 1);
+      expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(17.96, 1);
+    });
+
+    it('navigates between arc holes with keys 6 and 4', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit')); // mm
+      await enterArcMode(user);
+      await enterValue(user, '0');   // X
+      await enterValue(user, '0');   // Y
+      await enterValue(user, '10');  // radius
+      await enterValue(user, '0');   // start
+      await enterValue(user, '180'); // end
+      await enterValue(user, '4');   // holes
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
+
+      await user.click(screen.getByTestId('key-6'));
+      let sd = useDROStore.getState().stateData;
+      if (sd.stateDataType === 'bolt-hole') expect(sd.currentHole).toBe(2);
+
+      await user.click(screen.getByTestId('key-4'));
+      sd = useDROStore.getState().stateData;
+      if (sd.stateDataType === 'bolt-hole') expect(sd.currentHole).toBe(1);
+    });
+
+    it('exits to idle with clear key from arc navigate', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit')); // mm
+      await enterArcMode(user);
+      await enterValue(user, '0');
+      await enterValue(user, '0');
+      await enterValue(user, '10');
+      await enterValue(user, '0');
+      await enterValue(user, '90');
+      await enterValue(user, '3');
+      expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
+
+      await user.click(screen.getByTestId('key-clear'));
       expect(useDROStore.getState().stateName).toBe('idle');
     });
   });
