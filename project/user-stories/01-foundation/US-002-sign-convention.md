@@ -20,7 +20,7 @@ effectively move **right** — the conventional positive X direction. Per-axis L
 - [ ] **AC 2.1:** With the standard convention, table motion that moves the **tool** in the +X / +Y direction increases the displayed value (tool's-eye view, not operator's-eye view).
 - [ ] **AC 2.2:** The displayed sign of an axis flips when the per-axis Direction parameter (US-023, `LEFT`/`riGht`) is changed.
 - [ ] **AC 2.3:** The displayed sign also depends on the chosen datum location (e.g. lower-left vs. lower-right corner): a coordinate negative from one datum is positive from another.
-- [ ] **AC 2.4:** Z increases as cutting depth increases when the operator zeroes Z at tool-touch and prefers depth-positive (a documented user preference).
+- [ ] **AC 2.4:** Z increases as cutting depth increases when the operator zeroes Z at tool-touch and prefers depth-positive — a documented user preference, selectable at runtime via the global `dEP nEG` / `dEP PoS` setup toggle (default `dEP nEG`, the standard depth-negative convention).
 - [ ] **AC 2.5:** For sub-datums (US-009..011) and pre-programmed macros (bolt circle US-016, etc.), the **standard sign convention (Figure 1)** is used regardless of the operator's routine preference.
 - [ ] **AC 2.6:** A negative value is shown with a leading `-`; positive values have no sign.
 
@@ -53,7 +53,23 @@ describe('US-002: Sign Convention', () => {
   applied separately (zeroing/preset). Keep these as distinct transforms in
   `src/stores/dro/utils/displayComputation.ts`.
 - Macros must compute against the canonical convention, independent of the user's Direction
-  preference, so generated hole coordinates land where the figures show.
+  preference, so generated hole coordinates land where the figures show. This applies to the
+  coordinates a macro **generates** (the X/Y hole positions and their distance-to-go). The Z
+  field shown during a 2D drill macro (bolt circle, grid, etc.) is **not** a generated
+  coordinate — it is the operator's live tool-depth readout passed through, and it therefore
+  correctly follows their Z direction/depth preference (consistent with the Z reading
+  everywhere else in the session). AC 2.5 covers generated coordinates, not the live-position
+  passthrough.
+- **Z depth-sense (AC 2.4) is a documented, operator-reachable user preference.** The standard
+  convention is depth-negative (`zDepthSense: 'depth-negative'`, the default): with Z zeroed at
+  tool-touch, cutting deeper makes the displayed Z more negative. An operator who prefers to read
+  cutting depth as a positive number selects depth-positive (`'depth-positive'`), which inverts
+  the Z display sign so the value increases as the tool cuts deeper. It is toggled at runtime
+  through the global setup-menu parameter labelled `dEP nEG` / `dEP PoS` (see the Label Contract
+  below) and persisted in non-volatile memory — not a hidden constant. It is a **display-only**
+  Z-axis factor: it composes with the per-axis Z Direction inside `directionSign` (a Z that is
+  both `reversed` and `depth-positive` double-inverts back to standard) and never alters stored
+  machine position, datum offsets, or macro coordinate math.
 - Accessibility: announce sign to screen readers (US-037) — "negative three point two five".
 
 ## Setup-Menu Label Contract (pinned)
