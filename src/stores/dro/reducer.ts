@@ -22,6 +22,7 @@ import { angleHoleReducer } from './features/angle-hole';
 import { linearBoltHoleReducer } from './features/linear-bolt-hole';
 import { gridReducer } from './features/grid';
 import { distanceToGoReducer } from './features/distance-to-go';
+import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 
 /**
@@ -48,11 +49,11 @@ const featureReducers: FeatureReducer[] = [
   axisOperationsReducer, // Handles axis selection, zero, and value entry
   halfReducer, // Handles half function
   // State transition reducers
+  polarReducer, // Handles polar coordinate display mode (US-030)
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:
   // linearReducer,
-  // polarReducer,
 ];
 
 /**

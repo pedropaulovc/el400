@@ -62,6 +62,8 @@ const SevenSegmentDigit = ({
     'v': [false, true,  true,  true,  true,  true,  false],
     'X': [false, true,  true,  false, true,  true,  true ],
     'Y': [false, true,  true,  true,  false, true,  true ],
+    // Z shares the 2-glyph on a 7-segment display (segments a,b,d,e,g)
+    'Z': [true,  true,  false, true,  true,  false, true ],
   };
 
   // Throw exception for unsupported characters (case-sensitive)
