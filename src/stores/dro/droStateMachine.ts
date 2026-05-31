@@ -67,6 +67,17 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Arc contouring (step drilling) states (US-018)
+  | 'arc-contour-intro'
+  | 'arc-contour-center-x'
+  | 'arc-contour-center-y'
+  | 'arc-contour-radius'
+  | 'arc-contour-start-angle'
+  | 'arc-contour-end-angle'
+  | 'arc-contour-tool-diameter'
+  | 'arc-contour-cut-type'
+  | 'arc-contour-max-cut'
+  | 'arc-contour-navigate'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -122,9 +133,21 @@ export interface BoltHoleData extends BaseDROStateData {
   currentHole: number;
 }
 
+/** Cut offset type for arc contouring (which side of the radius the tool runs). */
+export type ArcCutType = 'INT' | 'EXT' | 'MID';
+
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
-  // TODO: define arc-specific fields when implementing arc feature
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  endAngle: number | null;
+  toolDiameter: number | null;
+  cutType: ArcCutType;
+  maxCut: number | null;
+  pointCount: number | null;
+  currentPoint: number;
 }
 
 export interface CalculatorData extends BaseDROStateData {
@@ -176,6 +199,7 @@ export type DROEventPayload =
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -210,7 +234,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_SELECT_Z' }
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
-  | { eventName: 'BTN_BOLT_HOLE' };
+  | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_ARC_CONTOUR' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -249,9 +274,13 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
-/** Check if FN LED should be active (function menu or bolt hole modes) */
+/** Check if arc contouring mode is active */
+export const isArcContourActive = (s: DROStateName): boolean =>
+  s.startsWith('arc-contour-');
+
+/** Check if FN LED should be active (function menu, bolt hole, or arc contour modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
-  isFunctionActive(s) || isBoltHoleActive(s);
+  isFunctionActive(s) || isBoltHoleActive(s) || isArcContourActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -291,6 +320,20 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   startAngle: null,
   holeCount: null,
   currentHole: 1,
+};
+
+export const INITIAL_ARC_DATA: ArcData = {
+  stateDataType: 'arc',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  endAngle: null,
+  toolDiameter: null,
+  cutType: 'INT',
+  maxCut: null,
+  pointCount: null,
+  currentPoint: 1,
 };
 
 export const INITIAL_PRESET_DATA: PresetData = {

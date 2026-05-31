@@ -54,5 +54,11 @@ export {
   BOLT_HOLE_INTRO_DURATION_MS,
 } from './features/bolt-hole';
 
+// Re-export arc contouring feature
+export {
+  useArcContourIntro,
+  ARC_CONTOUR_INTRO_DURATION_MS,
+} from './features/arc-contour';
+
 // Re-export bolt hole types and guards
-export { isBoltHoleActive, isFnLedActive } from './droStateMachine';
+export { isBoltHoleActive, isArcContourActive, isFnLedActive } from './droStateMachine';
