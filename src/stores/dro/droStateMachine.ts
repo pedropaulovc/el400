@@ -90,6 +90,13 @@ export type DROStateName =
   | 'grid-holes-x'
   | 'grid-holes-y'
   | 'grid-navigate'
+  // Sub Datum Memory (SDM) states (US-009 Learn; extended by US-010/US-011)
+  | 'sdm-intro'
+  | 'sdm-menu-program'
+  | 'sdm-menu-learn'
+  | 'sdm-menu-run'
+  | 'sdm-learn-step'
+  | 'sdm-learn-position'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -117,6 +124,7 @@ export type DROStateData =
   | AngleHoleData
   | LinearBoltHoleData
   | GridData
+  | SdmData
   | ArcData
   | CalculatorData
   | PresetData
@@ -182,6 +190,44 @@ export interface GridData extends BaseDROStateData {
   currentHole: number;     // 1-indexed, row-major
 }
 
+/**
+ * Maximum number of sub-datum steps the SDM can store (manual §8.2).
+ * Steps are 1-indexed, so valid step numbers are 1..MAX_SDM_STEPS.
+ */
+export const MAX_SDM_STEPS = 1000;
+
+/**
+ * Which of the three SDM sub-functions is selected (manual §8.2).
+ * Only LEARN is implemented in US-009; PROGRAM (US-010) and RUN (US-011)
+ * reuse this same data model.
+ */
+export type SdmMode = 'PROGRAM' | 'LEARN' | 'RUN';
+
+/**
+ * Two-press capture phase for Learn mode (manual §8.2.2): the first X press
+ * shows the current step number, the second stores the position and advances.
+ * Modelled as a string enum (not a boolean) so it can safely cross functions.
+ */
+export type SdmLearnPhase = 'awaiting-first-press' | 'step-shown';
+
+/**
+ * Sub Datum Memory state data. Shared across the SDM trilogy
+ * (US-009 Learn, US-010 Program, US-011 Run).
+ *
+ * `points` is a sparse map keyed by 1-indexed step number; a step is only
+ * present once a position has been stored for it. Each entry holds X/Y/Z
+ * coordinates in millimetres (internal storage unit).
+ */
+export interface SdmData extends BaseDROStateData {
+  readonly stateDataType: 'sdm';
+  sdmMode: SdmMode;
+  points: Record<number, StoredPoint>;
+  /** 1-indexed step currently being learned/programmed/run. */
+  currentStep: number;
+  /** Learn-mode two-press capture phase (unused outside learn states). */
+  learnPhase: SdmLearnPhase;
+}
+
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
   // TODO: define arc-specific fields when implementing arc feature
@@ -238,6 +284,7 @@ export type DROEventPayload =
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
+  | { eventName: 'SDM_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -274,7 +321,8 @@ export type DROEventPayload =
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
   | { eventName: 'BTN_ANGLE_HOLE' }
-  | { eventName: 'BTN_GRID' };
+  | { eventName: 'BTN_GRID' }
+  | { eventName: 'BTN_SDM' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -324,6 +372,10 @@ export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
 /** Check if grid drilling mode is active (US-020) */
 export const isGridActive = (s: DROStateName): boolean =>
   s.startsWith('grid-');
+
+/** Check if Sub Datum Memory mode is active (US-009/010/011) */
+export const isSdmActive = (s: DROStateName): boolean =>
+  s.startsWith('sdm-');
 
 /** Check if FN LED should be active (function menu or pattern modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
@@ -401,6 +453,14 @@ export const INITIAL_GRID_DATA: GridData = {
   holesX: null,
   holesY: null,
   currentHole: 1,
+};
+
+export const INITIAL_SDM_DATA: SdmData = {
+  stateDataType: 'sdm',
+  sdmMode: 'LEARN',
+  points: {},
+  currentStep: 1,
+  learnPhase: 'awaiting-first-press',
 };
 
 export const INITIAL_PRESET_DATA: PresetData = {

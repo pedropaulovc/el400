@@ -33,6 +33,10 @@ const SecondaryFunctionSection = () => {
     dispatch({ eventName: 'BTN_GRID' });
   };
 
+  const handleSdm = () => {
+    dispatch({ eventName: 'BTN_SDM' });
+  };
+
   return (
     <>
       <h2 className="sr-only">Secondary functions</h2>
@@ -63,7 +67,7 @@ const SecondaryFunctionSection = () => {
             <DROButton onClick={handleHalf} variant="dark" size="secondary" className="p-0" data-testid="btn-half" title="Half">
               <Icon name="half-function" /><span className="sr-only">Half</span>
             </DROButton>
-            <DROButton onClick={noop} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
+            <DROButton onClick={handleSdm} variant="dark" size="secondary" className="p-0" data-testid="btn-sdm" title="SDM">
               <Icon name="sdm-function" /><span className="sr-only">SDM</span>
             </DROButton>
             <DROButton onClick={handleFunction} variant="dark" size="secondary" className="p-0" data-testid="btn-function" title="Function">
