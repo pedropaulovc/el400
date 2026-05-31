@@ -26,7 +26,7 @@ const PrimaryFunctionSection = () => {
           }}
         >
           <div className="flex justify-between w-full">
-            <DROButton onClick={noop} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
+            <DROButton onClick={() => { dispatch({ eventName: 'BTN_SETUP' }); }} size="icon" className="p-0" data-testid="btn-settings" title="Settings">
               <Icon name="setup" /><span className="sr-only">Settings</span>
             </DROButton>
             <DROButton onClick={() => { dispatch({ eventName: 'BTN_ABS_INC' }); }} size="icon" className="p-0" data-testid="btn-abs-inc" title="Abs/Inc">
