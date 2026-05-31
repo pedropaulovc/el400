@@ -6,8 +6,33 @@
  */
 
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
+import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+
+/**
+ * Pure counting-direction sign for an axis (US-002).
+ *
+ * The displayed position is `rawPositionMm × directionSign(axis, nvMem)`. This is
+ * a display-only transform applied AFTER the datum offset is subtracted; it never
+ * mutates stored machine position, offsets, or macro coordinate math.
+ *
+ * - Base sign comes from the per-axis Direction: `'reversed' → -1`, else `+1`.
+ * - For Z, the depth-sense preference composes on top: `'depth-positive'` inverts
+ *   the Z sign so increasing cutting depth increases the displayed value. A Z axis
+ *   that is both `'reversed'` and `'depth-positive'` double-inverts back to `+1`.
+ *
+ * @param axis - The axis to compute the sign for
+ * @param nvMem - Non-volatile memory (counting direction + Z depth-sense)
+ * @returns +1 (standard) or -1 (flipped)
+ */
+export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
+  const reversed = nvMem.axisDirection[axis] === 'reversed';
+  const depthInverted = axis === 'Z' && nvMem.zDepthSense === 'depth-positive';
+  // XOR: a single inversion flips the sign; both (reversed Z + depth-positive)
+  // cancel back to +1.
+  return reversed !== depthInverted ? -1 : 1;
+}
 
 /**
  * Display value for a single axis - can be a number or text string
@@ -74,7 +99,10 @@ export function computeDisplayPosition(
   context: DROReducerContext
 ): number {
   const rawMm = computeAxisPositionMm(axis, vMem, context);
-  return fromMmToAnyUnit(rawMm, context.nvMem.defaultUnit);
+  // Counting direction is a display-only transform applied AFTER datum subtraction;
+  // it never mutates stored machine position, offsets, or macro coordinate math.
+  const signedMm = rawMm * directionSign(axis, context.nvMem);
+  return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
 }
 
 /**

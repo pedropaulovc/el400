@@ -28,6 +28,7 @@ import {
   isSetupActive,
 } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay, type DisplayState } from '../utils/displayComputation';
+import { useSettingsStore } from '../../settingsStore';
 import {
   getParameterAt,
   wrapItemIndex,
@@ -175,11 +176,20 @@ function reduceParameter(
       ...data,
       draftValues: { ...data.draftValues, [key]: nextChoice.value },
     };
+    // Commit-on-change parameters (e.g. Direction, US-002) persist immediately
+    // to nvMem; we then read the fresh nvMem so the label still reflects the new
+    // choice. Parameters without `commit` keep draft-only (discard-on-exit)
+    // semantics -- nvMem is untouched here.
+    let displayNvMem = nvMem;
+    if (param.commit !== undefined) {
+      param.commit(readContextFor(data, nvMem), nextChoice.value);
+      displayNvMem = useSettingsStore.getState().nvMem;
+    }
     return {
       stateName: 'setup-parameter',
       stateData: newData,
       vMem,
-      display: computeParameterDisplay(newData, nvMem),
+      display: computeParameterDisplay(newData, displayNvMem),
     };
   }
 

@@ -6,16 +6,20 @@
  * key, and End/Clear exit with draft discard.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { setupReducer, SETUP_SELECT_TEXT } from './setup';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_SETUP_DATA, type SetupData } from '../droStateMachine';
-import type { DROStatePayload } from '../types';
+import type { DROReducerContext, DROStatePayload } from '../types';
 import {
   SETUP_PARAMETERS,
   SETUP_PARAMETER_COUNT,
   SETUP_END_ID,
+  DIRECTION_ID,
+  Z_DEPTH_ID,
 } from './setup-parameters';
+import { useSettingsStore } from '../../settingsStore';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
 
 const ctx = DEFAULT_TEST_CONTEXT;
 
@@ -206,5 +210,73 @@ describe('setupReducer - exit (AC 39.7, AC 39.8)', () => {
     // Idle state carries no setup draft (discarded).
     expect(exited?.stateName).toBe('idle');
     expect(exited?.stateData).toEqual({ stateDataType: 'none' });
+  });
+});
+
+describe('setupReducer - commit-on-change parameters (US-002)', () => {
+  // Commit parameters persist to the live settings store, so reset it per test.
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  /** Context whose nvMem mirrors the live settings store. */
+  function liveCtx(): DROReducerContext {
+    return { ...DEFAULT_TEST_CONTEXT, nvMem: useSettingsStore.getState().nvMem };
+  }
+
+  const directionIdx = SETUP_PARAMETERS.findIndex((p) => p.id === DIRECTION_ID);
+  const zDepthIdx = SETUP_PARAMETERS.findIndex((p) => p.id === Z_DEPTH_ID);
+
+  it('cycling the direction param commits to nvMem for the selected axis', () => {
+    const state = paramState({ selectedAxis: 'X', currentParamIndex: directionIdx });
+    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
+    // Label updates to the reversed choice using the freshly committed nvMem.
+    expect(xText(result)).toBe('riGht');
+  });
+
+  it('cycling direction on Y does not change X (per-axis commit)', () => {
+    const state = paramState({ selectedAxis: 'Y', currentParamIndex: directionIdx });
+    setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    const dir = useSettingsStore.getState().nvMem.axisDirection;
+    expect(dir).toEqual({ X: 'normal', Y: 'reversed', Z: 'normal' });
+  });
+
+  it('cycling left from normal commits reversed (wrap-around)', () => {
+    const state = paramState({ selectedAxis: 'X', currentParamIndex: directionIdx });
+    const result = setupReducer(state, { eventName: 'KEY_4_LEFT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
+    expect(xText(result)).toBe('riGht');
+  });
+
+  it('cycling the z-depth param commits the global zDepthSense', () => {
+    const state = paramState({ selectedAxis: 'X', currentParamIndex: zDepthIdx });
+    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
+    expect(xText(result)).toBe('dEP PoS');
+  });
+
+  it('cycling a non-commit param (counting-mode) does NOT touch nvMem', () => {
+    const before = useSettingsStore.getState().nvMem;
+    setupReducer(paramState({ selectedAxis: 'X', currentParamIndex: 0 }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem).toEqual(before);
+  });
+
+  it('a committed direction change survives End exit (not discarded)', () => {
+    // Cycle direction (commits to nvMem), then navigate to End and exit.
+    const changed = setupReducer(
+      paramState({ selectedAxis: 'X', currentParamIndex: directionIdx }),
+      { eventName: 'KEY_6_RIGHT' },
+      liveCtx()
+    )!;
+    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
+
+    const endIdx = SETUP_PARAMETERS.findIndex((p) => p.id === SETUP_END_ID);
+    const atEnd = { ...changed, stateData: { ...(changed.stateData as SetupData), currentParamIndex: endIdx } };
+    const exited = setupReducer(atEnd, { eventName: 'KEY_ENTER' }, liveCtx());
+
+    expect(exited?.stateName).toBe('idle');
+    // Unlike draft params, the committed direction persists past exit.
+    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
   });
 });

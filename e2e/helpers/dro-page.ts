@@ -432,6 +432,97 @@ export class DROPage {
   }
 
   /**
+   * Move the workpiece table in the operator's stated direction (US-002).
+   *
+   * The spec describes motion in the tool's-eye convention: looking down from the
+   * cutting tool onto the work, a table moving LEFT makes the tool effectively
+   * move in the +X direction, which under the STANDARD (default `normal`/`LEFT`)
+   * Direction setting INCREASES the displayed value. This helper turns that
+   * human "table-left/right" wording into the raw encoder delta a real jog would
+   * emit, then drives it through the mock CNCjs server's relative-move endpoint
+   * (the same MILL_STATE_CHANGED path a physical encoder uses).
+   *
+   * Mapping (default Direction): `'left'` => +magnitude machine delta (display
+   * goes positive), `'right'` => -magnitude. The per-axis Direction parameter,
+   * applied downstream as a display-only sign, is what flips the observed sign
+   * for a `riGht`-configured axis — this helper deliberately does NOT bake that
+   * in, so a Direction-flip test exercises the production transform, not the
+   * helper.
+   *
+   * @param axis - The axis to move
+   * @param direction - Table motion in the tool's-eye frame
+   * @param magnitudeMm - Distance moved, in millimetres (always positive)
+   */
+  async simulateTableMove(
+    axis: 'X' | 'Y' | 'Z',
+    direction: 'left' | 'right',
+    magnitudeMm: number
+  ): Promise<void> {
+    const delta = direction === 'left' ? magnitudeMm : -magnitudeMm;
+    await this.simulateEncoderRelativeMove(axis, delta);
+  }
+
+  /**
+   * Set the per-axis counting Direction (US-002, manual section 6.2 `dir`) by
+   * driving the REAL setup menu: open setup, pick the axis, scroll to the
+   * Direction parameter, cycle its choice to the requested label, then exit.
+   *
+   * Mirrors the `gotoSC` navigation pattern in US-021. No window hooks, no forced
+   * state — only the buttons an operator presses.
+   *
+   * Label contract (manual section 6.2 `dir`, pinned in the spec under
+   * "Setup-Menu Label Contract"): the seven-segment panel has no uppercase `T`
+   * glyph, so the manual's "LEFT" renders as `LEFt` (lowercase t). The Direction
+   * parameter's choice labels are `LEFt` (normal / LEFT) and `riGht` (reversed /
+   * riGht). This helper accepts the operator-facing 'LEFT' | 'riGht' wording from
+   * the spec scenarios and maps it to those exact 7-segment labels.
+   *
+   * @param axis - Axis whose Direction is being configured
+   * @param target - Desired Direction in the spec's operator wording
+   */
+  async setAxisDirection(axis: 'X' | 'Y' | 'Z', target: 'LEFT' | 'riGht'): Promise<void> {
+    const targetLabel = target === 'LEFT' ? 'LEFt' : 'riGht';
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) through the parameter list until the Direction parameter is
+    // highlighted. It renders one of its two choice labels; recognise it by
+    // matching exactly `LEFt` or `riGht`. (Do NOT match the global Z-depth param,
+    // whose labels are `dEP nEG` / `dEP PoS`.)
+    const isDirectionLabel = (t: string) => t === 'LEFt' || t === 'riGht';
+    let guard = 0;
+    while (!isDirectionLabel(await this.getAxisRawText(axis))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('Direction parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (left/right keys) until the requested label is shown.
+    const matchesTarget = (t: string) => t === targetLabel;
+    guard = 0;
+    while (!matchesTarget(await this.getAxisRawText(axis))) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`Direction choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup back to the idle readout via the terminal `End` item + ent,
+    // the canonical exit (US-039 AC 39.7). Walk to End rather than hard-coding a
+    // press count, since the registry grows as setup stories land.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).

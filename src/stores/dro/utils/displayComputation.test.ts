@@ -1,0 +1,276 @@
+/**
+ * Unit tests for the display-position computation, focused on the US-002
+ * counting-direction transform (Task 2).
+ *
+ * The Direction transform is DISPLAY-ONLY: `computeDisplayPosition` multiplies the
+ * post-datum mm value by `directionSign(axis, nvMem)` before unit conversion.
+ * `computeAxisPositionMm` stays datum-only and is asserted to be untouched by
+ * Direction. Covers AC 2.1 (tool's-eye +X increases under normal), AC 2.2 (sign
+ * flips with Direction), AC 2.4 (Z depth-positive), and structurally supports
+ * AC 2.3 (datum applied first, then sign).
+ */
+import { describe, it, expect } from 'vitest';
+import {
+  computeAxisPositionMm,
+  computeDisplayPosition,
+  computeNormalDisplay,
+} from './displayComputation';
+import type { DROReducerContext } from '../types';
+import type { VolatileMemoryState } from '../../../types/volatileMemory';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import {
+  DEFAULT_NON_VOLATILE_MEMORY,
+  type NonVolatileMemory,
+  type AxisDirectionByAxis,
+  type ZDepthSense,
+} from '../../../types/nonVolatileMemory';
+import { createDefaultMillState } from '../../../types/millState';
+
+const MM_PER_INCH = 25.4;
+
+function makeNvMem(
+  overrides: {
+    axisDirection?: Partial<AxisDirectionByAxis>;
+    zDepthSense?: ZDepthSense;
+    defaultUnit?: 'inch' | 'mm';
+  } = {}
+): NonVolatileMemory {
+  return {
+    ...DEFAULT_NON_VOLATILE_MEMORY,
+    defaultUnit: overrides.defaultUnit ?? 'mm',
+    zDepthSense: overrides.zDepthSense ?? 'depth-negative',
+    axisDirection: {
+      ...DEFAULT_NON_VOLATILE_MEMORY.axisDirection,
+      ...overrides.axisDirection,
+    },
+  };
+}
+
+/** Manual (non-connected) context with a given preset absolute position in mm. */
+function manualContext(
+  nvMem: NonVolatileMemory
+): DROReducerContext {
+  return { millState: createDefaultMillState('noop'), nvMem };
+}
+
+function manualVMem(absoluteMm: Partial<VolatileMemoryState['manualAbsoluteValues']>): VolatileMemoryState {
+  return {
+    ...INITIAL_VOLATILE_MEMORY_STATE,
+    mode: 'abs',
+    manualAbsoluteValues: {
+      ...INITIAL_VOLATILE_MEMORY_STATE.manualAbsoluteValues,
+      ...absoluteMm,
+    },
+  };
+}
+
+describe('computeDisplayPosition — Direction transform', () => {
+  describe('per-axis Direction sign (mm units)', () => {
+    it('normal direction shows the positive value (AC 2.1)', () => {
+      const ctx = manualContext(makeNvMem({ axisDirection: { X: 'normal' } }));
+      const vMem = manualVMem({ X: 10 });
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(10);
+    });
+
+    it('reversed direction flips the sign (AC 2.2)', () => {
+      const ctx = manualContext(makeNvMem({ axisDirection: { X: 'reversed' } }));
+      const vMem = manualVMem({ X: 10 });
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-10);
+    });
+  });
+
+  describe('datum applied first, then Direction (AC 2.3 support)', () => {
+    it('connected reversed with zero datum flips full position', () => {
+      const ctx: DROReducerContext = {
+        millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 10, y: 0, z: 0 } },
+        nvMem: makeNvMem({ axisDirection: { X: 'reversed' } }),
+      };
+      const vMem: VolatileMemoryState = {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        mode: 'abs',
+        workOffsets: { X: 0, Y: 0, Z: 0 },
+      };
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-10);
+    });
+
+    it('reversed sign multiplies the post-datum value, not the raw machine position', () => {
+      const ctx: DROReducerContext = {
+        millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 10, y: 0, z: 0 } },
+        nvMem: makeNvMem({ axisDirection: { X: 'reversed' } }),
+      };
+      const vMem: VolatileMemoryState = {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        mode: 'abs',
+        workOffsets: { X: 4, Y: 0, Z: 0 },
+      };
+      // datum first: 10 - 4 = 6; then sign: -6
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-6);
+    });
+  });
+
+  describe('Z depth-sense (AC 2.4)', () => {
+    it('depth-positive inverts a positive Z value', () => {
+      const ctx = manualContext(makeNvMem({ zDepthSense: 'depth-positive' }));
+      const vMem = manualVMem({ Z: 5 });
+      expect(computeDisplayPosition('Z', vMem, ctx)).toBe(-5);
+    });
+
+    it('Z reversed + depth-positive double-inverts back to positive', () => {
+      const ctx = manualContext(
+        makeNvMem({ axisDirection: { Z: 'reversed' }, zDepthSense: 'depth-positive' })
+      );
+      const vMem = manualVMem({ Z: 5 });
+      expect(computeDisplayPosition('Z', vMem, ctx)).toBe(5);
+    });
+
+    it('depth-positive does not affect X', () => {
+      const ctx = manualContext(makeNvMem({ zDepthSense: 'depth-positive' }));
+      const vMem = manualVMem({ X: 7 });
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(7);
+    });
+  });
+
+  describe('inch units flip after conversion', () => {
+    it('reversed X in inch mode yields the negative converted value', () => {
+      const ctx = manualContext(
+        makeNvMem({ axisDirection: { X: 'reversed' }, defaultUnit: 'inch' })
+      );
+      const vMem = manualVMem({ X: 25.4 });
+      // 25.4 mm = 1 inch, reversed → -1
+      expect(computeDisplayPosition('X', vMem, ctx)).toBeCloseTo(-1, 10);
+    });
+
+    it('normal X in inch mode is positive', () => {
+      const ctx = manualContext(makeNvMem({ defaultUnit: 'inch' }));
+      const vMem = manualVMem({ X: MM_PER_INCH });
+      expect(computeDisplayPosition('X', vMem, ctx)).toBeCloseTo(1, 10);
+    });
+  });
+});
+
+describe('datum and Direction are independent, composable transforms (AC 2.3)', () => {
+  /** Connected context at a fixed machine point, with a chosen datum (workOffset). */
+  function datumCtx(machineX: number, datumX: number, nvMem: NonVolatileMemory) {
+    const ctx: DROReducerContext = {
+      millState: {
+        ...createDefaultMillState('cncjs'),
+        connected: true,
+        position: { x: machineX, y: 0, z: 0 },
+      },
+      nvMem,
+    };
+    const vMem: VolatileMemoryState = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'abs',
+      workOffsets: { X: datumX, Y: 0, Z: 0 },
+    };
+    return { ctx, vMem };
+  }
+
+  describe('pure datum effect — sign comes from the datum, Direction stays normal', () => {
+    const normal = makeNvMem({ axisDirection: { X: 'normal' } });
+    const MACHINE_X = 10;
+
+    it('a datum on the - side of the point reads POSITIVE', () => {
+      // Zero at machine 4: the point sits at +6 from that datum.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 4, normal);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(6);
+    });
+
+    it('a datum on the + side of the SAME point reads NEGATIVE', () => {
+      // Zero at machine 15: the same point now sits at -5 from that datum.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, normal);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-5);
+    });
+
+    it('the sign flip came purely from the datum: Direction was normal in both', () => {
+      // directionSign('X', normal) === +1, so the negative above is datum-only.
+      const { ctx } = datumCtx(MACHINE_X, 15, normal);
+      expect(ctx.nvMem.axisDirection.X).toBe('normal');
+    });
+  });
+
+  describe('Direction multiplies on top of the datum-derived magnitude', () => {
+    const reversed = makeNvMem({ axisDirection: { X: 'reversed' } });
+    const MACHINE_X = 10;
+
+    it('a +6 (from datum 4) becomes -6 under reversed Direction', () => {
+      const { ctx, vMem } = datumCtx(MACHINE_X, 4, reversed);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(-6);
+    });
+
+    it('a -5 (from datum 15) becomes +5 under reversed Direction', () => {
+      // Independent of which datum produced the magnitude: reversed just multiplies.
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, reversed);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(5);
+    });
+
+    it('reversed display value is exactly -1x the normal display value, same datum', () => {
+      const { ctx: nCtx, vMem: nVMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
+      const { ctx: rCtx, vMem: rVMem } = datumCtx(MACHINE_X, 4, reversed);
+      const normalVal = computeDisplayPosition('X', nVMem, nCtx);
+      const reversedVal = computeDisplayPosition('X', rVMem, rCtx);
+      expect(reversedVal).toBe(-normalVal);
+    });
+  });
+
+  describe('orthogonality — Direction does not change WHICH datum you measure from', () => {
+    const MACHINE_X = 10;
+
+    it('the datum-relative magnitude (computeAxisPositionMm) is identical under normal and reversed', () => {
+      const { ctx: nCtx, vMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
+      const { ctx: rCtx } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'reversed' } }));
+      // Same datum (4), same point (10): the measured-from magnitude is 6 for both;
+      // only the displayed SIGN differs. This proves the two transforms are orthogonal.
+      expect(computeAxisPositionMm('X', vMem, nCtx)).toBe(6);
+      expect(computeAxisPositionMm('X', vMem, rCtx)).toBe(6);
+    });
+
+    it('changing Direction leaves the chosen datum (workOffset) untouched', () => {
+      const { ctx, vMem } = datumCtx(MACHINE_X, 15, makeNvMem({ axisDirection: { X: 'reversed' } }));
+      // The datum is still 15 regardless of Direction; the magnitude measured from
+      // it is -5, and the displayed value is +5 — datum unchanged, sign multiplied.
+      expect(vMem.workOffsets.X).toBe(15);
+      expect(computeAxisPositionMm('X', vMem, ctx)).toBe(-5);
+      expect(computeDisplayPosition('X', vMem, ctx)).toBe(5);
+    });
+  });
+});
+
+describe('computeAxisPositionMm — datum-only, unaffected by Direction', () => {
+  it('returns the raw post-datum mm regardless of axisDirection', () => {
+    const reversedCtx = manualContext(
+      makeNvMem({ axisDirection: { X: 'reversed', Y: 'reversed', Z: 'reversed' } })
+    );
+    const vMem = manualVMem({ X: 10, Y: 20, Z: 30 });
+    expect(computeAxisPositionMm('X', vMem, reversedCtx)).toBe(10);
+    expect(computeAxisPositionMm('Y', vMem, reversedCtx)).toBe(20);
+    expect(computeAxisPositionMm('Z', vMem, reversedCtx)).toBe(30);
+  });
+
+  it('is unaffected by Z depth-positive', () => {
+    const ctx = manualContext(makeNvMem({ zDepthSense: 'depth-positive' }));
+    const vMem = manualVMem({ Z: 5 });
+    expect(computeAxisPositionMm('Z', vMem, ctx)).toBe(5);
+  });
+});
+
+describe('computeNormalDisplay — Direction across all three axes', () => {
+  it('reflects per-axis Direction and Z depth-sense together', () => {
+    const ctx = manualContext(
+      makeNvMem({
+        axisDirection: { X: 'reversed', Y: 'normal', Z: 'normal' },
+        zDepthSense: 'depth-positive',
+      })
+    );
+    const vMem = manualVMem({ X: 10, Y: 20, Z: 30 });
+    const display = computeNormalDisplay(vMem, ctx);
+    expect(display).toEqual({ X: -10, Y: 20, Z: -30 });
+  });
+
+  it('all-normal default leaves every axis positive', () => {
+    const ctx = manualContext(makeNvMem());
+    const vMem = manualVMem({ X: 1, Y: 2, Z: 3 });
+    expect(computeNormalDisplay(vMem, ctx)).toEqual({ X: 1, Y: 2, Z: 3 });
+  });
+});

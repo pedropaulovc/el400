@@ -91,6 +91,8 @@ export function resetStores(): void {
       bootMessageMode: 'skip', // Skip boot for faster tests
       scaleResolution: { X: '5', Y: '5', Z: '5' },
       taperOnAxis: 'X',
+      axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
+      zDepthSense: 'depth-negative',
     },
   });
 
