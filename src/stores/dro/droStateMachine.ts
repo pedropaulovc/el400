@@ -77,6 +77,17 @@ export type DROStateName =
   | 'bolt-hole-circle-angle'
   | 'bolt-hole-circle-holes'
   | 'bolt-hole-circle-navigate'
+  // Arc contouring (step drilling) states (US-018)
+  | 'arc-contour-intro'
+  | 'arc-contour-center-x'
+  | 'arc-contour-center-y'
+  | 'arc-contour-radius'
+  | 'arc-contour-start-angle'
+  | 'arc-contour-end-angle'
+  | 'arc-contour-tool-diameter'
+  | 'arc-contour-cut-type'
+  | 'arc-contour-max-cut'
+  | 'arc-contour-navigate'
   // Angle hole (linear hole pattern) states (US-019)
   | 'angle-hole-intro'
   | 'angle-hole-start-x'
@@ -203,9 +214,21 @@ export interface GridData extends BaseDROStateData {
   currentHole: number;     // 1-indexed, row-major
 }
 
+/** Cut offset type for arc contouring (which side of the radius the tool runs). */
+export type ArcCutType = 'INT' | 'EXT' | 'MID';
+
 export interface ArcData extends BaseDROStateData {
   readonly stateDataType: 'arc';
-  // TODO: define arc-specific fields when implementing arc feature
+  centerX: number | null;
+  centerY: number | null;
+  radius: number | null;
+  startAngle: number | null;
+  endAngle: number | null;
+  toolDiameter: number | null;
+  cutType: ArcCutType;
+  maxCut: number | null;
+  pointCount: number | null;
+  currentPoint: number;
 }
 
 /** Binary calculator operations (require two operands) */
@@ -274,6 +297,7 @@ export type DROEventPayload =
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
@@ -311,6 +335,7 @@ export type DROEventPayload =
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
+  | { eventName: 'BTN_ARC_CONTOUR' }
   | { eventName: 'BTN_ANGLE_HOLE' }
   | { eventName: 'BTN_GRID' };
 
@@ -355,6 +380,10 @@ export const isCalculatorActive = (s: DROStateName): boolean =>
 export const isBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('bolt-hole-');
 
+/** Check if arc contouring mode is active */
+export const isArcContourActive = (s: DROStateName): boolean =>
+  s.startsWith('arc-contour-');
+
 /** Check if angle hole (linear hole pattern) mode is active */
 export const isAngleHoleActive = (s: DROStateName): boolean =>
   s.startsWith('angle-hole-');
@@ -371,6 +400,7 @@ export const isGridActive = (s: DROStateName): boolean =>
 export const isFnLedActive = (s: DROStateName): boolean =>
   isFunctionActive(s) ||
   isBoltHoleActive(s) ||
+  isArcContourActive(s) ||
   isAngleHoleActive(s) ||
   isLinearBoltHoleActive(s) ||
   isGridActive(s) ||
@@ -415,6 +445,20 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   endAngle: null,
   holeCount: null,
   currentHole: 1,
+};
+
+export const INITIAL_ARC_DATA: ArcData = {
+  stateDataType: 'arc',
+  centerX: null,
+  centerY: null,
+  radius: null,
+  startAngle: null,
+  endAngle: null,
+  toolDiameter: null,
+  cutType: 'INT',
+  maxCut: null,
+  pointCount: null,
+  currentPoint: 1,
 };
 
 export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
