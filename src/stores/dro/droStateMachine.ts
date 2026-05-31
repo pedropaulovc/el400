@@ -80,6 +80,16 @@ export type DROStateName =
   | 'linear-bolt-hole-pitch'
   | 'linear-bolt-hole-holes'
   | 'linear-bolt-hole-navigate'
+  // Grid drilling states (US-020)
+  | 'grid-intro'
+  | 'grid-start-x'
+  | 'grid-start-y'
+  | 'grid-pitch-x'
+  | 'grid-pitch-y'
+  | 'grid-angle'
+  | 'grid-holes-x'
+  | 'grid-holes-y'
+  | 'grid-navigate'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -106,6 +116,7 @@ export type DROStateData =
   | BoltHoleData
   | AngleHoleData
   | LinearBoltHoleData
+  | GridData
   | ArcData
   | CalculatorData
   | PresetData
@@ -157,6 +168,18 @@ export interface LinearBoltHoleData extends BaseDROStateData {
   holeCount: number | null;
   /** 1-indexed current hole the user is navigating to */
   currentHole: number;
+}
+
+export interface GridData extends BaseDROStateData {
+  readonly stateDataType: 'grid';
+  startX: number | null;   // mm
+  startY: number | null;   // mm
+  pitchX: number | null;   // mm, spacing along grid X axis
+  pitchY: number | null;   // mm, spacing along grid Y axis
+  angle: number | null;    // degrees, tilt of grid X axis from machine +X
+  holesX: number | null;   // columns
+  holesY: number | null;   // rows
+  currentHole: number;     // 1-indexed, row-major
 }
 
 export interface ArcData extends BaseDROStateData {
@@ -214,6 +237,7 @@ export type DROEventPayload =
   | { eventName: 'MILL_STATE_CHANGED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
+  | { eventName: 'GRID_INTRO_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -249,7 +273,8 @@ export type DROEventPayload =
   // Secondary function buttons
   | { eventName: 'BTN_HALF' }
   | { eventName: 'BTN_BOLT_HOLE' }
-  | { eventName: 'BTN_ANGLE_HOLE' };
+  | { eventName: 'BTN_ANGLE_HOLE' }
+  | { eventName: 'BTN_GRID' };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -296,12 +321,17 @@ export const isAngleHoleActive = (s: DROStateName): boolean =>
 export const isLinearBoltHoleActive = (s: DROStateName): boolean =>
   s.startsWith('linear-bolt-hole-');
 
+/** Check if grid drilling mode is active (US-020) */
+export const isGridActive = (s: DROStateName): boolean =>
+  s.startsWith('grid-');
+
 /** Check if FN LED should be active (function menu or pattern modes) */
 export const isFnLedActive = (s: DROStateName): boolean =>
   isFunctionActive(s) ||
   isBoltHoleActive(s) ||
   isAngleHoleActive(s) ||
-  isLinearBoltHoleActive(s);
+  isLinearBoltHoleActive(s) ||
+  isGridActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -358,6 +388,18 @@ export const INITIAL_LINEAR_BOLT_HOLE_DATA: LinearBoltHoleData = {
   axis: null,
   pitch: null,
   holeCount: null,
+  currentHole: 1,
+};
+
+export const INITIAL_GRID_DATA: GridData = {
+  stateDataType: 'grid',
+  startX: null,
+  startY: null,
+  pitchX: null,
+  pitchY: null,
+  angle: null,
+  holesX: null,
+  holesY: null,
   currentHole: 1,
 };
 

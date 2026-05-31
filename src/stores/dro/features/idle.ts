@@ -7,7 +7,7 @@
  */
 
 import type { FeatureReducer } from '../types';
-import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ANGLE_HOLE_DATA } from '../droStateMachine';
+import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
 import { MENU_TEXT_MAP } from './menu';
 
@@ -54,6 +54,17 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         stateData: INITIAL_ANGLE_HOLE_DATA,
         vMem,
         display: createDisplay('AnGhoLE', 0, ''),
+      };
+    case 'BTN_GRID':
+      // Must be in ABS mode to run grid macro
+      if (vMem.mode !== 'abs') {
+        return null;
+      }
+      return {
+        stateName: 'grid-intro',
+        stateData: INITIAL_GRID_DATA,
+        vMem,
+        display: createDisplay('Grid', 0, ''),
       };
     default:
       return null;

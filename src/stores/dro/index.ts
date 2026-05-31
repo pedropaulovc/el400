@@ -60,5 +60,11 @@ export {
   ANGLE_HOLE_INTRO_DURATION_MS,
 } from './features/angle-hole';
 
-// Re-export bolt hole types and guards
-export { isBoltHoleActive, isAngleHoleActive, isFnLedActive } from './droStateMachine';
+// Re-export grid drilling feature (US-020)
+export {
+  useGridIntro,
+  GRID_INTRO_DURATION_MS,
+} from './features/grid';
+
+// Re-export bolt hole / angle hole / grid types and guards
+export { isBoltHoleActive, isAngleHoleActive, isGridActive, isFnLedActive } from './droStateMachine';
