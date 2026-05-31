@@ -50,4 +50,4 @@ describe('US-001: First Use and Power-Up', () => {
 ## Notes
 - Merged from US-001 (Claude) and G-001 (Gemini)
 - Enhanced test coverage with numeric display pattern check from G-001
-- Added 4-axis consideration from G-001
+- 4-axis (Z/U) consideration from G-001 is **not in scope**: the simulator is X/Y/Z only
