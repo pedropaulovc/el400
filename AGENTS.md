@@ -95,7 +95,7 @@ useVolatileMemory() // → { displayValues, mode, toggleMode, zeroAxis }
 **Debug Mode** (`?source=debug`):
 - Uses DebugMillAdapter with in-browser DebugServer (no backend)
 - Control panel: jog controls, probe toggle, event log
-- Works on GitHub Pages (static deployment)
+- Works on any static host (deployed to Cloudflare Pages)
 
 ## DRO State Names
 
