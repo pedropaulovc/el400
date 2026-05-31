@@ -25,7 +25,7 @@ test.describe('US-012: Datum Recall', () => {
     expect(await dro.isMmUnits()).toBe(true);
 
     // Press Reference -> honE
-    await dro.centerButton.click();
+    await dro.referenceButton.click();
     await dro.waitForAxisPureTextValue('X', 'honE', 1000);
 
     // Confirm honE with ENT -> SELECt
@@ -53,7 +53,7 @@ test.describe('US-012: Datum Recall', () => {
     await dro.toggleInchMm(); // mm
 
     // Press Reference, navigate right to nC rEF
-    await dro.centerButton.click();
+    await dro.referenceButton.click();
     await dro.waitForAxisPureTextValue('X', 'honE', 1000);
     await dro.key6.click(); // right
     await dro.waitForAxisPureTextValue('X', 'nC rEF', 1000);

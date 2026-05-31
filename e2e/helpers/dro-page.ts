@@ -55,7 +55,7 @@ export class DROPage {
   readonly settingsButton: Locator;
   readonly absIncButton: Locator;
   readonly toggleUnitButton: Locator;
-  readonly centerButton: Locator;
+  readonly referenceButton: Locator;
   readonly functionButton: Locator;
   readonly boltHoleButton: Locator;
   readonly angleHoleButton: Locator;
@@ -109,7 +109,7 @@ export class DROPage {
     this.settingsButton = page.getByTestId('btn-settings');
     this.absIncButton = page.getByTestId('btn-abs-inc');
     this.toggleUnitButton = page.getByTestId('btn-toggle-unit');
-    this.centerButton = page.getByTestId('btn-center');
+    this.referenceButton = page.getByTestId('btn-reference');
     this.functionButton = page.getByTestId('btn-function');
     this.boltHoleButton = page.getByTestId('btn-bolt-circle');
     this.angleHoleButton = page.getByTestId('btn-angle-hole');

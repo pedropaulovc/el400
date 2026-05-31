@@ -51,7 +51,7 @@ describe('Reference / Datum recall integration', () => {
     const user = userEvent.setup();
     renderSimulator();
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     expect(useDROStore.getState().stateName).toBe('reference-menu-home');
     expect(getAxisDisplayPureTextValue('X')).toBe(REFERENCE_TEXT.home);
 
@@ -64,7 +64,7 @@ describe('Reference / Datum recall integration', () => {
     const user = userEvent.setup();
     renderSimulator();
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-6')); // right -> nC rEF
     expect(useDROStore.getState().stateName).toBe('reference-menu-machine');
     expect(getAxisDisplayPureTextValue('X')).toBe(REFERENCE_TEXT.machine);
@@ -78,7 +78,7 @@ describe('Reference / Datum recall integration', () => {
     const user = userEvent.setup();
     renderSimulator();
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter')); // confirm honE
     await user.click(screen.getByTestId('axis-select-x'));
 
@@ -93,7 +93,7 @@ describe('Reference / Datum recall integration', () => {
     // mm mode for direct values
     await user.click(screen.getByTestId('btn-toggle-unit'));
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter')); // honE
     await user.click(screen.getByTestId('axis-select-x'));
     expect(useDROStore.getState().stateName).toBe('reference-home-waiting');
@@ -112,7 +112,7 @@ describe('Reference / Datum recall integration', () => {
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-6')); // -> nC rEF
     await user.click(screen.getByTestId('key-enter'));
     await user.click(screen.getByTestId('axis-select-x'));
@@ -131,7 +131,7 @@ describe('Reference / Datum recall integration', () => {
     await user.click(screen.getByTestId('btn-abs-inc')); // -> INC
     expect(useDROStore.getState().vMem.mode).toBe('inc');
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     expect(useDROStore.getState().stateName).toBe('reference-menu-home');
     expect(useDROStore.getState().vMem.mode).toBe('abs');
   });
@@ -140,7 +140,7 @@ describe('Reference / Datum recall integration', () => {
     const user = userEvent.setup();
     renderSimulator();
 
-    await user.click(screen.getByTestId('btn-center'));
+    await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter'));
     await user.click(screen.getByTestId('axis-select-x'));
     expect(useDROStore.getState().stateName).toBe('reference-home-waiting');

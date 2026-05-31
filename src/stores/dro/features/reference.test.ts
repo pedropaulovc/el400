@@ -164,6 +164,38 @@ describe('referenceReducer', () => {
     });
   });
 
+  describe('disconnected (NoOp/manual) mode — the default source', () => {
+    // Regression for the silent no-op: when no mill is connected the ABS display
+    // reads manualAbsoluteValues, not machinePos - workOffset. applyDatum must
+    // update that representation too or crossing the mark does nothing on screen.
+    // Disconnected context (NoOp default) showing values in mm so the display
+    // equals the stored mm value without unit conversion.
+    const disconnectedMmContext: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+    };
+
+    it('HOME: crossing mark updates the manual display value to 0 when disconnected', () => {
+      const state = createTestState('reference-home-waiting', refData({ referenceMode: 'HOME', selectedAxis: 'X' }));
+      // The default test mill is disconnected (connected: false).
+      expect(disconnectedMmContext.millState.connected).toBe(false);
+      const result = referenceReducer(state, { eventName: 'ENCODER_REF_MARK_CROSSED', axis: 'X' }, disconnectedMmContext);
+      expect(result?.stateName).toBe('idle');
+      // Manual absolute value (what the disconnected ABS display reads) must be 0.
+      expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(0, 4);
+      expect(result?.display.X).toBeCloseTo(0, 4);
+    });
+
+    it('MACHINE_RECALL: crossing mark updates the manual display value to the stored ref when disconnected', () => {
+      const state = createTestState('reference-machine-waiting', refData({ referenceMode: 'MACHINE_RECALL', selectedAxis: 'X' }));
+      const result = referenceReducer(state, { eventName: 'ENCODER_REF_MARK_CROSSED', axis: 'X' }, disconnectedMmContext);
+      expect(result?.stateName).toBe('idle');
+      // Stored as mm internally; display is mm here, so both equal the stored ref.
+      expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(MACHINE_REFERENCE_VALUES_MM.X, 4);
+      expect(result?.display.X).toBeCloseTo(MACHINE_REFERENCE_VALUES_MM.X, 4);
+    });
+  });
+
   describe('cancel with KEY_CLEAR', () => {
     it('cancels from menu back to idle', () => {
       const state = createTestState('reference-menu-home', refData());

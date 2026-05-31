@@ -49,9 +49,12 @@ export const REFERENCE_TEXT = {
 /**
  * Stored machine-reference values per axis, in mm (§7.7.2).
  *
- * In a real DRO this fixed distance from the encoder reference mark is set once
- * during commissioning (§7.7.2.1) and recalled afterwards. The simulator models
- * it as a constant so recall is deterministic.
+ * PLACEHOLDER: in a real DRO this fixed distance from the encoder reference
+ * mark is set once during commissioning via Set Machine Reference (§7.7.2.1)
+ * and recalled afterwards. That set-flow is OUT OF SCOPE for US-012 (tracked as
+ * a follow-up story), so the simulator hard-codes a per-axis constant. As a
+ * result every recall currently restores 25.4mm on the selected axis. When
+ * §7.7.2.1 lands, this constant should be replaced by the persisted set value.
  */
 export const MACHINE_REFERENCE_VALUES_MM: Record<Axis, number> = {
   X: 25.4,
@@ -98,8 +101,14 @@ function exitToIdle(
 }
 
 /**
- * Set the work offset for the selected axis so the displayed ABS value becomes
+ * Set the datum for the selected axis so the displayed ABS value becomes
  * `referenceValue` at the current (mark) machine position, then return to idle.
+ *
+ * Both representations are updated so the datum is reflected regardless of
+ * connection state (mirrors axis-operations setAxisValueMm):
+ * - connected: ABS display = machinePos - workOffset, so set the work offset.
+ * - disconnected (NoOp/manual, the default source): ABS display reads
+ *   manualAbsoluteValues, so set that to the reference value directly.
  */
 function applyDatum(
   axis: Axis,
@@ -111,6 +120,7 @@ function applyDatum(
   const newVMem: VolatileMemoryState = {
     ...vMem,
     workOffsets: { ...vMem.workOffsets, [axis]: offset },
+    manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: referenceValue },
     activeAxis: null,
     inputBuffer: '',
   };
@@ -240,7 +250,8 @@ export const REFERENCE_MARK_HOOK = '__el400CrossReferenceMark';
 
 declare global {
   interface Window {
-    [REFERENCE_MARK_HOOK]?: (axis: 'X' | 'Y' | 'Z') => void;
+    /** E2E-only hook to latch the encoder reference mark; see useReferenceMarkTestHook. */
+    __el400CrossReferenceMark?: (axis: 'X' | 'Y' | 'Z') => void;
   }
 }
 
@@ -250,11 +261,11 @@ declare global {
  */
 export function useReferenceMarkTestHook(dispatch: Dispatch<DROEventPayload>): void {
   useEffect(() => {
-    window[REFERENCE_MARK_HOOK] = (axis) => {
+    window.__el400CrossReferenceMark = (axis) => {
       dispatch({ eventName: 'ENCODER_REF_MARK_CROSSED', axis });
     };
     return () => {
-      window[REFERENCE_MARK_HOOK] = undefined;
+      delete window.__el400CrossReferenceMark;
     };
   }, [dispatch]);
 }

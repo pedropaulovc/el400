@@ -33,7 +33,7 @@ const PrimaryFunctionSection = () => {
             <DROButton onClick={handleToggleUnit} size="icon" className="p-0" data-testid="btn-toggle-unit" title="Toggle units">
               <Icon name="inch-mm" /><span className="sr-only">Toggle units</span>
             </DROButton>
-            <DROButton onClick={() => { dispatch({ eventName: 'BTN_REFERENCE' }); }} size="icon" className="p-0" data-testid="btn-center" title="Reference">
+            <DROButton onClick={() => { dispatch({ eventName: 'BTN_REFERENCE' }); }} size="icon" className="p-0" data-testid="btn-reference" title="Reference">
               <Icon name="reference" /><span className="sr-only">Reference</span>
             </DROButton>
             <DROButton onClick={() => { dispatch({ eventName: 'BTN_DISTANCE_TO_GO' }); }} size="icon" className="p-0" data-testid="btn-distance-to-go" title="Distance to Go">
