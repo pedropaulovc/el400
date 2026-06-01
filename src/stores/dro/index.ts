@@ -85,6 +85,18 @@ export {
   SETUP_SAVED_DURATION_MS,
 } from './features/save-changes';
 
+// Re-export OEM Mode feature (US-044): password gate + custom-default capture
+export {
+  useOemRejectedDismiss,
+  captureOemDefaults,
+  isOemPasswordCorrect,
+  OEM_PASSWORD_PROMPT,
+  OEM_MODE_TEXT,
+  OEM_REJECTED_TEXT,
+  OEM_MODE_SETUP_LABEL,
+} from './features/oem-mode';
+export { isOemActive } from './droStateMachine';
+
 // Re-export reference / datum recall feature (US-012)
 export {
   useReferenceMarkTestHook,

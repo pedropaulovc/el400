@@ -176,6 +176,13 @@ export type DROStateName =
   | 'setup-parameter'
   // SAV CHG save-confirmation state (US-027) - shows StorEd, auto-returns to setup
   | 'setup-saved'
+  // OEM Mode states (US-044): password-gated capture of a custom default baseline.
+  // `oem-password` collects the code; `oem-mode` is the entered screen where ENT
+  // stores the live config as nvMem.oemDefaults; `oem-rejected` flashes on a wrong
+  // code (OEM not entered). Save confirmation reuses the shared `setup-saved` glyph.
+  | 'oem-password'
+  | 'oem-mode'
+  | 'oem-rejected'
   // Taper calculation (lathe function, US-045)
   | 'function-menu-taper'
   | 'taper-active'
@@ -215,6 +222,7 @@ export type DROStateData =
   | PresetData
   | PolarData
   | SetupData
+  | OemData
   | TaperData
   | ReferenceData
   | ProbeData
@@ -385,6 +393,23 @@ export interface SetupData extends BaseDROStateData {
   draftValues: Record<string, string>;
 }
 
+/**
+ * OEM Mode context (US-044, manual §6.2 `oEm mod`).
+ *
+ * `passwordBuffer` accumulates the digit keys typed at the password prompt;
+ * it is matched against the module-private OEM code on ENT. `returnParamIndex`
+ * remembers which setup item (the `oEm mod` row) to re-highlight when the flow
+ * returns to the menu, so entry/exit is transparent. The password is NEVER
+ * stored here in cleartext beyond the live keystrokes the operator is typing.
+ */
+export interface OemData extends BaseDROStateData {
+  readonly stateDataType: 'oem';
+  /** Digits typed so far at the password prompt (cleared on entry/exit). */
+  passwordBuffer: string;
+  /** Setup param index of the `oEm mod` row, to restore on return to the menu. */
+  returnParamIndex: number;
+}
+
 export interface TaperData extends BaseDROStateData {
   readonly stateDataType: 'taper';
   /**
@@ -516,6 +541,8 @@ export type DROEventPayload =
   | { eventName: 'GRID_INTRO_TIMEOUT' }
   | { eventName: 'SDM_INTRO_TIMEOUT' }
   | { eventName: 'SETUP_SAVED_TIMEOUT' }
+  // Wrong OEM password flash elapsed (US-044); dispatched by useOemRejectedDismiss.
+  | { eventName: 'OEM_REJECTED_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }
@@ -639,6 +666,14 @@ export const isPresetActive = (s: DROStateName): boolean =>
 /** Check if setup menu is active (any setup-* state) */
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
+
+/**
+ * Check if OEM Mode is active (US-044): the password prompt, the entered store
+ * screen, or the wrong-password rejection flash. Distinct from `isSetupActive`
+ * so the setup reducer can hand OEM events to the dedicated OEM reducer.
+ */
+export const isOemActive = (s: DROStateName): boolean =>
+  s === 'oem-password' || s === 'oem-mode' || s === 'oem-rejected';
 
 /**
  * States where the Near-Zero Warning is automatically enabled (US-024 AC24.9,
@@ -773,6 +808,12 @@ export const INITIAL_SETUP_DATA: SetupData = {
   selectedAxis: null,
   currentParamIndex: 0,
   draftValues: {},
+};
+
+export const INITIAL_OEM_DATA: OemData = {
+  stateDataType: 'oem',
+  passwordBuffer: '',
+  returnParamIndex: 0,
 };
 
 export const INITIAL_TAPER_DATA: TaperData = {

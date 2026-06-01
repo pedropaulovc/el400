@@ -47,6 +47,7 @@ function resetStores(initialState?: DROShape) {
       encoderFailWarning: false,
       keypadLock: 'off',
       sleepTimeout: 0,
+      oemDefaults: null,
     },
   });
 
