@@ -37,7 +37,7 @@
  */
 
 import type { DROStateName, DROEventPayload } from '../droStateMachine';
-import { isSetupActive } from '../droStateMachine';
+import { isSetupActive, isOemActive } from '../droStateMachine';
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 
 /**
@@ -77,6 +77,9 @@ export function isEventBlockedByKeypadLock(
   if (nvMem.keypadLock !== 'on') return false;
   // Inside setup the operator navigates to LoC and unlocks -- never gate there.
   if (isSetupActive(stateName)) return false;
+  // OEM Mode (US-044) is reached from setup and needs its password digits live;
+  // it inherits setup's "don't gate" stance so the gate steps aside there too.
+  if (isOemActive(stateName)) return false;
   if (eventName === UNLOCK_AFFORDANCE_EVENT) return false;
   return isFrontPanelKey(eventName);
 }

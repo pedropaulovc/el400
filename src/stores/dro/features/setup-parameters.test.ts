@@ -8,6 +8,7 @@ import {
   SETUP_PARAMETER_COUNT,
   SETUP_END_ID,
   SAVE_CHANGES_ID,
+  OEM_MODE_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
@@ -46,11 +47,20 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(end.choices).toHaveLength(0);
   });
 
+  it('exposes the oEm mod (OEM Mode) terminal item with no choices (US-044 AC 44.1)', () => {
+    const oem = SETUP_PARAMETERS.find((p) => p.id === OEM_MODE_ID)!;
+    expect(oem).toBeDefined();
+    expect(oem.label).toBe('oEm mod');
+    expect(oem.choices).toHaveLength(0);
+    // The End sentinel stays LAST even after appending the OEM row.
+    expect(SETUP_PARAMETERS[SETUP_PARAMETER_COUNT - 1]!.id).toBe(SETUP_END_ID);
+  });
+
   it('non-terminal parameters have at least two choices', () => {
-    // Terminal action items (End, SAV CHG) carry no choices — they are acted on
-    // with ENT rather than cycled. Every other (choice-bearing) parameter offers
-    // at least two options to cycle between.
-    const terminalIds = new Set<string>([SETUP_END_ID, SAVE_CHANGES_ID]);
+    // Terminal action items (End, SAV CHG, OEM Mode) carry no choices — they are
+    // acted on with ENT rather than cycled. Every other (choice-bearing)
+    // parameter offers at least two options to cycle between.
+    const terminalIds = new Set<string>([SETUP_END_ID, SAVE_CHANGES_ID, OEM_MODE_ID]);
     for (const p of SETUP_PARAMETERS) {
       if (terminalIds.has(p.id)) continue;
       expect(p.choices.length).toBeGreaterThanOrEqual(2);

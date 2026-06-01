@@ -176,6 +176,18 @@ export type ProbeDroType = 'transmit' | 'freeze';
 export type KeypadLockState = 'off' | 'on';
 
 /**
+ * OEM/custom default baseline (US-044). A snapshot of the persistable
+ * configuration captured in OEM Mode and used as the restore target by
+ * Restore Defaults (US-028) instead of the as-shipped factory defaults.
+ *
+ * It is every persisted setting EXCEPT `oemDefaults` itself (the baseline never
+ * stores a baseline-of-a-baseline). Modelled as `Omit<NonVolatileMemory,
+ * 'oemDefaults'>` so adding a new setting automatically flows into the snapshot
+ * without touching this type. `null` until the shop owner first defines one.
+ */
+export type OemDefaultsSnapshot = Omit<NonVolatileMemory, 'oemDefaults'>;
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -227,6 +239,14 @@ export interface NonVolatileMemory {
    * Valid range 0-120.
    */
   sleepTimeout: number;
+  /**
+   * OEM/custom default baseline — OEM Mode (US-044, manual §6.2 `oEm mod`). A
+   * snapshot of the live persistable config the shop owner stores as "my
+   * defaults"; `null` until first defined. Restore Defaults (US-028) restores
+   * to this snapshot when present, falling back to the factory defaults
+   * otherwise. Captured in OEM Mode behind a password gate.
+   */
+  oemDefaults: OemDefaultsSnapshot | null;
 }
 
 /** SLEEP T disabled sentinel: 0 minutes means the display never sleeps (US-026). */
@@ -312,6 +332,9 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   encoderFailWarning: false,
   keypadLock: 'off',
   sleepTimeout: SLEEP_TIMEOUT_DISABLED,
+  // No OEM/custom baseline until the shop owner defines one in OEM Mode (US-044);
+  // Restore Defaults (US-028) falls back to these factory values while null.
+  oemDefaults: null,
 };
 
 /**

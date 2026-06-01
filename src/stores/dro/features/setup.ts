@@ -39,10 +39,12 @@ import {
   resolveChoices,
   SETUP_END_ID,
   SAVE_CHANGES_ID,
+  OEM_MODE_ID,
   type SetupParameter,
   type SetupReadContext,
 } from './setup-parameters';
 import { SETUP_SAVED_TEXT } from './save-changes';
+import { enterOemPassword } from './oem-mode';
 
 /** 7-segment text shown on the SELECT prompt. */
 export const SETUP_SELECT_TEXT = 'SELECt';
@@ -219,6 +221,12 @@ function reduceParameter(
         vMem,
         display: createDisplay(SETUP_SAVED_TEXT, '', ''),
       };
+    }
+    // oEm mod + ent opens the password gate (US-044, AC 44.1/44.2). The OEM
+    // reducer owns the rest; we hand it the row index so it can re-highlight
+    // `oEm mod` on return. Any unsaved drafts are intentionally left untouched.
+    if (param.id === OEM_MODE_ID) {
+      return enterOemPassword(vMem, data.currentParamIndex);
     }
     return null;
   }

@@ -36,6 +36,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       encoderFailWarning: false,
       keypadLock: 'off',
       sleepTimeout: 0,
+      oemDefaults: null,
     },
   });
 

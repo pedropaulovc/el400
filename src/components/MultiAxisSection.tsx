@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useSleepTimer } from "../stores/dro/features/sleep";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useOemRejectedDismiss, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
@@ -68,6 +68,9 @@ const MultiAxisSection = () => {
 
   // SAV CHG save-confirmation timing - auto-returns to setup after delay (US-027)
   useSetupSavedConfirmation(dispatch, droState);
+
+  // OEM Mode wrong-password flash - auto-returns to setup after delay (US-044)
+  useOemRejectedDismiss(dispatch, droState);
 
   // Reference-mark crossing hook for E2E (US-012)
   useReferenceMarkTestHook(dispatch);
