@@ -174,6 +174,8 @@ export type DROStateName =
   // Setup menu states (US-039)
   | 'setup-select'
   | 'setup-parameter'
+  // SAV CHG save-confirmation state (US-027) - shows StorEd, auto-returns to setup
+  | 'setup-saved'
   // Taper calculation (lathe function, US-045)
   | 'function-menu-taper'
   | 'taper-active'
@@ -511,6 +513,7 @@ export type DROEventPayload =
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
   | { eventName: 'SDM_INTRO_TIMEOUT' }
+  | { eventName: 'SETUP_SAVED_TIMEOUT' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }

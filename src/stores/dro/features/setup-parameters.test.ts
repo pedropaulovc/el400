@@ -7,6 +7,7 @@ import {
   SETUP_PARAMETERS,
   SETUP_PARAMETER_COUNT,
   SETUP_END_ID,
+  SAVE_CHANGES_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
@@ -37,8 +38,12 @@ describe('SETUP_PARAMETERS registry', () => {
   });
 
   it('non-terminal parameters have at least two choices', () => {
+    // Terminal action items (End, SAV CHG) carry no choices — they are acted on
+    // with ENT rather than cycled. Every other (choice-bearing) parameter offers
+    // at least two options to cycle between.
+    const terminalIds = new Set<string>([SETUP_END_ID, SAVE_CHANGES_ID]);
     for (const p of SETUP_PARAMETERS) {
-      if (p.id === SETUP_END_ID) continue;
+      if (terminalIds.has(p.id)) continue;
       expect(p.choices.length).toBeGreaterThanOrEqual(2);
     }
   });
