@@ -280,6 +280,120 @@ describe('Calculator Integration', () => {
     });
   });
 
+  // US-013: operand order per el400 operation manual §7.6.1.
+  // The manual is operation-first: "Press Y key to select the mathematical
+  // functions... After selecting desired operation, enter values and press
+  // enter. Result will be displayed on X axis." All three natural orderings
+  // must produce the same result.
+  describe('US-013: operand order (manual §7.6.1)', () => {
+    it('operation-first: ADD then 12 ENT then 8 ENT = 20', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // Select operation first (Y -> Add)
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
+
+      // Enter first operand: 12, ENT
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-2'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Enter second operand: 8, ENT
+      await user.click(screen.getByTestId('key-8'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(20, 4);
+    });
+
+    it('value-then-op-no-ENT: 12 Y 8 ENT = 20 (ADD)', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // Enter first operand without pressing ENT: 12
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-2'));
+
+      // Select operation (Y -> Add); pending buffer commits to first value
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
+
+      // Second operand: 8, ENT
+      await user.click(screen.getByTestId('key-8'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(20, 4);
+    });
+
+    it('value-ENT-op: 12 ENT Y 8 ENT = 20 (ADD, existing flow)', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // First operand with ENT
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-2'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Operation
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('Add');
+
+      // Second operand
+      await user.click(screen.getByTestId('key-8'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(20, 4);
+    });
+
+    it('operation-first SUB: SUB then 10 ENT then 3 ENT = 7', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // Y x2 -> SUB
+      await user.click(screen.getByTestId('axis-select-y'));
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('SUb');
+
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      await user.click(screen.getByTestId('key-3'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(7, 4);
+    });
+
+    it('value-then-op-no-ENT SUB: 10 Y Y 3 ENT = 7', async () => {
+      const user = userEvent.setup();
+      renderSimulator();
+
+      await user.click(screen.getByTestId('btn-calculator'));
+
+      // Enter 10 without ENT
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-0'));
+
+      // Cycle to SUB; first Y commits buffer to firstValue, both Y presses cycle
+      await user.click(screen.getByTestId('axis-select-y'));
+      await user.click(screen.getByTestId('axis-select-y'));
+      expect(getAxisDisplayPureTextValue('Y')).toBe('SUb');
+
+      await user.click(screen.getByTestId('key-3'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(7, 4);
+    });
+  });
+
   describe('US-014: Trigonometric Functions', () => {
     async function calcTrig(
       user: ReturnType<typeof userEvent.setup>,
