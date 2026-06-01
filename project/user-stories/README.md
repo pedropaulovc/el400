@@ -43,12 +43,13 @@ This directory contains the merged and deduplicated user stories from:
 
 ## Story Index by Category
 
-### 01. Foundation (2 stories)
+### 01. Foundation (3 stories)
 
 | ID | Title | Priority | Source | File |
 |----|-------|----------|--------|------|
 | US-001 | First Use and Power-Up Display | P0 | Claude + Gemini | [US-001-first-use.md](01-foundation/US-001-first-use.md) |
 | US-002 | Sign Convention and Axis Direction | P0 | Claude only | [US-002-sign-convention.md](01-foundation/US-002-sign-convention.md) |
+| US-047 | Display Overflow on Value Entry | P1 | EL400 spec table (7-digit panel) | [US-047-display-overflow.md](01-foundation/US-047-display-overflow.md) |
 
 **Summary:** Basic DRO startup behavior and coordinate system conventions.
 
