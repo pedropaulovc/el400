@@ -64,6 +64,26 @@ describe('Self-diagnostics integration tests', () => {
     expect(screen.getByTestId('axis-value-x').textContent).toContain('5');
   });
 
+  it('AC 46.2/46.3: connected-source MILL_STATE_CHANGED ticks do NOT skip the memory step', async () => {
+    const user = userEvent.setup();
+    await enterDiagnostics(user);
+    expect(getAxisDisplayPureTextValue('X')).toBe(DIAGNOSTICS_TEXT.memoryPass);
+
+    // A connected adapter floods MILL_STATE_CHANGED (every 100ms in ?source=debug).
+    // These are the genuine adapter path (millStore + MILL_STATE_CHANGED), not a
+    // forced state latch. None of them is a key press, so the memory step (RAmPASS)
+    // must stay on screen -- the operator still gets to see it.
+    jogTo(1, 0, 0);
+    jogTo(2, 0, 0);
+    jogTo(3, 1, 0);
+    expect(useDROStore.getState().stateName).toBe('diagnostics-memory');
+    expect(getAxisDisplayPureTextValue('X')).toBe(DIAGNOSTICS_TEXT.memoryPass);
+
+    // A real front-panel key still advances to the segment (display) test.
+    await user.click(screen.getByTestId('key-1'));
+    expect(useDROStore.getState().stateName).toBe('diagnostics-display');
+  });
+
   it('AC 46.5: encoder step confirms an axis once it moves (real MILL_STATE_CHANGED)', async () => {
     const user = userEvent.setup();
     await enterDiagnostics(user);

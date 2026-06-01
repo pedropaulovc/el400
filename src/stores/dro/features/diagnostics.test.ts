@@ -17,6 +17,7 @@ import {
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROReducerContext } from '../types';
 import { createDefaultMillState } from '../../../types/millState';
+import { createDisplay } from '../utils/displayComputation';
 
 /** Build a context whose connected mill sits at the given machine position. */
 function contextAt(x: number, y: number, z: number): DROReducerContext {
@@ -88,6 +89,40 @@ describe('diagnosticsReducer', () => {
       );
       expect(next?.stateName).toBe('diagnostics-keyboard');
     });
+
+    // A connected adapter broadcasts MILL_STATE_CHANGED continuously (every 100ms
+    // in ?source=debug). These ticks are NOT key presses (§11.1 advances on a key)
+    // and must not skip past the memory/segment steps the operator needs to see.
+    it('does NOT advance the memory step on a MILL_STATE_CHANGED tick', () => {
+      // Seed the on-screen RAmPASS the entry step shows, so the no-op is meaningful.
+      const state = createTestState(
+        'diagnostics-memory',
+        INITIAL_DIAGNOSTICS_DATA,
+        createDisplay(DIAGNOSTICS_TEXT.memoryPass, '', '')
+      );
+      const next = diagnosticsReducer(
+        state,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(5, 0, 0)
+      );
+      expect(next?.stateName).toBe('diagnostics-memory');
+      expect(next?.display.X).toBe(DIAGNOSTICS_TEXT.memoryPass);
+    });
+
+    it('does NOT advance the display step on a MILL_STATE_CHANGED tick', () => {
+      const state = createTestState(
+        'diagnostics-display',
+        INITIAL_DIAGNOSTICS_DATA,
+        createDisplay(DISPLAY_TEST_PATTERN, DISPLAY_TEST_PATTERN, DISPLAY_TEST_PATTERN)
+      );
+      const next = diagnosticsReducer(
+        state,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(5, 0, 0)
+      );
+      expect(next?.stateName).toBe('diagnostics-display');
+      expect(next?.display.X).toBe(DISPLAY_TEST_PATTERN);
+    });
   });
 
   describe('keyboard echo (AC 46.4)', () => {
@@ -121,6 +156,27 @@ describe('diagnosticsReducer', () => {
         DEFAULT_TEST_CONTEXT
       );
       expect(next?.stateName).toBe('diagnostics-encoder');
+    });
+
+    // Only the encoder step consumes MILL_STATE_CHANGED. A connected adapter's
+    // ticks must not be echoed as an (empty) key here -- otherwise the key the
+    // operator just pressed flashes and blanks every 100ms (AC 46.4).
+    it('does NOT echo a MILL_STATE_CHANGED tick over the last pressed key', () => {
+      const echoed = diagnosticsReducer(
+        createTestState('diagnostics-keyboard', INITIAL_DIAGNOSTICS_DATA),
+        { eventName: 'KEY_5' },
+        contextAt(0, 0, 0)
+      );
+      expect(String(echoed?.display.X)).toContain('5');
+
+      const ticked = diagnosticsReducer(
+        echoed!,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(9, 0, 0)
+      );
+      expect(ticked?.stateName).toBe('diagnostics-keyboard');
+      // The echoed key is preserved, not overwritten with a blank.
+      expect(String(ticked?.display.X)).toContain('5');
     });
   });
 
@@ -185,6 +241,35 @@ describe('diagnosticsReducer', () => {
         DEFAULT_TEST_CONTEXT
       );
       expect(second?.stateName).toBe('idle');
+    });
+
+    it('a MILL_STATE_CHANGED tick between the two C presses does NOT disarm the exit', () => {
+      // First C arms the exit and drops to the memory step.
+      const armed = diagnosticsReducer(
+        createTestState('diagnostics-display', INITIAL_DIAGNOSTICS_DATA),
+        { eventName: 'KEY_CLEAR' },
+        contextAt(0, 0, 0)
+      );
+      expect(armed?.stateName).toBe('diagnostics-memory');
+      expect((armed?.stateData as DiagnosticsData).clearPhase).toBe('armed');
+
+      // A connected adapter ticks. This is NOT a key press, so it must not disarm
+      // the gesture -- otherwise the second C never exits on real hardware (AC 46.7).
+      const ticked = diagnosticsReducer(
+        armed!,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(7, 0, 0)
+      );
+      expect(ticked?.stateName).toBe('diagnostics-memory');
+      expect((ticked?.stateData as DiagnosticsData).clearPhase).toBe('armed');
+
+      // Second C still exits Self-Diagnostics to the normal screen.
+      const exited = diagnosticsReducer(
+        ticked!,
+        { eventName: 'KEY_CLEAR' },
+        contextAt(7, 0, 0)
+      );
+      expect(exited?.stateName).toBe('idle');
     });
 
     it('a non-C key between two C presses disarms the double-C exit', () => {

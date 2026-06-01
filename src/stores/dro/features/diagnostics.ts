@@ -23,7 +23,7 @@
  */
 
 import type { FeatureReducer, DROStatePayload } from '../types';
-import type { DiagnosticsData } from '../droStateMachine';
+import type { DiagnosticsData, DROEventPayload } from '../droStateMachine';
 import {
   DIAGNOSTICS_TEXT,
   DISPLAY_TEST_PATTERN,
@@ -68,6 +68,17 @@ const KEY_LABEL: Record<string, string> = {
 /** Coerce arbitrary state data to DiagnosticsData, falling back to initial. */
 function asDiagnosticsData(data: DROStatePayload['stateData']): DiagnosticsData {
   return data.stateDataType === 'diagnostics' ? data : INITIAL_DIAGNOSTICS_DATA;
+}
+
+/**
+ * True when `eventName` is a front-panel user key/button press (the `KEY_*` and
+ * `BTN_*` families). The memory and segment steps advance on a key (§11.1: "Press
+ * any key …"); internal/adapter events — chiefly the MILL_STATE_CHANGED a
+ * connected source broadcasts every 100ms — are NOT keys and must not skip past
+ * those steps. (Same idiom as keypad-lock.ts / sleep.ts.)
+ */
+function isFrontPanelKey(eventName: DROEventPayload['eventName']): boolean {
+  return eventName.startsWith('KEY_') || eventName.startsWith('BTN_');
 }
 
 /** Per-axis pass/fail label for the encoder step (axis name when responding). */
@@ -120,6 +131,17 @@ export const diagnosticsReducer: FeatureReducer = (current, event, context) => {
 
   // Any non-C key disarms the double-C gesture for the steps that consume keys.
   const disarmed: DiagnosticsData = { ...data, clearPhase: 'idle' };
+
+  // The memory, segment and keyboard steps react to real key presses only
+  // (§11.1: "Press any key …"). The encoder step is the ONLY one that consumes
+  // MILL_STATE_CHANGED; everywhere else a connected adapter's ticks (every 100ms
+  // in ?source=debug) must be a no-op holding the current step. Otherwise:
+  //   - a single ▲ at boot races past RAmPASS / the segment test (AC 46.2 / 46.3),
+  //   - a tick disarms the double-C exit on the memory step (AC 46.7), and
+  //   - a tick blanks the key just echoed on the keyboard step (AC 46.4).
+  if (state !== 'diagnostics-encoder' && !isFrontPanelKey(eventName)) {
+    return current;
+  }
 
   // ── Memory step: any key advances to the display test (AC 46.3) ─────
   if (state === 'diagnostics-memory') {

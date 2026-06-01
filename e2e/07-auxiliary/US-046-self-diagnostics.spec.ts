@@ -27,6 +27,24 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
     await dro.waitForAxisPureTextValue('X', 'rAmPASS');
   });
 
+  test('AC 46.2/46.3: encoder activity does not skip the memory step (connected source)', async ({ dro }) => {
+    await enterDiagnostics(dro);
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // This session is connected to the mock CNCjs server, so encoder motion emits
+    // real MILL_STATE_CHANGED updates -- the same flood ?source=debug produces every
+    // 100ms. None is a key press, so the memory step (rAmPASS) must stay on screen;
+    // the operator still gets to see it.
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('Y', 1);
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // A real front-panel key still advances out of the memory step.
+    await dro.key1.click();
+    await expect.poll(() => dro.getAxisRawText('X')).not.toContain('rAmPASS');
+  });
+
   test('AC 46.4: keyboard diagnostic echoes the pressed key', async ({ dro }) => {
     await enterDiagnostics(dro);
     await dro.key1.click(); // memory -> display
@@ -40,5 +58,26 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
     await dro.clearButton.click(); // exit current step
     await dro.clearButton.click(); // exit diagnostics
     await dro.waitForAxisValue('X', 0);
+  });
+
+  test('AC 46.7: encoder activity between the two C presses does not break the exit (connected source)', async ({ dro }) => {
+    await enterDiagnostics(dro);
+    // Walk to the segment test so the first C has a step to exit from.
+    await dro.key1.click();
+    await dro.clearButton.click(); // first C: arm exit, drop to memory step
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // A connected adapter ticks (real MILL_STATE_CHANGED) while the exit is armed.
+    // It is not a key press, so it must not disarm the gesture (AC 46.7).
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('Y', 1);
+    // Still armed on the memory step despite the ticks.
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    await dro.clearButton.click(); // second C still exits to the normal screen
+    // Exit fired: X is back on the normal numeric readout, no longer the rAmPASS
+    // glyph. (getAxisDisplayPureNumberValue throws on text, so a resolved number
+    // proves we left diagnostics; were the gesture disarmed we'd still see rAmPASS.)
+    await expect.poll(() => dro.getAxisDisplayPureNumberValue('X')).toBeGreaterThanOrEqual(0);
   });
 });
