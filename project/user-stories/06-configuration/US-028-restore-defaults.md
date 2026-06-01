@@ -199,3 +199,38 @@ describe('US-028: Setup Menu - Restore Factory Defaults', () => {
 - US-027: Save Changes (opposite of reset - preserves settings)
 - US-021 through US-026: All parameters that get reset
 - US-009 through US-011: SDM data gets cleared
+
+## Notes — Manual reconciliation (implementation)
+
+The el400-operation-manual §6.2 setup table (the tie-breaker per AGENTS.md) lists
+two **separate adjacent** rows:
+
+| OCR | Meaning |
+|-----|---------|
+| `r5t oEñ` | Reset *6 — "Press to **Restore default** settings" (NOT password-protected) |
+| `oEñ ñod` | OEM mode — "Password protected OEM mode" |
+
+`OPT OFF` / `3 AXIS` / `MILL` appear only as standalone glossary glyphs (§12 text
+list, ~line 2080-2097) — model-config indicators, not a restore confirm chain.
+The manual's restore step is simply: scroll to `r5t oEñ` → ENT → `IN PROG` → done.
+
+The ACs above (28.4 password / 28.5 `3 AXIS`,`MILL`,`OPT OFF` / 28.6 SAV CHG)
+conflate the adjacent password-protected **`oEñ ñod`** (OEM Mode) row with the
+restore row — an OCR-era reading. Implemented per the manual:
+
+- **`rSt oEm`** is its own terminal-action setup row (mirrors SAV CHG / oEm mod).
+  ENT runs the restore directly — **no password, no confirm chain.** The privileged
+  op the password guards is *defining* the baseline (**US-044 `oEm mod`**), not
+  *restoring* to it.
+- `restoreDefaults()` restores to the captured **OEM baseline** if one exists
+  (`nvMem.oemDefaults != null`, closing **US-044 AC44.4**), else the **factory**
+  defaults (`DEFAULT_NON_VOLATILE_MEMORY`). User data (SDM points, tool/work
+  offsets) is cleared.
+- `In ProG` is shown for a brief, test-controllable dwell (`RESTORE_DURATION_MS`)
+  instead of the manual's literal ~2-minute wait (AC28.8/28.9). The data work is
+  durable synchronously on ENT, so the dwell is purely the on-screen indication.
+  (The panel font has no uppercase 'N', so `IN` renders as `In`.)
+
+The deviating ACs are documented here (not silently dropped); the behavior the
+story intends — a multi-step, irreversible factory/OEM reset that clears user
+data — is fully delivered, routed through the manual's actual control layout.

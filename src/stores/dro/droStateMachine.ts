@@ -183,6 +183,9 @@ export type DROStateName =
   | 'oem-password'
   | 'oem-mode'
   | 'oem-rejected'
+  // Restore Defaults in-progress dwell (US-028): shows `IN ProG` after the
+  // `rSt oEm` reset runs on ENT, then auto-returns to idle on RESTORE_COMPLETE.
+  | 'restore-in-progress'
   // Taper calculation (lathe function, US-045)
   | 'function-menu-taper'
   | 'taper-active'
@@ -543,6 +546,8 @@ export type DROEventPayload =
   | { eventName: 'SETUP_SAVED_TIMEOUT' }
   // Wrong OEM password flash elapsed (US-044); dispatched by useOemRejectedDismiss.
   | { eventName: 'OEM_REJECTED_TIMEOUT' }
+  // Restore Defaults dwell elapsed (US-028); dispatched by useRestoreProgress.
+  | { eventName: 'RESTORE_COMPLETE' }
   // Raw key presses - keypad emits these without knowing current state
   | { eventName: 'KEY_0' }
   | { eventName: 'KEY_1' }

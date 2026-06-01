@@ -40,11 +40,13 @@ import {
   SETUP_END_ID,
   SAVE_CHANGES_ID,
   OEM_MODE_ID,
+  RESTORE_DEFAULTS_ID,
   type SetupParameter,
   type SetupReadContext,
 } from './setup-parameters';
 import { SETUP_SAVED_TEXT } from './save-changes';
 import { enterOemPassword } from './oem-mode';
+import { enterRestoreInProgress } from './restore-defaults';
 
 /** 7-segment text shown on the SELECT prompt. */
 export const SETUP_SELECT_TEXT = 'SELECt';
@@ -227,6 +229,12 @@ function reduceParameter(
     // `oEm mod` on return. Any unsaved drafts are intentionally left untouched.
     if (param.id === OEM_MODE_ID) {
       return enterOemPassword(vMem, data.currentParamIndex);
+    }
+    // rSt oEm + ent runs the restore (US-028, AC28.7/28.8): reset nvMem to the
+    // OEM baseline or factory, wipe user data, and show the `IN ProG` dwell. The
+    // reset is durable synchronously here; unsaved drafts are discarded with it.
+    if (param.id === RESTORE_DEFAULTS_ID) {
+      return enterRestoreInProgress(vMem);
     }
     return null;
   }

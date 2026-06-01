@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useSleepTimer } from "../stores/dro/features/sleep";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useOemRejectedDismiss, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
@@ -71,6 +71,9 @@ const MultiAxisSection = () => {
 
   // OEM Mode wrong-password flash - auto-returns to setup after delay (US-044)
   useOemRejectedDismiss(dispatch, droState);
+
+  // Restore Defaults `IN ProG` dwell - auto-returns to idle after delay (US-028)
+  useRestoreProgress(dispatch, droState);
 
   // Reference-mark crossing hook for E2E (US-012)
   useReferenceMarkTestHook(dispatch);

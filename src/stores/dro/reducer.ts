@@ -28,6 +28,7 @@ import { distanceToGoReducer } from './features/distance-to-go';
 import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 import { oemModeReducer } from './features/oem-mode';
+import { restoreDefaultsReducer } from './features/restore-defaults';
 import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
 import { probeReducer } from './features/probe';
@@ -56,6 +57,7 @@ const featureReducers: FeatureReducer[] = [
   distanceToGoReducer, // Handles distance-to-go (US-008)
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
   oemModeReducer, // Handles OEM Mode password gate + baseline capture (US-044); before keypad so it owns digit input
+  restoreDefaultsReducer, // Handles Restore Defaults `IN ProG` dwell completion (US-028)
   referenceReducer, // Handles Reference / datum recall (US-012) - before idle so it owns BTN_REFERENCE
   taperReducer, // Handles taper calculation live derivation (US-045)
   // vMem/nvMem reducers for idle state operations

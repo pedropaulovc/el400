@@ -50,6 +50,10 @@ import {
   DEFAULT_ANGULAR_RESOLUTION,
 } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
+import { RESTORE_DEFAULTS_ID, RESTORE_DEFAULTS_LABEL } from './restore-defaults';
+// Re-export so the registry's restore row id/label stay importable from the
+// setup-parameters module alongside the other parameter ids (US-028).
+export { RESTORE_DEFAULTS_ID, RESTORE_DEFAULTS_LABEL };
 
 /** Scope of a setup parameter: per-axis values differ per X/Y/Z; global apply to all. */
 export type SetupParameterScope = 'per-axis' | 'global';
@@ -263,6 +267,15 @@ export const SLEEP_TIMEOUT_CHOICES: readonly SetupParameterChoice[] =
 
 /** The SAU CHG (save changes) parameter id (US-027) -- ENT commits drafts to nvMem. */
 export const SAVE_CHANGES_ID = 'save-changes';
+
+/**
+ * The `rSt oEm` (Restore Defaults) parameter id (US-028). Terminal-entry item
+ * like SAV CHG / oEm mod: ENT runs the reset (restore to the OEM baseline if one
+ * was captured, else factory defaults) and shows the `IN ProG` dwell. The
+ * state-machine hand-off lives in `setup.ts` / `restore-defaults.ts`; the registry
+ * only carries the row. The id/label are defined in `restore-defaults.ts` and
+ * imported above.
+ */
 
 /**
  * The `oEm mod` (OEM Mode) parameter id (US-044). Terminal-entry item like
@@ -621,6 +634,16 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ sleepTimeout: Number(value) });
     },
+  },
+  {
+    id: RESTORE_DEFAULTS_ID,
+    // Manual §6.2 `r5t oEñ` (Restore default settings). The panel renders
+    // r,S,t,o,E,m, so the faithful label is `rSt oEm`. Terminal-entry item: no
+    // choices; ENT runs the restore + `IN ProG` dwell (US-028). Handled in setup.ts.
+    label: RESTORE_DEFAULTS_LABEL,
+    scope: 'global',
+    choices: [],
+    readValue: () => '',
   },
   {
     id: OEM_MODE_ID,
