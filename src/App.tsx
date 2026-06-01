@@ -11,7 +11,7 @@ import type { MillAdapter } from "./adapters/MillAdapter";
 import type { DataSourceConfig } from "./types/millState";
 import { initializeMillStore } from "./stores";
 import { useSettingsStore } from "./stores/settingsStore";
-import type { TaperOnAxis } from "./types/nonVolatileMemory";
+import type { TaperOnAxis, ProbeDroType } from "./types/nonVolatileMemory";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +73,17 @@ function AppContent() {
     const valid: TaperOnAxis[] = ['X', 'Z', 'Zprime'];
     if (param && (valid as string[]).includes(param)) {
       useSettingsStore.getState().updateNvMem({ taperOnAxis: param as TaperOnAxis });
+    }
+  }, []);
+
+  // Seed the touch-probe DRO type (§10.1.1 `dro t` / `dro F`) from the URL so the
+  // probe freeze/transmit behaviour (US-032) can be exercised without entering
+  // setup, e.g. /?source=cncjs&probeDroType=freeze. Mirrors `taperOn` above.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('probeDroType');
+    const valid: ProbeDroType[] = ['transmit', 'freeze'];
+    if (param && (valid as string[]).includes(param)) {
+      useSettingsStore.getState().updateNvMem({ probeDroType: param as ProbeDroType });
     }
   }, []);
 

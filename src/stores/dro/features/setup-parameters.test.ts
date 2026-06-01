@@ -9,6 +9,7 @@ import {
   SETUP_END_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
+  PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
   getParameterAt,
   wrapItemIndex,
@@ -170,6 +171,17 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     zDepth.commit!({ nvMem, axis: null }, 'depth-positive');
     expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
+  });
+
+  it('probe-dro-type seeds from nvMem and commits the chosen DRO type (US-032, AC 32.1)', () => {
+    const probe = SETUP_PARAMETERS.find((p) => p.id === PROBE_DRO_TYPE_ID)!;
+    // Seeds the committed value (default transmit).
+    expect(probe.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('transmit');
+    expect(probe.choices.map((c) => c.label)).toEqual(['dro t', 'dro F']);
+    // Commit persists Freeze immediately.
+    const nvMem = useSettingsStore.getState().nvMem;
+    probe.commit!({ nvMem, axis: null }, 'freeze');
+    expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
   });
 
   it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {

@@ -74,6 +74,15 @@ export interface AxisDirectionByAxis {
 export type ZDepthSense = 'depth-negative' | 'depth-positive';
 
 /**
+ * Touch-probe DRO type (manual §10.1.1, setup `dro t` / `dro F`).
+ * - 'transmit' (`dro t`): the readout keeps counting on a probe trigger and
+ *   flashes the probe message; used with the datum/measurement functions.
+ * - 'freeze' (`dro F`): the readout freezes the coordinates on a probe trigger
+ *   until the probe clears.
+ */
+export type ProbeDroType = 'transmit' | 'freeze';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -95,6 +104,8 @@ export interface NonVolatileMemory {
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
+  probeDroType: ProbeDroType;
 }
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
@@ -135,6 +146,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  probeDroType: 'transmit',
 };
 
 /**

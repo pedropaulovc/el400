@@ -26,6 +26,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      probeDroType: 'transmit',
     },
   });
 

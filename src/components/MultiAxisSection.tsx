@@ -1,7 +1,7 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 
@@ -70,6 +70,9 @@ const MultiAxisSection = () => {
   // LED indicators
   const mode = useMode();
   const defaultUnit = useDefaultUnit();
+  // Touch-probe trigger indication (US-032, AC 32.8): lights when a probe
+  // contact is captured during a probe function.
+  const probeTriggered = useProbeTriggered();
 
   const isAbs = mode === 'abs';
   const isInch = defaultUnit === 'inch';
@@ -157,6 +160,12 @@ const MultiAxisSection = () => {
                 name="status"
                 isOn={isSdmActive(droState)}
                 data-testid="led-sdm"
+              />
+              <LEDIndicator
+                label="prb"
+                name="status"
+                isOn={probeTriggered}
+                data-testid="led-probe"
               />
             </fieldset>
           </div>

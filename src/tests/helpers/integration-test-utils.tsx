@@ -94,6 +94,7 @@ export function resetStores(): void {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      probeDroType: 'transmit',
     },
   });
 
