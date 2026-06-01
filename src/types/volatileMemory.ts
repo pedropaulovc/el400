@@ -14,6 +14,14 @@ export interface AxisValues {
 export type Axis = 'X' | 'Y' | 'Z';
 export type DatumMode = 'abs' | 'inc';
 
+/**
+ * Display power state (US-026 sleep timer). `'awake'` is the normal lit display;
+ * `'asleep'` dims/blanks the readout and flashes the wrench LED after the SLEEP T
+ * idle period elapses. Modelled as an enum (not a boolean) so further power
+ * states (e.g. a future deep-dim) can be added without churning call sites.
+ */
+export type DisplayPower = 'awake' | 'asleep';
+
 export const ZERO_AXIS_VALUES: AxisValues = { X: 0, Y: 0, Z: 0 };
 
 /**
@@ -47,6 +55,18 @@ export interface VolatileMemoryState {
    * recallable by Run (manual §8.2: the DRO stores up to 1000 sub-datums).
    */
   sdmPoints: Record<number, AxisValues>;
+  /**
+   * Display power state (US-026 sleep timer). `'asleep'` after the SLEEP T idle
+   * period; any key or axis movement returns it to `'awake'`. Position tracking
+   * continues in the background while asleep (no data loss).
+   */
+  displayPower: DisplayPower;
+  /**
+   * Machine position captured when the display went to sleep (US-026). Used to
+   * detect a real jog while asleep: a MILL_STATE_CHANGED whose position differs
+   * from this baseline wakes the display. null whenever the display is awake.
+   */
+  sleepBaselinePosition: AxisValues | null;
 }
 
 /**
@@ -60,6 +80,8 @@ export const INITIAL_VOLATILE_MEMORY_STATE: VolatileMemoryState = {
   manualAbsoluteValues: ZERO_AXIS_VALUES,
   inputBuffer: '',
   sdmPoints: {},
+  displayPower: 'awake',
+  sleepBaselinePosition: null,
 };
 
 /**

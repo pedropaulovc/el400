@@ -30,6 +30,7 @@ import { setupReducer } from './features/setup';
 import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
 import { probeReducer } from './features/probe';
+import { sleepReducer } from './features/sleep';
 import { isEventBlockedByKeypadLock } from './features/keypad-lock';
 
 /**
@@ -40,6 +41,7 @@ import { isEventBlockedByKeypadLock } from './features/keypad-lock';
  * position updates (idle, center-finding). Calculator and menu ignore it.
  */
 const featureReducers: FeatureReducer[] = [
+  sleepReducer, // Display sleep timer (US-026): owns SLEEP_TIMER_ELAPSED and, while asleep, consumes the waking key/jog. First so it gates input during sleep.
   bootReducer,
   diagnosticsReducer, // Handles Self-Diagnostics Mode (US-046); owns diagnostics-* states and the ▲-at-boot entry
   calculatorReducer,

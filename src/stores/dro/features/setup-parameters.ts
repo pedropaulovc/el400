@@ -198,6 +198,28 @@ export const ENF_ID = 'enf';
 /** The global keypad-lock parameter id (US-043, §6.2 `LoC`) -- its draft key. */
 export const KEYPAD_LOCK_ID = 'keypad-lock';
 
+/** The global display sleep-timer parameter id (US-026, §6.2) -- its draft key. */
+export const SLEEP_TIMEOUT_ID = 'sleep-timeout';
+
+/**
+ * SLEEP T choices: the idle timeout in minutes the left/right keys cycle through
+ * (manual §6.2 `SLEEP t`, range 0-120). `'0'` is the disabled sentinel, shown as
+ * `SLP oFF` (the display never sleeps); the remaining values are a representative
+ * ladder of common timeouts up to the 120-minute maximum, each shown as `SLP <n>`.
+ * Stored as the integer minute count string so commit can parse it back to a
+ * number for nvMem.sleepTimeout.
+ */
+export const SLEEP_TIMEOUT_MINUTES = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
+
+/** Build the 7-segment label for a sleep-timeout minute value (0 => disabled). */
+export function sleepTimeoutLabel(minutes: number): string {
+  return minutes === 0 ? 'SLP oFF' : `SLP ${String(minutes)}`;
+}
+
+/** SLEEP T choices derived from the minute ladder (value = integer-minutes string). */
+export const SLEEP_TIMEOUT_CHOICES: readonly SetupParameterChoice[] =
+  SLEEP_TIMEOUT_MINUTES.map((m) => ({ value: String(m), label: sleepTimeoutLabel(m) }));
+
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
 
@@ -464,6 +486,26 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // `LoC oFF` here unlocks even though the panel was locked on entry.
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
+    },
+  },
+  {
+    id: SLEEP_TIMEOUT_ID,
+    label: sleepTimeoutLabel(0),
+    scope: 'global',
+    choices: SLEEP_TIMEOUT_CHOICES,
+    // Global display sleep timeout in minutes (US-026, §6.2). Seeded from nvMem;
+    // guard against a stale persisted value that is not one of the ladder choices
+    // by falling back to the disabled sentinel.
+    readValue: (ctx) => {
+      const committed = String(ctx.nvMem.sleepTimeout);
+      const isValid = SLEEP_TIMEOUT_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0';
+    },
+    // Commit-on-change (US-026): persist immediately, same surgical path as
+    // Direction / dP, so the sleep timer takes effect on exit. Parses the choice
+    // value back to an integer minute count for nvMem.sleepTimeout.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ sleepTimeout: Number(value) });
     },
   },
   {

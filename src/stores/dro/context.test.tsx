@@ -45,6 +45,7 @@ function resetStores(initialState?: DROShape) {
       probeDroType: 'transmit',
       encoderFailWarning: false,
       keypadLock: 'off',
+      sleepTimeout: 0,
     },
   });
 

@@ -16,6 +16,9 @@ import {
   ZERO_APPROACH_DIST_ID,
   ZERO_APPROACH_TOLR_ID,
   ENF_ID,
+  SLEEP_TIMEOUT_ID,
+  SLEEP_TIMEOUT_MINUTES,
+  sleepTimeoutLabel,
   getParameterAt,
   wrapItemIndex,
   choiceIndexOf,
@@ -173,6 +176,47 @@ describe('SETUP_PARAMETERS registry', () => {
     ).toBe('on');
   });
 
+  it('exposes a global SLEEP T parameter with a 0..120 minute ladder (US-026, AC26.1)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    expect(sleep).toBeDefined();
+    expect(sleep.scope).toBe('global');
+    // First choice is the disabled sentinel (000 = off, AC26.2/26.8); ladder is
+    // strictly ascending and capped at the 120-minute maximum (AC26.3).
+    expect(sleep.choices[0]!.value).toBe('0');
+    expect(sleep.choices[0]!.label).toBe('SLP oFF');
+    const minutes = sleep.choices.map((c) => Number(c.value));
+    expect(minutes).toEqual([...SLEEP_TIMEOUT_MINUTES]);
+    expect(Math.max(...minutes)).toBe(120);
+    for (let i = 1; i < minutes.length; i++) {
+      expect(minutes[i]!).toBeGreaterThan(minutes[i - 1]!);
+    }
+    expect(typeof sleep.commit).toBe('function');
+  });
+
+  it('SLEEP T seeds its current value from nvMem.sleepTimeout (US-026, AC26.2)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    // Default 0 => disabled.
+    expect(sleep.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    expect(
+      sleep.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 10 }, axis: null })
+    ).toBe('10');
+  });
+
+  it('SLEEP T defends against a stale persisted value not in the ladder', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const seeded = sleep.readValue({
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 999 },
+      axis: null,
+    });
+    expect(sleep.choices.map((c) => c.value)).toContain(seeded);
+  });
+
+  it('sleepTimeoutLabel renders oFF for 0 and SLP <n> otherwise', () => {
+    expect(sleepTimeoutLabel(0)).toBe('SLP oFF');
+    expect(sleepTimeoutLabel(5)).toBe('SLP 5');
+    expect(sleepTimeoutLabel(120)).toBe('SLP 120');
+  });
+
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
     expect(taper.commit).toBeUndefined();
@@ -297,6 +341,17 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     probe.commit!({ nvMem, axis: null }, 'freeze');
     expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
+  });
+
+  it('SLEEP T.commit persists the chosen minutes to nvMem.sleepTimeout (US-026, AC26.4)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem, axis: null }, '10');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(10);
+    // Selecting the disabled sentinel persists 0 (AC26.8).
+    const after = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem: after, axis: null }, '0');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(0);
   });
 
   it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {

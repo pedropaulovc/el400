@@ -102,6 +102,7 @@ export function resetStores(): void {
       probeDroType: 'transmit',
       encoderFailWarning: false,
       keypadLock: 'off',
+      sleepTimeout: 0,
     },
   });
 

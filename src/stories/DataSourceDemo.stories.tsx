@@ -34,6 +34,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       probeDroType: 'transmit',
       encoderFailWarning: false,
       keypadLock: 'off',
+      sleepTimeout: 0,
     },
   });
 
