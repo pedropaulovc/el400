@@ -18,6 +18,7 @@ import {
   measurementScale,
   maxDisplayableMagnitude,
   PANEL_DIGIT_CELLS,
+  DISPLAY_OVERFLOW_TEXT,
 } from './displayComputation';
 import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
@@ -453,5 +454,43 @@ describe('maxDisplayableMagnitude — 7-digit panel limit (US-047)', () => {
         6
       );
     }
+  });
+});
+
+describe('computeDisplayPosition — derived-reading overflow (US-041 / Acu-Rite dashes)', () => {
+  it('diameter ×2 of a near-limit radius value overflows to dashes', () => {
+    // 999.9999 mm stored slide value × 2 (diameter) = 1999.9998 → 8 cells → dashes.
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter' } });
+    const vMem = manualVMem({ X: 999.9999 });
+    expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).toBe(DISPLAY_OVERFLOW_TEXT);
+  });
+
+  it('the exact panel boundary 999.9999 (radius, ×1) fits — no dashes', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'radius' } });
+    const vMem = manualVMem({ X: 999.9999 });
+    expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).toBeCloseTo(999.9999, 4);
+  });
+
+  it('a value just over the float boundary but rounding to 999.9999 still fits', () => {
+    // 999.99991 renders as "999.9999" at 4 decimals → must NOT trip overflow.
+    const nvMem = makeNvMem({ measurementMode: { X: 'radius' } });
+    const vMem = manualVMem({ X: 999.99991 });
+    expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).not.toBe(DISPLAY_OVERFLOW_TEXT);
+  });
+
+  it('a negative derived overflow also shows dashes (no signed number past the panel)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter' } });
+    const vMem = manualVMem({ X: -999.9999 });
+    expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).toBe(DISPLAY_OVERFLOW_TEXT);
+  });
+
+  it('overflow self-clears once the value returns in range (diameter ×2 of 100 fits)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter' } });
+    const vMem = manualVMem({ X: 100 }); // ×2 = 200 → fits
+    expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).toBeCloseTo(200, 4);
+  });
+
+  it('DISPLAY_OVERFLOW_TEXT is seven dashes (the 7 digit cells; sign cell blank)', () => {
+    expect(DISPLAY_OVERFLOW_TEXT).toBe('-------');
   });
 });

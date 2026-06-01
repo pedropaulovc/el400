@@ -87,6 +87,21 @@ export function axisDisplayDecimals(axis: Axis, nvMem: NonVolatileMemory): numbe
 export const ENCODER_FAIL_TEXT = 'no SIG';
 
 /**
+ * Seven-segment text shown when a LINEAR axis's derived reading cannot fit the
+ * 7 digit cells at its current dP resolution (e.g. a near-limit radius value
+ * re-scaled ×2 into diameter mode). Mirrors the Acu-Rite DRO100 "display
+ * overflow" behaviour — an honest out-of-range indicator rather than a clamped,
+ * plausible-but-wrong number. Seven dashes fill the 7 digit cells; the sign cell
+ * stays blank so it can never be misread as a negative number. The stored slide
+ * value is untouched, so the reading self-clears when the axis returns in range,
+ * dP is coarsened, or the axis is zeroed.
+ *
+ * This complements the US-047 entry-time clamp (which bounds KEYED values at the
+ * commit boundary); this guard bounds DERIVED readings at the display step.
+ */
+export const DISPLAY_OVERFLOW_TEXT = '-------';
+
+/**
  * Whether an axis should show the encoder-fail warning (US-042): the `EnF`
  * parameter must be on AND the live mill must report that axis's signal as lost.
  * A pure predicate so reducers and the display computation share one rule.
@@ -295,7 +310,19 @@ export function computeDisplayPosition(
   }
   // Diameter mode shows 2× the slide travel (the turned diameter); radius is 1:1.
   const signedMm = signed * measurementScale(axis, context.nvMem);
-  return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
+  const displayed = fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
+  // Derived-reading overflow (Acu-Rite precedent): if the value, as it would round
+  // on the panel, needs more than the 7 digit cells at this axis's dP resolution,
+  // show the all-dashes indicator instead of growing past the physical panel. This
+  // catches the radius→diameter ×2 re-scale of an already-stored value (US-047's
+  // entry-time clamp can't, since nothing was keyed) and any other derived overflow
+  // (e.g. a connected machine position jogged far out of range).
+  const decimals = axisDisplayDecimals(axis, context.nvMem);
+  const rounded = Number(Math.abs(displayed).toFixed(decimals));
+  if (rounded > maxDisplayableMagnitude(decimals)) {
+    return DISPLAY_OVERFLOW_TEXT;
+  }
+  return displayed;
 }
 
 /**

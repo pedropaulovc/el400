@@ -97,5 +97,10 @@ describe('US-047: Display Overflow on Value Entry', () => {
   its physical 8 cells. Root cause was the number-formatting path (`formatNumberValue`) padding the
   integer part to a *minimum* of 3 digits but never capping it; the fix instead bounds the value at
   entry so display and storage stay consistent (AC 47.5).
+- This clamp is **entry-time** (it bounds keyed values at the commit boundary). The
+  *derived-reading* overflow path — where a later radius→diameter ×2 re-scale (US-041) or a far-out
+  connected position would render past the panel — is handled separately at the display-derivation
+  step by an all-dashes overflow indicator (US-041 AC 41.8, `DISPLAY_OVERFLOW_TEXT` in
+  `displayComputation.ts`), not by this clamp.
 </content>
 </invoke>

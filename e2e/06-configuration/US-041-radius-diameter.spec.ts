@@ -13,7 +13,9 @@ import { test, expect } from '../helpers/fixtures';
  * key) so the spec's clean magnitudes hold; the default unit is inches.
  *
  * Covers AC 41.2 (◄/► toggle rAd/diA), AC 41.3 (rAd is 1:1, the default),
- * AC 41.4 (diA doubles the displayed value), AC 41.5 (per-axis).
+ * AC 41.4 (diA doubles the displayed value), AC 41.5 (per-axis),
+ * AC 41.8 (the ×2 scale composes with the 7-digit panel — a near-limit radius
+ * value switched to diA shows the all-dashes overflow rather than 8 cells).
  *
  * @see project/user-stories/06-configuration/US-041-radius-diameter-mode.md
  */
@@ -119,5 +121,31 @@ test.describe('US-041: Radius/Diameter Mode', () => {
     // Doubling must still apply -> 10, proving it is a persisted setting.
     await dro.simulateTableMove('X', 'left', 2);
     await dro.waitForAxisValue('X', 10);
+  });
+
+  /**
+   * AC 41.8: the ×2 diameter scale composes with the 7-digit panel limit. This is
+   * the previous-session deferred case — US-047's clamp is entry-time, so it can't
+   * catch a value that overflows only because a LATER mode switch doubled it.
+   * Preset X at the panel maximum in radius mode, then switch to diA: 999.9999 × 2
+   * = 1999.9998 won't fit, so the readout shows the all-dashes overflow indicator
+   * (Acu-Rite DRO100 precedent), never the 8-cell number. It self-clears on the way
+   * back to rAd because the stored slide value is untouched.
+   */
+  test('AC 41.8: a near-limit radius value switched to diA shows the dashes overflow', async ({ dro }) => {
+    // Preset X near the panel limit in the default radius mode (fits ×1).
+    await dro.selectAxis('X');
+    await dro.enterNumber('999.9999');
+    await dro.enterButton.click();
+    await dro.waitForAxisPureTextValue('X', '999.9999');
+
+    // Switch to diameter via the real setup menu: the ×2 re-scale overflows -> dashes.
+    await dro.setMeasurementMode('X', 'diA');
+    await dro.waitForAxisPureTextValue('X', '-------');
+
+    // Back to radius: the untouched slide value returns, proving dashes were a
+    // render-time indicator over a stored value, not a destructive clamp.
+    await dro.setMeasurementMode('X', 'rAd');
+    await dro.waitForAxisPureTextValue('X', '999.9999');
   });
 });
