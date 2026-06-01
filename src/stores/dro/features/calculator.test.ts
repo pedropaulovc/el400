@@ -114,6 +114,30 @@ describe('calculatorReducer', () => {
       }
     });
 
+    it('US-013: BTN_SELECT_Y commits pending buffer to firstValue when firstValue is null', () => {
+      // 12 (no ENT) then Y -> the 12 in the buffer becomes firstValue and the
+      // buffer is cleared, so a following second-operand ENT computes.
+      const state = stateWithBuffer('calculator-idle', INITIAL_CALCULATOR_DATA, '12');
+      const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result?.stateName).toBe('calculator-add');
+      const calcData = result?.stateData as CalculatorData;
+      expect(calcData.operation).toBe('ADD');
+      expect(calcData.firstValue).toBe(12);
+      expect(result?.vMem.inputBuffer).toBe('');
+    });
+
+    it('US-013: BTN_SELECT_Y does not overwrite an existing firstValue', () => {
+      const state = stateWithBuffer(
+        'calculator-add',
+        { stateDataType: 'calculator', firstValue: 7, operation: 'ADD', currentValue: 7 },
+        '99'
+      );
+      const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
+      const calcData = result?.stateData as CalculatorData;
+      expect(calcData.firstValue).toBe(7);
+    });
+
     it('should ignore BTN_SELECT_X in calculator mode (returns null)', () => {
       const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
       const result = calculatorReducer(state, { eventName: 'BTN_SELECT_X' }, DEFAULT_TEST_CONTEXT);
@@ -244,7 +268,10 @@ describe('calculatorReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should reset to idle if firstValue is null when operation is set', () => {
+    it('US-013: operation set + firstValue null + ENT stores buffer as firstValue (operation-first)', () => {
+      // Manual §7.6.1 operation-first: after picking the op with Y, the first
+      // ENT records the first operand and stays in the operation state (the
+      // NEXT ENT computes). It must NOT reset/drop the operand.
       const state = stateWithBuffer(
         'calculator-add',
         {
@@ -258,11 +285,39 @@ describe('calculatorReducer', () => {
 
       const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
 
-      expect(result?.stateName).toBe('calculator-idle');
+      expect(result?.stateName).toBe('calculator-add');
       const calcData = result?.stateData as CalculatorData;
-      expect(calcData.currentValue).toBe(5);
-      expect(calcData.firstValue).toBeNull();
-      expect(calcData.operation).toBeNull();
+      expect(calcData.firstValue).toBe(5);
+      expect(calcData.operation).toBe('ADD');
+      expect(result?.vMem.inputBuffer).toBe('');
+    });
+
+    it('US-013: operation-first full flow ADD: null-first ENT(12) then ENT(8) = 20', () => {
+      // First ENT records firstValue
+      const first = calculatorReducer(
+        stateWithBuffer(
+          'calculator-add',
+          { stateDataType: 'calculator', firstValue: null, operation: 'ADD', currentValue: 0 },
+          '12'
+        ),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect((first?.stateData as CalculatorData).firstValue).toBe(12);
+
+      // Second ENT computes the result
+      const second = calculatorReducer(
+        {
+          stateName: first!.stateName,
+          stateData: first!.stateData,
+          vMem: { ...first!.vMem, inputBuffer: '8' },
+          display: first!.display,
+        },
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(second?.stateName).toBe('calculator-idle');
+      expect((second?.stateData as CalculatorData).currentValue).toBe(20);
     });
 
     it('should handle digit input in calculator state (calculatorReducer owns digits)', () => {
