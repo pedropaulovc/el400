@@ -506,6 +506,8 @@ export type DROEventPayload =
   | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
+  // Display sleep-timer idle period elapsed (US-026); dispatched by useSleepTimer.
+  | { eventName: 'SLEEP_TIMER_ELAPSED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }

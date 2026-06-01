@@ -79,6 +79,7 @@ function resetStoresForTest(): void {
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
       probeDroType: 'transmit',
+      sleepTimeout: 0,
     },
   });
 

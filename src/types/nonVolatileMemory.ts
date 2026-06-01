@@ -106,7 +106,18 @@ export interface NonVolatileMemory {
   zDepthSense: ZDepthSense;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
+  /**
+   * Display sleep-timer idle period in minutes - SLEEP T parameter (US-026,
+   * manual section 6.2 / §6.2 note *4). After this many minutes with no key press
+   * or axis movement the display sleeps (dims) and the wrench LED flashes; any key
+   * or movement wakes it. `0` disables the timer (the display never sleeps).
+   * Valid range 0-120.
+   */
+  sleepTimeout: number;
 }
+
+/** SLEEP T disabled sentinel: 0 minutes means the display never sleeps (US-026). */
+export const SLEEP_TIMEOUT_DISABLED = 0;
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
 export const DEFAULT_AXIS_DIRECTION: AxisDirectionByAxis = {
@@ -147,6 +158,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
   probeDroType: 'transmit',
+  sleepTimeout: SLEEP_TIMEOUT_DISABLED,
 };
 
 /**

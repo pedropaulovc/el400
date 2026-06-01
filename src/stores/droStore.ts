@@ -143,6 +143,15 @@ export const useMode = () => useDROStore((s) => s.vMem.mode);
 /** Get currently active axis */
 export const useActiveAxis = () => useDROStore((s) => s.vMem.activeAxis);
 
+/**
+ * Display power state (US-026 sleep timer): 'awake' or 'asleep'. Drives the dim
+ * overlay on the readout panel and the flashing wrench LED.
+ */
+export const useDisplayPower = () => useDROStore((s) => s.vMem.displayPower);
+
+/** True when the display is asleep (US-026). */
+export const useIsAsleep = () => useDROStore((s) => s.vMem.displayPower === 'asleep');
+
 /** Get input buffer */
 export const useInputBuffer = () => useDROStore((s) => s.vMem.inputBuffer);
 
