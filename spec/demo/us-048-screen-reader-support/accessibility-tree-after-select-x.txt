@@ -1,0 +1,32 @@
+=== AC 48.6 - Accessibility-tree / ARIA readback AFTER real click on 'Select X axis' ===
+Source: live browser accessibility tree + aria-pressed DOM attributes (the AT surface).
+Action performed: page.getByRole('button', { name: 'Select X axis' }).click()
+
+--- ARIA snapshot: group 'Axis selection and zeroing' ---
+- group "Axis selection and zeroing":
+  - text: X
+  - button "Select X axis" [pressed]
+  - text: X
+  - subscript: "0"
+  - button "Zero X axis"
+  - text: "Y"
+  - button "Select Y axis"
+  - text: "Y"
+  - subscript: "0"
+  - button "Zero Y axis"
+  - text: Z
+  - button "Select Z axis"
+  - text: Z
+  - subscript: "0"
+  - button "Zero Z axis"
+
+--- aria-pressed readback per button (by accessible name) ---
+  Select X axis    testid=axis-select-x    aria-pressed=true
+  Select Y axis    testid=axis-select-y    aria-pressed=false
+  Select Z axis    testid=axis-select-z    aria-pressed=false
+  Abs/Inc          testid=btn-abs-inc      aria-pressed=false
+  Toggle units     testid=btn-toggle-unit  aria-pressed=false
+
+Result: 'Select X axis' = pressed/true; Y and Z = false.
+Momentary mode buttons btn-abs-inc and btn-toggle-unit stay aria-pressed=false
+(spec carve-out: their state is conveyed by the LED radio group, not a pressed toggle).

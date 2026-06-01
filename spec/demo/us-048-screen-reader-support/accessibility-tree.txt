@@ -1,0 +1,89 @@
+- main:
+  - heading "Electronica EL400 Digital Readout Simulator" [level=1]
+  - img "Electronica Logo"
+  - heading "Axis display" [level=2]
+  - table "Axis positions":
+    - rowgroup:
+      - row "Axis Value":
+        - columnheader "Axis"
+        - columnheader "Value"
+    - rowgroup:
+      - row "X 0.0000":
+        - rowheader "X"
+        - cell "0.0000"
+      - row "Y 0.0000":
+        - rowheader "Y"
+        - cell "0.0000"
+      - row "Z 0.0000":
+        - rowheader "Z"
+        - cell "0.0000"
+  - group "Positioning mode":
+    - text: Positioning mode
+    - radio "abs" [checked] [disabled]
+    - text: abs
+    - radio "inc" [disabled]
+    - text: inc
+  - group "Measurement units":
+    - text: Measurement units
+    - radio "inch" [checked] [disabled]
+    - text: inch
+    - radio "mm" [disabled]
+    - text: mm
+  - group "Status":
+    - text: Status
+    - radio "fn" [disabled]
+    - text: fn
+    - radio "sdm" [disabled]
+    - text: sdm
+    - radio "prb" [disabled]
+    - text: prb
+    - radio "slp" [disabled]
+    - text: slp
+  - heading "Axis selection" [level=2]
+  - group "Axis selection and zeroing":
+    - text: X
+    - button "Select X axis"
+    - text: X
+    - subscript: "0"
+    - button "Zero X axis"
+    - text: "Y"
+    - button "Select Y axis"
+    - text: "Y"
+    - subscript: "0"
+    - button "Zero Y axis"
+    - text: Z
+    - button "Select Z axis"
+    - text: Z
+    - subscript: "0"
+    - button "Zero Z axis"
+  - heading "Numeric keypad" [level=2]
+  - button "1"
+  - button "2 (Down)"
+  - button "3"
+  - button "4 (Left)"
+  - button "5"
+  - button "6 (Right)"
+  - button "7"
+  - button "8 (Up)"
+  - button "9"
+  - button "0"
+  - button "Toggle sign"
+  - button "."
+  - button "Clear"
+  - button "Enter"
+  - heading "Primary functions" [level=2]
+  - button "Settings"
+  - button "Abs/Inc"
+  - button "Toggle units"
+  - button "Reference"
+  - button "Distance to Go"
+  - heading "Secondary functions" [level=2]
+  - button "Bolt hole"
+  - button "Arc contour"
+  - button "Angle hole"
+  - button "Grid hole"
+  - button "Calculator"
+  - button "Half"
+  - button "SDM"
+  - button "Function"
+  - paragraph: Click axis buttons to select, then use keypad to enter values

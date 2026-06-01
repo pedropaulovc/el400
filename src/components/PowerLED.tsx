@@ -1,6 +1,6 @@
 const PowerLED = () => {
   return (
-    <div className="flex">
+    <div className="flex" aria-hidden="true">
       <div
         className="flex items-center justify-center w-6 h-6 rounded-full ml-4"
         style={{

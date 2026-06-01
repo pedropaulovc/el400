@@ -1,0 +1,30 @@
+=== AC 48.3 - Live-region readback AFTER real click on 'Zero X axis' ===
+Source: live 'Axis positions' table ARIA tree + the X value CELL's DOM attributes.
+Action: click 'Zero X axis' (the prior state was X = 5.0000, see accessibility-tree-after-preset-5.txt).
+
+--- ARIA snapshot: table 'Axis positions' ---
+- table "Axis positions":
+  - rowgroup:
+    - row "Axis Value":
+      - columnheader "Axis"
+      - columnheader "Value"
+  - rowgroup:
+    - row "X 0.0000":
+      - rowheader "X"
+      - cell "0.0000"
+    - row "Y 0.0000":
+      - rowheader "Y"
+      - cell "0.0000"
+    - row "Z 0.0000":
+      - rowheader "Z"
+      - cell "0.0000"
+
+--- X value cell DOM readback (testid=axis-value-x) ---
+  element:     <td>
+  text:        '0.0000'
+  aria-live:   polite
+  aria-atomic: true
+
+Result: the SAME live-region cell now reads '0.0000' (was 5.0000).
+Two real UI actions (keypad preset, then Zero) each moved the aria-live value -> the
+live region genuinely re-announces position changes to assistive tech.
