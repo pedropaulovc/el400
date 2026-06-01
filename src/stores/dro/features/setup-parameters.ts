@@ -36,8 +36,11 @@ import type {
   MeasurementMode,
   CountingMode,
   ProbeDroType,
+  KeypadLockState,
   DisplayResolutionValue,
   AngularFormat,
+  ZeroApproachDistance,
+  ZeroApproachTolerance,
 } from '../../../types/nonVolatileMemory';
 import {
   DEFAULT_SCALE_RESOLUTION,
@@ -177,11 +180,72 @@ export const DIRECTION_ID = 'direction';
 /** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
 export const Z_DEPTH_ID = 'z-depth';
 
+/** The global `ZERO AP` (Near-Zero Warning on/off) parameter id (US-024). */
+export const ZERO_APPROACH_ID = 'zero-approach';
+
+/** The global `BP DIST` (approach distance) parameter id (US-024, AC24.4). */
+export const ZERO_APPROACH_DIST_ID = 'zero-approach-dist';
+
+/** The global `BP TOLR` (departure tolerance) parameter id (US-024, AC24.5). */
+export const ZERO_APPROACH_TOLR_ID = 'zero-approach-tolr';
+
+/**
+ * BP DIST choices: the approach distances (inch) at which the warning engages.
+ * Anchored at the manual's 0.002" (≈50 micron) default; the video example uses
+ * 0.004"/0.010". Stored as inch strings (the device's native tolerance unit).
+ */
+export const ZERO_APPROACH_DIST_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0.002', label: 'bP .002' },
+  { value: '0.004', label: 'bP .004' },
+  { value: '0.005', label: 'bP .005' },
+  { value: '0.010', label: 'bP .010' },
+  { value: '0.020', label: 'bP .020' },
+];
+
+/**
+ * BP TOLR choices: departure hysteresis (inch) the axis must travel beyond
+ * BP DIST before the warning clears. Default 0 (clears at the band edge).
+ */
+export const ZERO_APPROACH_TOLR_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0', label: 'tL .000' },
+  { value: '0.002', label: 'tL .002' },
+  { value: '0.005', label: 'tL .005' },
+  { value: '0.010', label: 'tL .010' },
+];
+
 /** The per-axis radius/diameter measurement-mode parameter id (US-041) -- its draft key. */
 export const MEASUREMENT_MODE_ID = 'measurement-mode';
 
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
+
+/** The global encoder-fail warning parameter id (US-042) -- its draft key. */
+export const ENF_ID = 'enf';
+
+/** The global keypad-lock parameter id (US-043, §6.2 `LoC`) -- its draft key. */
+export const KEYPAD_LOCK_ID = 'keypad-lock';
+
+/** The global display sleep-timer parameter id (US-026, §6.2) -- its draft key. */
+export const SLEEP_TIMEOUT_ID = 'sleep-timeout';
+
+/**
+ * SLEEP T choices: the idle timeout in minutes the left/right keys cycle through
+ * (manual §6.2 `SLEEP t`, range 0-120). `'0'` is the disabled sentinel, shown as
+ * `SLP oFF` (the display never sleeps); the remaining values are a representative
+ * ladder of common timeouts up to the 120-minute maximum, each shown as `SLP <n>`.
+ * Stored as the integer minute count string so commit can parse it back to a
+ * number for nvMem.sleepTimeout.
+ */
+export const SLEEP_TIMEOUT_MINUTES = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
+
+/** Build the 7-segment label for a sleep-timeout minute value (0 => disabled). */
+export function sleepTimeoutLabel(minutes: number): string {
+  return minutes === 0 ? 'SLP oFF' : `SLP ${String(minutes)}`;
+}
+
+/** SLEEP T choices derived from the minute ladder (value = integer-minutes string). */
+export const SLEEP_TIMEOUT_CHOICES: readonly SetupParameterChoice[] =
+  SLEEP_TIMEOUT_MINUTES.map((m) => ({ value: String(m), label: sleepTimeoutLabel(m) }));
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -192,9 +256,9 @@ export const SETUP_END_ID = 'end';
  * Only a foundational subset is wired here as proof of the framework (US-039):
  * - `counting-mode` (per-axis): Linear / Angular -- a real per-axis nvMem-backed
  *   parameter with commit-on-change; angular axes display wrapped degrees (US-040).
- * - `enf` (global): encoder-fail warning On / Off, backed by nvMem.beepEnabled
- *   as a stand-in committed value -- proof of a global parameter reading real
- *   settings (full ENF semantics land in US-042).
+ * - `enf` (global): encoder-fail warning On / Off, backed by its own
+ *   nvMem.encoderFailWarning flag with commit-on-change; a lost encoder signal
+ *   shows `no SIG` on the affected axis when on (US-042).
  * - `End`: terminal exit item.
  *
  * Later stories append their own entries here.
@@ -225,15 +289,22 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
-    id: 'enf',
-    label: 'EnF on',
+    id: ENF_ID,
+    label: 'EnF oFF',
     scope: 'global',
+    // Default-first ordering: 'off' (the default, AC 42.1) seeds before 'on'.
     choices: [
-      { value: 'on', label: 'EnF on' },
       { value: 'off', label: 'EnF oFF' },
+      { value: 'on', label: 'EnF on' },
     ],
-    // Proof: read a real global nvMem flag (beepEnabled stands in until US-042).
-    readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
+    // Encoder-fail warning (US-042). Reads its OWN nvMem flag, decoupled from
+    // beepEnabled (US-025's field).
+    readValue: (ctx) => (ctx.nvMem.encoderFailWarning ? 'on' : 'off'),
+    // Commit-on-change (US-042): persist immediately so a later signal-loss
+    // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
+    },
   },
   {
     id: SCALE_RESOLUTION_ID,
@@ -357,6 +428,57 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: ZERO_APPROACH_ID,
+    label: 'bU22 oF',
+    scope: 'global',
+    // ZERO AP toggles the Near-Zero Warning (BU22). The 7-segment panel has no
+    // 'Z' glyph for "buzz", so the device renders it as `bU22` (AC24.2).
+    choices: [
+      { value: 'on', label: 'bU22 on' },
+      { value: 'off', label: 'bU22 oF' },
+    ],
+    readValue: (ctx) => (ctx.nvMem.zeroApproachEnabled ? 'on' : 'off'),
+    // Commit-on-change (US-024): persist immediately so the warning engages on
+    // exit without the generic SAU CHG save engine, mirroring Direction (US-002).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ zeroApproachEnabled: value === 'on' });
+    },
+  },
+  {
+    id: ZERO_APPROACH_DIST_ID,
+    label: 'bP .002',
+    scope: 'global',
+    choices: ZERO_APPROACH_DIST_CHOICES,
+    // Seed from the committed BP DIST; guard a stale value back to the default.
+    readValue: (ctx) => {
+      const committed = ctx.nvMem.zeroApproachDistance;
+      const isValid = ZERO_APPROACH_DIST_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0.002';
+    },
+    commit: (_ctx, value) => {
+      useSettingsStore
+        .getState()
+        .updateNvMem({ zeroApproachDistance: value as ZeroApproachDistance });
+    },
+  },
+  {
+    id: ZERO_APPROACH_TOLR_ID,
+    label: 'tL .000',
+    scope: 'global',
+    choices: ZERO_APPROACH_TOLR_CHOICES,
+    // Seed from the committed BP TOLR; guard a stale value back to the default.
+    readValue: (ctx) => {
+      const committed = ctx.nvMem.zeroApproachTolerance;
+      const isValid = ZERO_APPROACH_TOLR_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0';
+    },
+    commit: (_ctx, value) => {
+      useSettingsStore
+        .getState()
+        .updateNvMem({ zeroApproachTolerance: value as ZeroApproachTolerance });
+    },
+  },
+  {
     id: MEASUREMENT_MODE_ID,
     label: 'rAd',
     scope: 'per-axis',
@@ -394,6 +516,47 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // behaviour takes hold on exit (same path as Direction / Z depth).
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
+    },
+  },
+  {
+    id: KEYPAD_LOCK_ID,
+    label: 'LoC oFF',
+    scope: 'global',
+    choices: [
+      { value: 'off', label: 'LoC oFF' },
+      { value: 'on', label: 'LoC on' },
+    ],
+    // Global keypad lock (US-043, §6.2 `LoC`). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.keypadLock,
+    // Commit-on-change: persist immediately so the lock takes hold the moment the
+    // operator cycles the choice (same surgical path as Direction / Z depth /
+    // probe type). Persisting to nvMem (localStorage-backed) also means the lock
+    // survives a power cycle (AC 43.6). Crucially, committing on cycle -- not only
+    // on exit -- keeps the UNLOCK reachable: while `LoC on`, the gate already lets
+    // the wrench/setup key and all in-setup navigation through, so cycling back to
+    // `LoC oFF` here unlocks even though the panel was locked on entry.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
+    },
+  },
+  {
+    id: SLEEP_TIMEOUT_ID,
+    label: sleepTimeoutLabel(0),
+    scope: 'global',
+    choices: SLEEP_TIMEOUT_CHOICES,
+    // Global display sleep timeout in minutes (US-026, §6.2). Seeded from nvMem;
+    // guard against a stale persisted value that is not one of the ladder choices
+    // by falling back to the disabled sentinel.
+    readValue: (ctx) => {
+      const committed = String(ctx.nvMem.sleepTimeout);
+      const isValid = SLEEP_TIMEOUT_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0';
+    },
+    // Commit-on-change (US-026): persist immediately, same surgical path as
+    // Direction / dP, so the sleep timer takes effect on exit. Parses the choice
+    // value back to an integer minute count for nvMem.sleepTimeout.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ sleepTimeout: Number(value) });
     },
   },
   {

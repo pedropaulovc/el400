@@ -119,6 +119,23 @@ export interface CountingModeByAxis {
 export type ZDepthSense = 'depth-negative' | 'depth-positive';
 
 /**
+ * `BP DIST` approach distance for the Near-Zero Warning (US-024, manual §8.3,
+ * setup `ZERO AP` / video §1.13). Stored as an inch string — the device's native
+ * tolerance unit — so it is independent of the display unit; the warning engages
+ * once an axis is within this distance of zero. The 0.002" default matches the
+ * manual's "within 50 microns of the set value".
+ */
+export type ZeroApproachDistance = '0.002' | '0.004' | '0.005' | '0.010' | '0.020';
+
+/**
+ * `BP TOLR` departure tolerance for the Near-Zero Warning (US-024). Hysteresis
+ * width (inch string) the axis must travel BEYOND `BP DIST` before the warning
+ * clears, preventing beep flutter at the threshold. Default 0.0000" (the warning
+ * clears as soon as the axis leaves the approach band).
+ */
+export type ZeroApproachTolerance = '0' | '0.002' | '0.005' | '0.010';
+
+/**
  * Per-axis radius/diameter measurement mode (manual section 6.2 `rAd` / `diA`,
  * US-041). `'radius'` (radial) is the mill default: the display equals actual
  * axis movement 1:1. `'diameter'` (diametric) is the lathe convention: the
@@ -148,6 +165,17 @@ export interface MeasurementModeByAxis {
 export type ProbeDroType = 'transmit' | 'freeze';
 
 /**
+ * Keypad lock state (manual §6.2 `LoC`, note *3; video §1.12). Modelled as an
+ * enum (not a leaked boolean) so the lock status can cross module boundaries
+ * safely (the root reducer reads it, the `LoC` setup parameter commits it).
+ * - 'off' (`LoC off`, default): the front panel is live.
+ * - 'on'  (`LoC on`): every front-panel key is disabled except the wrench/setup
+ *   key, so the operator cannot accidentally zero an axis or change a value and
+ *   lose the datum. The live position readout keeps updating regardless (US-043).
+ */
+export type KeypadLockState = 'off' | 'on';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -171,13 +199,38 @@ export interface NonVolatileMemory {
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Near-Zero Warning on/off — setup `ZERO AP` / `BU22` toggle (US-024, AC24.2) */
+  zeroApproachEnabled: boolean;
+  /** Near-Zero Warning approach distance — setup `BP DIST` (US-024, AC24.4) */
+  zeroApproachDistance: ZeroApproachDistance;
+  /** Near-Zero Warning departure tolerance — setup `BP TOLR` (US-024, AC24.5) */
+  zeroApproachTolerance: ZeroApproachTolerance;
   /** Per-axis radius/diameter display mode - rAd/diA parameter (US-041, manual section 6.2) */
   measurementMode: MeasurementModeByAxis;
   /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
   countingMode: CountingModeByAxis;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
+  /**
+   * Encoder-fail warning - EnF parameter (US-042, manual section 6.2). When
+   * true, an axis that loses its encoder signal shows `no SIG`. Default off
+   * (legacy behavior). Independent of beepEnabled (US-025).
+   */
+  encoderFailWarning: boolean;
+  /** Keypad lock: 'off' (live) or 'on' (front panel locked) - LoC parameter (US-043, §6.2) */
+  keypadLock: KeypadLockState;
+  /**
+   * Display sleep-timer idle period in minutes - SLEEP T parameter (US-026,
+   * manual section 6.2 / §6.2 note *4). After this many minutes with no key press
+   * or axis movement the display sleeps (dims) and the wrench LED flashes; any key
+   * or movement wakes it. `0` disables the timer (the display never sleeps).
+   * Valid range 0-120.
+   */
+  sleepTimeout: number;
 }
+
+/** SLEEP T disabled sentinel: 0 minutes means the display never sleeps (US-026). */
+export const SLEEP_TIMEOUT_DISABLED = 0;
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
 export const DEFAULT_AXIS_DIRECTION: AxisDirectionByAxis = {
@@ -248,9 +301,17 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  // Near-Zero Warning defaults (US-024): off until the operator enables it, with
+  // the manual's 0.002" (≈50 micron) approach band and no departure hysteresis.
+  zeroApproachEnabled: false,
+  zeroApproachDistance: '0.002',
+  zeroApproachTolerance: '0',
   measurementMode: DEFAULT_MEASUREMENT_MODE,
   countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',
+  encoderFailWarning: false,
+  keypadLock: 'off',
+  sleepTimeout: SLEEP_TIMEOUT_DISABLED,
 };
 
 /**

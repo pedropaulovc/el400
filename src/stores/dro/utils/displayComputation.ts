@@ -11,6 +11,7 @@ import type {
   DisplayResolutionValue,
   AngularFormat,
 } from '../../../types/nonVolatileMemory';
+import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 
@@ -49,6 +50,26 @@ export function decimalsForDisplayResolution(value: DisplayResolutionValue): num
  */
 export function axisDisplayDecimals(axis: Axis, nvMem: NonVolatileMemory): number {
   return decimalsForDisplayResolution(nvMem.displayResolution[axis]);
+}
+
+/**
+ * Seven-segment text shown on an axis whose encoder signal is lost while the
+ * Encoder-Fail warning (`EnF`) is on (US-042, manual section 6.2 note *2).
+ */
+export const ENCODER_FAIL_TEXT = 'no SIG';
+
+/**
+ * Whether an axis should show the encoder-fail warning (US-042): the `EnF`
+ * parameter must be on AND the live mill must report that axis's signal as lost.
+ * A pure predicate so reducers and the display computation share one rule.
+ */
+export function isEncoderFailWarningActive(
+  axis: Axis,
+  millState: MillState,
+  nvMem: NonVolatileMemory
+): boolean {
+  if (!nvMem.encoderFailWarning) return false;
+  return millState.encoderSignal[axis] === 'lost';
 }
 
 /**
@@ -224,6 +245,13 @@ export function computeDisplayPosition(
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): AxisDisplayValue {
+  // Encoder-fail warning (US-042) overrides the numeric value: a lost signal on
+  // this axis with `EnF` on shows `no SIG` instead of a stale reading.
+  if (isEncoderFailWarningActive(axis, context.millState, context.nvMem)) {
+    return ENCODER_FAIL_TEXT;
+  }
+
+
   const rawMm = computeAxisPositionMm(axis, vMem, context);
   // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
   // transforms applied AFTER datum subtraction; they never mutate stored machine

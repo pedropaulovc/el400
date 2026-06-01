@@ -10,13 +10,13 @@
 **So that** nobody accidentally zeroes an axis or changes a value and loses my datum
 
 ## Acceptance Criteria
-- [ ] **AC 43.1:** The `LoC` parameter is available in setup with choices `LoC off` (default) and `LoC on`.
-- [ ] **AC 43.2:** When `LoC on` is saved, **all** front-panel keys are disabled **except** the 🔧 wrench (setup) key.
-- [ ] **AC 43.3:** Pressing any locked key has no effect (and, per beep settings, may give no/locked feedback).
-- [ ] **AC 43.4:** The wrench key still enters setup so the operator can navigate to `LoC` and set `LoC off` to unlock.
-- [ ] **AC 43.5:** Position display continues to update live while locked (lock affects input only, not the readout).
-- [ ] **AC 43.6:** The lock state persists after power cycle when saved via `SAU CHG`.
-- [ ] **AC 43.7:** While locked, the datum/ABS zero is protected from accidental reset (the purpose per note *3).
+- [x] **AC 43.1:** The `LoC` parameter is available in setup with choices `LoC off` (default) and `LoC on`.
+- [x] **AC 43.2:** When `LoC on` is saved, **all** front-panel keys are disabled **except** the 🔧 wrench (setup) key.
+- [x] **AC 43.3:** Pressing any locked key has no effect (and, per beep settings, may give no/locked feedback).
+- [x] **AC 43.4:** The wrench key still enters setup so the operator can navigate to `LoC` and set `LoC off` to unlock.
+- [x] **AC 43.5:** Position display continues to update live while locked (lock affects input only, not the readout).
+- [x] **AC 43.6:** The lock state persists after power cycle when saved via `SAU CHG`.
+- [x] **AC 43.7:** While locked, the datum/ABS zero is protected from accidental reset (the purpose per note *3).
 
 ## E2E Test Scenarios
 ```typescript

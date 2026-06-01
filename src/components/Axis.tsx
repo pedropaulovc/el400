@@ -1,5 +1,5 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
-import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis } from "../stores/droStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis, useZeroApproachX, useZeroApproachY, useZeroApproachZ } from "../stores/droStore";
 import { useAxisDisplayDecimals, useAxisIsAngular } from "../stores/settingsStore";
 import { formatAxisDigits } from "./axisDigits";
 
@@ -10,6 +10,13 @@ const axisHooks = {
   X: useDisplayX,
   Y: useDisplayY,
   Z: useDisplayZ,
+} as const;
+
+/** Map axis to its Near-Zero Warning flash hook (US-024). */
+const zeroApproachHooks = {
+  X: useZeroApproachX,
+  Y: useZeroApproachY,
+  Z: useZeroApproachZ,
 } as const;
 
 interface AxisProps {
@@ -23,7 +30,10 @@ const Axis = ({ axis }: AxisProps) => {
   const stateName = useStateName();
   // Reference waiting (§7.7.1): the selected axis's zero blinks until the mark is crossed.
   const blinkAxis = useReferenceWaitingAxis();
-  const isBlinking = blinkAxis === axis;
+  // Near-Zero Warning (US-024): this axis flashes while within BP DIST of zero.
+  const useAxisZeroApproach = zeroApproachHooks[axis];
+  const isNearZero = useAxisZeroApproach();
+  const isBlinking = blinkAxis === axis || isNearZero;
   // dP display resolution (US-022): fractional digits to render for this axis.
   const decimals = useAxisDisplayDecimals(axis);
   // Angular axes (US-040) render their pre-formatted DMS string verbatim.

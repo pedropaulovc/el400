@@ -12,6 +12,13 @@ import {
   MEASUREMENT_MODE_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
+  ZERO_APPROACH_ID,
+  ZERO_APPROACH_DIST_ID,
+  ZERO_APPROACH_TOLR_ID,
+  ENF_ID,
+  SLEEP_TIMEOUT_ID,
+  SLEEP_TIMEOUT_MINUTES,
+  sleepTimeoutLabel,
   ANGULAR_RESOLUTION_CHOICES,
   getParameterAt,
   resolveChoices,
@@ -141,6 +148,77 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(dp.choices.map((c) => c.value)).toContain(dp.readValue({ nvMem, axis: 'X' }));
   });
 
+  it('exposes a global EnF parameter with on / off choices (AC 42.1, AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    expect(enf).toBeDefined();
+    expect(enf.scope).toBe('global');
+    // Default-first ordering: 'off' is the default (AC 42.1), so it seeds first.
+    expect(enf.choices.map((c) => c.value)).toEqual(['off', 'on']);
+    expect(enf.choices.map((c) => c.label)).toEqual(['EnF oFF', 'EnF on']);
+    expect(typeof enf.commit).toBe('function');
+  });
+
+  it('EnF seeds its current value from nvMem.encoderFailWarning, NOT beepEnabled (AC 42.1)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    // Default nvMem: encoderFailWarning off -> seeds 'off'.
+    expect(enf.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    // On when the dedicated flag is set.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
+    // Decoupled from beepEnabled (US-025): flipping beep must not change EnF.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, beepEnabled: false, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
+  });
+
+  it('exposes a global SLEEP T parameter with a 0..120 minute ladder (US-026, AC26.1)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    expect(sleep).toBeDefined();
+    expect(sleep.scope).toBe('global');
+    // First choice is the disabled sentinel (000 = off, AC26.2/26.8); ladder is
+    // strictly ascending and capped at the 120-minute maximum (AC26.3).
+    expect(sleep.choices[0]!.value).toBe('0');
+    expect(sleep.choices[0]!.label).toBe('SLP oFF');
+    const minutes = sleep.choices.map((c) => Number(c.value));
+    expect(minutes).toEqual([...SLEEP_TIMEOUT_MINUTES]);
+    expect(Math.max(...minutes)).toBe(120);
+    for (let i = 1; i < minutes.length; i++) {
+      expect(minutes[i]!).toBeGreaterThan(minutes[i - 1]!);
+    }
+    expect(typeof sleep.commit).toBe('function');
+  });
+
+  it('SLEEP T seeds its current value from nvMem.sleepTimeout (US-026, AC26.2)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    // Default 0 => disabled.
+    expect(sleep.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    expect(
+      sleep.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 10 }, axis: null })
+    ).toBe('10');
+  });
+
+  it('SLEEP T defends against a stale persisted value not in the ladder', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const seeded = sleep.readValue({
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 999 },
+      axis: null,
+    });
+    expect(sleep.choices.map((c) => c.value)).toContain(seeded);
+  });
+
+  it('sleepTimeoutLabel renders oFF for 0 and SLP <n> otherwise', () => {
+    expect(sleepTimeoutLabel(0)).toBe('SLP oFF');
+    expect(sleepTimeoutLabel(5)).toBe('SLP 5');
+    expect(sleepTimeoutLabel(120)).toBe('SLP 120');
+  });
+
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
     expect(taper.commit).toBeUndefined();
@@ -267,6 +345,17 @@ describe('commit-on-change hooks (US-002)', () => {
     expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
   });
 
+  it('SLEEP T.commit persists the chosen minutes to nvMem.sleepTimeout (US-026, AC26.4)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem, axis: null }, '10');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(10);
+    // Selecting the disabled sentinel persists 0 (AC26.8).
+    const after = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem: after, axis: null }, '0');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(0);
+  });
+
   it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {
     const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
     const nvMem = useSettingsStore.getState().nvMem;
@@ -280,6 +369,78 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     dp.commit!({ nvMem, axis: null }, '50');
     expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('50');
+  });
+
+  it('enf.commit persists encoderFailWarning and leaves beepEnabled untouched (AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    const beepBefore = useSettingsStore.getState().nvMem.beepEnabled;
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(true);
+    // US-025's beep flag must remain independent.
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+  });
+});
+
+describe('Zero-Approach Warning parameters (US-024)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  it('exposes ZERO AP / BP DIST / BP TOLR as global parameters (AC24.1)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(ap).toBeDefined();
+    expect(dist).toBeDefined();
+    expect(tolr).toBeDefined();
+    expect(ap.scope).toBe('global');
+    expect(dist.scope).toBe('global');
+    expect(tolr.scope).toBe('global');
+  });
+
+  it('ZERO AP toggles BU22 ON/OFF (AC24.2)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.choices.map((c) => c.value)).toEqual(['on', 'off']);
+    // BU22 wording surfaces in the labels.
+    expect(ap.choices.map((c) => c.label).join(' ')).toContain('bU22');
+  });
+
+  it('ZERO AP seeds from nvMem.zeroApproachEnabled', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    const on = { ...DEFAULT_NON_VOLATILE_MEMORY, zeroApproachEnabled: true };
+    expect(ap.readValue({ nvMem: on, axis: null })).toBe('on');
+  });
+
+  it('ZERO AP.commit persists the toggle immediately (commit-on-change)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    ap.commit!({ nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(true);
+    ap.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(false);
+  });
+
+  it('BP DIST default is 0.002" and commits (AC24.4)', () => {
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    expect(dist.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0.002');
+    expect(dist.choices.map((c) => c.value)).toContain('0.010');
+    const nvMem = useSettingsStore.getState().nvMem;
+    dist.commit!({ nvMem, axis: null }, '0.010');
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance).toBe('0.010');
+  });
+
+  it('BP TOLR default is 0 and commits (AC24.5)', () => {
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(tolr.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    const nvMem = useSettingsStore.getState().nvMem;
+    tolr.commit!({ nvMem, axis: null }, '0.005');
+    expect(useSettingsStore.getState().nvMem.zeroApproachTolerance).toBe('0.005');
   });
 });
 
