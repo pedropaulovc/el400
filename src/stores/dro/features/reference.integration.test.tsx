@@ -11,7 +11,6 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -73,8 +72,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.5: honE mode shows honE, then SELECt after ENT', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     expect(useDROStore.getState().stateName).toBe('reference-menu-home');
@@ -86,8 +84,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.1: navigate to nC rEF and confirm', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-6')); // right -> nC rEF
@@ -100,8 +97,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.6: selecting an axis shows blinking 0 (waiting)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter')); // confirm honE
@@ -112,8 +108,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.3/12.4 honE: crossing mark sets datum at the mark (reads 0)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     // mm mode for direct values
     await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -133,8 +128,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.3/12.4 nC rEF: crossing mark recalls stored machine reference', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
 
@@ -157,8 +151,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.3 real-user trigger: jogging the axis across the mark latches the datum (no hook)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
 
@@ -181,8 +174,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.3 real-user trigger: jogging short of the mark keeps waiting (no latch)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter')); // honE
@@ -199,8 +191,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('AC 12.6: the waiting axis digits blink while waiting for the mark', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter')); // honE
@@ -217,8 +208,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('forces ABS mode when entered from INC (§7.7)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-abs-inc')); // -> INC
     expect(useDROStore.getState().vMem.mode).toBe('inc');
@@ -229,8 +219,7 @@ describe('Reference / Datum recall integration', () => {
   });
 
   it('CLEAR cancels reference without changing the datum', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await user.click(screen.getByTestId('btn-reference'));
     await user.click(screen.getByTestId('key-enter'));

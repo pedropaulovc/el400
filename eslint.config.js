@@ -45,4 +45,18 @@ export default tseslint.config({ ignores: ["dist", "storybook-static", "coverage
     "@typescript-eslint/require-await": "off",
     "react-refresh/only-export-components": "off",
   },
+}, {
+  // Integration tests must run against the live-tick harness: take `user` from
+  // `await renderSimulator()` (which wraps it to emit a deterministic
+  // MILL_STATE_CHANGED after every interaction), never a raw userEvent.setup().
+  // A bare setup() yields a tick-blind `user` and silently reintroduces the
+  // class of bug (US-046 diagnostics auto-skip, the SAV CHG / OEM confirmation
+  // wipe) that running under a connected encoder is meant to catch.
+  files: ["**/*.integration.test.{ts,tsx}"],
+  rules: {
+    "no-restricted-syntax": ["error", {
+      selector: "CallExpression[callee.object.name='userEvent'][callee.property.name='setup']",
+      message: "Don't call userEvent.setup() in an integration test — take `user` from `await renderSimulator()` so interactions run under live mill ticks. (Need a dead source? `renderSimulator({ millSource: 'noop' })`.)",
+    }],
+  },
 }, storybook.configs["flat/recommended"]);

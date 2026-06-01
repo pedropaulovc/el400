@@ -123,8 +123,7 @@ describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
   }
 
   it('does not warn outside BP DIST, fires once within it (AC24.6, AC24.10)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);
@@ -146,8 +145,7 @@ describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
   });
 
   it('clears when the axis backs out of the approach band again', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);
@@ -165,8 +163,7 @@ describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
   });
 
   it('never warns while disabled, even on top of the target (AC24.2 OFF)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);
@@ -179,8 +176,7 @@ describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
   });
 
   it('is off in plain idle even with an axis at zero (AC24.9 gating)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);
@@ -194,8 +190,7 @@ describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
   });
 
   it('only the approaching axis flashes (per-axis)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
-  enterValue,
+  typeValue,
+  pressEnter,
 } from '../tests/helpers/integration-test-utils';
 
 describe('Unit Conversion Integration', () => {
@@ -21,20 +21,22 @@ describe('Unit Conversion Integration', () => {
 
   describe('Basic Conversion', () => {
     it('should convert multiple axis values correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter values in inch mode
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '2.5');
+      await typeValue(user, '2.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(2.5, 4);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '0.5');
+      await typeValue(user, '0.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0.5, 4);
 
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '1');
+      await typeValue(user, '1');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(1, 4);
 
       // Toggle to mm
@@ -47,8 +49,7 @@ describe('Unit Conversion Integration', () => {
     });
 
     it('should handle value entry in mm mode', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Toggle to mm mode first
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -56,7 +57,8 @@ describe('Unit Conversion Integration', () => {
 
       // Enter 50.8 mm
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '50.8');
+      await typeValue(user, '50.8');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50.8, 3);
 
       // Toggle to inch - should show 2 inches
@@ -65,12 +67,12 @@ describe('Unit Conversion Integration', () => {
     });
 
     it('should convert negative values correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter negative value in inch mode
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '-1.5');
+      await typeValue(user, '-1.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-1.5, 4);
 
       // Toggle to mm
@@ -81,12 +83,12 @@ describe('Unit Conversion Integration', () => {
 
   describe('Integration with Other Functions', () => {
     it('should work correctly with half function', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter 2 inches
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '2');
+      await typeValue(user, '2');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(2, 4);
 
       // Half it to 1 inch
@@ -107,12 +109,12 @@ describe('Unit Conversion Integration', () => {
     });
 
     it('should work with zero function', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter value in inch mode
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '5');
+      await typeValue(user, '5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(5, 4);
 
       // Toggle to mm
@@ -129,12 +131,12 @@ describe('Unit Conversion Integration', () => {
     });
 
     it('should maintain conversion across ABS/INC mode changes', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter value in ABS inch mode
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '3');
+      await typeValue(user, '3');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(3, 4);
 
       // Toggle to mm
@@ -146,7 +148,8 @@ describe('Unit Conversion Integration', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
 
       // Enter value in INC mm mode
-      await enterValue(user, '10');
+      await typeValue(user, '10');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 3);
 
       // Toggle to inch in INC mode

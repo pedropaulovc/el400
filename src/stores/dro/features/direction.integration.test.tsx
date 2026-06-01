@@ -118,8 +118,7 @@ describe('Direction sign flip — live readout integration (US-002 AC 2.2)', () 
   }
 
   it('flips the live X readout when Direction is set to riGht via the setup menu', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     // Switch to mm so magnitudes are exact, then establish a known positive X.
@@ -138,8 +137,7 @@ describe('Direction sign flip — live readout integration (US-002 AC 2.2)', () 
   });
 
   it('keeps the flipped sign on a subsequent MILL_STATE_CHANGED', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
@@ -160,8 +158,7 @@ describe('Direction sign flip — live readout integration (US-002 AC 2.2)', () 
   });
 
   it('flips only X — Y readout stays standard (per-axis)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm

@@ -3,7 +3,8 @@ import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  enterValue,
+  typeValue,
+  pressEnter,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
 } from '../../../tests/helpers/integration-test-utils';
@@ -39,8 +40,7 @@ describe('Grid Drilling Integration (US-020)', () => {
 
   describe('entering grid mode (AC20.1)', () => {
     it('enters grid mode and shows Grid intro then start prompt', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       expect(useDROStore.getState().vMem.mode).toBe('abs');
 
@@ -54,8 +54,7 @@ describe('Grid Drilling Integration (US-020)', () => {
     });
 
     it('does not enter grid mode when in INC mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-abs-inc'));
       expect(useDROStore.getState().vMem.mode).toBe('inc');
@@ -67,44 +66,43 @@ describe('Grid Drilling Integration (US-020)', () => {
 
   describe('parameter entry flow (AC20.2-AC20.8)', () => {
     it('walks every prompt and stores values in mm', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await enterGridModeMm(user);
 
       // Start X (AC20.2)
       expect(useDROStore.getState().stateName).toBe('grid-start-x');
       expect(getAxisDisplayPureTextValue('Y')).toBe('EntCnt0');
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
 
       // Start Y (AC20.3)
       expect(useDROStore.getState().stateName).toBe('grid-start-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
 
       // Pitch X (AC20.4)
       expect(useDROStore.getState().stateName).toBe('grid-pitch-x');
       expect(getAxisDisplayPureTextValue('X')).toBe('PItCh X');
-      await enterValue(user, '10');
+      await typeValue(user, '10'); await pressEnter(user);
 
       // Pitch Y (AC20.5)
       expect(useDROStore.getState().stateName).toBe('grid-pitch-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('PItCh Y');
-      await enterValue(user, '8');
+      await typeValue(user, '8'); await pressEnter(user);
 
       // Angle (AC20.6)
       expect(useDROStore.getState().stateName).toBe('grid-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
 
       // Holes X (AC20.7)
       expect(useDROStore.getState().stateName).toBe('grid-holes-x');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLE X');
-      await enterValue(user, '3');
+      await typeValue(user, '3'); await pressEnter(user);
 
       // Holes Y (AC20.8)
       expect(useDROStore.getState().stateName).toBe('grid-holes-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLE Y');
-      await enterValue(user, '3');
+      await typeValue(user, '3'); await pressEnter(user);
 
       // Navigate, INC mode
       expect(useDROStore.getState().stateName).toBe('grid-navigate');
@@ -125,13 +123,12 @@ describe('Grid Drilling Integration (US-020)', () => {
     });
 
     it('rejects zero pitch X', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await enterGridModeMm(user);
 
-      await enterValue(user, '0'); // start X
-      await enterValue(user, '0'); // start Y
-      await enterValue(user, '0'); // pitch X = 0 (invalid)
+      await typeValue(user, '0'); await pressEnter(user); // start X
+      await typeValue(user, '0'); await pressEnter(user); // start Y
+      await typeValue(user, '0'); await pressEnter(user); // pitch X = 0 (invalid)
 
       expect(useDROStore.getState().stateName).toBe('grid-pitch-x');
     });
@@ -144,18 +141,17 @@ describe('Grid Drilling Integration (US-020)', () => {
       params: { pitchX: string; pitchY: string; angle: string; holesX: string; holesY: string }
     ) {
       await enterGridModeMm(user);
-      await enterValue(user, '0'); // start X
-      await enterValue(user, '0'); // start Y
-      await enterValue(user, params.pitchX);
-      await enterValue(user, params.pitchY);
-      await enterValue(user, params.angle);
-      await enterValue(user, params.holesX);
-      await enterValue(user, params.holesY);
+      await typeValue(user, '0'); await pressEnter(user); // start X
+      await typeValue(user, '0'); await pressEnter(user); // start Y
+      await typeValue(user, params.pitchX); await pressEnter(user);
+      await typeValue(user, params.pitchY); await pressEnter(user);
+      await typeValue(user, params.angle); await pressEnter(user);
+      await typeValue(user, params.holesX); await pressEnter(user);
+      await typeValue(user, params.holesY); await pressEnter(user);
     }
 
     it('axis-aligned grid: hole 2 one pitch X over, hole 4 one pitch Y up', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       // 3x3, pitchX=10, pitchY=8, angle 0
       await setupGrid(user, { pitchX: '10', pitchY: '8', angle: '0', holesX: '3', holesY: '3' });
 
@@ -182,8 +178,7 @@ describe('Grid Drilling Integration (US-020)', () => {
     });
 
     it('rotated grid at 45 degrees', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       // pitch 1mm each so cos/sin appear directly, 2x2
       await setupGrid(user, { pitchX: '1', pitchY: '1', angle: '45', holesX: '2', holesY: '2' });
 
@@ -201,19 +196,18 @@ describe('Grid Drilling Integration (US-020)', () => {
 
   describe('navigation and total holes (AC20.9, AC20.11)', () => {
     it('navigates 3x3 = 9 holes and wraps back to hole 1', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await user.click(screen.getByTestId('btn-grid-hole'));
       await advancePastIntro();
-      await enterValue(user, '0'); // start X
-      await enterValue(user, '0'); // start Y
-      await enterValue(user, '5'); // pitch X
-      await enterValue(user, '5'); // pitch Y
-      await enterValue(user, '0'); // angle
-      await enterValue(user, '3'); // holes X
-      await enterValue(user, '3'); // holes Y
+      await typeValue(user, '0'); await pressEnter(user); // start X
+      await typeValue(user, '0'); await pressEnter(user); // start Y
+      await typeValue(user, '5'); await pressEnter(user); // pitch X
+      await typeValue(user, '5'); await pressEnter(user); // pitch Y
+      await typeValue(user, '0'); await pressEnter(user); // angle
+      await typeValue(user, '3'); await pressEnter(user); // holes X
+      await typeValue(user, '3'); await pressEnter(user); // holes Y
 
       expect(useDROStore.getState().stateName).toBe('grid-navigate');
 
@@ -235,19 +229,18 @@ describe('Grid Drilling Integration (US-020)', () => {
     });
 
     it('shows current hole number with key 8', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await user.click(screen.getByTestId('btn-grid-hole'));
       await advancePastIntro();
-      await enterValue(user, '0');
-      await enterValue(user, '0');
-      await enterValue(user, '5');
-      await enterValue(user, '5');
-      await enterValue(user, '0');
-      await enterValue(user, '3');
-      await enterValue(user, '3');
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '5'); await pressEnter(user);
+      await typeValue(user, '5'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '3'); await pressEnter(user);
+      await typeValue(user, '3'); await pressEnter(user);
 
       await user.click(screen.getByTestId('key-6')); // hole 2
       await user.click(screen.getByTestId('key-8'));
@@ -257,19 +250,18 @@ describe('Grid Drilling Integration (US-020)', () => {
 
   describe('exiting grid mode', () => {
     it('exits to idle and restores ABS with clear from navigate', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await user.click(screen.getByTestId('btn-grid-hole'));
       await advancePastIntro();
-      await enterValue(user, '0');
-      await enterValue(user, '0');
-      await enterValue(user, '5');
-      await enterValue(user, '5');
-      await enterValue(user, '0');
-      await enterValue(user, '3');
-      await enterValue(user, '3');
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '5'); await pressEnter(user);
+      await typeValue(user, '5'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '3'); await pressEnter(user);
+      await typeValue(user, '3'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('grid-navigate');
 
       await user.click(screen.getByTestId('key-clear'));
@@ -278,10 +270,9 @@ describe('Grid Drilling Integration (US-020)', () => {
     });
 
     it('exits to idle with clear from parameter entry when buffer empty', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await enterGridModeMm(user);
-      await enterValue(user, '0'); // start X -> now at start Y
+      await typeValue(user, '0'); await pressEnter(user); // start X -> now at start Y
       expect(useDROStore.getState().stateName).toBe('grid-start-y');
 
       await user.click(screen.getByTestId('key-clear'));

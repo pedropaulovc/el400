@@ -66,9 +66,10 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   /** Render and switch to mm so measurements read directly (resetStores -> inch). */
-  function renderMm() {
-    renderSimulator();
+  async function renderMm() {
+    const result = await renderSimulator({ millSource: 'noop' });
     act(() => { useSettingsStore.getState().updateNvMem({ defaultUnit: 'mm' }); });
+    return result;
   }
 
   afterEach(() => {
@@ -82,8 +83,7 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   it('AC 32.4: Edge function sets the selected axis datum to zero at the contact', async () => {
-    const user = userEvent.setup();
-    renderMm();
+    const { user } = await renderMm();
 
     await openProbeMenu(user);
     // Edge is the default sub-function; confirm and pick X.
@@ -108,8 +108,7 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   it('AC 32.5: Midpoint function sets the datum at the midpoint of two edges', async () => {
-    const user = userEvent.setup();
-    renderMm();
+    const { user } = await renderMm();
 
     await openProbeMenu(user);
     // Cycle to Midpoint.
@@ -132,8 +131,7 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   it('AC 32.6: Inside measurement adds the probe diameter to the span', async () => {
-    const user = userEvent.setup();
-    renderMm();
+    const { user } = await renderMm();
 
     await openProbeMenu(user);
     // Cycle to Inside (edge -> midpoint -> inside).
@@ -157,8 +155,7 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   it('AC 32.6: Outside measurement subtracts the probe diameter from the span', async () => {
-    const user = userEvent.setup();
-    renderMm();
+    const { user } = await renderMm();
 
     await openProbeMenu(user);
     // Cycle to Outside (edge -> midpoint -> inside -> outside).
@@ -179,8 +176,7 @@ describe('Touch Probe Integration (US-032)', () => {
   });
 
   it('AC 32.3: Freeze mode halts the display on contact and resumes after release', async () => {
-    const user = userEvent.setup();
-    renderMm();
+    await renderMm();
     act(() => { useSettingsStore.getState().updateNvMem({ probeDroType: 'freeze' }); });
 
     // Normal counting at X=25.
@@ -198,11 +194,10 @@ describe('Touch Probe Integration (US-032)', () => {
 
     // Sanity: never left idle (no probe function entered).
     expect(useDROStore.getState().stateName).toBe('idle');
-    void user;
   });
 
   it('AC 32.2: Transmit mode keeps counting through a trigger', async () => {
-    renderMm();
+    await renderMm();
     act(() => { useSettingsStore.getState().updateNvMem({ probeDroType: 'transmit' }); });
 
     setMill(25, '');

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -43,15 +43,13 @@ describe('US-021 SC scale resolution (integration)', () => {
   });
 
   it('default value shown at SC is 5 micron (AC21.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoSC(user);
     expect(getAxisDisplayPureTextValue('X')).toBe('SC 5.0');
   });
 
   it('left arrow lowers the resolution toward 1 micron (AC21.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoSC(user);
     await user.click(screen.getByTestId('key-4')); // 5 -> 2
     expect(getAxisDisplayPureTextValue('X')).toBe('SC 2.0');
@@ -60,16 +58,14 @@ describe('US-021 SC scale resolution (integration)', () => {
   });
 
   it('right arrow reaches coarse special values (AC21.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoSC(user);
     await user.click(screen.getByTestId('key-6')); // 5 -> 10
     expect(getAxisDisplayPureTextValue('X')).toBe('SC 10.0');
   });
 
   it('does not log a multi-reducer conflict while changing SC', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoSC(user);
     await user.click(screen.getByTestId('key-4'));
     await user.click(screen.getByTestId('key-6'));

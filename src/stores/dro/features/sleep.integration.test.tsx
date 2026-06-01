@@ -64,8 +64,8 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     vi.useRealTimers();
   });
 
-  it('display sleeps after the configured idle period elapses (AC26.5, AC26.6)', () => {
-    renderSimulator();
+  it('display sleeps after the configured idle period elapses (AC26.5, AC26.6)', async () => {
+    await renderSimulator({ millSource: 'noop' });
     setSleepTimeout(5);
     useMillStore.setState({ millState: createDefaultMillState('noop') });
 
@@ -78,8 +78,8 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     expect(screen.getByTestId('sleep-led').className).toMatch(/flashing/);
   });
 
-  it('a real key press wakes the sleeping display (AC26.7)', () => {
-    renderSimulator();
+  it('a real key press wakes the sleeping display (AC26.7)', async () => {
+    await renderSimulator({ millSource: 'noop' });
     setSleepTimeout(5);
 
     advance(5 * MINUTES_TO_MS);
@@ -94,8 +94,8 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     expect(isAsleep()).toBe(false);
   });
 
-  it('a real X axis button wakes the sleeping display (AC26.7)', () => {
-    renderSimulator();
+  it('a real X axis button wakes the sleeping display (AC26.7)', async () => {
+    await renderSimulator({ millSource: 'noop' });
     setSleepTimeout(5);
 
     advance(5 * MINUTES_TO_MS);
@@ -107,8 +107,8 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     expect(isAsleep()).toBe(false);
   });
 
-  it('a real jog wakes the sleeping display (AC26.7)', () => {
-    renderSimulator();
+  it('a real jog wakes the sleeping display (AC26.7)', async () => {
+    await renderSimulator({ millSource: 'noop' });
     setSleepTimeout(5);
     useMillStore.setState({ millState: createDefaultMillState('noop') });
 
@@ -119,8 +119,8 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     expect(isAsleep()).toBe(false);
   });
 
-  it('never sleeps when sleepTimeout is 0 (disabled, AC26.8)', () => {
-    renderSimulator();
+  it('never sleeps when sleepTimeout is 0 (disabled, AC26.8)', async () => {
+    await renderSimulator({ millSource: 'noop' });
     setSleepTimeout(0);
 
     advance(120 * MINUTES_TO_MS);

@@ -3,7 +3,8 @@ import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  enterValue,
+  typeValue,
+  pressEnter,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
 } from '../../../tests/helpers/integration-test-utils';
@@ -37,8 +38,7 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
 
   describe('Entering Angle Hole Mode', () => {
     it('enters angle hole mode when button pressed in ABS mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       expect(useDROStore.getState().vMem.mode).toBe('abs');
 
@@ -58,8 +58,7 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
     });
 
     it('does not enter angle hole mode when in INC mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-abs-inc'));
       expect(useDROStore.getState().vMem.mode).toBe('inc');
@@ -71,8 +70,7 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
 
   describe('Parameter Entry', () => {
     it('completes full parameter entry in mm mode and computes hole 1 distance', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // Toggle to mm so stored values equal displayed distance
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -81,27 +79,27 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
       expect(useDROStore.getState().stateName).toBe('angle-hole-start-x');
 
       // Start X = 10
-      await enterValue(user, '10');
+      await typeValue(user, '10'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-start-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
 
       // Start Y = 5
-      await enterValue(user, '5');
+      await typeValue(user, '5'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-pitch');
       expect(getAxisDisplayPureTextValue('X')).toBe('P itCh');
 
       // Pitch = 20
-      await enterValue(user, '20');
+      await typeValue(user, '20'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
 
       // Angle = 30
-      await enterValue(user, '30');
+      await typeValue(user, '30'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-holes');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
 
       // Holes = 6
-      await enterValue(user, '6');
+      await typeValue(user, '6'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-navigate');
       expect(useDROStore.getState().vMem.mode).toBe('inc');
 
@@ -122,27 +120,25 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
     });
 
     it('rejects zero pitch (unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterAngleHoleMode(user);
-      await enterValue(user, '1'); // start X
-      await enterValue(user, '1'); // start Y
-      await enterValue(user, '0'); // pitch = 0 -> rejected
+      await typeValue(user, '1'); await pressEnter(user); // start X
+      await typeValue(user, '1'); await pressEnter(user); // start Y
+      await typeValue(user, '0'); await pressEnter(user); // pitch = 0 -> rejected
 
       expect(useDROStore.getState().stateName).toBe('angle-hole-pitch');
     });
 
     it('rejects hole count less than 2 (unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterAngleHoleMode(user);
-      await enterValue(user, '0'); // start X
-      await enterValue(user, '0'); // start Y
-      await enterValue(user, '1'); // pitch
-      await enterValue(user, '0'); // angle
-      await enterValue(user, '1'); // 1 hole -> rejected
+      await typeValue(user, '0'); await pressEnter(user); // start X
+      await typeValue(user, '0'); await pressEnter(user); // start Y
+      await typeValue(user, '1'); await pressEnter(user); // pitch
+      await typeValue(user, '0'); await pressEnter(user); // angle
+      await typeValue(user, '1'); await pressEnter(user); // 1 hole -> rejected
 
       expect(useDROStore.getState().stateName).toBe('angle-hole-holes');
     });
@@ -151,16 +147,15 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
   describe('Hole Navigation', () => {
     async function setupNavigateState(user: ReturnType<typeof userEvent.setup>) {
       await enterAngleHoleMode(user);
-      await enterValue(user, '0'); // start X
-      await enterValue(user, '0'); // start Y
-      await enterValue(user, '1'); // pitch
-      await enterValue(user, '0'); // angle
-      await enterValue(user, '6'); // 6 holes
+      await typeValue(user, '0'); await pressEnter(user); // start X
+      await typeValue(user, '0'); await pressEnter(user); // start Y
+      await typeValue(user, '1'); await pressEnter(user); // pitch
+      await typeValue(user, '0'); await pressEnter(user); // angle
+      await typeValue(user, '6'); await pressEnter(user); // 6 holes
     }
 
     it('navigates next/prev with keys 6 and 4', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       expect(useDROStore.getState().stateName).toBe('angle-hole-navigate');
@@ -179,8 +174,7 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
     });
 
     it('jumps to specific hole with number entry then enter (key 3)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       await user.click(screen.getByTestId('key-3'));
@@ -195,11 +189,10 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
 
   describe('Exiting Angle Hole Mode', () => {
     it('exits to idle with clear key from parameter entry', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterAngleHoleMode(user);
-      await enterValue(user, '1');
+      await typeValue(user, '1'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-start-y');
 
       await user.click(screen.getByTestId('key-clear'));
@@ -208,15 +201,14 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
     });
 
     it('exits to idle with clear key from navigate state', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterAngleHoleMode(user);
-      await enterValue(user, '0');
-      await enterValue(user, '0');
-      await enterValue(user, '1');
-      await enterValue(user, '0');
-      await enterValue(user, '6');
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '1'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '6'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('angle-hole-navigate');
 
       await user.click(screen.getByTestId('key-clear'));

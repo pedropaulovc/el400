@@ -58,21 +58,19 @@ describe('US-022 dP display resolution (integration)', () => {
   });
 
   it('default value shown at dP is 5 micron (AC22.2)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoDP(user, 'x');
     expect(getAxisDisplayPureTextValue('X')).toBe('dP 5.0');
   });
 
-  it('default readout shows 4 decimals (AC22.2)', () => {
-    renderSimulator();
+  it('default readout shows 4 decimals (AC22.2)', async () => {
+    await renderSimulator();
     // Default: live X shows 4 fractional digits.
     expect(axisDecimals('X')).toBe(4);
   });
 
   it('coarsening dP to 50 micron drops the readout to 3 decimals (AC22.4, AC22.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoDP(user, 'x');
     // 5 -> 10 -> 20 -> 50 via right arrow.
     await user.click(screen.getByTestId('key-6'));
@@ -85,8 +83,7 @@ describe('US-022 dP display resolution (integration)', () => {
   });
 
   it('dP is per-axis: coarsening X leaves Y at 4 decimals (AC22.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoDP(user, 'x');
     await user.click(screen.getByTestId('key-6')); // 5 -> 10
     await user.click(screen.getByTestId('key-6')); // 10 -> 20
@@ -97,8 +94,7 @@ describe('US-022 dP display resolution (integration)', () => {
   });
 
   it('does not log a multi-reducer conflict while changing dP', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await gotoDP(user, 'x');
     await user.click(screen.getByTestId('key-4'));
     await user.click(screen.getByTestId('key-6'));

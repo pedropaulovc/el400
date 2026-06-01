@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
-  enterValue,
+  typeValue,
+  pressEnter,
 } from '../tests/helpers/integration-test-utils';
 
 describe('SecondaryFunctionSection Integration', () => {
@@ -21,11 +21,11 @@ describe('SecondaryFunctionSection Integration', () => {
 
   describe('Half Button', () => {
     it('halves the value of the selected axis', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '100');
+      await typeValue(user, '100');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
       await user.click(screen.getByTestId('btn-half'));
@@ -33,11 +33,11 @@ describe('SecondaryFunctionSection Integration', () => {
     });
 
     it('halves negative values correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '-80');
+      await typeValue(user, '-80');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(-80, 4);
 
       await user.click(screen.getByTestId('btn-half'));
@@ -45,11 +45,11 @@ describe('SecondaryFunctionSection Integration', () => {
     });
 
     it('halves decimal values correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '12.5');
+      await typeValue(user, '12.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(12.5, 4);
 
       await user.click(screen.getByTestId('btn-half'));
@@ -57,11 +57,11 @@ describe('SecondaryFunctionSection Integration', () => {
     });
 
     it('can be applied multiple times', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '200');
+      await typeValue(user, '200');
+      await pressEnter(user);
 
       await user.click(screen.getByTestId('btn-half'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);

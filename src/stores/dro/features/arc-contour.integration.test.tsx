@@ -3,7 +3,8 @@ import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  enterValue,
+  typeValue,
+  pressEnter,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
 } from '../../../tests/helpers/integration-test-utils';
@@ -39,8 +40,7 @@ describe('Arc Contouring Integration', () => {
 
   describe('Entering Arc Contour Mode', () => {
     it('shows intro then advances to center-x entry (ABS mode)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       expect(useDROStore.getState().vMem.mode).toBe('abs');
 
@@ -56,8 +56,7 @@ describe('Arc Contouring Integration', () => {
     });
 
     it('does not enter arc contour mode when in INC mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-abs-inc'));
       expect(useDROStore.getState().vMem.mode).toBe('inc');
@@ -69,39 +68,38 @@ describe('Arc Contouring Integration', () => {
 
   describe('Parameter Entry and Cut Type', () => {
     it('walks through every prompt, selects MID cut, and computes points', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterArcContourMode(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-center-x');
 
       // Center X = 0
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-center-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
 
       // Center Y = 0
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-radius');
       expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
 
       // Radius = 25 mm
-      await enterValue(user, '25');
+      await typeValue(user, '25'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-start-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('Str AnG');
 
       // Start angle = 0
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-end-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('End AnG');
 
       // End angle = 90
-      await enterValue(user, '90');
+      await typeValue(user, '90'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-tool-diameter');
       expect(getAxisDisplayPureTextValue('X')).toBe('tooL d');
 
       // Tool diameter = 5 mm
-      await enterValue(user, '5');
+      await typeValue(user, '5'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-cut-type');
       // Default cut type INT
       expect(getAxisDisplayPureTextValue('X')).toBe('int CUt');
@@ -118,7 +116,7 @@ describe('Arc Contouring Integration', () => {
       expect(getAxisDisplayPureTextValue('X')).toBe('nAX CUt');
 
       // MAX CUT = 5 mm -> 90deg arc, MID radius 25 -> length 39.27 -> ceil/5 = 8 -> 9 points
-      await enterValue(user, '5');
+      await typeValue(user, '5'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('arc-contour-navigate');
       expect(useDROStore.getState().vMem.mode).toBe('inc');
 
@@ -133,13 +131,12 @@ describe('Arc Contouring Integration', () => {
     });
 
     it('rejects a zero radius', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterArcContourMode(user);
-      await enterValue(user, '0'); // center X
-      await enterValue(user, '0'); // center Y
-      await enterValue(user, '0'); // radius = 0 (invalid)
+      await typeValue(user, '0'); await pressEnter(user); // center X
+      await typeValue(user, '0'); await pressEnter(user); // center Y
+      await typeValue(user, '0'); await pressEnter(user); // radius = 0 (invalid)
 
       expect(useDROStore.getState().stateName).toBe('arc-contour-radius');
     });
@@ -148,19 +145,18 @@ describe('Arc Contouring Integration', () => {
   describe('Point Navigation', () => {
     async function setupNavigate(user: ReturnType<typeof userEvent.setup>) {
       await enterArcContourMode(user);
-      await enterValue(user, '0'); // center X
-      await enterValue(user, '0'); // center Y
-      await enterValue(user, '25'); // radius
-      await enterValue(user, '0'); // start angle
-      await enterValue(user, '90'); // end angle
-      await enterValue(user, '5'); // tool diameter
+      await typeValue(user, '0'); await pressEnter(user); // center X
+      await typeValue(user, '0'); await pressEnter(user); // center Y
+      await typeValue(user, '25'); await pressEnter(user); // radius
+      await typeValue(user, '0'); await pressEnter(user); // start angle
+      await typeValue(user, '90'); await pressEnter(user); // end angle
+      await typeValue(user, '5'); await pressEnter(user); // tool diameter
       await user.click(screen.getByTestId('key-enter')); // confirm INT cut
-      await enterValue(user, '5'); // max cut
+      await typeValue(user, '5'); await pressEnter(user); // max cut
     }
 
     it('navigates next/prev and wraps with keys 6 and 4', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigate(user);
 
       expect(useDROStore.getState().stateName).toBe('arc-contour-navigate');
@@ -182,8 +178,7 @@ describe('Arc Contouring Integration', () => {
     });
 
     it('exits to idle in ABS mode with clear key', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigate(user);
 
       await user.click(screen.getByTestId('key-clear'));

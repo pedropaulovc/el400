@@ -8,12 +8,12 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
   getAxisDisplayPureTextValue,
-  enterValue,
+  typeValue,
+  pressEnter,
 } from '../../../tests/helpers/integration-test-utils';
 
 describe('Function Menu Integration', () => {
@@ -30,20 +30,22 @@ describe('Function Menu Integration', () => {
 
   describe('Display after exiting function menu', () => {
     it('should restore position display after exiting function menu with CLEAR', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter values for all axes
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '1.5');
+      await typeValue(user, '1.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1.5, 4);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '2.5');
+      await typeValue(user, '2.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(2.5, 4);
 
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '3.5');
+      await typeValue(user, '3.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(3.5, 4);
 
       // Enter function menu
@@ -62,12 +64,12 @@ describe('Function Menu Integration', () => {
     });
 
     it('should restore position display after navigating in menu and exiting', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Set X to a value
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '10');
+      await typeValue(user, '10');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
 
       // Enter function menu
@@ -90,15 +92,15 @@ describe('Function Menu Integration', () => {
     });
 
     it('should respect unit setting when restoring display after function menu', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Toggle to mm mode
       await user.click(screen.getByTestId('btn-toggle-unit'));
 
       // Enter value in mm
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '25.4');
+      await typeValue(user, '25.4');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(25.4, 3);
 
       // Enter function menu
@@ -119,8 +121,7 @@ describe('Function Menu Integration', () => {
 
   describe('Function menu display', () => {
     it('should show CEntrE text when entering function menu', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter function menu
       await user.click(screen.getByTestId('btn-function'));
@@ -129,8 +130,7 @@ describe('Function Menu Integration', () => {
     });
 
     it('should update display when navigating menu items', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter function menu
       await user.click(screen.getByTestId('btn-function'));

@@ -61,8 +61,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('AC 30.1/30.2: navigates Fn -> PoLAr -> ENT into plane selection (H-Y default)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await openPolarPlaneSelect(user);
 
@@ -73,8 +72,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('AC 30.2: cycles plane options H-Y -> H-Z -> Y-Z with the right key', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await openPolarPlaneSelect(user);
     expect(getAxisDisplayPureTextValue('X')).toBe('h-Y');
@@ -90,8 +88,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('AC 30.3/30.4/30.5: X-Y plane shows R on X and θ on Y (3,4 -> 5, 53.13°)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     // Use mm so the radius reads directly.
     act(() => { useSettingsStore.getState().updateNvMem({ defaultUnit: 'mm' }); });
@@ -109,8 +106,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('display updates live as position changes', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     act(() => { useSettingsStore.getState().updateNvMem({ defaultUnit: 'mm' }); });
 
     await openPolarPlaneSelect(user);
@@ -126,8 +122,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('AC 30.6: C exits polar mode and returns to Cartesian display', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     act(() => { useSettingsStore.getState().updateNvMem({ defaultUnit: 'mm' }); });
 
     await openPolarPlaneSelect(user);
@@ -147,8 +142,7 @@ describe('Polar Coordinates Integration (US-030)', () => {
   });
 
   it('C cancels during plane selection and returns to idle', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
 
     await openPolarPlaneSelect(user);
     expect(useDROStore.getState().stateName).toBe('polar-select-plane');

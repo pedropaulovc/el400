@@ -5,6 +5,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  connectLiveMill,
+  wrapUserWithTicks,
+  getActiveMill,
+  teardownActiveMill,
+  emitMillTick,
+  emitPosition,
+  expectStableUnderTicks,
+} from './mill-harness';
+import type { MockMillAdapter } from '../../adapters/MockMillAdapter';
 import EL400Simulator from '../../components/EL400Simulator';
 import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
@@ -54,6 +64,15 @@ export {
   clearComponentMetrics,
   getComponentMetrics,
   printComponentMetrics,
+};
+
+// Re-export the live-mill tick harness so tests get everything from one module.
+export {
+  getActiveMill,
+  emitMillTick,
+  emitPosition,
+  expectStableUnderTicks,
+  teardownActiveMill,
 };
 
 /**
@@ -137,6 +156,17 @@ export function setIdleState(): void {
   });
 }
 
+/**
+ * Mill source for an integration render.
+ * - 'live'  (default): a connected, dispatch-wired mill. Every interaction on the
+ *   returned `user` emits a deterministic MILL_STATE_CHANGED tick, so the test
+ *   runs under production-like encoder traffic. No wall-clock timer.
+ * - 'noop': no mill connected — the dead source. EXPLICIT, greppable opt-out for
+ *   the rare test that must not see ticks (e.g. render-performance measurement,
+ *   boot/restore timing tests driving their own fake timers).
+ */
+export type MillSource = 'live' | 'noop';
+
 interface RenderSimulatorOptions {
   /** Boot message mode - defaults to 'skip' for faster tests */
   bootMessageMode?: 'show' | 'skip';
@@ -144,6 +174,19 @@ interface RenderSimulatorOptions {
   profile?: boolean;
   /** Use component-level profiling for detailed metrics */
   componentProfiling?: boolean;
+  /** Mill source — defaults to 'live' (ticking). See {@link MillSource}. */
+  millSource?: MillSource;
+}
+
+export interface RenderSimulatorResult extends ReturnType<typeof render> {
+  /**
+   * A userEvent instance OWNED by the harness. For a 'live' render it is wrapped
+   * so every interaction emits an act-wrapped tick. Always take `user` from here —
+   * never call userEvent.setup() yourself in an integration test (lint-enforced).
+   */
+  user: ReturnType<typeof userEvent.setup>;
+  /** The connected mill, or null for millSource:'noop'. */
+  mill: MockMillAdapter | null;
 }
 
 /**
@@ -155,8 +198,15 @@ interface RenderSimulatorOptions {
  * require explicit cleanup. The connection is reset via resetStores() which
  * is called at the start of each test.
  */
-export function renderSimulator(options?: RenderSimulatorOptions) {
-  const { bootMessageMode = 'skip', profile = false, componentProfiling = false } = options ?? {};
+export async function renderSimulator(
+  options?: RenderSimulatorOptions
+): Promise<RenderSimulatorResult> {
+  const {
+    bootMessageMode = 'skip',
+    profile = false,
+    componentProfiling = false,
+    millSource = 'live',
+  } = options ?? {};
 
   // Reset stores first (also initializes NoOpMillAdapter)
   resetStores();
@@ -184,16 +234,15 @@ export function renderSimulator(options?: RenderSimulatorOptions) {
     </QueryClientProvider>
   );
 
-  // Wrap with profiler if profiling is enabled
-  if (profile) {
-    return render(
-      <DeepProfiler>
-        {content}
-      </DeepProfiler>
-    );
-  }
+  const result = render(profile ? <DeepProfiler>{content}</DeepProfiler> : content);
 
-  return render(content);
+  // Connect a live, dispatch-wired mill (no wall-clock timer) unless opted out.
+  // The wrapped `user` then emits a deterministic tick after every interaction.
+  const mill = millSource === 'live' ? await connectLiveMill() : null;
+  const baseUser = userEvent.setup();
+  const user = mill ? wrapUserWithTicks(baseUser) : baseUser;
+
+  return { ...result, user, mill };
 }
 
 /**
@@ -234,10 +283,15 @@ export function getAxisDisplayPureNumberValue(axis: 'X' | 'Y' | 'Z', precision =
 }
 
 /**
- * Enters a numeric value via the keypad for the currently selected axis
- * Supports digits 0-9, decimal point '.', and negative sign '-'
+ * Types a numeric value on the keypad for the currently selected axis WITHOUT
+ * committing it — no ENTER is pressed. Supports digits 0-9, '.', and '-'.
+ *
+ * There is deliberately NO combined "type + ENTER" helper: burying ENTER inside
+ * a helper is exactly what hid the US-013 calculator operand-order bug. Pair
+ * `typeValue` with an explicit `pressEnter` so the commit is always visible —
+ * most importantly in the calculator, which is operation-FIRST (manual §7.6.1).
  */
-export async function enterValue(
+export async function typeValue(
   user: ReturnType<typeof userEvent.setup>,
   value: string
 ) {
@@ -250,5 +304,9 @@ export async function enterValue(
       await user.click(screen.getByTestId(`key-${char}`));
     }
   }
+}
+
+/** Presses the ENTER key. Always explicit — never folded into typeValue. */
+export async function pressEnter(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('key-enter'));
 }

@@ -60,8 +60,7 @@ describe('Taper Calculation Integration (US-045)', () => {
   });
 
   it('AC 45.2/45.3: taper on X shows angle on X and radius on Z (mm)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm so values map directly
     setTaperOnAxis('X');
 
@@ -83,8 +82,7 @@ describe('Taper Calculation Integration (US-045)', () => {
   });
 
   it('AC 45.3: taper on Z shows angle on Z and radius on X', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await user.click(screen.getByTestId('btn-toggle-unit'));
     setTaperOnAxis('Z');
 
@@ -98,8 +96,7 @@ describe('Taper Calculation Integration (US-045)', () => {
   });
 
   it('AC 45.5: pressing C exits taper and returns to normal display', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     setTaperOnAxis('X');
     await enterTaperFromMenu(user);
 

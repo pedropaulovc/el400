@@ -23,6 +23,15 @@ export interface MockMillAdapterOptions {
   simulateMovement?: boolean;
   /** Movement speed per update (default: 0.1) */
   movementSpeed?: number;
+  /**
+   * Whether connect() starts the free-running update interval (default: true).
+   *
+   * Set false to get a connected, dispatch-wired source whose MILL_STATE_CHANGED
+   * events are driven ONLY on demand (setPosition / a test harness emitting ticks),
+   * with no wall-clock timer. This is what the integration-test harness uses so
+   * ticks are deterministic instead of racing real time.
+   */
+  autoTick?: boolean;
 }
 
 export class MockMillAdapter implements MillAdapter {
@@ -40,6 +49,7 @@ export class MockMillAdapter implements MillAdapter {
       initialPosition: options.initialPosition ?? { x: 0, y: 0, z: 0 },
       simulateMovement: options.simulateMovement ?? false,
       movementSpeed: options.movementSpeed ?? 0.1,
+      autoTick: options.autoTick ?? true,
     };
 
     this.state = {
@@ -129,6 +139,9 @@ export class MockMillAdapter implements MillAdapter {
   }
 
   private startUpdates(): void {
+    if (!this.options.autoTick) {
+      return;
+    }
     if (this.intervalId !== null) {
       return;
     }

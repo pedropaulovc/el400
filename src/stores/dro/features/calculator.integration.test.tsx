@@ -1,29 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
-  enterValue,
+  typeValue,
+  pressEnter,
 } from '../../../tests/helpers/integration-test-utils';
 
 describe('Calculator Integration', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-  });
 
   describe('Sign Toggle', () => {
     it('toggles sign immediately after pressing +/- button', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Activate calculator
       await user.click(screen.getByTestId('btn-calculator'));
@@ -44,8 +34,7 @@ describe('Calculator Integration', () => {
     });
 
     it('can toggle sign multiple times', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -74,8 +63,7 @@ describe('Calculator Integration', () => {
 
   describe('Operations', () => {
     it('performs subtraction correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -100,8 +88,7 @@ describe('Calculator Integration', () => {
     });
 
     it('performs multiplication correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -126,8 +113,7 @@ describe('Calculator Integration', () => {
     });
 
     it('performs division correctly', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -152,8 +138,7 @@ describe('Calculator Integration', () => {
     });
 
     it('shows "inF vAL" for division by zero', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -179,8 +164,7 @@ describe('Calculator Integration', () => {
 
   describe('Clear Key', () => {
     it('clears calculator but stays in calculator mode', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -206,8 +190,7 @@ describe('Calculator Integration', () => {
 
   describe('Operation Cycling', () => {
     it('cycles through operations in correct order', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -254,8 +237,7 @@ describe('Calculator Integration', () => {
     });
 
     it('KEY_6 appends digit 6, Y button cycles operations in all calculator states', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -287,8 +269,7 @@ describe('Calculator Integration', () => {
   // must produce the same result.
   describe('US-013: operand order (manual §7.6.1)', () => {
     it('operation-first: ADD then 12 ENT then 8 ENT = 20', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -309,8 +290,7 @@ describe('Calculator Integration', () => {
     });
 
     it('value-then-op-no-ENT: 12 Y 8 ENT = 20 (ADD)', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -330,8 +310,7 @@ describe('Calculator Integration', () => {
     });
 
     it('value-ENT-op: 12 ENT Y 8 ENT = 20 (ADD, existing flow)', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -352,8 +331,7 @@ describe('Calculator Integration', () => {
     });
 
     it('operation-first SUB: SUB then 10 ENT then 3 ENT = 7', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -373,8 +351,7 @@ describe('Calculator Integration', () => {
     });
 
     it('value-then-op-no-ENT SUB: 10 Y Y 3 ENT = 7', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-calculator'));
 
@@ -401,15 +378,15 @@ describe('Calculator Integration', () => {
       cyclesToOperation: number
     ) {
       await user.click(screen.getByTestId('btn-calculator'));
-      await enterValue(user, value);
+      await typeValue(user, value);
+      await pressEnter(user);
       for (let i = 0; i < cyclesToOperation; i++) {
         await user.click(screen.getByTestId('axis-select-y'));
       }
     }
 
     it('AC14.1: sin(30) = 0.5000 shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       // ADD,SUB,MULTI,DIV,SIN -> 5 cycles to reach SIN
       await calcTrig(user, '30', 5);
       expect(getAxisDisplayPureTextValue('Y')).toBe('S in');
@@ -418,8 +395,7 @@ describe('Calculator Integration', () => {
     });
 
     it('AC14.2: cos(60) = 0.5000 shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '60', 6); // ...,COS
       expect(getAxisDisplayPureTextValue('Y')).toBe('CoS');
       await user.click(screen.getByTestId('key-enter'));
@@ -427,8 +403,7 @@ describe('Calculator Integration', () => {
     });
 
     it('AC14.3: tan(45) = 1.0000 shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '45', 7); // ...,TAN
       expect(getAxisDisplayPureTextValue('Y')).toBe('tAn');
       await user.click(screen.getByTestId('key-enter'));
@@ -436,8 +411,7 @@ describe('Calculator Integration', () => {
     });
 
     it('AC14.4/AC14.8: asin(0.5) = 30 degrees shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '0.5', 8); // ...,ASIN
       expect(getAxisDisplayPureTextValue('Y')).toBe('AS in');
       await user.click(screen.getByTestId('key-enter'));
@@ -445,8 +419,7 @@ describe('Calculator Integration', () => {
     });
 
     it('AC14.5: acos(0.5) = 60 degrees shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '0.5', 9); // ...,ACOS
       expect(getAxisDisplayPureTextValue('Y')).toBe('ACoS');
       await user.click(screen.getByTestId('key-enter'));
@@ -454,8 +427,7 @@ describe('Calculator Integration', () => {
     });
 
     it('AC14.6: atan(1) = 45 degrees shown on X', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '1', 10); // ...,ATAN
       expect(getAxisDisplayPureTextValue('Y')).toBe('AtAn');
       await user.click(screen.getByTestId('key-enter'));
@@ -463,8 +435,7 @@ describe('Calculator Integration', () => {
     });
 
     it('domain error: asin(2) shows "inF vAL"', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
       await calcTrig(user, '2', 8); // ASIN
       await user.click(screen.getByTestId('key-enter'));
       expect(getAxisDisplayPureTextValue('X')).toBe('inF vAL');

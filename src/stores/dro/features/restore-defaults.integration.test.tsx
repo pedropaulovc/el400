@@ -20,7 +20,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from 'react';
 import { screen, waitFor, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -70,8 +70,7 @@ describe('US-028 Restore Defaults (integration)', () => {
   }
 
   it('reaches the rSt oEm row and shows IN ProG on ENT (AC28.3/28.7/28.8)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoRestoreRow(user);
     expect(getAxisDisplayPureTextValue('X')).toBe(RESTORE_DEFAULTS_LABEL);
@@ -81,8 +80,7 @@ describe('US-028 Restore Defaults (integration)', () => {
   });
 
   it('restores all settings to factory defaults after the dwell (AC28.9/28.10)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Move several settings away from factory first.
     act(() => {
@@ -120,8 +118,7 @@ describe('US-028 Restore Defaults (integration)', () => {
   });
 
   it('AC44.4: restores to the OEM baseline when one is captured', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Capture an OEM baseline with EnF ON, then change it OFF.
     act(() => {
@@ -141,8 +138,7 @@ describe('US-028 Restore Defaults (integration)', () => {
   });
 
   it('clears user data (SDM points and tool/work offsets)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Seed user data directly into volatile memory.
     act(() => {

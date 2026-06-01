@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -67,8 +67,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
 
   describe('entering SDM and the menu (AC 9.1)', () => {
     it('shows the SdM intro then the Learn menu, with the SDM LED on', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-sdm'));
       expect(getAxisDisplayPureTextValue('X')).toBe('Sdm');
@@ -82,8 +81,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('navigates the menu ring with the right arrow', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await enterSdm(user);
 
       await user.click(screen.getByTestId('key-6'));
@@ -104,8 +102,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     }
 
     it('confirms the default step 1 and captures the live position', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startLearn(user);
 
       // Confirm step 1 (default, empty buffer).
@@ -126,8 +123,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('lets the operator pick a starting step number on Y (AC 9.2)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startLearn(user);
 
       await user.click(screen.getByTestId('key-5'));
@@ -137,8 +133,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('stores two consecutive steps and advances each time', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startLearn(user);
       await user.click(screen.getByTestId('key-enter')); // step 1
 
@@ -157,8 +152,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('exits to idle on clear (unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startLearn(user);
       await user.click(screen.getByTestId('key-enter')); // at position state
 
@@ -170,8 +164,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('rejects an out-of-range step number (unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startLearn(user);
 
       await user.click(screen.getByTestId('key-0'));
@@ -195,8 +188,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     }
 
     it('enters Program, shows the step prompt, and accepts X/Y/Z coordinates in mm (AC 10.1 - AC 10.3)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       // Work in mm so entered values map directly to stored mm.
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await startProgram(user);
@@ -230,8 +222,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('saves and advances to the next step with 6► (AC 10.4)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await startProgram(user);
 
@@ -252,8 +243,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('jumps directly to a step with Y + number + ent (AC 10.5)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startProgram(user);
 
       await user.click(screen.getByTestId('axis-select-y'));
@@ -264,8 +254,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('exits to idle on clear (AC 10.6, unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await startProgram(user);
 
       await user.click(screen.getByTestId('key-clear'));
@@ -317,8 +306,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     }
 
     it('recalls a step and shows live distance-to-go, advancing with 6► (AC 11.1 - 11.5)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit')); // work in mm
       await enterSdm(user);
       await programTwoSteps(user);
@@ -348,8 +336,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('lets the operator pick a starting step number on Y (AC 11.2)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await enterSdm(user);
       await programTwoSteps(user);
@@ -367,8 +354,7 @@ describe('SDM Learn Mode Integration (US-009)', () => {
     });
 
     it('exits to idle on clear from the DTG view (AC 11.6, unhappy path)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit'));
       await enterSdm(user);
       await programTwoSteps(user);

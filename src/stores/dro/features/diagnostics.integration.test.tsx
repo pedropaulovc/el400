@@ -28,13 +28,20 @@ function jogTo(x: number, y: number, z: number): void {
   });
 }
 
-/** Enter diagnostics by pressing the real ▲ (8) key during the boot message. */
-async function enterDiagnostics(user: ReturnType<typeof userEvent.setup>) {
-  renderSimulator({ bootMessageMode: 'show' });
+/**
+ * Enter diagnostics by pressing the real ▲ (8) key during the boot message.
+ * Renders against a LIVE, ticking mill (the default) and returns its wrapped
+ * `user`, so every subsequent interaction runs the diagnostics state machine
+ * under a production-like MILL_STATE_CHANGED tick — the exact traffic that hid
+ * the US-046 auto-skip bug.
+ */
+async function enterDiagnostics(): Promise<ReturnType<typeof userEvent.setup>> {
+  const { user } = await renderSimulator({ bootMessageMode: 'show' });
   // The boot message must be on screen before ▲ enters diagnostics.
   expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
   await user.click(screen.getByTestId('key-8'));
   expect(useDROStore.getState().stateName).toBe('diagnostics-memory');
+  return user;
 }
 
 describe('Self-diagnostics integration tests', () => {
@@ -43,14 +50,12 @@ describe('Self-diagnostics integration tests', () => {
   });
 
   it('AC 46.1/46.2: ▲ during boot enters memory diagnostics showing RAM pass', async () => {
-    const user = userEvent.setup();
-    await enterDiagnostics(user);
+    await enterDiagnostics();
     expect(getAxisDisplayPureTextValue('X')).toBe(DIAGNOSTICS_TEXT.memoryPass);
   });
 
   it('AC 46.3/46.4: any key advances memory -> display -> keyboard, then echoes the key', async () => {
-    const user = userEvent.setup();
-    await enterDiagnostics(user);
+    const user = await enterDiagnostics();
 
     await user.click(screen.getByTestId('key-1')); // -> display
     expect(useDROStore.getState().stateName).toBe('diagnostics-display');
@@ -65,8 +70,7 @@ describe('Self-diagnostics integration tests', () => {
   });
 
   it('AC 46.2/46.3: connected-source MILL_STATE_CHANGED ticks do NOT skip the memory step', async () => {
-    const user = userEvent.setup();
-    await enterDiagnostics(user);
+    const user = await enterDiagnostics();
     expect(getAxisDisplayPureTextValue('X')).toBe(DIAGNOSTICS_TEXT.memoryPass);
 
     // A connected adapter floods MILL_STATE_CHANGED (every 100ms in ?source=debug).
@@ -85,8 +89,7 @@ describe('Self-diagnostics integration tests', () => {
   });
 
   it('AC 46.5: encoder step confirms an axis once it moves (real MILL_STATE_CHANGED)', async () => {
-    const user = userEvent.setup();
-    await enterDiagnostics(user);
+    const user = await enterDiagnostics();
 
     await user.click(screen.getByTestId('key-1')); // display
     await user.click(screen.getByTestId('key-1')); // keyboard
@@ -99,8 +102,7 @@ describe('Self-diagnostics integration tests', () => {
   });
 
   it('AC 46.6/46.7: double C exits diagnostics back to idle', async () => {
-    const user = userEvent.setup();
-    await enterDiagnostics(user);
+    const user = await enterDiagnostics();
 
     await user.click(screen.getByTestId('key-clear')); // exit current step
     expect(useDROStore.getState().stateName).toBe('diagnostics-memory');

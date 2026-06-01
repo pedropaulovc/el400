@@ -3,7 +3,8 @@ import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  enterValue,
+  typeValue,
+  pressEnter,
   getAxisDisplayPureTextValue,
   getAxisDisplayPureNumberValue,
 } from '../../../tests/helpers/integration-test-utils';
@@ -39,8 +40,7 @@ describe('Bolt Hole Circle Integration', () => {
 
   describe('Entering Bolt Hole Mode', () => {
     it('enters bolt hole mode when button is pressed in ABS mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // Should start in ABS mode (idle state)
       expect(useDROStore.getState().vMem.mode).toBe('abs');
@@ -67,8 +67,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('does not enter bolt hole mode when in INC mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // Switch to INC mode
       await user.click(screen.getByTestId('btn-abs-inc'));
@@ -84,8 +83,7 @@ describe('Bolt Hole Circle Integration', () => {
 
   describe('Mode Selection', () => {
     it('toggles between CIRCLE and ARC mode with key 6', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
 
@@ -115,8 +113,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('enters arc center-x entry when ARC mode is confirmed', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
 
@@ -144,8 +141,7 @@ describe('Bolt Hole Circle Integration', () => {
     }
 
     it('completes the full arc parameter entry flow in mm mode', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // mm mode for direct value storage
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -154,33 +150,33 @@ describe('Bolt Hole Circle Integration', () => {
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-center-x');
 
       // Center X = 0
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-center-y');
       expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
 
       // Center Y = 0
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-radius');
       expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
 
       // Radius = 25.4mm
-      await enterValue(user, '25.4');
+      await typeValue(user, '25.4'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-start-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
 
       // Start angle = 45
-      await enterValue(user, '45');
+      await typeValue(user, '45'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-end-angle');
       // End-angle prompt shows "End"
       expect(getAxisDisplayPureTextValue('X')).toBe('End');
 
       // End angle = 260
-      await enterValue(user, '260');
+      await typeValue(user, '260'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-holes');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
 
       // 6 holes
-      await enterValue(user, '6');
+      await typeValue(user, '6'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
       expect(useDROStore.getState().vMem.mode).toBe('inc');
 
@@ -202,16 +198,15 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('navigates between arc holes with keys 6 and 4', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit')); // mm
       await enterArcMode(user);
-      await enterValue(user, '0');   // X
-      await enterValue(user, '0');   // Y
-      await enterValue(user, '10');  // radius
-      await enterValue(user, '0');   // start
-      await enterValue(user, '180'); // end
-      await enterValue(user, '4');   // holes
+      await typeValue(user, '0'); await pressEnter(user);   // X
+      await typeValue(user, '0'); await pressEnter(user);   // Y
+      await typeValue(user, '10'); await pressEnter(user);  // radius
+      await typeValue(user, '0'); await pressEnter(user);   // start
+      await typeValue(user, '180'); await pressEnter(user); // end
+      await typeValue(user, '4'); await pressEnter(user);   // holes
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
 
       await user.click(screen.getByTestId('key-6'));
@@ -224,16 +219,15 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('exits to idle with clear key from arc navigate', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await user.click(screen.getByTestId('btn-toggle-unit')); // mm
       await enterArcMode(user);
-      await enterValue(user, '0');
-      await enterValue(user, '0');
-      await enterValue(user, '10');
-      await enterValue(user, '0');
-      await enterValue(user, '90');
-      await enterValue(user, '3');
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '10'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '90'); await pressEnter(user);
+      await typeValue(user, '3'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-arc-navigate');
 
       await user.click(screen.getByTestId('key-clear'));
@@ -243,8 +237,7 @@ describe('Bolt Hole Circle Integration', () => {
 
   describe('Parameter Entry', () => {
     it('completes full parameter entry flow for bolt hole circle with display assertions', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // Enter bolt hole mode
       await enterBoltHoleMode(user);
@@ -276,21 +269,21 @@ describe('Bolt Hole Circle Integration', () => {
       expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter center Y = 1.25
-      await enterValue(user, '1.25');
+      await typeValue(user, '1.25'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
       expect(getAxisDisplayPureTextValue('X')).toBe('rAdiUS');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
       expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter radius = 0.95
-      await enterValue(user, '0.95');
+      await typeValue(user, '0.95'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-angle');
       expect(getAxisDisplayPureTextValue('X')).toBe('AnGLE');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
       expect(getAxisDisplayPureTextValue('Z')).toBe('');
 
       // Enter starting angle = 20
-      await enterValue(user, '20');
+      await typeValue(user, '20'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
@@ -321,8 +314,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('completes parameter entry in mm mode with values stored directly', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       // Toggle to mm mode
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -337,26 +329,26 @@ describe('Bolt Hole Circle Integration', () => {
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-x');
 
       // Enter center X = 12.7mm
-      await enterValue(user, '12.7');
+      await typeValue(user, '12.7'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-y');
       // In center-y state: X shows prompt, Y shows buffer (0 for empty)
       expect(getAxisDisplayPureTextValue('X')).toBe('EntCnt1');
       expect(getAxisDisplayPureNumberValue('Y')).toBe(0);
 
       // Enter center Y = -7.62mm
-      await enterValue(user, '-7.62');
+      await typeValue(user, '-7.62'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
 
       // Enter radius = 25.4mm
-      await enterValue(user, '25.4');
+      await typeValue(user, '25.4'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-angle');
 
       // Enter angle = 45
-      await enterValue(user, '45');
+      await typeValue(user, '45'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
 
       // Enter hole count = 4
-      await enterValue(user, '4');
+      await typeValue(user, '4'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
 
       // Verify state data (stored in mm without conversion)
@@ -380,34 +372,32 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('rejects invalid radius (zero)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
       await user.click(screen.getByTestId('key-enter')); // Confirm CIRCLE
-      await enterValue(user, '1'); // Center X
-      await enterValue(user, '1'); // Center Y
+      await typeValue(user, '1'); await pressEnter(user); // Center X
+      await typeValue(user, '1'); await pressEnter(user); // Center Y
 
       // Try to enter zero radius
-      await enterValue(user, '0');
+      await typeValue(user, '0'); await pressEnter(user);
 
       // Should still be on radius entry
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-radius');
     });
 
     it('rejects invalid hole count (less than 2)', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
       await user.click(screen.getByTestId('key-enter'));
-      await enterValue(user, '1');
-      await enterValue(user, '1');
-      await enterValue(user, '1');
-      await enterValue(user, '0');
+      await typeValue(user, '1'); await pressEnter(user);
+      await typeValue(user, '1'); await pressEnter(user);
+      await typeValue(user, '1'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
 
       // Try to enter 1 hole
-      await enterValue(user, '1');
+      await typeValue(user, '1'); await pressEnter(user);
 
       // Should still be on hole count entry
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
@@ -418,16 +408,15 @@ describe('Bolt Hole Circle Integration', () => {
     async function setupNavigateState(user: ReturnType<typeof userEvent.setup>) {
       await enterBoltHoleMode(user);
       await user.click(screen.getByTestId('key-enter'));
-      await enterValue(user, '0'); // Center X
-      await enterValue(user, '0'); // Center Y
-      await enterValue(user, '1'); // Radius
-      await enterValue(user, '0'); // Start angle
-      await enterValue(user, '6'); // 6 holes
+      await typeValue(user, '0'); await pressEnter(user); // Center X
+      await typeValue(user, '0'); await pressEnter(user); // Center Y
+      await typeValue(user, '1'); await pressEnter(user); // Radius
+      await typeValue(user, '0'); await pressEnter(user); // Start angle
+      await typeValue(user, '6'); await pressEnter(user); // 6 holes
     }
 
     it('navigates to next hole with key 6', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
@@ -447,8 +436,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('navigates to previous hole with key 4', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       // Go to hole 2 first
@@ -463,8 +451,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('wraps from last hole to first with key 6', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       // Go to hole 6 (press key 6 five times)
@@ -486,8 +473,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('wraps from first hole to last with key 4', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       // Start at hole 1, press key 4 to wrap to last hole
@@ -499,8 +485,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('jumps to specific hole with number entry and enter', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       // Enter hole number 3 and press enter
@@ -515,8 +500,7 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('shows current hole number with key 8', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
       // Start at hole 1
@@ -545,8 +529,7 @@ describe('Bolt Hole Circle Integration', () => {
 
   describe('Exiting Bolt Hole Mode', () => {
     it('exits to idle with clear key from menu select', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-menu-select');
@@ -556,12 +539,11 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('exits to idle with clear key from parameter entry', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
       await user.click(screen.getByTestId('key-enter'));
-      await enterValue(user, '1');
+      await typeValue(user, '1'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-center-y');
 
       await user.click(screen.getByTestId('key-clear'));
@@ -569,16 +551,15 @@ describe('Bolt Hole Circle Integration', () => {
     });
 
     it('exits to idle with clear key from navigate state', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderSimulator();
+      const { user } = await renderSimulator({ millSource: 'noop' });
 
       await enterBoltHoleMode(user);
       await user.click(screen.getByTestId('key-enter'));
-      await enterValue(user, '0');
-      await enterValue(user, '0');
-      await enterValue(user, '1');
-      await enterValue(user, '0');
-      await enterValue(user, '6');
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '1'); await pressEnter(user);
+      await typeValue(user, '0'); await pressEnter(user);
+      await typeValue(user, '6'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
 
       await user.click(screen.getByTestId('key-clear'));

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { runMillTeardown } from './helpers/mill-teardown-registry';
 
 // Mock localStorage for testing
 const localStorageMock = (() => {
@@ -93,5 +94,8 @@ global.fetch = vi.fn((url) => {
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  // Disconnect any live mill AFTER unmount, so its final dispatch hits no
+  // mounted component and no interval leaks into the next test.
+  runMillTeardown();
   localStorage.clear();
 });

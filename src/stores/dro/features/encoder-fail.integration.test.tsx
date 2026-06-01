@@ -129,8 +129,7 @@ describe('Encoder-fail warning — live readout integration (US-042)', () => {
   }
 
   it('shows no SIG on the affected axis when ENF on and signal drops (AC 42.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
@@ -147,8 +146,7 @@ describe('Encoder-fail warning — live readout integration (US-042)', () => {
   });
 
   it('clears the warning once the signal is restored (AC 42.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
@@ -163,8 +161,7 @@ describe('Encoder-fail warning — live readout integration (US-042)', () => {
   });
 
   it('with ENF off (default), a dropped signal is silent (AC 42.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm

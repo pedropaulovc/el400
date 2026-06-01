@@ -39,8 +39,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   }
 
   it('AC 38.1/38.3/38.7 — selects axis and enters a value with the keyboard', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -53,8 +52,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.4 — decimal point produces a fractional value', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('y');
@@ -69,8 +67,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.5 — minus toggles the sign', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -82,8 +79,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.6 — Escape clears the input buffer before confirm', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -97,8 +93,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.8 — Shift+X zeros the X axis', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -112,8 +107,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.13 — Shift+0 zeros all axes', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -136,8 +130,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.10 — A toggles ABS/INC', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     expect(screen.getByTestId('led-abs').querySelector('input')).toBeChecked();
@@ -149,8 +142,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.11 — U toggles inch/mm', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     const inchChecked = screen.getByTestId('led-inch').querySelector('input')?.checked;
@@ -162,8 +154,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.9 — W opens the settings menu', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('w');
@@ -172,8 +163,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.12 — R activates the reference function', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('r');
@@ -190,8 +180,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     ['d', 'grid-intro'],
     ['s', 'sdm-intro'],
   ])('AC 38.14-38.21 — "%s" enters %s', async (key, expectedState) => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard(key);
@@ -200,8 +189,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.19 — H halves the selected axis value', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
     await focusSimulator(user);
 
     await user.keyboard('x');
@@ -217,8 +205,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('AC 38.22 — shortcuts do not fire while typing in a text input', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // A stray text input mounted inside the simulator must keep its keystrokes.
     const container = screen.getByTestId('el400-simulator');
@@ -234,8 +221,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
   });
 
   it('does not react to keys outside the simulator container', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Focus the document body (outside the simulator), then press a shortcut key.
     document.body.focus();
