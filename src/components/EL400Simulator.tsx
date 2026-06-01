@@ -6,11 +6,19 @@ import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useDROState } from "../stores/dro";
 
 const EL400Simulator = () => {
   // Power-user keyboard shortcuts (US-038). Scoped to this container so they
   // only fire while focus is inside the simulator and never hijack the page.
   const { onKeyDown } = useKeyboardShortcuts();
+
+  // Mirror the state-machine state onto the root as a stable, deterministic
+  // readiness signal. E2E boot barriers await this (e.g. `data-dro-state="idle"`)
+  // instead of polling a socket-derived display value behind a timeout — it flips
+  // the instant React commits the post-boot state, independent of machine load or
+  // the Socket.IO handshake. It also doubles as a debugging aid in the DOM.
+  const droState = useDROState();
 
   return (
     <div
@@ -18,6 +26,7 @@ const EL400Simulator = () => {
       tabIndex={0}
       aria-label="EL400 digital readout simulator"
       data-testid="el400-simulator"
+      data-dro-state={droState}
       className="relative rounded-2xl select-none overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',

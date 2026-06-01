@@ -12,6 +12,7 @@ Web-based simulator of Electronica EL400 (MagXact MX-100M) digital readout for C
 | Types | `src/types/` - MillState, VolatileMemory, NonVolatileMemory |
 | Components | `src/components/` - EL400Simulator root |
 | User Stories | `project/user-stories/*` |
+| Reference Manuals | `~/src/harmonic-analyzer/references/` (local git submodule of [harmonic-analyzer-references](https://github.com/pedropaulovc/harmonic-analyzer-references)) — OCR text under `el400-operation-manual/ocr/markdown.md`, `magxact-mx100m-mill-dro-manual/ocr/markdown.md`, and the video manual under `el400-dro-overview-video/MANUAL.md`. Read these locally instead of fetching from GitHub. |
 
 ## Commands
 

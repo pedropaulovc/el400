@@ -265,6 +265,82 @@ describe('axisOperationsReducer', () => {
     });
   });
 
+  describe('KEY_ENTER display-overflow clamp (US-047)', () => {
+    const mmContext: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+
+    it('clamps an over-long magnitude to 999.9999 at 4 decimals (AC 47.1)', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        inputBuffer: '55555555',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+      expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(999.9999, 4);
+    });
+
+    it('preserves sign when clamping a too-large negative (AC 47.2)', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'Y',
+        inputBuffer: '-55555555',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+      expect(result?.vMem.manualAbsoluteValues.Y).toBeCloseTo(-999.9999, 4);
+    });
+
+    it('leaves a value that already fits unchanged (AC 47.6)', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'Z',
+        inputBuffer: '123.4567',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+      expect(result?.vMem.manualAbsoluteValues.Z).toBeCloseTo(123.4567, 4);
+    });
+
+    it('passes the exact boundary 999.9999 through verbatim (AC 47.6)', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        inputBuffer: '999.9999',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+      expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(999.9999, 4);
+    });
+
+    it('halves the stored limit in diameter mode so the displayed value fits (AC 47.7)', () => {
+      // Diameter mode shows 2× the stored slide value (US-041). The 7-digit panel
+      // limit (999.9999) bounds the DISPLAYED magnitude, so the stored value is
+      // capped at half that — the readout then shows 2 × 499.99995 = 999.9999.
+      const diameterContext: DROReducerContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: {
+          ...DEFAULT_NON_VOLATILE_MEMORY,
+          defaultUnit: 'mm',
+          measurementMode: {
+            ...DEFAULT_NON_VOLATILE_MEMORY.measurementMode,
+            X: 'diameter',
+          },
+        },
+      };
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        inputBuffer: '55555555',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, diameterContext);
+      expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(999.9999 / 2, 4);
+    });
+  });
+
   describe('KEY_ENTER value entry - connected mode (abs)', () => {
     it('should adjust work offset to show desired value in connected mode', () => {
       // Machine is at x=100, we want to display 25
