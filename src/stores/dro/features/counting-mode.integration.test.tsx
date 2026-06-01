@@ -120,18 +120,17 @@ describe('Counting mode angular display — live readout integration (US-040)', 
 
     await setAxisAngular(user, 'X');
 
-    // The same raw 90 now reads as 90 degrees (still 90 in mm; the point is it is
-    // NOT unit-converted and IS wrappable). Drive a value past a revolution to
-    // prove the angular wrap is live.
-    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(90, 4); });
+    // The same raw 90 now reads as 90 degrees in the default angular format
+    // (dd.mn -> "90.00", i.e. 90°00'); NOT unit-converted and IS wrappable.
+    await waitFor(() => { expect(rawAxisText('X')).toBe('90.00'); });
 
-    // A later encoder update past 360 wraps on the live display (450 -> 90).
+    // A later encoder update past 360 wraps on the live display (450 -> 90°).
     await emitPosition(mock, 450, 0, 0);
-    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(90, 4); });
+    await waitFor(() => { expect(rawAxisText('X')).toBe('90.00'); });
 
-    // And 370 -> 10.
+    // And 370 -> 10°.
     await emitPosition(mock, 370, 0, 0);
-    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4); });
+    await waitFor(() => { expect(rawAxisText('X')).toBe('10.00'); });
   });
 
   it('angular X does not unit-convert when the display is in inch (AC 40.4)', async () => {
@@ -143,7 +142,7 @@ describe('Counting mode angular display — live readout integration (US-040)', 
 
     // 90 raw reads as 90 degrees even though the panel unit is inch (no /25.4).
     await emitPosition(mock, 90, 0, 0);
-    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(90, 4); });
+    await waitFor(() => { expect(rawAxisText('X')).toBe('90.00'); });
   });
 
   it('switches only X to angular — Y keeps reading linear distance (AC 40.5)', async () => {
@@ -154,9 +153,9 @@ describe('Counting mode angular display — live readout integration (US-040)', 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await setAxisAngular(user, 'X');
 
-    // X angular (wrapped degrees), Y linear (mm distance) from the same encoder.
+    // X angular (wrapped degrees in dd.mn), Y linear (mm distance) from the same encoder.
     await emitPosition(mock, 400, 12, 0);
-    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(40, 4); });
+    await waitFor(() => { expect(rawAxisText('X')).toBe('40.00'); });
     expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(12, 4);
   });
 });

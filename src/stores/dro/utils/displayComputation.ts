@@ -9,6 +9,7 @@ import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
 import type {
   NonVolatileMemory,
   DisplayResolutionValue,
+  AngularFormat,
 } from '../../../types/nonVolatileMemory';
 import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
@@ -127,6 +128,59 @@ export function wrapDegrees(degrees: number): number {
   return ((degrees % 360) + 360) % 360;
 }
 
+/** Decimal places rendered for the degrees-decimal (`dd.dEC`) angular format. */
+export const ANGULAR_DECIMAL_PLACES = 3;
+
+/** Left-pad a non-negative integer to two digits (e.g. 6 -> "06"). */
+function pad2(value: number): string {
+  return value.toString().padStart(2, '0');
+}
+
+/**
+ * Render an angular-axis value in the selected DMS format (US-040 AC 40.3/40.4).
+ *
+ * The seven-segment panel has no °/'/" glyphs, so degree/minute/second groups are
+ * separated by the panel's decimal point — exactly how the manual writes the
+ * format labels (`dd.mn`, `dd.mn.SS`). The input is wrapped to [0, 360) first so
+ * negatives and over-a-revolution values render in range:
+ *
+ *   - `'dd-dec'`   12.5° -> "12.500"   (degrees with 3 decimals)
+ *   - `'dd-mn'`    12.5° -> "12.30"    (degrees "." minutes, minutes 2-digit)
+ *   - `'dd-mn-ss'` 12.5° -> "12.30.00" (degrees "." minutes "." seconds, 2-digit)
+ *
+ * Minute/second rounding carries up (e.g. 12.9999° -> 13.00 in `dd-mn`) so the
+ * groups never read an out-of-range 60. The result is a pre-formatted string so
+ * the readout renders it verbatim through the text path rather than re-rounding
+ * it as a plain number.
+ *
+ * @param degrees - The raw angle in degrees (any real value; wrapped internally)
+ * @param format - The angular display-resolution format for the axis
+ * @returns The seven-segment-renderable DMS string
+ */
+export function formatAngularValue(degrees: number, format: AngularFormat): string {
+  const wrapped = wrapDegrees(degrees);
+
+  if (format === 'dd-dec') {
+    return wrapped.toFixed(ANGULAR_DECIMAL_PLACES);
+  }
+
+  if (format === 'dd-mn') {
+    // Round to whole minutes, then carry a rounded-up 60' into the degree group
+    // and wrap a 360° carry back to 0° (e.g. 359.9999° -> 0.00).
+    const totalMinutes = Math.round(wrapped * 60);
+    const deg = Math.floor(totalMinutes / 60) % 360;
+    const min = totalMinutes % 60;
+    return `${deg.toString()}.${pad2(min)}`;
+  }
+
+  // dd-mn-ss: round to whole seconds, carrying 60" -> minutes and 60' -> degrees.
+  const totalSeconds = Math.round(wrapped * 3600);
+  const deg = Math.floor(totalSeconds / 3600) % 360;
+  const min = Math.floor((totalSeconds % 3600) / 60);
+  const sec = totalSeconds % 60;
+  return `${deg.toString()}.${pad2(min)}.${pad2(sec)}`;
+}
+
 /**
  * Display value for a single axis - can be a number or text string
  */
@@ -184,7 +238,7 @@ export function computeAxisPositionMm(
  * @param axis - The axis to compute display value for
  * @param vMem - Volatile memory state
  * @param context - Reducer context (millState, nvMem)
- * @returns Display value in the user's preferred unit
+ * @returns Numeric value for linear axes; a pre-formatted DMS string for angular
  */
 export function computeDisplayPosition(
   axis: Axis,
@@ -197,16 +251,19 @@ export function computeDisplayPosition(
     return ENCODER_FAIL_TEXT;
   }
 
+
   const rawMm = computeAxisPositionMm(axis, vMem, context);
   // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
   // transforms applied AFTER datum subtraction; they never mutate stored machine
   // position, offsets, or macro coordinate math.
   const signed = rawMm * directionSign(axis, context.nvMem);
   // Angular (rotary) axes read an ANGLE: the raw position is degrees, wrapped to
-  // [0, 360) and NOT unit-converted (US-040, AC 40.4). Diameter ×2 scale applies
-  // only in linear mode (AC41.7 — angular has no diameter concept).
+  // [0, 360) and NOT unit-converted (US-040, AC 40.4). The axis's angular dP
+  // format renders the wrapped degrees as a pre-formatted DMS string (AC 40.3).
+  // Diameter ×2 scale applies only in linear mode (AC41.7 — angular has no
+  // diameter concept).
   if (context.nvMem.countingMode[axis] === 'angular') {
-    return wrapDegrees(signed);
+    return formatAngularValue(signed, context.nvMem.angularResolution[axis]);
   }
   // Diameter mode shows 2× the slide travel (the turned diameter); radius is 1:1.
   const signedMm = signed * measurementScale(axis, context.nvMem);

@@ -607,6 +607,56 @@ export class DROPage {
   }
 
   /**
+   * Set the keypad lock (US-043, manual §6.2 `LoC`) by driving the REAL setup
+   * menu: open setup, pick X (the SELECT prompt asks for an axis even for global
+   * params), scroll to the `LoC` parameter, cycle its choice to the requested
+   * label, then exit via the terminal End item + ent.
+   *
+   * Works whether or not the panel is already locked: while locked the gate keeps
+   * the wrench/setup key and all in-setup navigation live (the unlock path), so
+   * the same helper can both lock and unlock. No window hooks, no forced state.
+   *
+   * Label contract (manual §6.2): the parameter renders `LoC oFF` (value 'off')
+   * and `LoC on` (value 'on') — the seven-segment panel has no lowercase f pair,
+   * so OFF renders `oFF`.
+   *
+   * @param target - 'on' to lock the panel, 'off' to unlock
+   */
+  async setKeypadLock(target: 'on' | 'off'): Promise<void> {
+    const targetLabel = target === 'on' ? 'LoC on' : 'LoC oFF';
+    const isLockLabel = (t: string) => t === 'LoC oFF' || t === 'LoC on';
+
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis('X');
+
+    // Scroll down to the LoC parameter.
+    let guard = 0;
+    while (!isLockLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('LoC parameter not found in setup menu after 30 steps');
+    }
+
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== targetLabel) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) throw new Error(`LoC choice "${targetLabel}" not reachable by cycling`);
+    }
+
+    // Exit setup via the terminal End item + ent (US-039 AC 39.7).
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Enable the Near-Zero Warning (US-024) through the REAL setup menu: open
    * setup, pick an axis (ZERO AP is global, so any axis works), scroll to the
    * `ZERO AP` parameter, cycle its choice to `bU22 on`, then exit via End + ent.
@@ -726,6 +776,61 @@ export class DROPage {
       guard += 1;
       if (guard > 4) {
         throw new Error(`counting-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Set the per-axis ANGULAR display-resolution format (US-040 AC 40.4, manual
+   * section 6.2 "Display resolution (Angular)") by driving the REAL setup menu:
+   * open setup, pick the axis, scroll DOWN to the dP item — which, because the
+   * axis is angular, shows one of the DMS format labels (`dd.mn` / `dd.mn.SS` /
+   * `dd.dEC`) — cycle to the requested label, then exit via the terminal `End` +
+   * ent.
+   *
+   * Precondition: the axis is already in AnGULAr counting mode (call
+   * `setAxisCountingMode(axis, 'AnGULAr')` first), otherwise the dP item shows the
+   * linear `dP n.0` micron labels and the requested DMS label is unreachable.
+   *
+   * Mirrors `setMeasurementMode`. No window hooks, no forced state — only buttons.
+   *
+   * @param axis - Axis whose angular dP format is being configured
+   * @param target - Desired DMS label: 'dd.mn' | 'dd.mn.SS' | 'dd.dEC'
+   */
+  async setAxisAngularResolution(
+    axis: 'X' | 'Y' | 'Z',
+    target: 'dd.mn' | 'dd.mn.SS' | 'dd.dEC'
+  ): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) to the dP item; for an angular axis it shows a `dd.` DMS label.
+    const isAngularDpLabel = (t: string) => t.startsWith('dd.');
+    let guard = 0;
+    while (!isAngularDpLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('angular dP parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (right key) until the requested DMS label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`angular dP choice "${target}" not reachable by cycling`);
       }
     }
     // Exit setup to the idle readout via the terminal `End` item + ent.

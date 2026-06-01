@@ -78,6 +78,13 @@ export {
   SDM_INTRO_DURATION_MS,
 } from './features/sdm';
 
+// Re-export SAV CHG save-confirmation feature (US-027)
+export {
+  useSetupSavedConfirmation,
+  SETUP_SAVED_TEXT,
+  SETUP_SAVED_DURATION_MS,
+} from './features/save-changes';
+
 // Re-export reference / datum recall feature (US-012)
 export {
   useReferenceMarkTestHook,

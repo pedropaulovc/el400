@@ -75,6 +75,7 @@ function resetStoresForTest(): void {
       bootMessageMode: 'skip',
       scaleResolution: { X: '5', Y: '5', Z: '5' },
       displayResolution: { X: '5', Y: '5', Z: '5' },
+      angularResolution: { X: 'dd-mn', Y: 'dd-mn', Z: 'dd-mn' },
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
@@ -85,6 +86,8 @@ function resetStoresForTest(): void {
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
       encoderFailWarning: false,
+      keypadLock: 'off',
+      sleepTimeout: 0,
     },
   });
 

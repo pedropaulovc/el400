@@ -35,10 +35,14 @@ import {
   choiceIndexOf,
   wrapChoiceIndex,
   labelForValue,
+  commitDrafts,
+  resolveChoices,
   SETUP_END_ID,
+  SAVE_CHANGES_ID,
   type SetupParameter,
   type SetupReadContext,
 } from './setup-parameters';
+import { SETUP_SAVED_TEXT } from './save-changes';
 
 /** 7-segment text shown on the SELECT prompt. */
 export const SETUP_SELECT_TEXT = 'SELECt';
@@ -78,7 +82,9 @@ function computeSelectDisplay(): DisplayState {
 function computeParameterDisplay(data: SetupData, nvMem: NonVolatileMemory): DisplayState {
   const param = getParameterAt(data.currentParamIndex);
   const value = currentValue(param, data, nvMem);
-  return createDisplay(labelForValue(param, value), '', '');
+  // Pass the read context so a parameter with conditional choices (dP, US-040)
+  // draws its label from the active set (angular DMS labels on an angular axis).
+  return createDisplay(labelForValue(param, value, readContextFor(data, nvMem)), '', '');
 }
 
 /** Map an axis-select event to its axis, or null if not an axis event. */
@@ -164,12 +170,17 @@ function reduceParameter(
   // Choice cycling left/right with wrap-around (AC 39.4).
   if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
     const param = getParameterAt(data.currentParamIndex);
+    // Resolve the active choice set: parameters with conditional choices (dP,
+    // US-040) cycle the angular DMS formats on an angular axis instead of the
+    // linear micron values.
+    const ctx = readContextFor(data, nvMem);
+    const choices = resolveChoices(param, ctx);
     // Terminal items (End) have no choices to cycle -- ignore.
-    if (param.choices.length === 0) return null;
+    if (choices.length === 0) return null;
 
     const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
-    const idx = choiceIndexOf(param, currentValue(param, data, nvMem));
-    const nextChoice = param.choices[wrapChoiceIndex(param, idx, delta)];
+    const idx = choiceIndexOf(param, currentValue(param, data, nvMem), ctx);
+    const nextChoice = choices[wrapChoiceIndex(param, idx, delta, ctx)];
     if (nextChoice === undefined) return null;
     const key = draftKey(param, data.selectedAxis);
     const newData: SetupData = {
@@ -193,10 +204,22 @@ function reduceParameter(
     };
   }
 
-  // End + ent exits to the normal screen, discarding the draft (AC 39.7 / 39.8).
   if (eventName === 'KEY_ENTER') {
     const param = getParameterAt(data.currentParamIndex);
+    // End + ent exits to the normal screen, discarding the draft (AC 39.7 / 39.8).
     if (param.id === SETUP_END_ID) return exitToIdle(vMem, context);
+    // SAU CHG + ent commits the buffered draft to nvMem (AC27.2 / 27.3) and shows
+    // the confirmation message (AC27.4). The draft map is left intact so a
+    // re-commit is idempotent; exiting later still discards anything unsaved.
+    if (param.id === SAVE_CHANGES_ID) {
+      commitDrafts(data.draftValues);
+      return {
+        stateName: 'setup-saved',
+        stateData: data,
+        vMem,
+        display: createDisplay(SETUP_SAVED_TEXT, '', ''),
+      };
+    }
     return null;
   }
 
@@ -206,6 +229,26 @@ function reduceParameter(
   }
 
   return null;
+}
+
+/**
+ * Handle the SAU CHG confirmation screen (US-027). Any event — the auto-dismiss
+ * timeout or an impatient key press — returns to the setup menu with SAV CHG
+ * still highlighted, so the operator can continue (typically scroll to End to
+ * exit). The draft is carried through unchanged; the save already happened on
+ * ENT, so nothing here touches nvMem.
+ */
+function reduceSaved(
+  data: SetupData,
+  vMem: VolatileMemoryState,
+  nvMem: NonVolatileMemory
+): DROStatePayload {
+  return {
+    stateName: 'setup-parameter',
+    stateData: data,
+    vMem,
+    display: computeParameterDisplay(data, nvMem),
+  };
 }
 
 export const setupReducer: FeatureReducer = (statePayload, eventPayload, context) => {
@@ -228,6 +271,10 @@ export const setupReducer: FeatureReducer = (statePayload, eventPayload, context
 
   if (state === 'setup-select') {
     return reduceSelect(eventName, setupData, vMem, context.nvMem, context);
+  }
+
+  if (state === 'setup-saved') {
+    return reduceSaved(setupData, vMem, context.nvMem);
   }
 
   return reduceParameter(eventName, setupData, vMem, context.nvMem, context);

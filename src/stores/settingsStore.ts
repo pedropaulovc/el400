@@ -86,6 +86,14 @@ export const usePrecision = () => useSettingsStore((s) => s.nvMem.precision);
 export const useAxisDisplayDecimals = (axis: 'X' | 'Y' | 'Z') =>
   useSettingsStore((s) => decimalsForDisplayResolution(s.nvMem.displayResolution[axis]));
 
+/**
+ * Whether a single axis counts in angular mode (US-040). Subscribes only to that
+ * axis's counting mode so a change to one axis does not re-render the others.
+ * Drives the readout's number-vs-DMS-text rendering decision.
+ */
+export const useAxisIsAngular = (axis: 'X' | 'Y' | 'Z') =>
+  useSettingsStore((s) => s.nvMem.countingMode[axis] === 'angular');
+
 /** Get beep enabled setting */
 export const useBeepEnabled = () => useSettingsStore((s) => s.nvMem.beepEnabled);
 
