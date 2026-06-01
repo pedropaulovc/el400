@@ -1,0 +1,3 @@
+# US-046 diagnostics gating fix demo
+
+Open `/?source=debug` (the in-browser debug adapter broadcasts MILL_STATE_CHANGED every 100ms). Reload so the boot/version message (`EL400`) is on screen, then press `▲` (8) to enter Self-Diagnostics. The display shows `rAmPASS` (memory OK). Now jog any axis from the debug panel — the encoder ticks no longer skip the screen; `rAmPASS` stays put. Press any digit key (e.g. `1`) to advance to the segment/lamp test (`88888888` across all cells); it also holds against encoder ticks until you press another key. Before the fix, a single `▲` raced straight past `rAmPASS` and the segment test in `?source=debug` because every MILL_STATE_CHANGED tick advanced the step.
