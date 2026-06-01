@@ -126,6 +126,12 @@ export type DROStateName =
   | 'sdm-menu-run'
   | 'sdm-learn-step'
   | 'sdm-learn-position'
+  // SDM Program / direct-entry states (US-010)
+  | 'sdm-program-step'
+  | 'sdm-program-jump'
+  | 'sdm-program-input-x'
+  | 'sdm-program-input-y'
+  | 'sdm-program-input-z'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'

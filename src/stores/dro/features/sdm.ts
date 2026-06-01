@@ -1,15 +1,16 @@
 /**
- * Sub Datum Memory (SDM) Feature Reducer (US-009 Learn Mode)
+ * Sub Datum Memory (SDM) Feature Reducer (US-009 Learn + US-010 Program)
  *
  * The SDM lets the operator store up to 1000 sub-datum points, each holding
  * X/Y/Z coordinates (manual §8.2). This file implements the LEARN sub-function
- * (manual §8.2.2); the data model (`SdmData`) is shared with PROGRAM (US-010)
- * and RUN (US-011), which will plug into the same menu ring and point store.
+ * (manual §8.2.2) and the PROGRAM / direct-entry sub-function (manual §8.2.1);
+ * the data model (`SdmData`) is shared with RUN (US-011), which plugs into the
+ * same menu ring and point store.
  *
  * Learn-mode workflow (manual §8.2.2):
  *  - Intro: shows "SdM" briefly, then auto-advances to the menu.
  *  - Menu: Program / Learn / Run, navigated with left/right arrows; Enter
- *    confirms. Only Learn is implemented here.
+ *    confirms.
  *  - Step entry: the operator types a step number on the Y display and confirms
  *    with Enter (defaults to step 1).
  *  - Capture: move the machine to the desired position, press X once to show
@@ -17,9 +18,24 @@
  *    step's sub-datum and advance to the next step.
  *  - Press C (clear) at any point to exit.
  *
- * Spec discrepancy: the story file (AC 9.4) binds "store" to `6►`; the manual
+ * Program-mode workflow (manual §8.2.1, US-010):
+ *  - Confirm Program at the menu → step prompt ("StEP" on X, step number on Y),
+ *    defaulting to step 1. Edit the step by typing digits and pressing Enter
+ *    (or press Y to start a fresh jump-target entry).
+ *  - Enter advances into per-axis coordinate entry: X, then Y, then Z. Type a
+ *    coordinate in the operator's current unit and press Enter to confirm each;
+ *    the value is converted to mm and stored in the same `points` map Learn uses
+ *    (so US-011 Run reads either source uniformly). Pressing an axis-select
+ *    button (X/Y/Z) jumps straight to that axis.
+ *  - After Z the session returns to the step prompt. 6► saves and advances to
+ *    the next step; 4◄ goes to the previous step (manual: "right and left key …
+ *    select previous/next step"; story AC 10.4 binds save+advance to 6►).
+ *  - Jump-to-step (AC 10.5): press Y, type the step number, press Enter.
+ *  - Press C (clear) to exit.
+ *
+ * Spec discrepancy: the Learn story (AC 9.4) binds "store" to `6►`; the manual
  * §8.2.2 binds it to `X`. The manual wins (per the implementer brief), so the
- * store/advance action is BTN_SELECT_X.
+ * learn store/advance action is BTN_SELECT_X.
  */
 
 import { useEffect, type Dispatch } from 'react';
@@ -41,6 +57,8 @@ import type { VolatileMemoryState } from '../../../types/volatileMemory';
 import {
   getBufferValue,
   appendDigit,
+  appendDecimal,
+  toggleSign,
   removeLastChar,
   KEY_TO_DIGIT,
 } from './buffer-utils';
@@ -50,6 +68,7 @@ import {
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
+import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
 
 /** Duration the "SdM" intro message shows before auto-advancing. */
 export const SDM_INTRO_DURATION_MS = 1000;
@@ -112,6 +131,72 @@ function computeMenuDisplay(state: DROStateName): DisplayState {
 function computeStepEntryDisplay(vMem: VolatileMemoryState): DisplayState {
   const value = getBufferValue(vMem.inputBuffer);
   return createDisplay('StEP', value ?? 0, '');
+}
+
+/** Axes handled by program direct-entry, in confirmation order. */
+const PROGRAM_AXES = ['X', 'Y', 'Z'] as const;
+type ProgramAxis = (typeof PROGRAM_AXES)[number];
+
+/** Map each program coordinate-entry state to its axis. */
+const PROGRAM_INPUT_AXIS: Partial<Record<DROStateName, ProgramAxis>> = {
+  'sdm-program-input-x': 'X',
+  'sdm-program-input-y': 'Y',
+  'sdm-program-input-z': 'Z',
+};
+
+/** Map an axis to its program coordinate-entry state. */
+const PROGRAM_AXIS_STATE: Record<ProgramAxis, DROStateName> = {
+  X: 'sdm-program-input-x',
+  Y: 'sdm-program-input-y',
+  Z: 'sdm-program-input-z',
+};
+
+/**
+ * Program step-view display (manual §8.2.1): X shows the "StEP" prompt; Y shows
+ * the buffered jump-target if one is being typed, otherwise the current step.
+ */
+function computeProgramStepDisplay(data: SdmData, vMem: VolatileMemoryState): DisplayState {
+  const buffered = getBufferValue(vMem.inputBuffer);
+  return createDisplay('StEP', buffered ?? data.currentStep, '');
+}
+
+/** Parse the buffer to a numeric value for display (empty/invalid => 0). */
+function bufferToDisplayNumber(buffer: string): number {
+  if (!buffer || buffer === '-' || buffer === '.' || buffer === '-.') return 0;
+  const value = parseFloat(buffer);
+  return isNaN(value) ? 0 : value;
+}
+
+/**
+ * Program coordinate-entry display: the axis being edited shows the typed
+ * buffer value; the other two axes show their stored coordinate for the step
+ * (in the operator's unit), so the operator sees the point taking shape.
+ */
+function computeProgramInputDisplay(
+  state: DROStateName,
+  data: SdmData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  const editing = PROGRAM_INPUT_AXIS[state];
+  const unit = context.nvMem.defaultUnit;
+  const stored = data.points[data.currentStep];
+
+  const valueFor = (axis: ProgramAxis): number => {
+    if (axis === editing) return bufferToDisplayNumber(vMem.inputBuffer);
+    return fromMmToAnyUnit(stored?.[axis] ?? 0, unit);
+  };
+
+  return createDisplay(valueFor('X'), valueFor('Y'), valueFor('Z'));
+}
+
+/** Store one coordinate (mm) for the current step, preserving the other axes. */
+function storeProgramCoordinate(data: SdmData, axis: ProgramAxis, valueMm: number): SdmData {
+  const existing = data.points[data.currentStep] ?? { X: 0, Y: 0, Z: 0 };
+  return {
+    ...data,
+    points: { ...data.points, [data.currentStep]: { ...existing, [axis]: valueMm } },
+  };
 }
 
 /** Position display: live position, but with the step number shown on Y once the first X is pressed. */
@@ -178,16 +263,31 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
     }
 
     if (eventName === 'KEY_ENTER') {
-      // Only Learn is implemented; Program (US-010) and Run (US-011) exit for now.
-      if (state !== 'sdm-menu-learn') return exitToIdle(vMem, context);
       const newVMem = { ...vMem, inputBuffer: '' };
-      const learnData: SdmData = { ...data, sdmMode: 'LEARN', currentStep: 1 };
-      return {
-        stateName: 'sdm-learn-step',
-        stateData: learnData,
-        vMem: newVMem,
-        display: computeStepEntryDisplay(newVMem),
-      };
+
+      if (state === 'sdm-menu-learn') {
+        const learnData: SdmData = { ...data, sdmMode: 'LEARN', currentStep: 1 };
+        return {
+          stateName: 'sdm-learn-step',
+          stateData: learnData,
+          vMem: newVMem,
+          display: computeStepEntryDisplay(newVMem),
+        };
+      }
+
+      // Program / direct-entry (US-010, manual §8.2.1).
+      if (state === 'sdm-menu-program') {
+        const programData: SdmData = { ...data, sdmMode: 'PROGRAM', currentStep: 1 };
+        return {
+          stateName: 'sdm-program-step',
+          stateData: programData,
+          vMem: newVMem,
+          display: computeProgramStepDisplay(programData, newVMem),
+        };
+      }
+
+      // Run (US-011) not implemented yet; exit for now.
+      return exitToIdle(vMem, context);
     }
     return statePayload;
   }
@@ -257,6 +357,200 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
         ...statePayload,
         stateData: newData,
         display: computePositionDisplay(newData, vMem, context),
+      };
+    }
+    return statePayload;
+  }
+
+  // ── program: step view (manual §8.2.1) ───────────────────────────
+  if (state === 'sdm-program-step') {
+    if (eventName === 'KEY_CLEAR') {
+      if (vMem.inputBuffer !== '') {
+        const newVMem = { ...vMem, inputBuffer: removeLastChar(vMem.inputBuffer) };
+        return { ...statePayload, vMem: newVMem, display: computeProgramStepDisplay(data, newVMem) };
+      }
+      return exitToIdle(vMem, context);
+    }
+
+    if (eventName === 'MILL_STATE_CHANGED') {
+      return { ...statePayload, display: computeProgramStepDisplay(data, vMem) };
+    }
+
+    // Y opens a jump-to-step prompt (AC 10.5): type the target step, Enter jumps.
+    if (eventName === 'BTN_SELECT_Y') {
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: 'sdm-program-jump',
+        stateData: data,
+        vMem: newVMem,
+        display: computeProgramStepDisplay(data, newVMem),
+      };
+    }
+
+    // 6► / 4◄ save the current step and move to the next / previous step.
+    if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
+      const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
+      const nextStep = Math.min(Math.max(data.currentStep + delta, 1), MAX_SDM_STEPS);
+      const newData: SdmData = { ...data, currentStep: nextStep };
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: 'sdm-program-step',
+        stateData: newData,
+        vMem: newVMem,
+        display: computeProgramStepDisplay(newData, newVMem),
+      };
+    }
+
+    const stepDigit = KEY_TO_DIGIT[eventName];
+    if (stepDigit !== undefined) {
+      const newVMem = { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, stepDigit) };
+      return { ...statePayload, vMem: newVMem, display: computeProgramStepDisplay(data, newVMem) };
+    }
+
+    if (eventName === 'KEY_ENTER') {
+      const typed = getBufferValue(vMem.inputBuffer);
+      const step = typed === null ? data.currentStep : Math.floor(typed);
+      if (step < 1 || step > MAX_SDM_STEPS) return statePayload;
+      const newData: SdmData = { ...data, currentStep: step };
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: 'sdm-program-input-x',
+        stateData: newData,
+        vMem: newVMem,
+        display: computeProgramInputDisplay('sdm-program-input-x', newData, newVMem, context),
+      };
+    }
+    return statePayload;
+  }
+
+  // ── program: jump-to-step entry (manual §8.2.1, AC 10.5) ─────────
+  if (state === 'sdm-program-jump') {
+    if (eventName === 'KEY_CLEAR') {
+      if (vMem.inputBuffer !== '') {
+        const newVMem = { ...vMem, inputBuffer: removeLastChar(vMem.inputBuffer) };
+        return { ...statePayload, vMem: newVMem, display: computeProgramStepDisplay(data, newVMem) };
+      }
+      // Cancel the jump, returning to the step view at the current step.
+      return {
+        stateName: 'sdm-program-step',
+        stateData: data,
+        vMem,
+        display: computeProgramStepDisplay(data, vMem),
+      };
+    }
+
+    if (eventName === 'MILL_STATE_CHANGED') {
+      return { ...statePayload, display: computeProgramStepDisplay(data, vMem) };
+    }
+
+    const jumpDigit = KEY_TO_DIGIT[eventName];
+    if (jumpDigit !== undefined) {
+      const newVMem = { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, jumpDigit) };
+      return { ...statePayload, vMem: newVMem, display: computeProgramStepDisplay(data, newVMem) };
+    }
+
+    if (eventName === 'KEY_ENTER') {
+      const typed = getBufferValue(vMem.inputBuffer);
+      const step = typed === null ? data.currentStep : Math.floor(typed);
+      if (step < 1 || step > MAX_SDM_STEPS) {
+        // Invalid target: discard and return to the step view unchanged.
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'sdm-program-step',
+          stateData: data,
+          vMem: newVMem,
+          display: computeProgramStepDisplay(data, newVMem),
+        };
+      }
+      const newData: SdmData = { ...data, currentStep: step };
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: 'sdm-program-step',
+        stateData: newData,
+        vMem: newVMem,
+        display: computeProgramStepDisplay(newData, newVMem),
+      };
+    }
+    return statePayload;
+  }
+
+  // ── program: per-axis coordinate entry (manual §8.2.1) ───────────
+  const inputAxis = PROGRAM_INPUT_AXIS[state];
+  if (inputAxis !== undefined) {
+    const refresh = (vm: VolatileMemoryState) => computeProgramInputDisplay(state, data, vm, context);
+
+    if (eventName === 'KEY_CLEAR') {
+      if (vMem.inputBuffer !== '') {
+        const newVMem = { ...vMem, inputBuffer: removeLastChar(vMem.inputBuffer) };
+        return { ...statePayload, vMem: newVMem, display: refresh(newVMem) };
+      }
+      return exitToIdle(vMem, context);
+    }
+
+    if (eventName === 'MILL_STATE_CHANGED') {
+      return { ...statePayload, display: refresh(vMem) };
+    }
+
+    // Selecting an axis jumps straight to editing that axis (manual §8.2.1).
+    const selectAxis =
+      eventName === 'BTN_SELECT_X' ? 'X' :
+      eventName === 'BTN_SELECT_Y' ? 'Y' :
+      eventName === 'BTN_SELECT_Z' ? 'Z' : null;
+    if (selectAxis !== null) {
+      const target = PROGRAM_AXIS_STATE[selectAxis];
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: target,
+        stateData: data,
+        vMem: newVMem,
+        display: computeProgramInputDisplay(target, data, newVMem, context),
+      };
+    }
+
+    const digit = KEY_TO_DIGIT[eventName];
+    if (digit !== undefined) {
+      const newVMem = { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, digit) };
+      return { ...statePayload, vMem: newVMem, display: refresh(newVMem) };
+    }
+
+    if (eventName === 'KEY_DECIMAL') {
+      const newVMem = { ...vMem, inputBuffer: appendDecimal(vMem.inputBuffer) };
+      return { ...statePayload, vMem: newVMem, display: refresh(newVMem) };
+    }
+
+    if (eventName === 'KEY_SIGN') {
+      const newVMem = { ...vMem, inputBuffer: toggleSign(vMem.inputBuffer) };
+      return { ...statePayload, vMem: newVMem, display: refresh(newVMem) };
+    }
+
+    if (eventName === 'KEY_ENTER') {
+      const typed = getBufferValue(vMem.inputBuffer);
+      // Empty buffer keeps the existing stored value for this axis.
+      const stored = data.points[data.currentStep];
+      const valueMm =
+        typed === null
+          ? stored?.[inputAxis] ?? 0
+          : fromAnyUnitToMm(typed, context.nvMem.defaultUnit);
+      const newData = storeProgramCoordinate(data, inputAxis, valueMm);
+      const newVMem = { ...vMem, inputBuffer: '' };
+
+      // Advance X → Y → Z → back to the step view.
+      const axisIdx = PROGRAM_AXES.indexOf(inputAxis);
+      const nextAxis = PROGRAM_AXES[axisIdx + 1];
+      if (nextAxis === undefined) {
+        return {
+          stateName: 'sdm-program-step',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeProgramStepDisplay(newData, newVMem),
+        };
+      }
+      const nextState = PROGRAM_AXIS_STATE[nextAxis];
+      return {
+        stateName: nextState,
+        stateData: newData,
+        vMem: newVMem,
+        display: computeProgramInputDisplay(nextState, newData, newVMem, context),
       };
     }
     return statePayload;
