@@ -33,6 +33,7 @@ render-only trick — so the displayed reading and the value the DRO holds in me
 - [ ] **AC 47.4:** The clamp is unit-independent in display space — the same 7-digit panel limit applies whether the axis reads in inch or mm (the entered value is in the displayed unit; only that magnitude is capped).
 - [ ] **AC 47.5:** Displayed value equals stored value after a clamped entry: the readout shows the clamped number AND the DRO's internal axis value corresponds to that same clamped number (no render-only divergence). This holds in manual ABS, connected ABS (work-offset preset), and INC modes.
 - [ ] **AC 47.6:** Values that already fit are unaffected — `123.4567` (4 decimals) and the exact boundary `999.9999` enter verbatim with no clamping.
+- [ ] **AC 47.7:** The clamp bounds the **displayed** magnitude, so it composes with the diameter ×2 scale (US-041). On a `diameter`-mode axis the readout shows twice the stored slide value, so the entered value is capped at `maxDisplayableMagnitude(decimals) / 2` — keying `55555555` on a diameter axis stores `499.99995` and displays `999.9999`, never the 8-cell `1999.9998`. A `radius`-mode axis (×1) is unaffected.
 
 ## E2E Test Scenarios
 ```typescript
@@ -76,9 +77,12 @@ describe('US-047: Display Overflow on Value Entry', () => {
 
   where `PANEL_DIGIT_CELLS = 7` (the panel's digit cells, excluding the sign cell —
   `DISPLAY_WIDTH` in `axisDigits.ts` is 8 because it counts the sign cell).
-- Clamp magnitude, keep sign: `clamped = sign(v) * min(abs(v), maxDisplayableMagnitude(decimals))`.
-  The value being clamped is in the **displayed unit** (what the user typed); convert to mm for
-  storage exactly as today.
+- Clamp magnitude, keep sign, and bound the **displayed** magnitude — divide the limit by the
+  axis's measurement scale (US-041) so a diameter axis (×2) caps at half (AC 47.7):
+  `clamped = sign(v) * min(abs(v), maxDisplayableMagnitude(decimals) / measurementScale(axis, nvMem))`.
+  In radius mode `measurementScale` is 1, so this reduces to the plain limit. The value being
+  clamped is in the **displayed unit** (what the user typed); convert to mm for storage exactly as
+  today.
 - Angular axes (US-040) wrap to `[0, 360)` and never approach the panel limit, so the clamp is a
   no-op for them; do not special-case beyond the existing angular path.
 
@@ -86,6 +90,7 @@ describe('US-047: Display Overflow on Value Entry', () => {
 - US-002: Sign Convention (the sign cell this clamp preserves)
 - US-022: Display Resolution `dP` (decimal count that sets the integer-digit budget)
 - US-040: Angular Display (wraps to [0,360), exempt from the linear clamp)
+- US-041: Radius/Diameter Measurement Mode (the ×2 display scale the clamp must compose with, AC 47.7)
 
 ## Notes
 - Authored to fix a reported bug: selecting X, keying `55555555`, then `ent` grew the readout past
