@@ -161,17 +161,17 @@ describe('setupReducer - scope: per-axis vs global (AC 39.5)', () => {
     expect(globalKey).toBeDefined();
   });
 
-  it('global parameter seeds from nvMem (beepEnabled stand-in)', () => {
+  it('global parameter seeds from nvMem.encoderFailWarning (US-042)', () => {
     const enfIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'enf');
-    // beepEnabled true -> "EnF on"
-    const onState = paramState({ selectedAxis: 'X', currentParamIndex: enfIdx });
-    const shown = setupReducer(setupReducer(onState, { eventName: 'KEY_8_UP' }, ctx)!, { eventName: 'KEY_2_DOWN' }, ctx);
-    expect(xText(shown)).toBe('EnF on');
-
-    // beepEnabled false -> "EnF oFF"
-    const offCtx = { ...ctx, nvMem: { ...ctx.nvMem, beepEnabled: false } };
-    const offShown = setupReducer(setupReducer(onState, { eventName: 'KEY_8_UP' }, offCtx)!, { eventName: 'KEY_2_DOWN' }, offCtx);
+    // encoderFailWarning false (default) -> "EnF oFF"
+    const baseState = paramState({ selectedAxis: 'X', currentParamIndex: enfIdx });
+    const offShown = setupReducer(setupReducer(baseState, { eventName: 'KEY_8_UP' }, ctx)!, { eventName: 'KEY_2_DOWN' }, ctx);
     expect(xText(offShown)).toBe('EnF oFF');
+
+    // encoderFailWarning true -> "EnF on"
+    const onCtx = { ...ctx, nvMem: { ...ctx.nvMem, encoderFailWarning: true } };
+    const onShown = setupReducer(setupReducer(baseState, { eventName: 'KEY_8_UP' }, onCtx)!, { eventName: 'KEY_2_DOWN' }, onCtx);
+    expect(xText(onShown)).toBe('EnF on');
   });
 });
 

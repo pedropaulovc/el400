@@ -97,6 +97,7 @@ export function resetStores(): void {
       measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
+      encoderFailWarning: false,
     },
   });
 

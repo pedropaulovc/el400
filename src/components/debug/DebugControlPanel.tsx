@@ -82,6 +82,16 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
     server.setProbe(newState);
   };
 
+  // Encoder signal-loss toggle (US-042): simulates a scale cable dropping so the
+  // readout can show `no SIG` when the EnF parameter is on.
+  const handleSignalToggle = (axis: 'x' | 'y' | 'z') => {
+    const key = axis.toUpperCase() as 'X' | 'Y' | 'Z';
+    const lost = millState.encoderSignal[key] === 'lost';
+    const next = lost ? 'ok' : 'lost';
+    addLogEntry(next === 'lost' ? 'warning' : 'info', `Encoder ${key} signal ${next === 'lost' ? 'LOST' : 'restored'}`);
+    server.setEncoderSignal(axis, next);
+  };
+
   const btnClass = "px-3 py-2 bg-white border border-gray-300 hover:bg-gray-100 active:bg-gray-200 text-gray-700 text-sm font-medium rounded transition-colors disabled:opacity-50";
   const btnPrimaryClass = "px-3 py-2 bg-gray-100 border border-gray-300 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-sm rounded transition-colors";
 
@@ -133,15 +143,29 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
                   <span className="text-xs text-gray-400 ml-1">mm</span>
                 </td>
                 <td className="py-2 text-right">
-                  <button
-                    onClick={() => {
-                      server.setPosition(axis, 0);
-                      addLogEntry('info', `Zero ${axis.toUpperCase()}`);
-                    }}
-                    className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded"
-                  >
-                    Zero
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => { handleSignalToggle(axis); }}
+                      className={`px-2 py-0.5 text-xs border rounded ${
+                        millState.encoderSignal[axis.toUpperCase() as 'X' | 'Y' | 'Z'] === 'lost'
+                          ? 'bg-yellow-100 border-yellow-400 text-yellow-700'
+                          : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+                      }`}
+                      title="Toggle encoder signal loss (no SIG)"
+                      data-testid={`signal-toggle-${axis}`}
+                    >
+                      {millState.encoderSignal[axis.toUpperCase() as 'X' | 'Y' | 'Z'] === 'lost' ? 'no SIG' : 'SIG'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        server.setPosition(axis, 0);
+                        addLogEntry('info', `Zero ${axis.toUpperCase()}`);
+                      }}
+                      className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded"
+                    >
+                      Zero
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
