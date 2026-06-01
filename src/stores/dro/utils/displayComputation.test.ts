@@ -215,8 +215,9 @@ describe('datum and Direction are independent, composable transforms (AC 2.3)', 
     it('reversed display value is exactly -1x the normal display value, same datum', () => {
       const { ctx: nCtx, vMem: nVMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
       const { ctx: rCtx, vMem: rVMem } = datumCtx(MACHINE_X, 4, reversed);
-      const normalVal = computeDisplayPosition('X', nVMem, nCtx);
-      const reversedVal = computeDisplayPosition('X', rVMem, rCtx);
+      // Linear axes return numeric display values; assert the sign relationship.
+      const normalVal = computeDisplayPosition('X', nVMem, nCtx) as number;
+      const reversedVal = computeDisplayPosition('X', rVMem, rCtx) as number;
       expect(reversedVal).toBe(-normalVal);
     });
   });

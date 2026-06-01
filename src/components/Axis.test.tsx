@@ -15,6 +15,7 @@ import { render, screen } from '@/tests/helpers/render-utils';
 import MultiAxisSection from './MultiAxisSection';
 import { formatNumberValue } from './axisDigits';
 import { useDROStore } from '../stores/droStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import {
   computeNormalDisplay,
   type DisplayState,
@@ -71,6 +72,38 @@ describe('MultiAxisSection sr-only axis-value cell (AC 2.6)', () => {
     const cell = screen.getByTestId('axis-value-x');
     expect(cell).toHaveTextContent('3.2500');
     expect(cell.textContent.startsWith('-')).toBe(false);
+  });
+});
+
+describe('Angular DMS rendering on the seven-segment row (US-040 AC 40.3)', () => {
+  it('renders the angular axis DMS string verbatim in the screen-reader cell', () => {
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      countingMode: { X: 'angular' as const, Y: 'linear' as const, Z: 'linear' as const },
+    };
+    act(() => {
+      useSettingsStore.setState({ nvMem });
+    });
+    render(<MultiAxisSection />);
+    // The reducer emits the pre-formatted DMS string for an angular axis; the
+    // dP decimals must NOT re-pad "90.00" to "90.0000".
+    setDisplay({ X: '90.00', Y: 0, Z: 0 });
+    const cell = screen.getByTestId('axis-value-x');
+    expect(cell).toHaveTextContent('90.00');
+    expect(cell.textContent).not.toContain('0000');
+  });
+
+  it('renders a dd.mn.SS angular value with both group separators verbatim', () => {
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      countingMode: { X: 'angular' as const, Y: 'linear' as const, Z: 'linear' as const },
+    };
+    act(() => {
+      useSettingsStore.setState({ nvMem });
+    });
+    render(<MultiAxisSection />);
+    setDisplay({ X: '12.30.00', Y: 0, Z: 0 });
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent('12.30.00');
   });
 });
 

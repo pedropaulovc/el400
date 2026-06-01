@@ -1,8 +1,7 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
-import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
 import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis } from "../stores/droStore";
-import { useAxisDisplayDecimals } from "../stores/settingsStore";
-import { formatNumberValue, formatTextValue } from "./axisDigits";
+import { useAxisDisplayDecimals, useAxisIsAngular } from "../stores/settingsStore";
+import { formatAxisDigits } from "./axisDigits";
 
 export type AxisDisplayValue = number | string;
 
@@ -27,13 +26,13 @@ const Axis = ({ axis }: AxisProps) => {
   const isBlinking = blinkAxis === axis;
   // dP display resolution (US-022): fractional digits to render for this axis.
   const decimals = useAxisDisplayDecimals(axis);
+  // Angular axes (US-040) render their pre-formatted DMS string verbatim.
+  const isAngular = useAxisIsAngular(axis);
 
   // Check if in function mode (distance-to-go displays leading decimal on 2nd digit)
   const isFunctionMode = stateName === 'distance-to-go';
 
-  const digits = typeof value === 'number' || (typeof value === 'string' && VALID_NUMBER_PATTERN.test(value.trim()))
-    ? formatNumberValue(typeof value === 'number' ? value : parseFloat(value), decimals)
-    : formatTextValue(value);
+  const digits = formatAxisDigits(value, { decimals, isAngular });
 
   // Add leading decimal to 2nd digit when in function mode
   if (isFunctionMode && digits.length >= 2) {

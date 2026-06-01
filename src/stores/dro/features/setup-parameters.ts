@@ -37,10 +37,12 @@ import type {
   CountingMode,
   ProbeDroType,
   DisplayResolutionValue,
+  AngularFormat,
 } from '../../../types/nonVolatileMemory';
 import {
   DEFAULT_SCALE_RESOLUTION,
   DEFAULT_DISPLAY_RESOLUTION,
+  DEFAULT_ANGULAR_RESOLUTION,
 } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
 
@@ -78,9 +80,20 @@ export interface SetupParameter {
   readonly scope: SetupParameterScope;
   /**
    * Choices the left/right keys cycle through. Empty for terminal items like
-   * `End`, which carry no value and are acted on with `ent` instead.
+   * `End`, which carry no value and are acted on with `ent` instead. For
+   * parameters whose option set depends on committed state, this is the *default*
+   * (fallback) set; `choicesFor` overrides it conditionally (see below).
    */
   readonly choices: readonly SetupParameterChoice[];
+  /**
+   * Optional context-aware choice set. When present, the shell cycles through
+   * the choices this returns for the current read context instead of the static
+   * `choices`. Used by dP (US-040 AC 40.4), whose option set switches between the
+   * linear micron values and the angular DMS formats depending on the axis's
+   * counting mode. Resolve via `resolveChoices` so callers without a context
+   * fall back to the static `choices`.
+   */
+  readonly choicesFor?: (ctx: SetupReadContext) => readonly SetupParameterChoice[];
   /**
    * Seed the current value from committed state. Returns the `value` of the
    * choice that should be shown first. Terminal items return ''.
@@ -142,6 +155,20 @@ export const DISPLAY_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
   { value: '10', label: 'dP 10.0' },
   { value: '20', label: 'dP 20.0' },
   { value: '50', label: 'dP 50.0' },
+];
+
+/**
+ * Angular dP choices: the three degree formats the display-resolution parameter
+ * offers when the axis counts in `angular` mode (manual §6.2 "Display resolution
+ * (Angular)", US-040 AC 40.4). Order matches the manual table; `dd.mn`
+ * (degrees-minutes) is first and is the angular default. The OCR labels
+ * `dd.πn / dd.πn.SS / dd.dEC` reconcile to these seven-segment-renderable
+ * literals (`.` separators stand in for the °/'/" the panel cannot draw).
+ */
+export const ANGULAR_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
+  { value: 'dd-mn', label: 'dd.mn' },
+  { value: 'dd-mn-ss', label: 'dd.mn.SS' },
+  { value: 'dd-dec', label: 'dd.dEC' },
 ];
 
 /** The per-axis counting-direction parameter id (US-002) -- its draft key. */
@@ -230,22 +257,46 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     label: 'dP 5.0',
     scope: 'per-axis',
     choices: DISPLAY_RESOLUTION_CHOICES,
-    // Seed from the selected axis's committed display resolution (nvMem). On the
-    // SELECT prompt (axis null) fall back to X. Guard against a stale persisted
-    // value no longer in the choice set by defaulting to the mill default.
+    // The dP option set is conditional on the axis's counting mode (US-040
+    // AC 40.4): angular axes cycle the DMS formats, linear axes the micron
+    // values. The static `choices` above is the linear fallback (used on the
+    // SELECT prompt and by context-free callers).
+    choicesFor: (ctx) =>
+      isAngularAxis(ctx) ? ANGULAR_RESOLUTION_CHOICES : DISPLAY_RESOLUTION_CHOICES,
+    // Seed from the selected axis's committed resolution. For an angular axis
+    // that is the DMS format (nvMem.angularResolution); for a linear axis the
+    // micron value (nvMem.displayResolution). On the SELECT prompt (axis null)
+    // fall back to X. Guard against a stale persisted value no longer in the
+    // active choice set by defaulting to the mill default.
     readValue: (ctx) => {
       const axis = ctx.axis ?? 'X';
+      if (isAngularAxis(ctx)) {
+        const committed = ctx.nvMem.angularResolution[axis];
+        const isValid = ANGULAR_RESOLUTION_CHOICES.some((c) => c.value === committed);
+        return isValid ? committed : DEFAULT_ANGULAR_RESOLUTION[axis];
+      }
       const committed = ctx.nvMem.displayResolution[axis];
       const isValid = DISPLAY_RESOLUTION_CHOICES.some((c) => c.value === committed);
       return isValid ? committed : DEFAULT_DISPLAY_RESOLUTION[axis];
     },
-    // Commit-on-change (US-022): persist the per-axis display resolution
-    // immediately so the readout's decimal precision updates on exit. dP is a
-    // display-only transform (AC22.5); SAU CHG (US-027) is not yet wired, so this
-    // surgical path -- the same one Direction (US-002) uses -- makes the effect
-    // visible without the generic save engine.
+    // Commit-on-change (US-022 / US-040): persist the per-axis resolution
+    // immediately so the readout updates on exit. dP is a display-only transform
+    // (AC22.5); SAU CHG (US-027) is not yet wired, so this surgical path -- the
+    // same one Direction (US-002) uses -- makes the effect visible. Angular axes
+    // write the DMS format to a separate nvMem slot so switching counting mode
+    // back and forth preserves each axis's linear micron and angular format
+    // choices independently.
     commit: (ctx, value) => {
       const axis = ctx.axis ?? 'X';
+      if (isAngularAxis(ctx)) {
+        useSettingsStore.getState().updateNvMem({
+          angularResolution: {
+            ...ctx.nvMem.angularResolution,
+            [axis]: value as AngularFormat,
+          },
+        });
+        return;
+      }
       useSettingsStore.getState().updateNvMem({
         displayResolution: {
           ...ctx.nvMem.displayResolution,
@@ -354,6 +405,28 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
   },
 ];
 
+/**
+ * Whether the axis currently being configured counts in `angular` mode (US-040).
+ * Per-axis parameters read the selected axis's mode; on the SELECT prompt
+ * (axis null) fall back to X. Used to pick the conditional dP option set.
+ */
+function isAngularAxis(ctx: SetupReadContext): boolean {
+  return ctx.nvMem.countingMode[ctx.axis ?? 'X'] === 'angular';
+}
+
+/**
+ * Resolve the choices a parameter cycles through for the given read context.
+ * Parameters with a `choicesFor` accessor (e.g. dP, whose option set depends on
+ * counting mode, US-040 AC 40.4) get their context-aware set; all others fall
+ * back to their static `choices`.
+ */
+export function resolveChoices(
+  param: SetupParameter,
+  ctx: SetupReadContext
+): readonly SetupParameterChoice[] {
+  return param.choicesFor?.(ctx) ?? param.choices;
+}
+
 /** Look up a parameter by index, clamped to the registry bounds. */
 export function getParameterAt(index: number): SetupParameter {
   const count = SETUP_PARAMETERS.length;
@@ -381,18 +454,35 @@ export function wrapItemIndex(index: number, delta: number): number {
 /**
  * Find the index of a choice value within a parameter, defaulting to 0 when the
  * value is not one of the choices (e.g. terminal items or stale drafts).
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the lookup
+ * runs against the active set; without it the static `choices` are used.
  */
-export function choiceIndexOf(param: SetupParameter, value: string): number {
-  const idx = param.choices.findIndex((c) => c.value === value);
+export function choiceIndexOf(
+  param: SetupParameter,
+  value: string,
+  ctx?: SetupReadContext
+): number {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const idx = choices.findIndex((c) => c.value === value);
   return idx === -1 ? 0 : idx;
 }
 
 /**
  * Cycle a choice index by `delta` with wrap-around (AC 39.4).
  * Returns 0 for parameters with no choices.
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the cycle
+ * length matches the active set; without it the static `choices` are used.
  */
-export function wrapChoiceIndex(param: SetupParameter, index: number, delta: number): number {
-  const count = param.choices.length;
+export function wrapChoiceIndex(
+  param: SetupParameter,
+  index: number,
+  delta: number,
+  ctx?: SetupReadContext
+): number {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const count = choices.length;
   if (count === 0) return 0;
   return (((index + delta) % count) + count) % count;
 }
@@ -401,8 +491,17 @@ export function wrapChoiceIndex(param: SetupParameter, index: number, delta: num
  * Resolve the label to show for a parameter given the current draft value:
  * the matching choice's label, or the parameter's own label when no choice
  * matches (terminal items, unseeded params).
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the label
+ * is drawn from the active set (e.g. the angular DMS labels for an angular axis);
+ * without it the static `choices` are used.
  */
-export function labelForValue(param: SetupParameter, value: string): string {
-  const choice = param.choices.find((c) => c.value === value);
+export function labelForValue(
+  param: SetupParameter,
+  value: string,
+  ctx?: SetupReadContext
+): string {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const choice = choices.find((c) => c.value === value);
   return choice?.label ?? param.label;
 }

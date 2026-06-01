@@ -669,6 +669,61 @@ export class DROPage {
   }
 
   /**
+   * Set the per-axis ANGULAR display-resolution format (US-040 AC 40.4, manual
+   * section 6.2 "Display resolution (Angular)") by driving the REAL setup menu:
+   * open setup, pick the axis, scroll DOWN to the dP item — which, because the
+   * axis is angular, shows one of the DMS format labels (`dd.mn` / `dd.mn.SS` /
+   * `dd.dEC`) — cycle to the requested label, then exit via the terminal `End` +
+   * ent.
+   *
+   * Precondition: the axis is already in AnGULAr counting mode (call
+   * `setAxisCountingMode(axis, 'AnGULAr')` first), otherwise the dP item shows the
+   * linear `dP n.0` micron labels and the requested DMS label is unreachable.
+   *
+   * Mirrors `setMeasurementMode`. No window hooks, no forced state — only buttons.
+   *
+   * @param axis - Axis whose angular dP format is being configured
+   * @param target - Desired DMS label: 'dd.mn' | 'dd.mn.SS' | 'dd.dEC'
+   */
+  async setAxisAngularResolution(
+    axis: 'X' | 'Y' | 'Z',
+    target: 'dd.mn' | 'dd.mn.SS' | 'dd.dEC'
+  ): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) to the dP item; for an angular axis it shows a `dd.` DMS label.
+    const isAngularDpLabel = (t: string) => t.startsWith('dd.');
+    let guard = 0;
+    while (!isAngularDpLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('angular dP parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (right key) until the requested DMS label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`angular dP choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).

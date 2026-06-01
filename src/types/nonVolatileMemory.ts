@@ -43,6 +43,34 @@ export interface DisplayResolutionByAxis {
 }
 
 /**
+ * Angular display-resolution format for the `dP` parameter when an axis counts
+ * in `angular` mode (manual §6.2 "Display resolution (Angular)", US-040 AC 40.4).
+ * The dP option set is conditional on the axis's counting mode: linear axes use
+ * the micron `DisplayResolutionValue` set, angular axes use these DMS formats.
+ *
+ * The OCR labels (`dd.πn`, `dd.πn.SS`, `dd.dEC`) reconcile to these enum values
+ * and seven-segment-renderable literals (the panel has no °/'/" glyphs, so DMS
+ * groups are separated by the seven-segment decimal point — exactly how the
+ * manual writes the format labels):
+ *
+ * - `'dd-mn'`    degrees-minutes         -> setup label `dd.mn`,    value `12.30`
+ * - `'dd-mn-ss'` degrees-minutes-seconds -> setup label `dd.mn.SS`, value `12.30.00`
+ * - `'dd-dec'`   degrees-decimal         -> setup label `dd.dEC`,   value `12.500`
+ */
+export type AngularFormat = 'dd-mn' | 'dd-mn-ss' | 'dd-dec';
+
+/**
+ * Per-axis angular display-resolution format - the angular counterpart of dP
+ * (US-040, display-only). Read instead of `displayResolution` whenever the axis
+ * counting mode is `angular`; never affects the stored machine position.
+ */
+export interface AngularResolutionByAxis {
+  X: AngularFormat;
+  Y: AngularFormat;
+  Z: AngularFormat;
+}
+
+/**
  * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`, used by
  * the Taper Calculation function in Section 9.2.2). The other axis of the pair
  * shows the radius. 'Zprime' is the lathe 4th-axis variant; on this 3-axis mill
@@ -135,6 +163,8 @@ export interface NonVolatileMemory {
   scaleResolution: ScaleResolutionByAxis;
   /** Per-axis display resolution in microns - dP parameter (US-022, display-only) */
   displayResolution: DisplayResolutionByAxis;
+  /** Per-axis angular display-resolution format - angular dP for angular axes (US-040, display-only) */
+  angularResolution: AngularResolutionByAxis;
   /** Axis on which the Taper function displays the angle (Section 6.2). */
   taperOnAxis: TaperOnAxis;
   /** Per-axis counting direction - dir parameter (US-002, manual section 6.2) */
@@ -192,6 +222,19 @@ export const DEFAULT_DISPLAY_RESOLUTION: DisplayResolutionByAxis = {
 };
 
 /**
+ * Mill default angular display-resolution format: degrees-minutes (`dd.mn`) on
+ * every axis — the first angular format listed in the §6.2 table. Only consulted
+ * for axes whose counting mode is `angular`; the mill ships all-linear (AC 40.6),
+ * so this is the value an axis switched to angular reads until the operator picks
+ * another format.
+ */
+export const DEFAULT_ANGULAR_RESOLUTION: AngularResolutionByAxis = {
+  X: 'dd-mn',
+  Y: 'dd-mn',
+  Z: 'dd-mn',
+};
+
+/**
  * Default non-volatile memory values
  */
 export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
@@ -201,6 +244,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   bootMessageMode: 'show',
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
   displayResolution: DEFAULT_DISPLAY_RESOLUTION,
+  angularResolution: DEFAULT_ANGULAR_RESOLUTION,
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
