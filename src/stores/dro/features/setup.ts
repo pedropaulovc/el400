@@ -36,6 +36,7 @@ import {
   wrapChoiceIndex,
   labelForValue,
   commitDrafts,
+  resolveChoices,
   SETUP_END_ID,
   SAVE_CHANGES_ID,
   type SetupParameter,
@@ -81,7 +82,9 @@ function computeSelectDisplay(): DisplayState {
 function computeParameterDisplay(data: SetupData, nvMem: NonVolatileMemory): DisplayState {
   const param = getParameterAt(data.currentParamIndex);
   const value = currentValue(param, data, nvMem);
-  return createDisplay(labelForValue(param, value), '', '');
+  // Pass the read context so a parameter with conditional choices (dP, US-040)
+  // draws its label from the active set (angular DMS labels on an angular axis).
+  return createDisplay(labelForValue(param, value, readContextFor(data, nvMem)), '', '');
 }
 
 /** Map an axis-select event to its axis, or null if not an axis event. */
@@ -167,12 +170,17 @@ function reduceParameter(
   // Choice cycling left/right with wrap-around (AC 39.4).
   if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
     const param = getParameterAt(data.currentParamIndex);
+    // Resolve the active choice set: parameters with conditional choices (dP,
+    // US-040) cycle the angular DMS formats on an angular axis instead of the
+    // linear micron values.
+    const ctx = readContextFor(data, nvMem);
+    const choices = resolveChoices(param, ctx);
     // Terminal items (End) have no choices to cycle -- ignore.
-    if (param.choices.length === 0) return null;
+    if (choices.length === 0) return null;
 
     const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
-    const idx = choiceIndexOf(param, currentValue(param, data, nvMem));
-    const nextChoice = param.choices[wrapChoiceIndex(param, idx, delta)];
+    const idx = choiceIndexOf(param, currentValue(param, data, nvMem), ctx);
+    const nextChoice = choices[wrapChoiceIndex(param, idx, delta, ctx)];
     if (nextChoice === undefined) return null;
     const key = draftKey(param, data.selectedAxis);
     const newData: SetupData = {

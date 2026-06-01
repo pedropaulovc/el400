@@ -508,6 +508,8 @@ export type DROEventPayload =
   | { eventName: 'BOOT_MESSAGE_TIMEOUT' }
   | { eventName: 'ABS_INC_TOGGLE_COMPLETE' }
   | { eventName: 'MILL_STATE_CHANGED' }
+  // Display sleep-timer idle period elapsed (US-026); dispatched by useSleepTimer.
+  | { eventName: 'SLEEP_TIMER_ELAPSED' }
   | { eventName: 'BOLT_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
@@ -637,6 +639,15 @@ export const isPresetActive = (s: DROStateName): boolean =>
 /** Check if setup menu is active (any setup-* state) */
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
+
+/**
+ * States where the Near-Zero Warning is automatically enabled (US-024 AC24.9,
+ * manual §8.3): distance-to-go / Preset, Sub Datum Memory, and all milling-
+ * specific functions (the FN-LED macro modes). In plain idle there is no target
+ * being approached, so a freshly-zeroed axis sitting at 0 must NOT beep.
+ */
+export const isZeroApproachContext = (s: DROStateName): boolean =>
+  isPresetActive(s) || isSdmActive(s) || isFnLedActive(s);
 
 /** Check if taper calculation mode is active (US-045) */
 export const isTaperActive = (s: DROStateName): boolean =>

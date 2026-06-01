@@ -13,8 +13,16 @@ import {
   MEASUREMENT_MODE_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
+  ZERO_APPROACH_ID,
+  ZERO_APPROACH_DIST_ID,
+  ZERO_APPROACH_TOLR_ID,
   ENF_ID,
+  SLEEP_TIMEOUT_ID,
+  SLEEP_TIMEOUT_MINUTES,
+  sleepTimeoutLabel,
+  ANGULAR_RESOLUTION_CHOICES,
   getParameterAt,
+  resolveChoices,
   wrapItemIndex,
   choiceIndexOf,
   wrapChoiceIndex,
@@ -175,6 +183,47 @@ describe('SETUP_PARAMETERS registry', () => {
     ).toBe('on');
   });
 
+  it('exposes a global SLEEP T parameter with a 0..120 minute ladder (US-026, AC26.1)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    expect(sleep).toBeDefined();
+    expect(sleep.scope).toBe('global');
+    // First choice is the disabled sentinel (000 = off, AC26.2/26.8); ladder is
+    // strictly ascending and capped at the 120-minute maximum (AC26.3).
+    expect(sleep.choices[0]!.value).toBe('0');
+    expect(sleep.choices[0]!.label).toBe('SLP oFF');
+    const minutes = sleep.choices.map((c) => Number(c.value));
+    expect(minutes).toEqual([...SLEEP_TIMEOUT_MINUTES]);
+    expect(Math.max(...minutes)).toBe(120);
+    for (let i = 1; i < minutes.length; i++) {
+      expect(minutes[i]!).toBeGreaterThan(minutes[i - 1]!);
+    }
+    expect(typeof sleep.commit).toBe('function');
+  });
+
+  it('SLEEP T seeds its current value from nvMem.sleepTimeout (US-026, AC26.2)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    // Default 0 => disabled.
+    expect(sleep.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    expect(
+      sleep.readValue({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 10 }, axis: null })
+    ).toBe('10');
+  });
+
+  it('SLEEP T defends against a stale persisted value not in the ladder', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const seeded = sleep.readValue({
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, sleepTimeout: 999 },
+      axis: null,
+    });
+    expect(sleep.choices.map((c) => c.value)).toContain(seeded);
+  });
+
+  it('sleepTimeoutLabel renders oFF for 0 and SLP <n> otherwise', () => {
+    expect(sleepTimeoutLabel(0)).toBe('SLP oFF');
+    expect(sleepTimeoutLabel(5)).toBe('SLP 5');
+    expect(sleepTimeoutLabel(120)).toBe('SLP 120');
+  });
+
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
     expect(taper.commit).toBeUndefined();
@@ -301,6 +350,17 @@ describe('commit-on-change hooks (US-002)', () => {
     expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
   });
 
+  it('SLEEP T.commit persists the chosen minutes to nvMem.sleepTimeout (US-026, AC26.4)', () => {
+    const sleep = SETUP_PARAMETERS.find((p) => p.id === SLEEP_TIMEOUT_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem, axis: null }, '10');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(10);
+    // Selecting the disabled sentinel persists 0 (AC26.8).
+    const after = useSettingsStore.getState().nvMem;
+    sleep.commit!({ nvMem: after, axis: null }, '0');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(0);
+  });
+
   it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {
     const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
     const nvMem = useSettingsStore.getState().nvMem;
@@ -328,6 +388,130 @@ describe('commit-on-change hooks (US-002)', () => {
     enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
     expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
     expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+  });
+});
+
+describe('Zero-Approach Warning parameters (US-024)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  it('exposes ZERO AP / BP DIST / BP TOLR as global parameters (AC24.1)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(ap).toBeDefined();
+    expect(dist).toBeDefined();
+    expect(tolr).toBeDefined();
+    expect(ap.scope).toBe('global');
+    expect(dist.scope).toBe('global');
+    expect(tolr.scope).toBe('global');
+  });
+
+  it('ZERO AP toggles BU22 ON/OFF (AC24.2)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.choices.map((c) => c.value)).toEqual(['on', 'off']);
+    // BU22 wording surfaces in the labels.
+    expect(ap.choices.map((c) => c.label).join(' ')).toContain('bU22');
+  });
+
+  it('ZERO AP seeds from nvMem.zeroApproachEnabled', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    const on = { ...DEFAULT_NON_VOLATILE_MEMORY, zeroApproachEnabled: true };
+    expect(ap.readValue({ nvMem: on, axis: null })).toBe('on');
+  });
+
+  it('ZERO AP.commit persists the toggle immediately (commit-on-change)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    ap.commit!({ nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(true);
+    ap.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(false);
+  });
+
+  it('BP DIST default is 0.002" and commits (AC24.4)', () => {
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    expect(dist.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0.002');
+    expect(dist.choices.map((c) => c.value)).toContain('0.010');
+    const nvMem = useSettingsStore.getState().nvMem;
+    dist.commit!({ nvMem, axis: null }, '0.010');
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance).toBe('0.010');
+  });
+
+  it('BP TOLR default is 0 and commits (AC24.5)', () => {
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(tolr.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    const nvMem = useSettingsStore.getState().nvMem;
+    tolr.commit!({ nvMem, axis: null }, '0.005');
+    expect(useSettingsStore.getState().nvMem.zeroApproachTolerance).toBe('0.005');
+  });
+});
+
+describe('dP angular display-resolution formats (US-040 AC 40.4)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  const dp = () => SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+
+  const angularNvMem = (axis: 'X' | 'Y' | 'Z' = 'X') => ({
+    ...DEFAULT_NON_VOLATILE_MEMORY,
+    countingMode: { ...DEFAULT_NON_VOLATILE_MEMORY.countingMode, [axis]: 'angular' as const },
+  });
+
+  it('exposes the three angular format choices with the manual labels', () => {
+    expect(ANGULAR_RESOLUTION_CHOICES.map((c) => c.value)).toEqual([
+      'dd-mn', 'dd-mn-ss', 'dd-dec',
+    ]);
+    expect(ANGULAR_RESOLUTION_CHOICES.map((c) => c.label)).toEqual([
+      'dd.mn', 'dd.mn.SS', 'dd.dEC',
+    ]);
+  });
+
+  it('resolveChoices returns the linear micron set for a linear axis', () => {
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
+    expect(resolveChoices(dp(), ctx).map((c) => c.value)).toEqual([
+      '0.1', '0.2', '0.5', '1', '2', '5', '10', '20', '50',
+    ]);
+  });
+
+  it('resolveChoices returns the angular DMS set when the axis is angular', () => {
+    const ctx = { nvMem: angularNvMem('X'), axis: 'X' as const };
+    expect(resolveChoices(dp(), ctx)).toEqual(ANGULAR_RESOLUTION_CHOICES);
+  });
+
+  it('resolveChoices is per-axis: angular X but linear Y keep their own sets', () => {
+    const nvMem = angularNvMem('X');
+    expect(resolveChoices(dp(), { nvMem, axis: 'X' })).toEqual(ANGULAR_RESOLUTION_CHOICES);
+    expect(resolveChoices(dp(), { nvMem, axis: 'Y' }).map((c) => c.value)).toContain('5');
+  });
+
+  it('resolveChoices falls back to a parameters static choices when no choicesFor', () => {
+    const dir = SETUP_PARAMETERS.find((p) => p.id === DIRECTION_ID)!;
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
+    expect(resolveChoices(dir, ctx)).toBe(dir.choices);
+  });
+
+  it('dP seeds from nvMem.angularResolution for an angular axis', () => {
+    const nvMem = {
+      ...angularNvMem('X'),
+      angularResolution: {
+        ...DEFAULT_NON_VOLATILE_MEMORY.angularResolution,
+        X: 'dd-dec' as const,
+      },
+    };
+    expect(dp().readValue({ nvMem, axis: 'X' })).toBe('dd-dec');
+  });
+
+  it('dP.commit persists an angular format to nvMem.angularResolution for the axis only', () => {
+    const nvMem = angularNvMem('Y');
+    dp().commit!({ nvMem, axis: 'Y' }, 'dd-mn-ss');
+    const after = useSettingsStore.getState().nvMem.angularResolution;
+    expect(after).toEqual({ X: 'dd-mn', Y: 'dd-mn-ss', Z: 'dd-mn' });
+    // The linear micron resolution for Y is left untouched.
+    expect(useSettingsStore.getState().nvMem.displayResolution.Y).toBe('5');
   });
 });
 

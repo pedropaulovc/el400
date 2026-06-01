@@ -7,6 +7,11 @@
  * converted. Linear axes are untouched. Per-axis Direction still composes on top
  * (a reversed angular axis counts the other way, i.e. 360 - value).
  *
+ * The wrapped degrees render through the axis's angular dP format as a
+ * pre-formatted DMS string (default `dd-mn`, e.g. 90° -> "90.00"); the exact
+ * format mapping is covered in `angularDms.test.ts`. These tests assert the
+ * wrap/direction/per-axis semantics under that default format.
+ *
  * @see project/user-stories/06-configuration/US-040-counting-mode.md
  */
 import { describe, it, expect } from 'vitest';
@@ -83,15 +88,16 @@ describe('wrapDegrees', () => {
 describe('computeDisplayPosition — angular counting mode (US-040)', () => {
   it('an angular axis shows the position as degrees, no unit conversion (AC 40.4)', () => {
     const ctx = manualContext(makeNvMem({ countingMode: { X: 'angular' }, defaultUnit: 'inch' }));
-    // 90 "mm" of raw position is read as 90 degrees, NOT converted to inches.
+    // 90 "mm" of raw position is read as 90 degrees, NOT converted to inches; the
+    // default angular dP format (dd-mn) renders it as "90.00" (90°00').
     const vMem = manualVMem({ X: 90 });
-    expect(computeDisplayPosition('X', vMem, ctx)).toBe(90);
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe('90.00');
   });
 
   it('wraps an angular value past a full revolution (AC 40.4)', () => {
     const ctx = manualContext(makeNvMem({ countingMode: { X: 'angular' } }));
     const vMem = manualVMem({ X: 450 }); // 450° -> 90°
-    expect(computeDisplayPosition('X', vMem, ctx)).toBe(90);
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe('90.00');
   });
 
   it('a linear axis is unaffected and still unit-converts (AC 40.3)', () => {
@@ -105,7 +111,7 @@ describe('computeDisplayPosition — angular counting mode (US-040)', () => {
       makeNvMem({ countingMode: { X: 'angular' }, axisDirection: { X: 'reversed' } })
     );
     const vMem = manualVMem({ X: 90 }); // reversed: -90 -> wrap -> 270
-    expect(computeDisplayPosition('X', vMem, ctx)).toBe(270);
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe('270.00');
   });
 
   it('is per-axis: X angular, Y linear at the same time (AC 40.5)', () => {
@@ -113,7 +119,7 @@ describe('computeDisplayPosition — angular counting mode (US-040)', () => {
       makeNvMem({ countingMode: { X: 'angular', Y: 'linear' }, defaultUnit: 'mm' })
     );
     const vMem = manualVMem({ X: 370, Y: 12 });
-    expect(computeDisplayPosition('X', vMem, ctx)).toBe(10); // wrapped degrees
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe('10.00'); // wrapped degrees (dd-mn)
     expect(computeDisplayPosition('Y', vMem, ctx)).toBe(12); // linear mm
   });
 });
@@ -124,7 +130,8 @@ describe('computeNormalDisplay — mixed angular/linear axes (AC 40.5)', () => {
       makeNvMem({ countingMode: { X: 'angular', Y: 'linear', Z: 'angular' }, defaultUnit: 'mm' })
     );
     const vMem = manualVMem({ X: 90, Y: 5, Z: -30 });
-    expect(computeNormalDisplay(vMem, ctx)).toEqual({ X: 90, Y: 5, Z: 330 });
+    // Angular axes render as DMS strings (default dd-mn); the linear axis stays numeric.
+    expect(computeNormalDisplay(vMem, ctx)).toEqual({ X: '90.00', Y: 5, Z: '330.00' });
   });
 
   it('all-linear default leaves every axis as linear distance', () => {

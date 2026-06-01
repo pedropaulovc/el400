@@ -38,21 +38,22 @@ test.describe('US-040: Counting Mode (Linear vs Angular)', () => {
   test('AC 40.4: an AnGULAr axis reads degrees and wraps at a full revolution', async ({ dro }) => {
     await dro.setAxisCountingMode('X', 'AnGULAr');
 
-    // Datum the angular axis at the current encoder position, then rotate.
+    // Datum the angular axis at the current encoder position, then rotate. The
+    // default angular format (dd.mn) renders degrees as "dd.mn" (e.g. 0 -> "0.00").
     await dro.zeroAxis('X');
-    await dro.waitForAxisValue('X', 0);
+    await dro.waitForAxisPureTextValue('X', '0.00');
 
     // 90 of motion reads 90 degrees (no inch/mm conversion — default unit is inch).
     await dro.simulateTableMove('X', 'left', 90);
-    await dro.waitForAxisValue('X', 90);
+    await dro.waitForAxisPureTextValue('X', '90.00');
 
     // Past a full revolution the display wraps into [0, 360): +280 more -> 370 -> 10.
     await dro.simulateTableMove('X', 'left', 280);
-    await dro.waitForAxisValue('X', 10);
+    await dro.waitForAxisPureTextValue('X', '10.00');
 
     // Rotating back below the datum wraps up from the top (-> 350).
     await dro.simulateTableMove('X', 'right', 20);
-    await dro.waitForAxisValue('X', 350);
+    await dro.waitForAxisPureTextValue('X', '350.00');
   });
 
   test('AC 40.5: counting mode is per-axis — X angular, Y stays linear', async ({ dro }) => {
@@ -63,13 +64,13 @@ test.describe('US-040: Counting Mode (Linear vs Angular)', () => {
 
     await dro.zeroAxis('X');
     await dro.zeroAxis('Y');
-    await dro.waitForAxisValue('X', 0);
-    await dro.waitForAxisValue('Y', 0);
+    await dro.waitForAxisPureTextValue('X', '0.00'); // angular dd.mn
+    await dro.waitForAxisValue('Y', 0); // linear numeric
 
-    // Same magnitude of motion: X reads degrees (wrapped), Y reads mm distance.
+    // Same magnitude of motion: X reads degrees (wrapped, dd.mn), Y reads mm distance.
     await dro.simulateTableMove('X', 'left', 400); // 400 -> 40 degrees
     await dro.simulateTableMove('Y', 'left', 12); // 12 mm
-    await dro.waitForAxisValue('X', 40);
+    await dro.waitForAxisPureTextValue('X', '40.00');
     await dro.waitForAxisValue('Y', 12);
   });
 });

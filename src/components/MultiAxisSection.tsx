@@ -1,9 +1,11 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered } from "../stores/droStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
+import { useSleepTimer } from "../stores/dro/features/sleep";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -70,12 +72,20 @@ const MultiAxisSection = () => {
   // Reference-mark crossing hook for E2E (US-012)
   useReferenceMarkTestHook(dispatch);
 
+  // Near-Zero Warning (US-024): plays the continuous beep while an axis is within
+  // BP DIST of zero; returns whether the visual indicator should show.
+  const zeroApproachActive = useZeroApproachWarning();
+  // Display sleep timer (US-026): arm the idle countdown from the SLEEP T setting.
+  useSleepTimer(dispatch, droState, nvMem.sleepTimeout);
+
   // LED indicators
   const mode = useMode();
   const defaultUnit = useDefaultUnit();
   // Touch-probe trigger indication (US-032, AC 32.8): lights when a probe
   // contact is captured during a probe function.
   const probeTriggered = useProbeTriggered();
+  // Display sleep state (US-026): dims the readout and flashes the wrench LED.
+  const isAsleep = useIsAsleep();
 
   const isAbs = mode === 'abs';
   const isInch = defaultUnit === 'inch';
@@ -85,7 +95,10 @@ const MultiAxisSection = () => {
       <h2 className="sr-only">Axis display</h2>
       <BeveledFrame className="h-full">
         <div
-          className="p-4 rounded-lg h-full flex flex-col"
+          data-testid="display-panel"
+          data-display-power={isAsleep ? 'asleep' : 'awake'}
+          // US-026: when asleep the readout dims (display switched off, note *4).
+          className={`p-4 rounded-lg h-full flex flex-col${isAsleep ? ' sleeping opacity-10 transition-opacity' : ' transition-opacity'}`}
           style={{
             background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',
             boxShadow: 'inset 0 4px 16px rgba(0,0,0,0.9)',
@@ -112,6 +125,21 @@ const MultiAxisSection = () => {
             <Axis axis="Y" />
             <Axis axis="Z" />
           </div>
+
+          {/* Near-Zero Warning indicator (US-024): rendered only while the warning
+              is active, so its presence/absence drives the audio-indicator assertion.
+              aria-live announces the alert to screen-reader users. */}
+          {zeroApproachActive && (
+            <div
+              data-testid="audio-indicator"
+              role="status"
+              aria-live="assertive"
+              className="mt-1 flex items-center justify-center gap-1 text-red-400 animate-blink"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">♪</span>
+              <span className="sr-only">Near zero warning</span>
+            </div>
+          )}
 
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">
@@ -169,6 +197,14 @@ const MultiAxisSection = () => {
                 name="status"
                 isOn={probeTriggered}
                 data-testid="led-probe"
+              />
+              {/* US-026: wrench/sleep LED flashes while the display is asleep. */}
+              <LEDIndicator
+                label="slp"
+                name="status"
+                isOn={isAsleep}
+                className={isAsleep ? 'flashing animate-blink' : ''}
+                data-testid="sleep-led"
               />
             </fieldset>
           </div>

@@ -36,13 +36,18 @@ import type {
   MeasurementMode,
   CountingMode,
   ProbeDroType,
+  KeypadLockState,
   DisplayResolutionValue,
   ScaleResolutionValue,
   TaperOnAxis,
+  AngularFormat,
+  ZeroApproachDistance,
+  ZeroApproachTolerance,
 } from '../../../types/nonVolatileMemory';
 import {
   DEFAULT_SCALE_RESOLUTION,
   DEFAULT_DISPLAY_RESOLUTION,
+  DEFAULT_ANGULAR_RESOLUTION,
 } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
 
@@ -80,9 +85,20 @@ export interface SetupParameter {
   readonly scope: SetupParameterScope;
   /**
    * Choices the left/right keys cycle through. Empty for terminal items like
-   * `End`, which carry no value and are acted on with `ent` instead.
+   * `End`, which carry no value and are acted on with `ent` instead. For
+   * parameters whose option set depends on committed state, this is the *default*
+   * (fallback) set; `choicesFor` overrides it conditionally (see below).
    */
   readonly choices: readonly SetupParameterChoice[];
+  /**
+   * Optional context-aware choice set. When present, the shell cycles through
+   * the choices this returns for the current read context instead of the static
+   * `choices`. Used by dP (US-040 AC 40.4), whose option set switches between the
+   * linear micron values and the angular DMS formats depending on the axis's
+   * counting mode. Resolve via `resolveChoices` so callers without a context
+   * fall back to the static `choices`.
+   */
+  readonly choicesFor?: (ctx: SetupReadContext) => readonly SetupParameterChoice[];
   /**
    * Seed the current value from committed state. Returns the `value` of the
    * choice that should be shown first. Terminal items return ''.
@@ -155,11 +171,58 @@ export const DISPLAY_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
   { value: '50', label: 'dP 50.0' },
 ];
 
+/**
+ * Angular dP choices: the three degree formats the display-resolution parameter
+ * offers when the axis counts in `angular` mode (manual §6.2 "Display resolution
+ * (Angular)", US-040 AC 40.4). Order matches the manual table; `dd.mn`
+ * (degrees-minutes) is first and is the angular default. The OCR labels
+ * `dd.πn / dd.πn.SS / dd.dEC` reconcile to these seven-segment-renderable
+ * literals (`.` separators stand in for the °/'/" the panel cannot draw).
+ */
+export const ANGULAR_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
+  { value: 'dd-mn', label: 'dd.mn' },
+  { value: 'dd-mn-ss', label: 'dd.mn.SS' },
+  { value: 'dd-dec', label: 'dd.dEC' },
+];
+
 /** The per-axis counting-direction parameter id (US-002) -- its draft key. */
 export const DIRECTION_ID = 'direction';
 
 /** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
 export const Z_DEPTH_ID = 'z-depth';
+
+/** The global `ZERO AP` (Near-Zero Warning on/off) parameter id (US-024). */
+export const ZERO_APPROACH_ID = 'zero-approach';
+
+/** The global `BP DIST` (approach distance) parameter id (US-024, AC24.4). */
+export const ZERO_APPROACH_DIST_ID = 'zero-approach-dist';
+
+/** The global `BP TOLR` (departure tolerance) parameter id (US-024, AC24.5). */
+export const ZERO_APPROACH_TOLR_ID = 'zero-approach-tolr';
+
+/**
+ * BP DIST choices: the approach distances (inch) at which the warning engages.
+ * Anchored at the manual's 0.002" (≈50 micron) default; the video example uses
+ * 0.004"/0.010". Stored as inch strings (the device's native tolerance unit).
+ */
+export const ZERO_APPROACH_DIST_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0.002', label: 'bP .002' },
+  { value: '0.004', label: 'bP .004' },
+  { value: '0.005', label: 'bP .005' },
+  { value: '0.010', label: 'bP .010' },
+  { value: '0.020', label: 'bP .020' },
+];
+
+/**
+ * BP TOLR choices: departure hysteresis (inch) the axis must travel beyond
+ * BP DIST before the warning clears. Default 0 (clears at the band edge).
+ */
+export const ZERO_APPROACH_TOLR_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0', label: 'tL .000' },
+  { value: '0.002', label: 'tL .002' },
+  { value: '0.005', label: 'tL .005' },
+  { value: '0.010', label: 'tL .010' },
+];
 
 /** The per-axis radius/diameter measurement-mode parameter id (US-041) -- its draft key. */
 export const MEASUREMENT_MODE_ID = 'measurement-mode';
@@ -169,6 +232,31 @@ export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
 /** The global encoder-fail warning parameter id (US-042) -- its draft key. */
 export const ENF_ID = 'enf';
+
+/** The global keypad-lock parameter id (US-043, §6.2 `LoC`) -- its draft key. */
+export const KEYPAD_LOCK_ID = 'keypad-lock';
+
+/** The global display sleep-timer parameter id (US-026, §6.2) -- its draft key. */
+export const SLEEP_TIMEOUT_ID = 'sleep-timeout';
+
+/**
+ * SLEEP T choices: the idle timeout in minutes the left/right keys cycle through
+ * (manual §6.2 `SLEEP t`, range 0-120). `'0'` is the disabled sentinel, shown as
+ * `SLP oFF` (the display never sleeps); the remaining values are a representative
+ * ladder of common timeouts up to the 120-minute maximum, each shown as `SLP <n>`.
+ * Stored as the integer minute count string so commit can parse it back to a
+ * number for nvMem.sleepTimeout.
+ */
+export const SLEEP_TIMEOUT_MINUTES = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
+
+/** Build the 7-segment label for a sleep-timeout minute value (0 => disabled). */
+export function sleepTimeoutLabel(minutes: number): string {
+  return minutes === 0 ? 'SLP oFF' : `SLP ${String(minutes)}`;
+}
+
+/** SLEEP T choices derived from the minute ladder (value = integer-minutes string). */
+export const SLEEP_TIMEOUT_CHOICES: readonly SetupParameterChoice[] =
+  SLEEP_TIMEOUT_MINUTES.map((m) => ({ value: String(m), label: sleepTimeoutLabel(m) }));
 
 /** The SAU CHG (save changes) parameter id (US-027) -- ENT commits drafts to nvMem. */
 export const SAVE_CHANGES_ID = 'save-changes';
@@ -267,22 +355,46 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     label: 'dP 5.0',
     scope: 'per-axis',
     choices: DISPLAY_RESOLUTION_CHOICES,
-    // Seed from the selected axis's committed display resolution (nvMem). On the
-    // SELECT prompt (axis null) fall back to X. Guard against a stale persisted
-    // value no longer in the choice set by defaulting to the mill default.
+    // The dP option set is conditional on the axis's counting mode (US-040
+    // AC 40.4): angular axes cycle the DMS formats, linear axes the micron
+    // values. The static `choices` above is the linear fallback (used on the
+    // SELECT prompt and by context-free callers).
+    choicesFor: (ctx) =>
+      isAngularAxis(ctx) ? ANGULAR_RESOLUTION_CHOICES : DISPLAY_RESOLUTION_CHOICES,
+    // Seed from the selected axis's committed resolution. For an angular axis
+    // that is the DMS format (nvMem.angularResolution); for a linear axis the
+    // micron value (nvMem.displayResolution). On the SELECT prompt (axis null)
+    // fall back to X. Guard against a stale persisted value no longer in the
+    // active choice set by defaulting to the mill default.
     readValue: (ctx) => {
       const axis = ctx.axis ?? 'X';
+      if (isAngularAxis(ctx)) {
+        const committed = ctx.nvMem.angularResolution[axis];
+        const isValid = ANGULAR_RESOLUTION_CHOICES.some((c) => c.value === committed);
+        return isValid ? committed : DEFAULT_ANGULAR_RESOLUTION[axis];
+      }
       const committed = ctx.nvMem.displayResolution[axis];
       const isValid = DISPLAY_RESOLUTION_CHOICES.some((c) => c.value === committed);
       return isValid ? committed : DEFAULT_DISPLAY_RESOLUTION[axis];
     },
-    // Commit-on-change (US-022): persist the per-axis display resolution
-    // immediately so the readout's decimal precision updates on exit. dP is a
-    // display-only transform (AC22.5); SAU CHG (US-027) is not yet wired, so this
-    // surgical path -- the same one Direction (US-002) uses -- makes the effect
-    // visible without the generic save engine.
+    // Commit-on-change (US-022 / US-040): persist the per-axis resolution
+    // immediately so the readout updates on exit. dP is a display-only transform
+    // (AC22.5); SAU CHG (US-027) is not yet wired, so this surgical path -- the
+    // same one Direction (US-002) uses -- makes the effect visible. Angular axes
+    // write the DMS format to a separate nvMem slot so switching counting mode
+    // back and forth preserves each axis's linear micron and angular format
+    // choices independently.
     commit: (ctx, value) => {
       const axis = ctx.axis ?? 'X';
+      if (isAngularAxis(ctx)) {
+        useSettingsStore.getState().updateNvMem({
+          angularResolution: {
+            ...ctx.nvMem.angularResolution,
+            [axis]: value as AngularFormat,
+          },
+        });
+        return;
+      }
       useSettingsStore.getState().updateNvMem({
         displayResolution: {
           ...ctx.nvMem.displayResolution,
@@ -346,6 +458,57 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: ZERO_APPROACH_ID,
+    label: 'bU22 oF',
+    scope: 'global',
+    // ZERO AP toggles the Near-Zero Warning (BU22). The 7-segment panel has no
+    // 'Z' glyph for "buzz", so the device renders it as `bU22` (AC24.2).
+    choices: [
+      { value: 'on', label: 'bU22 on' },
+      { value: 'off', label: 'bU22 oF' },
+    ],
+    readValue: (ctx) => (ctx.nvMem.zeroApproachEnabled ? 'on' : 'off'),
+    // Commit-on-change (US-024): persist immediately so the warning engages on
+    // exit without the generic SAU CHG save engine, mirroring Direction (US-002).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ zeroApproachEnabled: value === 'on' });
+    },
+  },
+  {
+    id: ZERO_APPROACH_DIST_ID,
+    label: 'bP .002',
+    scope: 'global',
+    choices: ZERO_APPROACH_DIST_CHOICES,
+    // Seed from the committed BP DIST; guard a stale value back to the default.
+    readValue: (ctx) => {
+      const committed = ctx.nvMem.zeroApproachDistance;
+      const isValid = ZERO_APPROACH_DIST_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0.002';
+    },
+    commit: (_ctx, value) => {
+      useSettingsStore
+        .getState()
+        .updateNvMem({ zeroApproachDistance: value as ZeroApproachDistance });
+    },
+  },
+  {
+    id: ZERO_APPROACH_TOLR_ID,
+    label: 'tL .000',
+    scope: 'global',
+    choices: ZERO_APPROACH_TOLR_CHOICES,
+    // Seed from the committed BP TOLR; guard a stale value back to the default.
+    readValue: (ctx) => {
+      const committed = ctx.nvMem.zeroApproachTolerance;
+      const isValid = ZERO_APPROACH_TOLR_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0';
+    },
+    commit: (_ctx, value) => {
+      useSettingsStore
+        .getState()
+        .updateNvMem({ zeroApproachTolerance: value as ZeroApproachTolerance });
+    },
+  },
+  {
     id: MEASUREMENT_MODE_ID,
     label: 'rAd',
     scope: 'per-axis',
@@ -386,6 +549,47 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: KEYPAD_LOCK_ID,
+    label: 'LoC oFF',
+    scope: 'global',
+    choices: [
+      { value: 'off', label: 'LoC oFF' },
+      { value: 'on', label: 'LoC on' },
+    ],
+    // Global keypad lock (US-043, §6.2 `LoC`). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.keypadLock,
+    // Commit-on-change: persist immediately so the lock takes hold the moment the
+    // operator cycles the choice (same surgical path as Direction / Z depth /
+    // probe type). Persisting to nvMem (localStorage-backed) also means the lock
+    // survives a power cycle (AC 43.6). Crucially, committing on cycle -- not only
+    // on exit -- keeps the UNLOCK reachable: while `LoC on`, the gate already lets
+    // the wrench/setup key and all in-setup navigation through, so cycling back to
+    // `LoC oFF` here unlocks even though the panel was locked on entry.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
+    },
+  },
+  {
+    id: SLEEP_TIMEOUT_ID,
+    label: sleepTimeoutLabel(0),
+    scope: 'global',
+    choices: SLEEP_TIMEOUT_CHOICES,
+    // Global display sleep timeout in minutes (US-026, §6.2). Seeded from nvMem;
+    // guard against a stale persisted value that is not one of the ladder choices
+    // by falling back to the disabled sentinel.
+    readValue: (ctx) => {
+      const committed = String(ctx.nvMem.sleepTimeout);
+      const isValid = SLEEP_TIMEOUT_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : '0';
+    },
+    // Commit-on-change (US-026): persist immediately, same surgical path as
+    // Direction / dP, so the sleep timer takes effect on exit. Parses the choice
+    // value back to an integer minute count for nvMem.sleepTimeout.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ sleepTimeout: Number(value) });
+    },
+  },
+  {
     id: SAVE_CHANGES_ID,
     // Manual section 6.2 names this `SAu ChG`; the seven-segment panel has no
     // lowercase 'u' glyph, so the renderable label uses uppercase 'U' (as in
@@ -403,6 +607,28 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     readValue: () => '',
   },
 ];
+
+/**
+ * Whether the axis currently being configured counts in `angular` mode (US-040).
+ * Per-axis parameters read the selected axis's mode; on the SELECT prompt
+ * (axis null) fall back to X. Used to pick the conditional dP option set.
+ */
+function isAngularAxis(ctx: SetupReadContext): boolean {
+  return ctx.nvMem.countingMode[ctx.axis ?? 'X'] === 'angular';
+}
+
+/**
+ * Resolve the choices a parameter cycles through for the given read context.
+ * Parameters with a `choicesFor` accessor (e.g. dP, whose option set depends on
+ * counting mode, US-040 AC 40.4) get their context-aware set; all others fall
+ * back to their static `choices`.
+ */
+export function resolveChoices(
+  param: SetupParameter,
+  ctx: SetupReadContext
+): readonly SetupParameterChoice[] {
+  return param.choicesFor?.(ctx) ?? param.choices;
+}
 
 /** Look up a parameter by index, clamped to the registry bounds. */
 export function getParameterAt(index: number): SetupParameter {
@@ -431,18 +657,35 @@ export function wrapItemIndex(index: number, delta: number): number {
 /**
  * Find the index of a choice value within a parameter, defaulting to 0 when the
  * value is not one of the choices (e.g. terminal items or stale drafts).
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the lookup
+ * runs against the active set; without it the static `choices` are used.
  */
-export function choiceIndexOf(param: SetupParameter, value: string): number {
-  const idx = param.choices.findIndex((c) => c.value === value);
+export function choiceIndexOf(
+  param: SetupParameter,
+  value: string,
+  ctx?: SetupReadContext
+): number {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const idx = choices.findIndex((c) => c.value === value);
   return idx === -1 ? 0 : idx;
 }
 
 /**
  * Cycle a choice index by `delta` with wrap-around (AC 39.4).
  * Returns 0 for parameters with no choices.
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the cycle
+ * length matches the active set; without it the static `choices` are used.
  */
-export function wrapChoiceIndex(param: SetupParameter, index: number, delta: number): number {
-  const count = param.choices.length;
+export function wrapChoiceIndex(
+  param: SetupParameter,
+  index: number,
+  delta: number,
+  ctx?: SetupReadContext
+): number {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const count = choices.length;
   if (count === 0) return 0;
   return (((index + delta) % count) + count) % count;
 }
@@ -451,9 +694,18 @@ export function wrapChoiceIndex(param: SetupParameter, index: number, delta: num
  * Resolve the label to show for a parameter given the current draft value:
  * the matching choice's label, or the parameter's own label when no choice
  * matches (terminal items, unseeded params).
+ *
+ * Pass `ctx` for parameters with conditional choices (dP, US-040) so the label
+ * is drawn from the active set (e.g. the angular DMS labels for an angular axis);
+ * without it the static `choices` are used.
  */
-export function labelForValue(param: SetupParameter, value: string): string {
-  const choice = param.choices.find((c) => c.value === value);
+export function labelForValue(
+  param: SetupParameter,
+  value: string,
+  ctx?: SetupReadContext
+): string {
+  const choices = ctx ? resolveChoices(param, ctx) : param.choices;
+  const choice = choices.find((c) => c.value === value);
   return choice?.label ?? param.label;
 }
 
