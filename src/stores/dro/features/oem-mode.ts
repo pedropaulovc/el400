@@ -37,6 +37,7 @@ import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_OEM_DATA,
   isOemActive,
+  isFrontPanelKey,
 } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
 import { useSettingsStore } from '../../settingsStore';
@@ -251,8 +252,13 @@ export const oemModeReducer: FeatureReducer = (statePayload, eventPayload, conte
     return reduceMode(eventName, oemData, vMem, context);
   }
 
-  // oem-rejected: any key (or the auto-dismiss timeout) returns to the setup menu
-  // with the `oEm mod` row re-highlighted; OEM Mode was never entered (AC 44.7).
+  // oem-rejected: a front-panel key (or the auto-dismiss OEM_REJECTED_TIMEOUT)
+  // returns to the setup menu with the `oEm mod` row re-highlighted; OEM Mode was
+  // never entered (AC 44.7). A MILL_STATE_CHANGED encoder tick must NOT dismiss
+  // the `Err` screen — under a connected encoder those arrive every ~100ms and
+  // would wipe it before the operator sees the rejection. Such events no-op.
+  const isDismissal = eventName === 'OEM_REJECTED_TIMEOUT' || isFrontPanelKey(eventName);
+  if (!isDismissal) return null;
   return {
     stateName: 'setup-parameter',
     stateData: setupReturnData(oemData.returnParamIndex),
