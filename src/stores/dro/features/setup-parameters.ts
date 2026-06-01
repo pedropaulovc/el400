@@ -33,6 +33,7 @@ import type {
   NonVolatileMemory,
   AxisDirection,
   ZDepthSense,
+  ProbeDroType,
 } from '../../../types/nonVolatileMemory';
 import { DEFAULT_SCALE_RESOLUTION } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
@@ -118,6 +119,9 @@ export const DIRECTION_ID = 'direction';
 
 /** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
 export const Z_DEPTH_ID = 'z-depth';
+
+/** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
+export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -224,6 +228,22 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // Commit-on-change (US-002): persist immediately, same path as Direction.
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ zDepthSense: value as ZDepthSense });
+    },
+  },
+  {
+    id: PROBE_DRO_TYPE_ID,
+    label: 'dro t',
+    scope: 'global',
+    choices: [
+      { value: 'transmit', label: 'dro t' },
+      { value: 'freeze', label: 'dro F' },
+    ],
+    // Global touch-probe DRO type (US-032, §10.1.1). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.probeDroType,
+    // Commit-on-change: persist immediately so the probe freeze/transmit
+    // behaviour takes hold on exit (same path as Direction / Z depth).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
     },
   },
   {

@@ -28,6 +28,7 @@ import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
+import { probeReducer } from './features/probe';
 
 /**
  * All feature reducers in priority order.
@@ -58,6 +59,7 @@ const featureReducers: FeatureReducer[] = [
   halfReducer, // Handles half function
   // State transition reducers
   polarReducer, // Handles polar coordinate display mode (US-030)
+  probeReducer, // Handles touch probe functions + Freeze-mode idle (US-032); before idle so it owns the frozen display
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:

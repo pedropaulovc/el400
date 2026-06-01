@@ -119,7 +119,7 @@ export class DROPage {
    * Navigate to the DRO simulator connected to the mock CNCjs server.
    * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime' }) {
+  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime'; probeDroType?: 'transmit' | 'freeze' }) {
     const params = new URLSearchParams();
     params.set('source', 'cncjs');
     params.set('host', 'localhost');
@@ -132,6 +132,9 @@ export class DROPage {
     }
     if (options?.taperOn) {
       params.set('taperOn', options.taperOn);
+    }
+    if (options?.probeDroType) {
+      params.set('probeDroType', options.probeDroType);
     }
 
     const url = `/?${params.toString()}`;
@@ -302,6 +305,51 @@ export class DROPage {
    */
   async isFnModeActive(): Promise<boolean> {
     return await this.isLEDOn(this.fnLED);
+  }
+
+  /**
+   * Simulate a touch-probe contact (US-032).
+   *
+   * Hits the mock CNCjs server's probe-trigger endpoint, which sets the GRBL
+   * pin state to 'P' and broadcasts controller:state. The REAL CncjsMillAdapter
+   * parses that pin state into MillState.probe.triggered and dispatches
+   * MILL_STATE_CHANGED - the same path a physical probe input takes. No window
+   * hook, no forced state.
+   */
+  async simulateProbeContact(): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/probe-trigger?sessionId=${this.sessionId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to simulate probe contact: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Release the touch probe (pin state back to open). Pair with
+   * simulateProbeContact to produce a fresh rising edge for the next capture.
+   */
+  async simulateProbeClear(): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/probe-clear?sessionId=${this.sessionId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to clear probe: ${response.statusText}`);
+    }
+  }
+
+  /** Open the probe sub-function menu: Fn -> ProbE -> ENT. */
+  async openProbeMenu(): Promise<void> {
+    await this.functionButton.click();
+    // Ring: center, circle, line, linear, polar, taper, probe => 6 right presses.
+    for (let i = 0; i < 6; i++) {
+      await this.key6.click();
+    }
+    await this.waitForAxisPureTextValue('X', 'ProbE');
+    await this.enterButton.click();
+    await this.waitForAxisPureTextValue('X', 'Prob Ed');
   }
 
   /**

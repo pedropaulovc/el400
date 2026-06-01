@@ -36,6 +36,7 @@ function resetStores(initialState?: DROShape) {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      probeDroType: 'transmit',
     },
   });
 
