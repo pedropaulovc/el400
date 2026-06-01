@@ -523,6 +523,64 @@ export class DROPage {
   }
 
   /**
+   * Enable the Near-Zero Warning (US-024) through the REAL setup menu: open
+   * setup, pick an axis (ZERO AP is global, so any axis works), scroll to the
+   * `ZERO AP` parameter, cycle its choice to `bU22 on`, then exit via End + ent.
+   *
+   * Mirrors `setAxisDirection`'s navigation discipline — only the buttons an
+   * operator presses, no window hooks. The 7-segment panel renders the BU22
+   * "buzz" toggle as `bU22 on` / `bU22 oF` (no 'Z' glyph).
+   */
+  async enableZeroApproachWarning(): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis('X');
+
+    const isZeroApLabel = (t: string) => t === 'bU22 on' || t === 'bU22 oF';
+    let guard = 0;
+    while (!isZeroApLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 40) throw new Error('ZERO AP parameter not found in setup menu');
+    }
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'bU22 on') {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
+    }
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 40) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Enter Distance-to-Go with a single-axis target (US-008), the function in
+   * which the Near-Zero Warning is auto-enabled. Open distance-to-go, select the
+   * axis, type the value, confirm, then press distance-to-go again to execute —
+   * the readout then shows (target − current position).
+   *
+   * @param axis - axis to target
+   * @param value - target value in the current display unit
+   */
+  async startDistanceToGo(axis: 'X' | 'Y' | 'Z', value: string): Promise<void> {
+    await this.distanceToGoButton.click();
+    await this.selectAxis(axis);
+    await this.enterNumber(value);
+    await this.enterButton.click();
+    await this.distanceToGoButton.click();
+  }
+
+  /** Whether the Near-Zero Warning audio indicator is currently shown (US-024). */
+  async isZeroApproachWarningVisible(): Promise<boolean> {
+    return (await this.page.getByTestId('audio-indicator').count()) > 0;
+  }
+
+  /**
    * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).

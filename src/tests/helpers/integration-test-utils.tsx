@@ -94,6 +94,9 @@ export function resetStores(): void {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      zeroApproachEnabled: false,
+      zeroApproachDistance: '0.002',
+      zeroApproachTolerance: '0',
     },
   });
 
