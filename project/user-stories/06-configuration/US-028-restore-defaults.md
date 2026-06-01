@@ -214,6 +214,17 @@ two **separate adjacent** rows:
 list, ~line 2080-2097) — model-config indicators, not a restore confirm chain.
 The manual's restore step is simply: scroll to `r5t oEñ` → ENT → `IN PROG` → done.
 
+**Corroborated by the el400-dro-overview-video** (a second EL400-specific source):
+§1.17 `[10:31]` — "`rSt oEñ` resets the display to the OEM defaults" (a simple
+reset, narrated with no password / no `3 AXIS` chain / no confirm steps); §1.18
+`[11:04]` — "`oEñ ñod` lets you create your own default settings that `rSt oEñ`
+will restore to (e.g. make `EnF on` your default)." So the EL400's own manual AND
+video both treat restore as the simple non-password row and OEM Mode as the
+separate, password-protected baseline-definer. The password-routed chain
+(3 AXIS / MILL / OPT OFF / RST DEF) exists only in the magxact-mx100m manual
+(lines 877-890), which self-disclaims "may vary by firmware" and is overridden by
+the EL400's own docs.
+
 ### Per-AC mapping (deviating ACs — evidence, not omission)
 
 | Story AC | Disposition | Evidence |
