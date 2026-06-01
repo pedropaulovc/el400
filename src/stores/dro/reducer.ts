@@ -8,6 +8,7 @@
 import type { DROStatePayload, FeatureReducer, DROReducerContext } from './types';
 import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
+import { diagnosticsReducer } from './features/diagnostics';
 import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
@@ -38,6 +39,7 @@ import { taperReducer } from './features/taper';
  */
 const featureReducers: FeatureReducer[] = [
   bootReducer,
+  diagnosticsReducer, // Handles Self-Diagnostics Mode (US-046); owns diagnostics-* states and the ▲-at-boot entry
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   boltHoleReducer, // Handles bolt hole circle pattern generation

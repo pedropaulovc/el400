@@ -45,6 +45,11 @@ export const bootReducer: FeatureReducer = (statePayload, eventPayload, context)
           display: computeNormalDisplay(vMem, context),
         };
       }
+      // ▲ (8) during the boot message enters Self-Diagnostics Mode (US-046);
+      // defer to the diagnostics reducer by not handling it here.
+      if (eventName === 'KEY_8_UP') {
+        return null;
+      }
       return statePayload;
 
     default:
