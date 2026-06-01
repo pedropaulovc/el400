@@ -49,14 +49,29 @@ class MockAudioBufferSourceNode {
 }
 
 class MockGainNode {
-  gain = { value: 1 };
+  gain = {
+    value: 1,
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
+  };
   connect = vi.fn().mockReturnThis();
+}
+
+// Oscillator node for the Near-Zero Warning beep (US-024).
+class MockOscillatorNode {
+  type = 'sine';
+  frequency = { value: 0 };
+  connect = vi.fn().mockReturnThis();
+  start = vi.fn();
+  stop = vi.fn();
 }
 
 class MockAudioContext {
   state = 'running';
+  currentTime = 0;
   createBufferSource = vi.fn(() => new MockAudioBufferSourceNode());
   createGain = vi.fn(() => new MockGainNode());
+  createOscillator = vi.fn(() => new MockOscillatorNode());
   decodeAudioData = vi.fn().mockResolvedValue({});
   resume = vi.fn().mockResolvedValue(undefined);
   destination = {};

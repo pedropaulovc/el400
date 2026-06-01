@@ -257,6 +257,20 @@ describe('MockMillAdapter', () => {
       expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
     });
 
+    it('setEncoderSignal updates state and dispatches MILL_STATE_CHANGED (US-042)', () => {
+      const dispatch = vi.fn();
+      adapter.setDispatch(createDispatch(dispatch));
+
+      adapter.setEncoderSignal('X', 'lost');
+
+      expect(adapter.getState().encoderSignal).toEqual({ X: 'lost', Y: 'ok', Z: 'ok' });
+      expect(dispatch).toHaveBeenCalledWith({ eventName: 'MILL_STATE_CHANGED' });
+
+      // Restoring the signal flips just that axis back.
+      adapter.setEncoderSignal('X', 'ok');
+      expect(adapter.getState().encoderSignal).toEqual({ X: 'ok', Y: 'ok', Z: 'ok' });
+    });
+
     it('should dispatch MILL_STATE_CHANGED on connect', async () => {
       const dispatch = vi.fn();
       adapter.setDispatch(createDispatch(dispatch));

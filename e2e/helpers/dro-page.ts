@@ -431,6 +431,42 @@ export class DROPage {
   }
 
   /**
+   * Simulate an encoder signal loss on an axis (US-042).
+   * Calls the mock CNCjs server, which emits the lost signal on controller:state.
+   * The CncjsMillAdapter normalizes it into MillState.encoderSignal and fires
+   * MILL_STATE_CHANGED — the real signal-loss path, no in-app test hook.
+   *
+   * @param axis - The axis whose encoder signal drops ('X', 'Y', or 'Z')
+   */
+  async simulateEncoderSignalLoss(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'lost');
+  }
+
+  /**
+   * Restore a previously dropped encoder signal on an axis (US-042).
+   *
+   * @param axis - The axis whose encoder signal is restored
+   */
+  async simulateEncoderSignalRestore(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'ok');
+  }
+
+  private async setEncoderSignal(axis: 'X' | 'Y' | 'Z', signal: 'ok' | 'lost'): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-signal?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, signal }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to set encoder signal: ${response.statusText}`);
+    }
+  }
+
+  /**
    * Simulate crossing the encoder reference mark for an axis (US-012).
    *
    * Moves the mock encoder to the reference-mark machine position, then invokes
@@ -568,6 +604,212 @@ export class DROPage {
       }
     }
     await this.enterButton.click();
+  }
+
+  /**
+   * Set the keypad lock (US-043, manual §6.2 `LoC`) by driving the REAL setup
+   * menu: open setup, pick X (the SELECT prompt asks for an axis even for global
+   * params), scroll to the `LoC` parameter, cycle its choice to the requested
+   * label, then exit via the terminal End item + ent.
+   *
+   * Works whether or not the panel is already locked: while locked the gate keeps
+   * the wrench/setup key and all in-setup navigation live (the unlock path), so
+   * the same helper can both lock and unlock. No window hooks, no forced state.
+   *
+   * Label contract (manual §6.2): the parameter renders `LoC oFF` (value 'off')
+   * and `LoC on` (value 'on') — the seven-segment panel has no lowercase f pair,
+   * so OFF renders `oFF`.
+   *
+   * @param target - 'on' to lock the panel, 'off' to unlock
+   */
+  async setKeypadLock(target: 'on' | 'off'): Promise<void> {
+    const targetLabel = target === 'on' ? 'LoC on' : 'LoC oFF';
+    const isLockLabel = (t: string) => t === 'LoC oFF' || t === 'LoC on';
+
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis('X');
+
+    // Scroll down to the LoC parameter.
+    let guard = 0;
+    while (!isLockLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('LoC parameter not found in setup menu after 30 steps');
+    }
+
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== targetLabel) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) throw new Error(`LoC choice "${targetLabel}" not reachable by cycling`);
+    }
+
+    // Exit setup via the terminal End item + ent (US-039 AC 39.7).
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Enable the Near-Zero Warning (US-024) through the REAL setup menu: open
+   * setup, pick an axis (ZERO AP is global, so any axis works), scroll to the
+   * `ZERO AP` parameter, cycle its choice to `bU22 on`, then exit via End + ent.
+   *
+   * Mirrors `setAxisDirection`'s navigation discipline — only the buttons an
+   * operator presses, no window hooks. The 7-segment panel renders the BU22
+   * "buzz" toggle as `bU22 on` / `bU22 oF` (no 'Z' glyph).
+   */
+  async enableZeroApproachWarning(): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis('X');
+
+    const isZeroApLabel = (t: string) => t === 'bU22 on' || t === 'bU22 oF';
+    let guard = 0;
+    while (!isZeroApLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 40) throw new Error('ZERO AP parameter not found in setup menu');
+    }
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'bU22 on') {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
+    }
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 40) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Set the per-axis radius/diameter measurement mode (US-041, manual section 6.2
+   * `rAd` / `diA`) by driving the REAL setup menu: open setup, pick the axis,
+   * scroll to the rAd/diA parameter, cycle its choice to the requested label, then
+   * exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only the buttons
+   * an operator presses. The parameter renders `rAd` (radius / 1:1) and `diA`
+   * (diameter / ×2); those two labels appear on no other parameter, so they
+   * uniquely identify the item while scrolling.
+   *
+   * @param axis - Axis whose measurement mode is being configured
+   * @param target - Desired mode label: 'rAd' (radius) or 'diA' (diameter)
+   */
+  async setMeasurementMode(axis: 'X' | 'Y' | 'Z', target: 'rAd' | 'diA'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) through the parameter list until the measurement-mode
+    // parameter is highlighted; recognise it by its `rAd` / `diA` labels.
+    const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
+    let guard = 0;
+    while (!isMeasurementLabel(await this.getAxisRawText(axis))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('measurement-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (right key) until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`measurement-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup back to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Set the per-axis counting mode (US-040, manual section 6.2 `LinEAr` /
+   * `AnGULAr`) by driving the REAL setup menu: open setup, pick the axis, scroll
+   * to the counting-mode parameter (the first item), cycle its choice to the
+   * requested label, then exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only buttons.
+   * Counting-mode renders `LinEAr` (linear) / `AnGULAr` (angular); these strings
+   * appear on no other parameter, so they uniquely identify the item.
+   *
+   * @param axis - Axis whose counting mode is being configured
+   * @param target - Desired mode label
+   */
+  async setAxisCountingMode(axis: 'X' | 'Y' | 'Z', target: 'LinEAr' | 'AnGULAr'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Counting-mode is the first parameter; scroll up (key8) until it is shown.
+    const isCountingLabel = (t: string) => t === 'LinEAr' || t === 'AnGULAr';
+    let guard = 0;
+    while (!isCountingLabel(await this.getAxisRawText('X'))) {
+      await this.key8.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('counting-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`counting-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Enter Distance-to-Go with a single-axis target (US-008), the function in
+   * which the Near-Zero Warning is auto-enabled. Open distance-to-go, select the
+   * axis, type the value, confirm, then press distance-to-go again to execute —
+   * the readout then shows (target − current position).
+   *
+   * @param axis - axis to target
+   * @param value - target value in the current display unit
+   */
+  async startDistanceToGo(axis: 'X' | 'Y' | 'Z', value: string): Promise<void> {
+    await this.distanceToGoButton.click();
+    await this.selectAxis(axis);
+    await this.enterNumber(value);
+    await this.enterButton.click();
+    await this.distanceToGoButton.click();
+  }
+
+  /** Whether the Near-Zero Warning audio indicator is currently shown (US-024). */
+  async isZeroApproachWarningVisible(): Promise<boolean> {
+    return (await this.page.getByTestId('audio-indicator').count()) > 0;
   }
 
   /**

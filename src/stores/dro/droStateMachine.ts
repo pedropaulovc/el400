@@ -637,6 +637,15 @@ export const isPresetActive = (s: DROStateName): boolean =>
 export const isSetupActive = (s: DROStateName): boolean =>
   s.startsWith('setup-');
 
+/**
+ * States where the Near-Zero Warning is automatically enabled (US-024 AC24.9,
+ * manual §8.3): distance-to-go / Preset, Sub Datum Memory, and all milling-
+ * specific functions (the FN-LED macro modes). In plain idle there is no target
+ * being approached, so a freshly-zeroed axis sitting at 0 must NOT beep.
+ */
+export const isZeroApproachContext = (s: DROStateName): boolean =>
+  isPresetActive(s) || isSdmActive(s) || isFnLedActive(s);
+
 /** Check if taper calculation mode is active (US-045) */
 export const isTaperActive = (s: DROStateName): boolean =>
   s === 'taper-active';

@@ -10,6 +10,7 @@ import type {
   NonVolatileMemory,
   DisplayResolutionValue,
 } from '../../../types/nonVolatileMemory';
+import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 
@@ -51,6 +52,26 @@ export function axisDisplayDecimals(axis: Axis, nvMem: NonVolatileMemory): numbe
 }
 
 /**
+ * Seven-segment text shown on an axis whose encoder signal is lost while the
+ * Encoder-Fail warning (`EnF`) is on (US-042, manual section 6.2 note *2).
+ */
+export const ENCODER_FAIL_TEXT = 'no SIG';
+
+/**
+ * Whether an axis should show the encoder-fail warning (US-042): the `EnF`
+ * parameter must be on AND the live mill must report that axis's signal as lost.
+ * A pure predicate so reducers and the display computation share one rule.
+ */
+export function isEncoderFailWarningActive(
+  axis: Axis,
+  millState: MillState,
+  nvMem: NonVolatileMemory
+): boolean {
+  if (!nvMem.encoderFailWarning) return false;
+  return millState.encoderSignal[axis] === 'lost';
+}
+
+/**
  * Pure counting-direction sign for an axis (US-002).
  *
  * The displayed position is `rawPositionMm × directionSign(axis, nvMem)`. This is
@@ -72,6 +93,38 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
   // XOR: a single inversion flips the sign; both (reversed Z + depth-positive)
   // cancel back to +1.
   return reversed !== depthInverted ? -1 : 1;
+}
+
+/**
+ * Pure radius/diameter scale factor for an axis (US-041).
+ *
+ * Lathe diameter turning shows the cut diameter, which is twice the slide travel,
+ * so a `'diameter'`-mode axis displays `2 ×` the actual movement; `'radius'` (the
+ * mill default) is 1:1. Like `directionSign`, this is a display-only transform
+ * applied AFTER the datum offset is subtracted; it never mutates stored machine
+ * position, offsets, or macro coordinate math.
+ *
+ * @param axis - The axis to compute the scale for
+ * @param nvMem - Non-volatile memory (per-axis measurement mode)
+ * @returns 2 (diameter) or 1 (radius)
+ */
+export function measurementScale(axis: Axis, nvMem: NonVolatileMemory): 1 | 2 {
+  return nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+}
+
+/**
+ * Wrap an angle in degrees into the half-open range [0, 360) (US-040).
+ *
+ * Angular (rotary) axes count an angle, so the readout rolls over at a full
+ * revolution: 360° -> 0°, 370° -> 10°, and negatives wrap up (-10° -> 350°).
+ * This is the angular analogue of the linear readout and is applied to angular
+ * axes in place of unit conversion.
+ *
+ * @param degrees - The raw angle in degrees (may be any real value)
+ * @returns The equivalent angle in [0, 360)
+ */
+export function wrapDegrees(degrees: number): number {
+  return ((degrees % 360) + 360) % 360;
 }
 
 /**
@@ -137,11 +190,26 @@ export function computeDisplayPosition(
   axis: Axis,
   vMem: VolatileMemoryState,
   context: DROReducerContext
-): number {
+): AxisDisplayValue {
+  // Encoder-fail warning (US-042) overrides the numeric value: a lost signal on
+  // this axis with `EnF` on shows `no SIG` instead of a stale reading.
+  if (isEncoderFailWarningActive(axis, context.millState, context.nvMem)) {
+    return ENCODER_FAIL_TEXT;
+  }
+
   const rawMm = computeAxisPositionMm(axis, vMem, context);
-  // Counting direction is a display-only transform applied AFTER datum subtraction;
-  // it never mutates stored machine position, offsets, or macro coordinate math.
-  const signedMm = rawMm * directionSign(axis, context.nvMem);
+  // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
+  // transforms applied AFTER datum subtraction; they never mutate stored machine
+  // position, offsets, or macro coordinate math.
+  const signed = rawMm * directionSign(axis, context.nvMem);
+  // Angular (rotary) axes read an ANGLE: the raw position is degrees, wrapped to
+  // [0, 360) and NOT unit-converted (US-040, AC 40.4). Diameter ×2 scale applies
+  // only in linear mode (AC41.7 — angular has no diameter concept).
+  if (context.nvMem.countingMode[axis] === 'angular') {
+    return wrapDegrees(signed);
+  }
+  // Diameter mode shows 2× the slide travel (the turned diameter); radius is 1:1.
+  const signedMm = signed * measurementScale(axis, context.nvMem);
   return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
 }
 
