@@ -27,6 +27,24 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
     await dro.waitForAxisPureTextValue('X', 'rAmPASS');
   });
 
+  test('AC 46.2/46.3: encoder activity does not skip the memory step (connected source)', async ({ dro }) => {
+    await enterDiagnostics(dro);
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // This session is connected to the mock CNCjs server, so encoder motion emits
+    // real MILL_STATE_CHANGED updates -- the same flood ?source=debug produces every
+    // 100ms. None is a key press, so the memory step (rAmPASS) must stay on screen;
+    // the operator still gets to see it.
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('Y', 1);
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // A real front-panel key still advances out of the memory step.
+    await dro.key1.click();
+    await expect.poll(() => dro.getAxisRawText('X')).not.toContain('rAmPASS');
+  });
+
   test('AC 46.4: keyboard diagnostic echoes the pressed key', async ({ dro }) => {
     await enterDiagnostics(dro);
     await dro.key1.click(); // memory -> display

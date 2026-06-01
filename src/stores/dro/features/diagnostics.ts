@@ -23,7 +23,7 @@
  */
 
 import type { FeatureReducer, DROStatePayload } from '../types';
-import type { DiagnosticsData } from '../droStateMachine';
+import type { DiagnosticsData, DROEventPayload } from '../droStateMachine';
 import {
   DIAGNOSTICS_TEXT,
   DISPLAY_TEST_PATTERN,
@@ -68,6 +68,17 @@ const KEY_LABEL: Record<string, string> = {
 /** Coerce arbitrary state data to DiagnosticsData, falling back to initial. */
 function asDiagnosticsData(data: DROStatePayload['stateData']): DiagnosticsData {
   return data.stateDataType === 'diagnostics' ? data : INITIAL_DIAGNOSTICS_DATA;
+}
+
+/**
+ * True when `eventName` is a front-panel user key/button press (the `KEY_*` and
+ * `BTN_*` families). The memory and segment steps advance on a key (§11.1: "Press
+ * any key …"); internal/adapter events — chiefly the MILL_STATE_CHANGED a
+ * connected source broadcasts every 100ms — are NOT keys and must not skip past
+ * those steps. (Same idiom as keypad-lock.ts / sleep.ts.)
+ */
+function isFrontPanelKey(eventName: DROEventPayload['eventName']): boolean {
+  return eventName.startsWith('KEY_') || eventName.startsWith('BTN_');
 }
 
 /** Per-axis pass/fail label for the encoder step (axis name when responding). */
@@ -120,6 +131,17 @@ export const diagnosticsReducer: FeatureReducer = (current, event, context) => {
 
   // Any non-C key disarms the double-C gesture for the steps that consume keys.
   const disarmed: DiagnosticsData = { ...data, clearPhase: 'idle' };
+
+  // The memory and segment steps advance on a real key press only (§11.1). A
+  // connected adapter's MILL_STATE_CHANGED ticks are not keys, so they hold the
+  // current step — otherwise a single ▲ at boot races past RAmPASS / the segment
+  // test before the operator can see them (AC 46.2 / 46.3).
+  if (
+    (state === 'diagnostics-memory' || state === 'diagnostics-display') &&
+    !isFrontPanelKey(eventName)
+  ) {
+    return current;
+  }
 
   // ── Memory step: any key advances to the display test (AC 46.3) ─────
   if (state === 'diagnostics-memory') {

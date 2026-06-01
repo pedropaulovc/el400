@@ -17,6 +17,7 @@ import {
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { DROReducerContext } from '../types';
 import { createDefaultMillState } from '../../../types/millState';
+import { createDisplay } from '../utils/displayComputation';
 
 /** Build a context whose connected mill sits at the given machine position. */
 function contextAt(x: number, y: number, z: number): DROReducerContext {
@@ -87,6 +88,40 @@ describe('diagnosticsReducer', () => {
         DEFAULT_TEST_CONTEXT
       );
       expect(next?.stateName).toBe('diagnostics-keyboard');
+    });
+
+    // A connected adapter broadcasts MILL_STATE_CHANGED continuously (every 100ms
+    // in ?source=debug). These ticks are NOT key presses (§11.1 advances on a key)
+    // and must not skip past the memory/segment steps the operator needs to see.
+    it('does NOT advance the memory step on a MILL_STATE_CHANGED tick', () => {
+      // Seed the on-screen RAmPASS the entry step shows, so the no-op is meaningful.
+      const state = createTestState(
+        'diagnostics-memory',
+        INITIAL_DIAGNOSTICS_DATA,
+        createDisplay(DIAGNOSTICS_TEXT.memoryPass, '', '')
+      );
+      const next = diagnosticsReducer(
+        state,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(5, 0, 0)
+      );
+      expect(next?.stateName).toBe('diagnostics-memory');
+      expect(next?.display.X).toBe(DIAGNOSTICS_TEXT.memoryPass);
+    });
+
+    it('does NOT advance the display step on a MILL_STATE_CHANGED tick', () => {
+      const state = createTestState(
+        'diagnostics-display',
+        INITIAL_DIAGNOSTICS_DATA,
+        createDisplay(DISPLAY_TEST_PATTERN, DISPLAY_TEST_PATTERN, DISPLAY_TEST_PATTERN)
+      );
+      const next = diagnosticsReducer(
+        state,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(5, 0, 0)
+      );
+      expect(next?.stateName).toBe('diagnostics-display');
+      expect(next?.display.X).toBe(DISPLAY_TEST_PATTERN);
     });
   });
 
