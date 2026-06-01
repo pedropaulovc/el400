@@ -32,3 +32,6 @@ actionlint
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Playwright CLI scratch (skill tooling)
+.playwright-cli/
