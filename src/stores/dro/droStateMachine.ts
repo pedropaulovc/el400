@@ -132,6 +132,9 @@ export type DROStateName =
   | 'sdm-program-input-x'
   | 'sdm-program-input-y'
   | 'sdm-program-input-z'
+  // SDM Run / recall states (US-011)
+  | 'sdm-run-step'
+  | 'sdm-run-active'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'

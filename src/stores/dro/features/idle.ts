@@ -78,9 +78,11 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         display: createDisplay('Grid', 0, ''),
       };
     case 'BTN_SDM':
+      // Seed the session from the retained sub-datum store so Run (US-011) can
+      // recall points learned/programmed in a previous SDM session.
       return {
         stateName: 'sdm-intro',
-        stateData: INITIAL_SDM_DATA,
+        stateData: { ...INITIAL_SDM_DATA, points: { ...vMem.sdmPoints } },
         vMem,
         display: createDisplay('Sdm', '', ''),
       };
