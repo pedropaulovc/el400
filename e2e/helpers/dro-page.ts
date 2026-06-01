@@ -523,6 +523,54 @@ export class DROPage {
   }
 
   /**
+   * Set the per-axis counting mode (US-040, manual section 6.2 `LinEAr` /
+   * `AnGULAr`) by driving the REAL setup menu: open setup, pick the axis, scroll
+   * to the counting-mode parameter (the first item), cycle its choice to the
+   * requested label, then exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only buttons.
+   * Counting-mode renders `LinEAr` (linear) / `AnGULAr` (angular); these strings
+   * appear on no other parameter, so they uniquely identify the item.
+   *
+   * @param axis - Axis whose counting mode is being configured
+   * @param target - Desired mode label
+   */
+  async setAxisCountingMode(axis: 'X' | 'Y' | 'Z', target: 'LinEAr' | 'AnGULAr'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Counting-mode is the first parameter; scroll up (key8) until it is shown.
+    const isCountingLabel = (t: string) => t === 'LinEAr' || t === 'AnGULAr';
+    let guard = 0;
+    while (!isCountingLabel(await this.getAxisRawText('X'))) {
+      await this.key8.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('counting-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`counting-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).

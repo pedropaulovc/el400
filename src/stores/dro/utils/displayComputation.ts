@@ -35,6 +35,21 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
 }
 
 /**
+ * Wrap an angle in degrees into the half-open range [0, 360) (US-040).
+ *
+ * Angular (rotary) axes count an angle, so the readout rolls over at a full
+ * revolution: 360° -> 0°, 370° -> 10°, and negatives wrap up (-10° -> 350°).
+ * This is the angular analogue of the linear readout and is applied to angular
+ * axes in place of unit conversion.
+ *
+ * @param degrees - The raw angle in degrees (may be any real value)
+ * @returns The equivalent angle in [0, 360)
+ */
+export function wrapDegrees(degrees: number): number {
+  return ((degrees % 360) + 360) % 360;
+}
+
+/**
  * Display value for a single axis - can be a number or text string
  */
 export type AxisDisplayValue = number | string;
@@ -101,8 +116,13 @@ export function computeDisplayPosition(
   const rawMm = computeAxisPositionMm(axis, vMem, context);
   // Counting direction is a display-only transform applied AFTER datum subtraction;
   // it never mutates stored machine position, offsets, or macro coordinate math.
-  const signedMm = rawMm * directionSign(axis, context.nvMem);
-  return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
+  const signed = rawMm * directionSign(axis, context.nvMem);
+  // Angular (rotary) axes read an ANGLE: the raw position is degrees, wrapped to
+  // [0, 360) and NOT unit-converted (US-040, AC 40.4). Linear axes unit-convert.
+  if (context.nvMem.countingMode[axis] === 'angular') {
+    return wrapDegrees(signed);
+  }
+  return fromMmToAnyUnit(signed, context.nvMem.defaultUnit);
 }
 
 /**
