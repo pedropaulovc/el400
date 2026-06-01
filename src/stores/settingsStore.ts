@@ -12,6 +12,7 @@ import {
   DEFAULT_NON_VOLATILE_MEMORY,
   NON_VOLATILE_MEMORY_STORAGE_KEY,
 } from '../types/nonVolatileMemory';
+import { decimalsForDisplayResolution } from './dro/utils/displayComputation';
 
 // ─────────────────────────────────────────────────────────────────
 // STORE INTERFACE
@@ -76,6 +77,14 @@ export const useDefaultUnit = () => useSettingsStore((s) => s.nvMem.defaultUnit)
 
 /** Get display precision setting */
 export const usePrecision = () => useSettingsStore((s) => s.nvMem.precision);
+
+/**
+ * Get the fractional-digit count for a single axis from its dP display
+ * resolution (US-022). Subscribes only to that axis's value so a change to one
+ * axis does not re-render the others.
+ */
+export const useAxisDisplayDecimals = (axis: 'X' | 'Y' | 'Z') =>
+  useSettingsStore((s) => decimalsForDisplayResolution(s.nvMem.displayResolution[axis]));
 
 /** Get beep enabled setting */
 export const useBeepEnabled = () => useSettingsStore((s) => s.nvMem.beepEnabled);

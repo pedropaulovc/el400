@@ -33,8 +33,12 @@ import type {
   NonVolatileMemory,
   AxisDirection,
   ZDepthSense,
+  DisplayResolutionValue,
 } from '../../../types/nonVolatileMemory';
-import { DEFAULT_SCALE_RESOLUTION } from '../../../types/nonVolatileMemory';
+import {
+  DEFAULT_SCALE_RESOLUTION,
+  DEFAULT_DISPLAY_RESOLUTION,
+} from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
 
 /** Scope of a setup parameter: per-axis values differ per X/Y/Z; global apply to all. */
@@ -113,6 +117,27 @@ export const SCALE_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
   { value: '50', label: 'SC 50.0' },
 ];
 
+/** The dP (display resolution) parameter id (US-022) -- its per-axis draft key. */
+export const DISPLAY_RESOLUTION_ID = 'display-resolution';
+
+/**
+ * dP choices: the same nine measuring resolutions in microns as SC, ascending.
+ * Labels carry the `dP` prefix and a one-decimal micron value as shown on the
+ * device ("dP 5.0"). dP is the display-only counterpart of SC (US-022) and is
+ * independent of it (AC22.3).
+ */
+export const DISPLAY_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0.1', label: 'dP 0.1' },
+  { value: '0.2', label: 'dP 0.2' },
+  { value: '0.5', label: 'dP 0.5' },
+  { value: '1', label: 'dP 1.0' },
+  { value: '2', label: 'dP 2.0' },
+  { value: '5', label: 'dP 5.0' },
+  { value: '10', label: 'dP 10.0' },
+  { value: '20', label: 'dP 20.0' },
+  { value: '50', label: 'dP 50.0' },
+];
+
 /** The per-axis counting-direction parameter id (US-002) -- its draft key. */
 export const DIRECTION_ID = 'direction';
 
@@ -173,6 +198,35 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
       // falling back to the mill default for that axis.
       const isValid = SCALE_RESOLUTION_CHOICES.some((c) => c.value === committed);
       return isValid ? committed : DEFAULT_SCALE_RESOLUTION[axis];
+    },
+  },
+  {
+    id: DISPLAY_RESOLUTION_ID,
+    label: 'dP 5.0',
+    scope: 'per-axis',
+    choices: DISPLAY_RESOLUTION_CHOICES,
+    // Seed from the selected axis's committed display resolution (nvMem). On the
+    // SELECT prompt (axis null) fall back to X. Guard against a stale persisted
+    // value no longer in the choice set by defaulting to the mill default.
+    readValue: (ctx) => {
+      const axis = ctx.axis ?? 'X';
+      const committed = ctx.nvMem.displayResolution[axis];
+      const isValid = DISPLAY_RESOLUTION_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : DEFAULT_DISPLAY_RESOLUTION[axis];
+    },
+    // Commit-on-change (US-022): persist the per-axis display resolution
+    // immediately so the readout's decimal precision updates on exit. dP is a
+    // display-only transform (AC22.5); SAU CHG (US-027) is not yet wired, so this
+    // surgical path -- the same one Direction (US-002) uses -- makes the effect
+    // visible without the generic save engine.
+    commit: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        displayResolution: {
+          ...ctx.nvMem.displayResolution,
+          [axis]: value as DisplayResolutionValue,
+        },
+      });
     },
   },
   {
