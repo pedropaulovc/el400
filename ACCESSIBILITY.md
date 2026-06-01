@@ -18,7 +18,7 @@ This project targets **WCAG 2.1 Level AAA** compliance where applicable, with pa
 - Axis displays use `aria-live="polite"` regions in an accessible table to announce position changes
 - Mode indicators use native `<fieldset>` with `<legend>` for semantic grouping
 - LED indicators are non-interactive disabled radio buttons showing current state
-- Buttons use `aria-pressed` to indicate active/selected states
+- Axis-selection buttons use `aria-pressed` to indicate the selected axis; momentary mode buttons (ABS/INC, IN/MM) stay `aria-pressed="false"` and convey state via the LED radio groups
 - Section headings use `sr-only` class (e.g., "Numeric keypad", "Primary functions")
 - Decorative chrome uses `aria-hidden="true"` to avoid screen reader noise: SVG icons, the PowerLED indicator lamp, and the HousingEdge bezel panels. The HousingEdge logo slot stays in the accessibility tree so the BrandLogo `alt` text remains announced (US-048).
 

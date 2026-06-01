@@ -29,8 +29,10 @@ Baseline: all 13 existing accessibility e2e tests pass. `npm run test:all` is th
   "Measurement units", "Status"), each wrapping multiple `LEDIndicator`s — NOT one fieldset per LED.
 - LEDs: `LEDIndicator.tsx` renders `<input type="radio" disabled readOnly class="sr-only">`
   grouped by `name` (positioning-mode / measurement-units / status).
-- aria-pressed: `DROButton.tsx:59` `aria-pressed={isActive}`; axis buttons + mode toggles
-  (`btn-abs-inc`, `btn-toggle-unit`) pass `isActive`.
+- aria-pressed: `DROButton.tsx:59` `aria-pressed={isActive}`; only axis-select buttons pass a
+  selection `isActive` (selected axis reports `aria-pressed="true"`). The momentary mode buttons
+  (`btn-abs-inc`, `btn-toggle-unit`) stay `aria-pressed="false"` and convey state via the
+  disabled-radio LED group, not a pressed toggle.
 - sr-only headings: "Axis display", "Numeric keypad", "Axis selection", "Primary functions",
   "Secondary functions".
 - Decorative icons: `Icon.tsx:259` wrapper `aria-hidden="true"`.
@@ -56,9 +58,11 @@ Add `aria-hidden="true"` so screen readers skip purely decorative chrome.
   ACs MUST describe the verified ground truth above (including Task 1's aria-hidden).
 - Integration test `src/components/screen-reader.integration.test.tsx` (RTL) asserting:
   sr-only button labels, aria-live axis table, three fieldsets+legends, disabled-radio
-  LEDs, aria-pressed on toggles, sr-only section headings, aria-hidden decorative chrome.
+  LEDs, aria-pressed selection on axis-select buttons (mode buttons stay `false`), sr-only
+  section headings, aria-hidden decorative chrome.
 - E2E `e2e/08-accessibility/US-048-screen-reader-support.spec.ts` (1–2 critical checks):
-  accessible names present + aria-live region exists + an aria-pressed toggle flips on activation.
+  accessible names present + aria-live region exists + an axis-select button's `aria-pressed`
+  flips to `true` on selection (momentary mode buttons stay `aria-pressed="false"`).
 - Mark US-048 ACs `[x]` only for behaviors the tests actually verify GREEN.
 
 ### Task 3 — Documentation accuracy
