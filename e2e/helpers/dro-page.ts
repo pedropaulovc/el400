@@ -633,6 +633,16 @@ export class DROPage {
       guard += 1;
       if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
     }
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 40) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Set the per-axis radius/diameter measurement mode (US-041, manual section 6.2
    * `rAd` / `diA`) by driving the REAL setup menu: open setup, pick the axis,
    * scroll to the rAd/diA parameter, cycle its choice to the requested label, then
