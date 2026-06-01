@@ -9,6 +9,8 @@ import {
   SETUP_END_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
+  PROBE_DRO_TYPE_ID,
+  DISPLAY_RESOLUTION_ID,
   getParameterAt,
   wrapItemIndex,
   choiceIndexOf,
@@ -102,6 +104,40 @@ describe('SETUP_PARAMETERS registry', () => {
     ).toBe('depth-positive');
   });
 
+  it('exposes a per-axis dP display-resolution parameter with the 9 micron choices (US-022)', () => {
+    const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+    expect(dp).toBeDefined();
+    expect(dp.scope).toBe('per-axis');
+    expect(dp.choices.map((c) => c.value)).toEqual([
+      '0.1', '0.2', '0.5', '1', '2', '5', '10', '20', '50',
+    ]);
+    expect(dp.choices.map((c) => c.label)).toEqual([
+      'dP 0.1', 'dP 0.2', 'dP 0.5', 'dP 1.0', 'dP 2.0', 'dP 5.0', 'dP 10.0', 'dP 20.0', 'dP 50.0',
+    ]);
+    expect(typeof dp.commit).toBe('function');
+  });
+
+  it('dP seeds its current value from nvMem.displayResolution per axis (US-022)', () => {
+    const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      displayResolution: { X: '5' as const, Y: '50' as const, Z: '5' as const },
+    };
+    expect(dp.readValue({ nvMem, axis: 'X' })).toBe('5');
+    expect(dp.readValue({ nvMem, axis: 'Y' })).toBe('50');
+    // SELECT prompt (axis null) falls back to X.
+    expect(dp.readValue({ nvMem, axis: null })).toBe('5');
+  });
+
+  it('dP defends against a stale persisted value not in the choice set', () => {
+    const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      displayResolution: { X: '999' as unknown as '5', Y: '5' as const, Z: '5' as const },
+    };
+    expect(dp.choices.map((c) => c.value)).toContain(dp.readValue({ nvMem, axis: 'X' }));
+  });
+
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
     const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
@@ -135,6 +171,32 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     zDepth.commit!({ nvMem, axis: null }, 'depth-positive');
     expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
+  });
+
+  it('probe-dro-type seeds from nvMem and commits the chosen DRO type (US-032, AC 32.1)', () => {
+    const probe = SETUP_PARAMETERS.find((p) => p.id === PROBE_DRO_TYPE_ID)!;
+    // Seeds the committed value (default transmit).
+    expect(probe.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('transmit');
+    expect(probe.choices.map((c) => c.label)).toEqual(['dro t', 'dro F']);
+    // Commit persists Freeze immediately.
+    const nvMem = useSettingsStore.getState().nvMem;
+    probe.commit!({ nvMem, axis: null }, 'freeze');
+    expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
+  });
+
+  it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {
+    const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    dp.commit!({ nvMem, axis: 'Y' }, '50');
+    const after = useSettingsStore.getState().nvMem.displayResolution;
+    expect(after).toEqual({ X: '5', Y: '50', Z: '5' });
+  });
+
+  it('dP.commit falls back to X on the SELECT prompt (axis null)', () => {
+    const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    dp.commit!({ nvMem, axis: null }, '50');
+    expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('50');
   });
 });
 

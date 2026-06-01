@@ -124,6 +124,16 @@ export const useReferenceWaitingAxis = (): 'X' | 'Y' | 'Z' | null =>
     return s.stateData.stateDataType === 'reference' ? s.stateData.selectedAxis : null;
   });
 
+/**
+ * Touch-probe trigger indication (US-032, AC 32.8): true on the tick a probe
+ * contact is captured, driving the visual/audible "probe triggered" cue. Read
+ * from the active probe-function state data; false outside a probe trigger.
+ */
+export const useProbeTriggered = (): boolean =>
+  useDROStore((s) =>
+    s.stateData.stateDataType === 'probe' ? s.stateData.probeTriggered : false
+  );
+
 /** Get full volatile memory state */
 export const useVMem = () => useDROStore((s) => s.vMem);
 

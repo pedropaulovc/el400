@@ -237,6 +237,9 @@ function emitStateToSession(sessionId: string) {
         activeState: 'Idle',
         mpos: [x, y, z],
         wpos: [x, y, z],
+        // GRBL exposes pin state in `pn`; the real CncjsMillAdapter parses the
+        // probe trigger from here, so a probe contact must surface in `pn`.
+        pn: session.probeState?.pinState ?? '',
       },
       probe: session.probeState || '',
     });
@@ -279,6 +282,7 @@ io.on('connection', (socket) => {
       activeState: 'Idle',
       mpos: [x, y, z],
       wpos: [x, y, z],
+      pn: session.probeState?.pinState ?? '',
     },
     probe: session.probeState || '',
   });
@@ -299,6 +303,7 @@ io.on('connection', (socket) => {
             activeState: 'Idle',
             mpos: [x, y, z],
             wpos: [x, y, z],
+            pn: s.probeState?.pinState ?? '',
           },
           probe: s.probeState || '',
         });

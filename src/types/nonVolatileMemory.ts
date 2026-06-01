@@ -25,6 +25,24 @@ export interface ScaleResolutionByAxis {
 }
 
 /**
+ * Valid dP display-resolution values in microns (manual section 6.2). Same set
+ * of nine resolutions as the scale resolution SC; dP is the *display-only*
+ * counterpart (US-022) and is independent of SC (AC22.3).
+ */
+export type DisplayResolutionValue = ScaleResolutionValue;
+
+/**
+ * Per-axis display resolution in microns - dP parameter (US-022). Controls how
+ * many decimal places the readout shows for each axis; never affects the stored
+ * machine position or measurement accuracy (AC22.5).
+ */
+export interface DisplayResolutionByAxis {
+  X: DisplayResolutionValue;
+  Y: DisplayResolutionValue;
+  Z: DisplayResolutionValue;
+}
+
+/**
  * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`, used by
  * the Taper Calculation function in Section 9.2.2). The other axis of the pair
  * shows the radius. 'Zprime' is the lathe 4th-axis variant; on this 3-axis mill
@@ -56,6 +74,15 @@ export interface AxisDirectionByAxis {
 export type ZDepthSense = 'depth-negative' | 'depth-positive';
 
 /**
+ * Touch-probe DRO type (manual §10.1.1, setup `dro t` / `dro F`).
+ * - 'transmit' (`dro t`): the readout keeps counting on a probe trigger and
+ *   flashes the probe message; used with the datum/measurement functions.
+ * - 'freeze' (`dro F`): the readout freezes the coordinates on a probe trigger
+ *   until the probe clears.
+ */
+export type ProbeDroType = 'transmit' | 'freeze';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -69,12 +96,16 @@ export interface NonVolatileMemory {
   bootMessageMode: 'show' | 'skip';
   /** Per-axis measuring-system (scale) resolution in microns - SC parameter (US-021) */
   scaleResolution: ScaleResolutionByAxis;
+  /** Per-axis display resolution in microns - dP parameter (US-022, display-only) */
+  displayResolution: DisplayResolutionByAxis;
   /** Axis on which the Taper function displays the angle (Section 6.2). */
   taperOnAxis: TaperOnAxis;
   /** Per-axis counting direction - dir parameter (US-002, manual section 6.2) */
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
+  probeDroType: ProbeDroType;
 }
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
@@ -92,6 +123,17 @@ export const DEFAULT_SCALE_RESOLUTION: ScaleResolutionByAxis = {
 };
 
 /**
+ * Mill default display resolution: 5 micron on every axis (manual `dP 5.0`,
+ * section 6.2). On the 8-cell panel this renders 4 decimals in both units,
+ * matching the device's and the simulator's default 4-decimal readout (AC22.2).
+ */
+export const DEFAULT_DISPLAY_RESOLUTION: DisplayResolutionByAxis = {
+  X: '5',
+  Y: '5',
+  Z: '5',
+};
+
+/**
  * Default non-volatile memory values
  */
 export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
@@ -100,9 +142,11 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   precision: 4,
   bootMessageMode: 'show',
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
+  displayResolution: DEFAULT_DISPLAY_RESOLUTION,
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  probeDroType: 'transmit',
 };
 
 /**

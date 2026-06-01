@@ -18,8 +18,13 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
   if (state !== 'idle') return null;
 
   switch (eventName) {
-    // Handle position updates - update display when mill position changes
+    // Handle position updates - update display when mill position changes.
+    // In probe Freeze mode the probeReducer owns the idle display (it may hold
+    // the readout frozen on a probe trigger), so defer to it (US-032, AC 32.3).
     case 'MILL_STATE_CHANGED':
+      if (context.nvMem.probeDroType === 'freeze') {
+        return null;
+      }
       return {
         ...statePayload,
         display: computeNormalDisplay(vMem, context),
