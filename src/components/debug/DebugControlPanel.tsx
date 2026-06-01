@@ -96,7 +96,10 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
   const btnPrimaryClass = "px-3 py-2 bg-gray-100 border border-gray-300 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-sm rounded transition-colors";
 
   return (
-    <div className="fixed right-0 top-0 h-full w-80 bg-white text-gray-800 shadow-xl border-l border-gray-300 overflow-y-auto">
+    <div
+      data-testid="debug-control-panel"
+      className="fixed right-0 top-0 h-full w-80 bg-white text-gray-800 shadow-xl border-l border-gray-300 overflow-y-auto"
+    >
       {/* Header */}
       <div className="sticky top-0 bg-gray-100 border-b border-gray-300 px-3 py-2 flex items-center justify-between z-10">
         <span className="font-semibold text-gray-700">Axes</span>
