@@ -174,17 +174,24 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
       };
 
     case 'BTN_SELECT_Y': {
-      // Y button in calculator mode cycles through operations
+      // Y button in calculator mode cycles through operations.
+      // US-013 (manual §7.6.1): if the operator follows a typed-but-not-ENTERed
+      // value (e.g. `12 Y 8 ENT`), commit that pending buffer as the first
+      // operand and clear the buffer, so the next ENT computes the result.
+      const pendingValue = getBufferValue(vMem.inputBuffer);
+      const shouldCommitBuffer = pendingValue !== null && calcData.firstValue === null;
       const nextOp = getNextOperation(calcData.operation);
       const nextState: CalculatorData = {
         ...calcData,
         operation: nextOp,
+        ...(shouldCommitBuffer ? { firstValue: pendingValue, currentValue: pendingValue } : {}),
       };
       const nextStateName = `calculator-${nextOp.toLowerCase()}` as DROStateName;
+      const nextVMem = shouldCommitBuffer ? { ...vMem, inputBuffer: '' } : vMem;
       return {
         stateName: nextStateName,
         stateData: nextState,
-        vMem,
+        vMem: nextVMem,
         display: computeCalculatorDisplay(nextStateName, nextState),
       };
     }
@@ -268,20 +275,24 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
           display: computeCalculatorDisplay(state, newCalcData),
         };
       } else {
-        // Second value - store and immediately calculate
+        // Operation already chosen.
         if (calcData.firstValue === null) {
-          // Reset to idle with the new value if invariant violated
-          const resetCalcData: CalculatorData = {
-            ...INITIAL_CALCULATOR_DATA,
+          // US-013 (manual §7.6.1, operation-first): the operator was picked
+          // before any operand. This ENT records the FIRST operand and stays
+          // in the operation state; the NEXT ENT computes the result.
+          const firstOperandCalcData: CalculatorData = {
+            ...calcData,
+            firstValue: newValue,
             currentValue: newValue,
           };
           return {
-            stateName: 'calculator-idle',
-            stateData: resetCalcData,
+            stateName: state,
+            stateData: firstOperandCalcData,
             vMem: { ...vMem, inputBuffer: '' },
-            display: computeCalculatorDisplay('calculator-idle', resetCalcData),
+            display: computeCalculatorDisplay(state, firstOperandCalcData),
           };
         }
+        // Second value - store and immediately calculate
         const result = performBinaryCalculation(calcData.firstValue, newValue, calcData.operation);
         const resultCalcData: CalculatorData = {
           ...calcData,

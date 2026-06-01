@@ -7,7 +7,12 @@ const Index = () => {
   const showDebug = config.type === 'debug';
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#8a8a70]">
+    <main
+      data-testid="app-main"
+      className={`min-h-screen flex flex-col items-center justify-center p-4 bg-[#8a8a70]${
+        showDebug ? ' pr-80' : ''
+      }`}
+    >
       <div className="origin-center" style={{ transform: 'scale(1.2)' }}>
         <h1 className="sr-only">Electronica EL400 Digital Readout Simulator</h1>
         <EL400Simulator />
