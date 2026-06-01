@@ -14,6 +14,7 @@ import {
   computeNormalDisplay,
   axisDisplayDecimals,
   maxDisplayableMagnitude,
+  measurementScale,
 } from '../utils/displayComputation';
 
 /**
@@ -80,7 +81,13 @@ function setAxisValue(
   // boundary, before mm conversion — keeps the stored value equal to the
   // displayed reading (AC 47.5). Angular axes wrap to [0,360) and never reach the
   // limit, so this is a harmless no-op for them.
-  const limit = maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem));
+  //
+  // The panel limit bounds the DISPLAYED magnitude. In diameter mode (US-041) the
+  // display shows 2× the stored slide value, so the stored value's limit is the
+  // panel limit divided by the measurement scale (AC 47.7) — keeping display ≤
+  // panel max and display==stored consistent. Radius mode (×1) is unchanged.
+  const limit =
+    maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem)) / measurementScale(axis, nvMem);
   const clamped = Math.sign(value) * Math.min(Math.abs(value), limit);
   // Convert from display unit to mm for internal storage
   const valueMm = fromAnyUnitToMm(clamped, nvMem.defaultUnit);

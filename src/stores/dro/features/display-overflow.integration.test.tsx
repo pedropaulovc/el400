@@ -83,6 +83,64 @@ async function coarsenToThreeDecimals(
   await user.click(screen.getByTestId('key-clear'));
 }
 
+/**
+ * Drive the REAL setup menu (US-041 path) to put an axis into `diA` (diameter)
+ * measurement mode: wrench -> select axis -> scroll to the rAd/diA item ->
+ * cycle to diA -> exit via the terminal End item + ent. Mirrors
+ * measurement-mode.integration.test.tsx. The `rAd`/`diA` labels appear on no
+ * other parameter, so they uniquely identify the item while scrolling.
+ */
+async function setDiameterMode(
+  user: ReturnType<typeof userEvent.setup>,
+  axis: 'X' | 'Y' | 'Z'
+) {
+  await user.click(screen.getByTestId('btn-settings'));
+  await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
+  const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
+  let guard = 0;
+  while (!isMeasurementLabel(rawAxisText(axis))) {
+    await user.click(screen.getByTestId('key-2'));
+    if (++guard > 30) throw new Error('measurement-mode parameter not found');
+  }
+  guard = 0;
+  while (rawAxisText(axis) !== 'diA') {
+    await user.click(screen.getByTestId('key-6'));
+    if (++guard > 4) throw new Error('diA choice not reachable by cycling');
+  }
+  guard = 0;
+  while (rawAxisText(axis) !== 'End') {
+    await user.click(screen.getByTestId('key-2'));
+    if (++guard > 30) throw new Error('End item not found while exiting setup');
+  }
+  await user.click(screen.getByTestId('key-enter'));
+}
+
+/** Inverse of {@link setDiameterMode}: put an axis back into `rAd` (radius, ×1). */
+async function setRadiusMode(
+  user: ReturnType<typeof userEvent.setup>,
+  axis: 'X' | 'Y' | 'Z'
+) {
+  await user.click(screen.getByTestId('btn-settings'));
+  await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
+  const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
+  let guard = 0;
+  while (!isMeasurementLabel(rawAxisText(axis))) {
+    await user.click(screen.getByTestId('key-2'));
+    if (++guard > 30) throw new Error('measurement-mode parameter not found');
+  }
+  guard = 0;
+  while (rawAxisText(axis) !== 'rAd') {
+    await user.click(screen.getByTestId('key-6'));
+    if (++guard > 4) throw new Error('rAd choice not reachable by cycling');
+  }
+  guard = 0;
+  while (rawAxisText(axis) !== 'End') {
+    await user.click(screen.getByTestId('key-2'));
+    if (++guard > 30) throw new Error('End item not found while exiting setup');
+  }
+  await user.click(screen.getByTestId('key-enter'));
+}
+
 describe('US-047: Display Overflow on Value Entry (integration)', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
@@ -303,6 +361,94 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
       });
       await waitFor(() => { expect(rawAxisText('X')).toBe('998.9999'); });
     });
+  });
+
+  // --- Adversarial: re-clamp after a unit toggle (no stale-clamp latch) -----
+  // A lazy impl that clamped once and cached the result, or that bound the limit
+  // to the unit active at first entry, would mis-handle a SECOND over-long entry
+  // made after switching units. Each ENTER must clamp independently.
+  it('a second over-long preset after a unit toggle clamps again to 999.9999', async () => {
+    const { user } = await renderSimulator();
+    // First over-long entry in the default inch unit.
+    await selectAxis(user, 'X');
+    await typeValue(user, '55555555');
+    await pressEnter(user);
+    expect(rawAxisText('X')).toBe('999.9999');
+
+    // Toggle to mm and key a DIFFERENT over-long value — must clamp afresh.
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    await selectAxis(user, 'X');
+    await typeValue(user, '87654321');
+    await pressEnter(user);
+    expect(rawAxisText('X')).toBe('999.9999');
+  });
+
+  // --- Adversarial: clamped value survives an ABS/INC round-trip (storage) ---
+  // Re-reading after a mode round-trip is an independent storage probe: a render
+  // trick that left INC's stored counter at the un-clamped magnitude would show
+  // the over-long number on the way back. The clamp is in the INC counter, so the
+  // value must read 999.9999 both before and after the ABS->INC->ABS->INC trip.
+  it('a clamped INC preset survives an ABS/INC round-trip', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-abs-inc')); // -> INC
+    await selectAxis(user, 'X');
+    await typeValue(user, '55555555');
+    await pressEnter(user);
+    expect(rawAxisText('X')).toBe('999.9999');
+
+    // Round-trip the mode: INC -> ABS -> INC. The stored INC counter is untouched
+    // by the toggle, so the clamped reading must reappear verbatim.
+    await user.click(screen.getByTestId('btn-abs-inc')); // -> ABS
+    await user.click(screen.getByTestId('btn-abs-inc')); // -> INC
+    expect(rawAxisText('X')).toBe('999.9999');
+  });
+
+  // --- AC 47.7: clamp bounds the DISPLAYED magnitude (diameter ×2, US-041) ---
+  // On a diameter-mode axis the readout shows 2× the stored slide value, so a
+  // naive clamp on the entered value lets the DISPLAY overflow: a clamped slide
+  // of 999.9999 renders 1999.9998 (8 cells). AC 47.7 requires the entered value
+  // be capped at maxDisplayableMagnitude/2 so the displayed magnitude stays
+  // inside the 7-digit panel.
+  it('AC 47.7: over-long entry on a diameter axis displays 999.9999, never 1999.9998', async () => {
+    const { user } = await renderSimulator();
+    await setDiameterMode(user, 'X');
+
+    await selectAxis(user, 'X');
+    await typeValue(user, '55555555');
+    await pressEnter(user);
+
+    const text = rawAxisText('X');
+    expect(text).toBe('999.9999');
+    // The physical panel has exactly 7 digit cells; the ×2 scale must not grow it.
+    expect(text.replace(/[^0-9]/g, '').length).toBe(7);
+  });
+
+  it('AC 47.7: radius mode (×1) is unaffected — still pins at 999.9999', async () => {
+    const { user } = await renderSimulator();
+    // Default measurement mode is radius; no setup change. Control case proving
+    // the diameter halving does not leak into the ×1 path.
+    await selectAxis(user, 'Y');
+    await typeValue(user, '55555555');
+    await pressEnter(user);
+    expect(rawAxisText('Y')).toBe('999.9999');
+  });
+
+  it('AC 47.7: the STORED slide value is the halved 499.99995, not 999.9999', async () => {
+    const { user } = await renderSimulator();
+    await setDiameterMode(user, 'X');
+
+    // Preset on the diameter axis: entered 55555555 is capped so the DISPLAY is
+    // 999.9999, which means the stored slide value is 499.99995.
+    await selectAxis(user, 'X');
+    await typeValue(user, '55555555');
+    await pressEnter(user);
+    expect(rawAxisText('X')).toBe('999.9999');
+
+    // Flip the SAME axis back to radius mode (×1): the stored slide value now
+    // displays 1:1. 499.99995 at 4 decimals rounds to 500.0000 — proving storage
+    // holds the halved value, not the full 999.9999 (which would read 999.9999).
+    await setRadiusMode(user, 'X');
+    expect(rawAxisText('X')).toBe('500.0000');
   });
 
   // --- Hygiene: the commit must not trip the multi-reducer conflict guard ---

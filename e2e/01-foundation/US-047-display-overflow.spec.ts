@@ -105,4 +105,23 @@ test.describe('US-047: Display Overflow on Value Entry', () => {
     await dro.simulateEncoderAbsoluteMove('X', -1);
     await dro.waitForAxisPureTextValue('X', '998.9999');
   });
+
+  /**
+   * AC 47.7: the clamp bounds the DISPLAYED magnitude, composing with the
+   * diameter ×2 scale (US-041). On a diameter-mode axis the readout shows twice
+   * the stored slide value, so an over-long entry must still land inside the
+   * 7-digit panel — 999.9999, never the 8-cell 1999.9998. Diameter mode is set
+   * through the REAL setup menu (dro.setMeasurementMode, no window hook).
+   */
+  test('AC 47.7: over-long entry on a diameter axis displays 999.9999, never 1999.9998', async ({ dro }) => {
+    await dro.setMeasurementMode('X', 'diA');
+
+    await dro.selectAxis('X');
+    await dro.enterNumber('55555555');
+    await dro.enterButton.click();
+
+    await dro.waitForAxisPureTextValue('X', '999.9999');
+    const text = await dro.getAxisRawText('X');
+    expect(text.replace(/[^0-9]/g, '').length).toBe(7);
+  });
 });
