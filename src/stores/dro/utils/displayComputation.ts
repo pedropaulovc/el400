@@ -35,6 +35,23 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
 }
 
 /**
+ * Pure radius/diameter scale factor for an axis (US-041).
+ *
+ * Lathe diameter turning shows the cut diameter, which is twice the slide travel,
+ * so a `'diameter'`-mode axis displays `2 ×` the actual movement; `'radius'` (the
+ * mill default) is 1:1. Like `directionSign`, this is a display-only transform
+ * applied AFTER the datum offset is subtracted; it never mutates stored machine
+ * position, offsets, or macro coordinate math.
+ *
+ * @param axis - The axis to compute the scale for
+ * @param nvMem - Non-volatile memory (per-axis measurement mode)
+ * @returns 2 (diameter) or 1 (radius)
+ */
+export function measurementScale(axis: Axis, nvMem: NonVolatileMemory): 1 | 2 {
+  return nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+}
+
+/**
  * Display value for a single axis - can be a number or text string
  */
 export type AxisDisplayValue = number | string;
@@ -99,9 +116,11 @@ export function computeDisplayPosition(
   context: DROReducerContext
 ): number {
   const rawMm = computeAxisPositionMm(axis, vMem, context);
-  // Counting direction is a display-only transform applied AFTER datum subtraction;
-  // it never mutates stored machine position, offsets, or macro coordinate math.
-  const signedMm = rawMm * directionSign(axis, context.nvMem);
+  // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
+  // transforms applied AFTER datum subtraction; they never mutate stored machine
+  // position, offsets, or macro coordinate math. Diameter mode shows 2× the slide
+  // travel (the turned diameter); radius is 1:1.
+  const signedMm = rawMm * directionSign(axis, context.nvMem) * measurementScale(axis, context.nvMem);
   return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
 }
 

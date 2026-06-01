@@ -77,6 +77,7 @@ function resetStoresForTest(): void {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
     },
   });
 
