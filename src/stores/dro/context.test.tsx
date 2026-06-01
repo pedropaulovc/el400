@@ -39,6 +39,7 @@ function resetStores(initialState?: DROShape) {
       zDepthSense: 'depth-negative',
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
+      encoderFailWarning: false,
     },
   });
 

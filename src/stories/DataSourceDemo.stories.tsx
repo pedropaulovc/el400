@@ -28,6 +28,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       zDepthSense: 'depth-negative',
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
+      encoderFailWarning: false,
     },
   });
 

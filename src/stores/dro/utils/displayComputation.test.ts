@@ -14,7 +14,9 @@ import {
   computeAxisPositionMm,
   computeDisplayPosition,
   computeNormalDisplay,
+  ENCODER_FAIL_TEXT,
 } from './displayComputation';
+import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
 import type { VolatileMemoryState } from '../../../types/volatileMemory';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
@@ -208,8 +210,9 @@ describe('datum and Direction are independent, composable transforms (AC 2.3)', 
     it('reversed display value is exactly -1x the normal display value, same datum', () => {
       const { ctx: nCtx, vMem: nVMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
       const { ctx: rCtx, vMem: rVMem } = datumCtx(MACHINE_X, 4, reversed);
-      const normalVal = computeDisplayPosition('X', nVMem, nCtx);
-      const reversedVal = computeDisplayPosition('X', rVMem, rCtx);
+      // No encoder-fail override here, so both are numeric; assert as numbers.
+      const normalVal = computeDisplayPosition('X', nVMem, nCtx) as number;
+      const reversedVal = computeDisplayPosition('X', rVMem, rCtx) as number;
       expect(reversedVal).toBe(-normalVal);
     });
   });
@@ -272,5 +275,63 @@ describe('computeNormalDisplay — Direction across all three axes', () => {
     const ctx = manualContext(makeNvMem());
     const vMem = manualVMem({ X: 1, Y: 2, Z: 3 });
     expect(computeNormalDisplay(vMem, ctx)).toEqual({ X: 1, Y: 2, Z: 3 });
+  });
+});
+
+describe('Encoder-fail warning — no SIG override (US-042)', () => {
+  /** Connected context with a per-axis encoder signal state and ENF flag. */
+  function enfContext(
+    encoderSignal: MillState['encoderSignal'],
+    encoderFailWarning: boolean
+  ): DROReducerContext {
+    return {
+      millState: {
+        ...createDefaultMillState('cncjs'),
+        connected: true,
+        position: { x: 10, y: 20, z: 30 },
+        encoderSignal,
+      },
+      nvMem: { ...makeNvMem(), encoderFailWarning },
+    };
+  }
+
+  const connectedVMem: VolatileMemoryState = {
+    ...INITIAL_VOLATILE_MEMORY_STATE,
+    mode: 'abs',
+    workOffsets: { X: 0, Y: 0, Z: 0 },
+  };
+
+  it('shows no SIG on an axis that lost signal when ENF is on (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, ctx)).toBe(ENCODER_FAIL_TEXT);
+  });
+
+  it('only the affected axis shows no SIG; others read position (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    const display = computeNormalDisplay(connectedVMem, ctx);
+    expect(display.X).toBe(ENCODER_FAIL_TEXT);
+    expect(display.Y).toBe(20);
+    expect(display.Z).toBe(30);
+  });
+
+  it('per-axis: a lost Z shows no SIG while X/Y read position (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'ok', Y: 'ok', Z: 'lost' }, true);
+    const display = computeNormalDisplay(connectedVMem, ctx);
+    expect(display.X).toBe(10);
+    expect(display.Y).toBe(20);
+    expect(display.Z).toBe(ENCODER_FAIL_TEXT);
+  });
+
+  it('with ENF off, a lost signal is silent — axis reads position (AC 42.4)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, false);
+    expect(computeDisplayPosition('X', connectedVMem, ctx)).toBe(10);
+    expect(computeNormalDisplay(connectedVMem, ctx)).toEqual({ X: 10, Y: 20, Z: 30 });
+  });
+
+  it('warning clears once the signal is restored (AC 42.5)', () => {
+    const lost = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, lost)).toBe(ENCODER_FAIL_TEXT);
+    const restored = enfContext({ X: 'ok', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, restored)).toBe(10);
   });
 });

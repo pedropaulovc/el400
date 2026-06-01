@@ -152,6 +152,9 @@ export const Z_DEPTH_ID = 'z-depth';
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
+/** The global encoder-fail warning parameter id (US-042) -- its draft key. */
+export const ENF_ID = 'enf';
+
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
 
@@ -161,9 +164,9 @@ export const SETUP_END_ID = 'end';
  * Only a foundational subset is wired here as proof of the framework (US-039):
  * - `counting-mode` (per-axis): Linear / Angular -- a real per-axis nvMem-backed
  *   parameter with commit-on-change; angular axes display wrapped degrees (US-040).
- * - `enf` (global): encoder-fail warning On / Off, backed by nvMem.beepEnabled
- *   as a stand-in committed value -- proof of a global parameter reading real
- *   settings (full ENF semantics land in US-042).
+ * - `enf` (global): encoder-fail warning On / Off, backed by its own
+ *   nvMem.encoderFailWarning flag with commit-on-change; a lost encoder signal
+ *   shows `no SIG` on the affected axis when on (US-042).
  * - `End`: terminal exit item.
  *
  * Later stories append their own entries here.
@@ -194,15 +197,22 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
-    id: 'enf',
-    label: 'EnF on',
+    id: ENF_ID,
+    label: 'EnF oFF',
     scope: 'global',
+    // Default-first ordering: 'off' (the default, AC 42.1) seeds before 'on'.
     choices: [
-      { value: 'on', label: 'EnF on' },
       { value: 'off', label: 'EnF oFF' },
+      { value: 'on', label: 'EnF on' },
     ],
-    // Proof: read a real global nvMem flag (beepEnabled stands in until US-042).
-    readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
+    // Encoder-fail warning (US-042). Reads its OWN nvMem flag, decoupled from
+    // beepEnabled (US-025's field).
+    readValue: (ctx) => (ctx.nvMem.encoderFailWarning ? 'on' : 'off'),
+    // Commit-on-change (US-042): persist immediately so a later signal-loss
+    // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
+    },
   },
   {
     id: SCALE_RESOLUTION_ID,

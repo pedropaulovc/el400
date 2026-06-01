@@ -431,6 +431,42 @@ export class DROPage {
   }
 
   /**
+   * Simulate an encoder signal loss on an axis (US-042).
+   * Calls the mock CNCjs server, which emits the lost signal on controller:state.
+   * The CncjsMillAdapter normalizes it into MillState.encoderSignal and fires
+   * MILL_STATE_CHANGED — the real signal-loss path, no in-app test hook.
+   *
+   * @param axis - The axis whose encoder signal drops ('X', 'Y', or 'Z')
+   */
+  async simulateEncoderSignalLoss(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'lost');
+  }
+
+  /**
+   * Restore a previously dropped encoder signal on an axis (US-042).
+   *
+   * @param axis - The axis whose encoder signal is restored
+   */
+  async simulateEncoderSignalRestore(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'ok');
+  }
+
+  private async setEncoderSignal(axis: 'X' | 'Y' | 'Z', signal: 'ok' | 'lost'): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-signal?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, signal }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to set encoder signal: ${response.statusText}`);
+    }
+  }
+
+  /**
    * Simulate crossing the encoder reference mark for an axis (US-012).
    *
    * Moves the mock encoder to the reference-mark machine position, then invokes

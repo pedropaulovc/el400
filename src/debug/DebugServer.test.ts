@@ -180,6 +180,33 @@ describe('DebugServer', () => {
     });
   });
 
+  describe('setEncoderSignal (US-042)', () => {
+    it('should set a per-axis encoder signal to lost', () => {
+      server.setEncoderSignal('x', 'lost');
+      expect(server.getState().encoderSignal).toEqual({ X: 'lost', Y: 'ok', Z: 'ok' });
+    });
+
+    it('should broadcast the per-axis encoder signal on controller:state', () => {
+      const handler = vi.fn();
+      server.on('controller:state', handler);
+      handler.mockClear();
+
+      server.setEncoderSignal('z', 'lost');
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          encoderSignal: { X: 'ok', Y: 'ok', Z: 'lost' },
+        })
+      );
+    });
+
+    it('should restore the signal back to ok', () => {
+      server.setEncoderSignal('y', 'lost');
+      server.setEncoderSignal('y', 'ok');
+      expect(server.getState().encoderSignal).toEqual({ X: 'ok', Y: 'ok', Z: 'ok' });
+    });
+  });
+
   describe('reset', () => {
     it('should reset position to origin', () => {
       server.moveAbsolute(10, 20, 30);

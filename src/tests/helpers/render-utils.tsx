@@ -80,6 +80,7 @@ function resetStoresForTest(): void {
       zDepthSense: 'depth-negative',
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
+      encoderFailWarning: false,
     },
   });
 
