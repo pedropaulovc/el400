@@ -607,6 +607,56 @@ export class DROPage {
   }
 
   /**
+   * Set the per-axis radius/diameter measurement mode (US-041, manual section 6.2
+   * `rAd` / `diA`) by driving the REAL setup menu: open setup, pick the axis,
+   * scroll to the rAd/diA parameter, cycle its choice to the requested label, then
+   * exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only the buttons
+   * an operator presses. The parameter renders `rAd` (radius / 1:1) and `diA`
+   * (diameter / ×2); those two labels appear on no other parameter, so they
+   * uniquely identify the item while scrolling.
+   *
+   * @param axis - Axis whose measurement mode is being configured
+   * @param target - Desired mode label: 'rAd' (radius) or 'diA' (diameter)
+   */
+  async setMeasurementMode(axis: 'X' | 'Y' | 'Z', target: 'rAd' | 'diA'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) through the parameter list until the measurement-mode
+    // parameter is highlighted; recognise it by its `rAd` / `diA` labels.
+    const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
+    let guard = 0;
+    while (!isMeasurementLabel(await this.getAxisRawText(axis))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('measurement-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (right key) until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`measurement-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup back to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Set the per-axis counting mode (US-040, manual section 6.2 `LinEAr` /
    * `AnGULAr`) by driving the REAL setup menu: open setup, pick the axis, scroll
    * to the counting-mode parameter (the first item), cycle its choice to the

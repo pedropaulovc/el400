@@ -15,6 +15,7 @@ import {
   computeDisplayPosition,
   computeNormalDisplay,
   ENCODER_FAIL_TEXT,
+  measurementScale,
 } from './displayComputation';
 import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
@@ -25,6 +26,7 @@ import {
   type NonVolatileMemory,
   type AxisDirectionByAxis,
   type ZDepthSense,
+  type MeasurementModeByAxis,
 } from '../../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../../types/millState';
 
@@ -35,6 +37,7 @@ function makeNvMem(
     axisDirection?: Partial<AxisDirectionByAxis>;
     zDepthSense?: ZDepthSense;
     defaultUnit?: 'inch' | 'mm';
+    measurementMode?: Partial<MeasurementModeByAxis>;
   } = {}
 ): NonVolatileMemory {
   return {
@@ -44,6 +47,10 @@ function makeNvMem(
     axisDirection: {
       ...DEFAULT_NON_VOLATILE_MEMORY.axisDirection,
       ...overrides.axisDirection,
+    },
+    measurementMode: {
+      ...DEFAULT_NON_VOLATILE_MEMORY.measurementMode,
+      ...overrides.measurementMode,
     },
   };
 }
@@ -255,6 +262,90 @@ describe('computeAxisPositionMm — datum-only, unaffected by Direction', () => 
     const ctx = manualContext(makeNvMem({ zDepthSense: 'depth-positive' }));
     const vMem = manualVMem({ Z: 5 });
     expect(computeAxisPositionMm('Z', vMem, ctx)).toBe(5);
+  });
+});
+
+describe('measurementScale — radius/diameter factor (US-041)', () => {
+  it('radius is 1x (the mill default, AC 41.3)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'radius' } });
+    expect(measurementScale('X', nvMem)).toBe(1);
+  });
+
+  it('diameter is 2x (AC 41.4)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter' } });
+    expect(measurementScale('X', nvMem)).toBe(2);
+  });
+
+  it('is independent per axis (AC 41.5)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter', Y: 'radius', Z: 'diameter' } });
+    expect(measurementScale('X', nvMem)).toBe(2);
+    expect(measurementScale('Y', nvMem)).toBe(1);
+    expect(measurementScale('Z', nvMem)).toBe(2);
+  });
+});
+
+describe('computeDisplayPosition — radius/diameter transform (US-041)', () => {
+  it('radius mode shows the value 1:1 (AC 41.3)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'radius' } }));
+    const vMem = manualVMem({ X: 1 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(1);
+  });
+
+  it('diameter mode doubles the displayed value — 1.000 reads 2.000 (AC 41.4)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'diameter' } }));
+    const vMem = manualVMem({ X: 1 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(2);
+  });
+
+  it('doubling is per-axis: diameter X does not change radius Y (AC 41.5)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'diameter', Y: 'radius' } }));
+    const vMem = manualVMem({ X: 3, Y: 3 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(6);
+    expect(computeDisplayPosition('Y', vMem, ctx)).toBe(3);
+  });
+
+  it('diameter doubling composes with a reversed Direction (-x then ×2)', () => {
+    const ctx = manualContext(
+      makeNvMem({ axisDirection: { X: 'reversed' }, measurementMode: { X: 'diameter' } })
+    );
+    const vMem = manualVMem({ X: 5 });
+    // sign first: -5; diameter scale: -10.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(-10);
+  });
+
+  it('diameter doubling is applied to the converted inch value, not raw mm', () => {
+    const ctx = manualContext(
+      makeNvMem({ measurementMode: { X: 'diameter' }, defaultUnit: 'inch' })
+    );
+    const vMem = manualVMem({ X: 25.4 });
+    // 25.4 mm = 1 inch; diameter -> 2.0000 inch.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBeCloseTo(2, 10);
+  });
+
+  it('diameter is applied AFTER the datum subtraction (doubles the post-datum magnitude)', () => {
+    const ctx: DROReducerContext = {
+      millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 10, y: 0, z: 0 } },
+      nvMem: makeNvMem({ measurementMode: { X: 'diameter' } }),
+    };
+    const vMem: VolatileMemoryState = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'abs',
+      workOffsets: { X: 4, Y: 0, Z: 0 },
+    };
+    // datum first: 10 - 4 = 6; diameter: 12.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(12);
+  });
+});
+
+describe('computeAxisPositionMm — datum-only, unaffected by measurement mode (US-041)', () => {
+  it('returns the raw post-datum mm regardless of measurementMode', () => {
+    const ctx = manualContext(
+      makeNvMem({ measurementMode: { X: 'diameter', Y: 'diameter', Z: 'diameter' } })
+    );
+    const vMem = manualVMem({ X: 10, Y: 20, Z: 30 });
+    expect(computeAxisPositionMm('X', vMem, ctx)).toBe(10);
+    expect(computeAxisPositionMm('Y', vMem, ctx)).toBe(20);
+    expect(computeAxisPositionMm('Z', vMem, ctx)).toBe(30);
   });
 });
 

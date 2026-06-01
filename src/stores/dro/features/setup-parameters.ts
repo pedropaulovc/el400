@@ -33,6 +33,7 @@ import type {
   NonVolatileMemory,
   AxisDirection,
   ZDepthSense,
+  MeasurementMode,
   CountingMode,
   ProbeDroType,
   DisplayResolutionValue,
@@ -148,6 +149,9 @@ export const DIRECTION_ID = 'direction';
 
 /** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
 export const Z_DEPTH_ID = 'z-depth';
+
+/** The per-axis radius/diameter measurement-mode parameter id (US-041) -- its draft key. */
+export const MEASUREMENT_MODE_ID = 'measurement-mode';
 
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
@@ -309,6 +313,30 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // Commit-on-change (US-002): persist immediately, same path as Direction.
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ zDepthSense: value as ZDepthSense });
+    },
+  },
+  {
+    id: MEASUREMENT_MODE_ID,
+    label: 'rAd',
+    scope: 'per-axis',
+    choices: [
+      { value: 'radius', label: 'rAd' },
+      { value: 'diameter', label: 'diA' },
+    ],
+    // Seed from the selected axis's committed measurement mode (US-041). On the
+    // SELECT prompt (axis null) fall back to X. radius is the mill default (AC 41.3).
+    readValue: (ctx) => ctx.nvMem.measurementMode[ctx.axis ?? 'X'],
+    // Commit-on-change (US-041): persist the per-axis mode immediately so the
+    // readout switches between 1:1 (radius) and 2× (diameter) on exit and on
+    // every later position update -- the same surgical path as Direction (US-002).
+    commit: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        measurementMode: {
+          ...ctx.nvMem.measurementMode,
+          [axis]: value as MeasurementMode,
+        },
+      });
     },
   },
   {
