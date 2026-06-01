@@ -139,10 +139,34 @@ describe('SETUP_PARAMETERS registry', () => {
   });
 
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
-    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
-    expect(counting.commit).toBeUndefined();
     expect(taper.commit).toBeUndefined();
+  });
+
+  it('exposes a per-axis counting-mode parameter with linear / angular choices (US-040)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    expect(counting).toBeDefined();
+    expect(counting.scope).toBe('per-axis');
+    expect(counting.choices.map((c) => c.value)).toEqual(['linear', 'angular']);
+    expect(counting.choices.map((c) => c.label)).toEqual(['LinEAr', 'AnGULAr']);
+    // First choice (default) is LinEAr (AC 40.1).
+    expect(counting.choices[0]!.value).toBe('linear');
+    // Real committed parameter now (US-040) — exposes a commit hook.
+    expect(typeof counting.commit).toBe('function');
+  });
+
+  it('counting-mode seeds its current value from nvMem.countingMode per axis (AC 40.1, 40.5)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    // Default is linear on every axis (AC 40.6).
+    expect(counting.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' })).toBe('linear');
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      countingMode: { X: 'angular' as const, Y: 'linear' as const, Z: 'linear' as const },
+    };
+    expect(counting.readValue({ nvMem, axis: 'X' })).toBe('angular');
+    expect(counting.readValue({ nvMem, axis: 'Y' })).toBe('linear');
+    // SELECT prompt (axis null) falls back to X.
+    expect(counting.readValue({ nvMem, axis: null })).toBe('angular');
   });
 });
 
@@ -171,6 +195,24 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     zDepth.commit!({ nvMem, axis: null }, 'depth-positive');
     expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
+  });
+
+  it('counting-mode.commit persists the chosen mode to the selected axis only (US-040)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    counting.commit!({ nvMem, axis: 'Y' }, 'angular');
+    expect(useSettingsStore.getState().nvMem.countingMode).toEqual({
+      X: 'linear',
+      Y: 'angular',
+      Z: 'linear',
+    });
+  });
+
+  it('counting-mode.commit falls back to X on the SELECT prompt (axis null)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    counting.commit!({ nvMem, axis: null }, 'angular');
+    expect(useSettingsStore.getState().nvMem.countingMode.X).toBe('angular');
   });
 
   it('probe-dro-type seeds from nvMem and commits the chosen DRO type (US-032, AC 32.1)', () => {

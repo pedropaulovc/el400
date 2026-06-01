@@ -66,6 +66,23 @@ export interface AxisDirectionByAxis {
 }
 
 /**
+ * Per-axis counting mode (manual section 6.2 `LinEAr` / `AnGULAr`, US-040).
+ * `'linear'` is a translation scale (glass/magnetic) reading distance in the
+ * user's linear unit; `'angular'` is a rotary encoder reading an angle in
+ * degrees. The choice picks which display-resolution option set applies (linear
+ * micron values vs. the angular degree formats) and, for angular axes, switches
+ * the readout to wrapped degrees instead of unit-converted distance.
+ */
+export type CountingMode = 'linear' | 'angular';
+
+/** Per-axis counting mode. */
+export interface CountingModeByAxis {
+  X: CountingMode;
+  Y: CountingMode;
+  Z: CountingMode;
+}
+
+/**
  * Z depth-sense preference (AC 2.4). `'depth-negative'` is the standard
  * convention (cutting deeper makes Z more negative); `'depth-positive'` inverts
  * the Z display sign so increasing cutting depth increases the displayed value.
@@ -104,6 +121,8 @@ export interface NonVolatileMemory {
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
+  countingMode: CountingModeByAxis;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
 }
@@ -120,6 +139,16 @@ export const DEFAULT_SCALE_RESOLUTION: ScaleResolutionByAxis = {
   X: '5',
   Y: '5',
   Z: '5',
+};
+
+/**
+ * Mill default counting mode: linear on every axis (AC 40.6 — all DRO PROS mill
+ * kits ship with linear scales; angular is for rotary-axis installs).
+ */
+export const DEFAULT_COUNTING_MODE: CountingModeByAxis = {
+  X: 'linear',
+  Y: 'linear',
+  Z: 'linear',
 };
 
 /**
@@ -146,6 +175,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',
 };
 

@@ -37,6 +37,7 @@ function resetStores(initialState?: DROShape) {
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
+      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
     },
   });
