@@ -103,6 +103,7 @@ describe('inchMmReducer', () => {
           probe: { pinState: '', triggered: false },
           connected: false,
           controllerType: 'noop',
+          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
         },
         nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
       };

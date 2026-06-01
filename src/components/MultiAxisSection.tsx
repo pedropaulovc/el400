@@ -4,6 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -67,6 +68,10 @@ const MultiAxisSection = () => {
   // Reference-mark crossing hook for E2E (US-012)
   useReferenceMarkTestHook(dispatch);
 
+  // Near-Zero Warning (US-024): plays the continuous beep while an axis is within
+  // BP DIST of zero; returns whether the visual indicator should show.
+  const zeroApproachActive = useZeroApproachWarning();
+
   // LED indicators
   const mode = useMode();
   const defaultUnit = useDefaultUnit();
@@ -109,6 +114,21 @@ const MultiAxisSection = () => {
             <Axis axis="Y" />
             <Axis axis="Z" />
           </div>
+
+          {/* Near-Zero Warning indicator (US-024): rendered only while the warning
+              is active, so its presence/absence drives the audio-indicator assertion.
+              aria-live announces the alert to screen-reader users. */}
+          {zeroApproachActive && (
+            <div
+              data-testid="audio-indicator"
+              role="status"
+              aria-live="assertive"
+              className="mt-1 flex items-center justify-center gap-1 text-red-400 animate-blink"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">♪</span>
+              <span className="sr-only">Near zero warning</span>
+            </div>
+          )}
 
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">

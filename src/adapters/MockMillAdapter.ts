@@ -5,7 +5,12 @@
 
 import type { Dispatch } from 'react';
 import type { MillAdapter } from './MillAdapter';
-import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import type {
+  ControllerType,
+  EncoderSignalState,
+  MillState,
+  MillStateListener,
+} from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { createDefaultMillState, createProbeState } from '../types/millState';
 
@@ -108,6 +113,19 @@ export class MockMillAdapter implements MillAdapter {
   toggleProbe(): void {
     const newPinState = this.state.probe.triggered ? '' : 'P';
     this.setProbeState(newPinState);
+  }
+
+  /**
+   * Set the encoder signal state for an axis (US-042). Simulates an encoder
+   * cable dropping ('lost') or being restored ('ok'); fires the normal
+   * adapter -> millStore -> droStore MILL_STATE_CHANGED path.
+   */
+  setEncoderSignal(axis: 'X' | 'Y' | 'Z', signal: EncoderSignalState): void {
+    this.state = {
+      ...this.state,
+      encoderSignal: { ...this.state.encoderSignal, [axis]: signal },
+    };
+    this.notifyListeners();
   }
 
   private startUpdates(): void {

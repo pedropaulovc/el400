@@ -30,8 +30,8 @@ test.describe('US-039: Setup Menu Navigation', () => {
     // Scroll up to the terminal End item and exit (AC 39.7). The number of
     // middle parameters grows as setup stories land (SC added by US-021), so
     // walk up until End rather than hard-coding the press count.
-    await dro.key8.click(); // EnF on
-    await dro.waitForAxisPureTextValue('X', 'EnF on');
+    await dro.key8.click(); // EnF oFF
+    await dro.waitForAxisPureTextValue('X', 'EnF oFF');
     while ((await dro.getAxisRawText('X')) !== 'End') {
       await dro.key8.click();
     }
@@ -50,7 +50,7 @@ test.describe('US-039: Setup Menu Navigation', () => {
     expect(first).toBe('LinEAr');
 
     // Scroll up through every item to End, then one more wraps to the first.
-    await dro.key8.click(); // EnF on
+    await dro.key8.click(); // EnF oFF
     while ((await dro.getAxisRawText('X')) !== 'End') {
       await dro.key8.click();
     }

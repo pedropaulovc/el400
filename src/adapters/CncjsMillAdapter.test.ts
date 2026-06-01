@@ -399,6 +399,22 @@ describe('normalizeControllerState', () => {
 
       expect(result.position).toEqual({ x: 1, y: 2, z: 3 });
     });
+
+    it('defaults encoderSignal to all-ok when absent (US-042)', () => {
+      const state = { status: { mpos: [0, 0, 0] } };
+      const result = normalizeControllerState('Grbl', state);
+      expect(result.encoderSignal).toEqual({ X: 'ok', Y: 'ok', Z: 'ok' });
+    });
+
+    it('carries a per-axis encoder signal-loss report (US-042)', () => {
+      const state = {
+        status: { mpos: [0, 0, 0] },
+        encoderSignal: { X: 'lost' as const },
+      };
+      const result = normalizeControllerState('Grbl', state);
+      // Reported axis is lost; unreported axes default to ok.
+      expect(result.encoderSignal).toEqual({ X: 'lost', Y: 'ok', Z: 'ok' });
+    });
   });
 
   describe('GrblHAL', () => {

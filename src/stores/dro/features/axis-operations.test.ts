@@ -31,6 +31,7 @@ function connectedContext(position: { x: number; y: number; z: number }): DRORed
       probe: { pinState: '', triggered: false },
       connected: true,
       controllerType: 'cncjs',
+      encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
     },
     nvMem: DEFAULT_NON_VOLATILE_MEMORY,
   };
@@ -280,6 +281,7 @@ describe('axisOperationsReducer', () => {
           probe: { pinState: '', triggered: false },
           connected: true,
           controllerType: 'cncjs',
+          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
         },
         nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
       };
@@ -303,6 +305,7 @@ describe('axisOperationsReducer', () => {
           probe: { pinState: '', triggered: false },
           connected: true,
           controllerType: 'cncjs',
+          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
         },
         nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
       };
@@ -325,6 +328,7 @@ describe('axisOperationsReducer', () => {
           probe: { pinState: '', triggered: false },
           connected: true,
           controllerType: 'cncjs',
+          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
         },
         nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
       };

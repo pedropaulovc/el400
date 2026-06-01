@@ -14,7 +14,10 @@ import {
   computeAxisPositionMm,
   computeDisplayPosition,
   computeNormalDisplay,
+  ENCODER_FAIL_TEXT,
+  measurementScale,
 } from './displayComputation';
+import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
 import type { VolatileMemoryState } from '../../../types/volatileMemory';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
@@ -23,6 +26,7 @@ import {
   type NonVolatileMemory,
   type AxisDirectionByAxis,
   type ZDepthSense,
+  type MeasurementModeByAxis,
 } from '../../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../../types/millState';
 
@@ -33,6 +37,7 @@ function makeNvMem(
     axisDirection?: Partial<AxisDirectionByAxis>;
     zDepthSense?: ZDepthSense;
     defaultUnit?: 'inch' | 'mm';
+    measurementMode?: Partial<MeasurementModeByAxis>;
   } = {}
 ): NonVolatileMemory {
   return {
@@ -42,6 +47,10 @@ function makeNvMem(
     axisDirection: {
       ...DEFAULT_NON_VOLATILE_MEMORY.axisDirection,
       ...overrides.axisDirection,
+    },
+    measurementMode: {
+      ...DEFAULT_NON_VOLATILE_MEMORY.measurementMode,
+      ...overrides.measurementMode,
     },
   };
 }
@@ -208,8 +217,9 @@ describe('datum and Direction are independent, composable transforms (AC 2.3)', 
     it('reversed display value is exactly -1x the normal display value, same datum', () => {
       const { ctx: nCtx, vMem: nVMem } = datumCtx(MACHINE_X, 4, makeNvMem({ axisDirection: { X: 'normal' } }));
       const { ctx: rCtx, vMem: rVMem } = datumCtx(MACHINE_X, 4, reversed);
-      const normalVal = computeDisplayPosition('X', nVMem, nCtx);
-      const reversedVal = computeDisplayPosition('X', rVMem, rCtx);
+      // No encoder-fail override here, so both are numeric; assert as numbers.
+      const normalVal = computeDisplayPosition('X', nVMem, nCtx) as number;
+      const reversedVal = computeDisplayPosition('X', rVMem, rCtx) as number;
       expect(reversedVal).toBe(-normalVal);
     });
   });
@@ -255,6 +265,90 @@ describe('computeAxisPositionMm — datum-only, unaffected by Direction', () => 
   });
 });
 
+describe('measurementScale — radius/diameter factor (US-041)', () => {
+  it('radius is 1x (the mill default, AC 41.3)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'radius' } });
+    expect(measurementScale('X', nvMem)).toBe(1);
+  });
+
+  it('diameter is 2x (AC 41.4)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter' } });
+    expect(measurementScale('X', nvMem)).toBe(2);
+  });
+
+  it('is independent per axis (AC 41.5)', () => {
+    const nvMem = makeNvMem({ measurementMode: { X: 'diameter', Y: 'radius', Z: 'diameter' } });
+    expect(measurementScale('X', nvMem)).toBe(2);
+    expect(measurementScale('Y', nvMem)).toBe(1);
+    expect(measurementScale('Z', nvMem)).toBe(2);
+  });
+});
+
+describe('computeDisplayPosition — radius/diameter transform (US-041)', () => {
+  it('radius mode shows the value 1:1 (AC 41.3)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'radius' } }));
+    const vMem = manualVMem({ X: 1 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(1);
+  });
+
+  it('diameter mode doubles the displayed value — 1.000 reads 2.000 (AC 41.4)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'diameter' } }));
+    const vMem = manualVMem({ X: 1 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(2);
+  });
+
+  it('doubling is per-axis: diameter X does not change radius Y (AC 41.5)', () => {
+    const ctx = manualContext(makeNvMem({ measurementMode: { X: 'diameter', Y: 'radius' } }));
+    const vMem = manualVMem({ X: 3, Y: 3 });
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(6);
+    expect(computeDisplayPosition('Y', vMem, ctx)).toBe(3);
+  });
+
+  it('diameter doubling composes with a reversed Direction (-x then ×2)', () => {
+    const ctx = manualContext(
+      makeNvMem({ axisDirection: { X: 'reversed' }, measurementMode: { X: 'diameter' } })
+    );
+    const vMem = manualVMem({ X: 5 });
+    // sign first: -5; diameter scale: -10.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(-10);
+  });
+
+  it('diameter doubling is applied to the converted inch value, not raw mm', () => {
+    const ctx = manualContext(
+      makeNvMem({ measurementMode: { X: 'diameter' }, defaultUnit: 'inch' })
+    );
+    const vMem = manualVMem({ X: 25.4 });
+    // 25.4 mm = 1 inch; diameter -> 2.0000 inch.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBeCloseTo(2, 10);
+  });
+
+  it('diameter is applied AFTER the datum subtraction (doubles the post-datum magnitude)', () => {
+    const ctx: DROReducerContext = {
+      millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 10, y: 0, z: 0 } },
+      nvMem: makeNvMem({ measurementMode: { X: 'diameter' } }),
+    };
+    const vMem: VolatileMemoryState = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'abs',
+      workOffsets: { X: 4, Y: 0, Z: 0 },
+    };
+    // datum first: 10 - 4 = 6; diameter: 12.
+    expect(computeDisplayPosition('X', vMem, ctx)).toBe(12);
+  });
+});
+
+describe('computeAxisPositionMm — datum-only, unaffected by measurement mode (US-041)', () => {
+  it('returns the raw post-datum mm regardless of measurementMode', () => {
+    const ctx = manualContext(
+      makeNvMem({ measurementMode: { X: 'diameter', Y: 'diameter', Z: 'diameter' } })
+    );
+    const vMem = manualVMem({ X: 10, Y: 20, Z: 30 });
+    expect(computeAxisPositionMm('X', vMem, ctx)).toBe(10);
+    expect(computeAxisPositionMm('Y', vMem, ctx)).toBe(20);
+    expect(computeAxisPositionMm('Z', vMem, ctx)).toBe(30);
+  });
+});
+
 describe('computeNormalDisplay — Direction across all three axes', () => {
   it('reflects per-axis Direction and Z depth-sense together', () => {
     const ctx = manualContext(
@@ -272,5 +366,63 @@ describe('computeNormalDisplay — Direction across all three axes', () => {
     const ctx = manualContext(makeNvMem());
     const vMem = manualVMem({ X: 1, Y: 2, Z: 3 });
     expect(computeNormalDisplay(vMem, ctx)).toEqual({ X: 1, Y: 2, Z: 3 });
+  });
+});
+
+describe('Encoder-fail warning — no SIG override (US-042)', () => {
+  /** Connected context with a per-axis encoder signal state and ENF flag. */
+  function enfContext(
+    encoderSignal: MillState['encoderSignal'],
+    encoderFailWarning: boolean
+  ): DROReducerContext {
+    return {
+      millState: {
+        ...createDefaultMillState('cncjs'),
+        connected: true,
+        position: { x: 10, y: 20, z: 30 },
+        encoderSignal,
+      },
+      nvMem: { ...makeNvMem(), encoderFailWarning },
+    };
+  }
+
+  const connectedVMem: VolatileMemoryState = {
+    ...INITIAL_VOLATILE_MEMORY_STATE,
+    mode: 'abs',
+    workOffsets: { X: 0, Y: 0, Z: 0 },
+  };
+
+  it('shows no SIG on an axis that lost signal when ENF is on (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, ctx)).toBe(ENCODER_FAIL_TEXT);
+  });
+
+  it('only the affected axis shows no SIG; others read position (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    const display = computeNormalDisplay(connectedVMem, ctx);
+    expect(display.X).toBe(ENCODER_FAIL_TEXT);
+    expect(display.Y).toBe(20);
+    expect(display.Z).toBe(30);
+  });
+
+  it('per-axis: a lost Z shows no SIG while X/Y read position (AC 42.3)', () => {
+    const ctx = enfContext({ X: 'ok', Y: 'ok', Z: 'lost' }, true);
+    const display = computeNormalDisplay(connectedVMem, ctx);
+    expect(display.X).toBe(10);
+    expect(display.Y).toBe(20);
+    expect(display.Z).toBe(ENCODER_FAIL_TEXT);
+  });
+
+  it('with ENF off, a lost signal is silent — axis reads position (AC 42.4)', () => {
+    const ctx = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, false);
+    expect(computeDisplayPosition('X', connectedVMem, ctx)).toBe(10);
+    expect(computeNormalDisplay(connectedVMem, ctx)).toEqual({ X: 10, Y: 20, Z: 30 });
+  });
+
+  it('warning clears once the signal is restored (AC 42.5)', () => {
+    const lost = enfContext({ X: 'lost', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, lost)).toBe(ENCODER_FAIL_TEXT);
+    const restored = enfContext({ X: 'ok', Y: 'ok', Z: 'ok' }, true);
+    expect(computeDisplayPosition('X', connectedVMem, restored)).toBe(10);
   });
 });
