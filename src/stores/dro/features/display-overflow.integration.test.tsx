@@ -451,6 +451,50 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
     expect(rawAxisText('X')).toBe('500.0000');
   });
 
+  // --- Derived-reading overflow: radius→diameter ×2 of a near-limit value -------
+  // US-047's clamp is entry-time; this is the DERIVED path. Preset a value just
+  // under the panel limit in radius mode, then switch the SAME axis to diameter:
+  // the display-only ×2 re-scale would render the 8-cell 1999.9998, so the panel
+  // shows the dashes overflow indicator (Acu-Rite precedent). It self-clears when
+  // the axis goes back to radius mode, since the stored slide value is untouched.
+  describe('derived-reading overflow (radius→diameter ×2, US-041)', () => {
+    it('switching a near-limit radius value to diameter shows the dashes overflow', async () => {
+      const { user } = await renderSimulator();
+      // Preset X to the panel maximum in radius mode (default). 999.9999 fits ×1.
+      await selectAxis(user, 'X');
+      await typeValue(user, '999.9999');
+      await pressEnter(user);
+      expect(rawAxisText('X')).toBe('999.9999');
+
+      // Switch to diameter via the real setup menu: 999.9999 × 2 = 1999.9998 → dashes.
+      await setDiameterMode(user, 'X');
+      expect(rawAxisText('X')).toBe('-------');
+    });
+
+    it('the overflow self-clears when the axis goes back to radius mode', async () => {
+      const { user } = await renderSimulator();
+      await selectAxis(user, 'X');
+      await typeValue(user, '999.9999');
+      await pressEnter(user);
+      await setDiameterMode(user, 'X');
+      expect(rawAxisText('X')).toBe('-------');
+
+      // Back to radius (×1): the stored slide value is untouched, so 999.9999 returns.
+      await setRadiusMode(user, 'X');
+      expect(rawAxisText('X')).toBe('999.9999');
+    });
+
+    it('a value that still fits after ×2 is unaffected (200.0000 from a 100 radius)', async () => {
+      const { user } = await renderSimulator();
+      await selectAxis(user, 'X');
+      await typeValue(user, '100');
+      await pressEnter(user);
+      await setDiameterMode(user, 'X');
+      // 100 × 2 = 200 → fits the panel, normal number, no dashes.
+      expect(rawAxisText('X')).toBe('200.0000');
+    });
+  });
+
   // --- Hygiene: the commit must not trip the multi-reducer conflict guard ---
   it('clamping on ENTER does not log a multi-reducer conflict', async () => {
     const { user } = await renderSimulator();
