@@ -20,11 +20,15 @@ export const DISPLAY_WIDTH = 8;
  * Convert a numeric axis value into the per-digit glyph sequence. The first glyph
  * is the sign cell: `'-'` for negatives, a blank space for non-negatives
  * (AC 2.6 — positives carry no sign).
+ *
+ * `decimals` is the fractional-digit count the dP display resolution selects for
+ * this axis (US-022); it defaults to the panel maximum of 4, preserving the
+ * standard readout for callers that do not vary precision.
  */
-export const formatNumberValue = (num: number): AxisDigit[] => {
+export const formatNumberValue = (num: number, decimals = 4): AxisDigit[] => {
   const isNegative = num < 0;
   const absNum = Math.abs(num);
-  const formatted = absNum.toFixed(4);
+  const formatted = absNum.toFixed(decimals);
 
   const result: AxisDigit[] = [];
 

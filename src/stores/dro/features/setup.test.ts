@@ -23,6 +23,13 @@ import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
 
 const ctx = DEFAULT_TEST_CONTEXT;
 
+// Several parameters now commit-on-change to the live settings store (Direction,
+// Z depth-sense, and counting-mode as of US-040). Reset it before every test so
+// a cycle in one test cannot leak nvMem state into the next.
+beforeEach(() => {
+  useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+});
+
 /** Build a setup-parameter state with the given setup data. */
 function paramState(data: Partial<SetupData>): DROStatePayload {
   const merged: SetupData = { ...INITIAL_SETUP_DATA, selectedAxis: 'X', ...data };
@@ -256,9 +263,27 @@ describe('setupReducer - commit-on-change parameters (US-002)', () => {
     expect(xText(result)).toBe('dEP PoS');
   });
 
-  it('cycling a non-commit param (counting-mode) does NOT touch nvMem', () => {
+  it('cycling the counting-mode param commits to nvMem for the selected axis (US-040)', () => {
+    const state = paramState({ selectedAxis: 'X', currentParamIndex: 0 });
+    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem.countingMode.X).toBe('angular');
+    // Label updates to the angular choice using the freshly committed nvMem.
+    expect(xText(result)).toBe('AnGULAr');
+  });
+
+  it('cycling counting-mode on Y does not change X (per-axis commit, AC 40.5)', () => {
+    setupReducer(paramState({ selectedAxis: 'Y', currentParamIndex: 0 }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    expect(useSettingsStore.getState().nvMem.countingMode).toEqual({
+      X: 'linear',
+      Y: 'angular',
+      Z: 'linear',
+    });
+  });
+
+  it('cycling a non-commit param (taper-on) does NOT touch nvMem', () => {
+    const taperIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'taper-on');
     const before = useSettingsStore.getState().nvMem;
-    setupReducer(paramState({ selectedAxis: 'X', currentParamIndex: 0 }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
+    setupReducer(paramState({ selectedAxis: 'X', currentParamIndex: taperIdx }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
     expect(useSettingsStore.getState().nvMem).toEqual(before);
   });
 

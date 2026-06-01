@@ -6,9 +6,49 @@
  */
 
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
-import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import type {
+  NonVolatileMemory,
+  DisplayResolutionValue,
+} from '../../../types/nonVolatileMemory';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+
+/**
+ * Maximum fractional digits the 8-cell seven-segment panel can render
+ * (1 sign cell + 3 integer cells + 4 decimal cells). Finer dP settings clamp to
+ * this, which also keeps the device's and simulator's default 4-decimal readout.
+ */
+export const MAX_DISPLAY_DECIMALS = 4;
+
+/**
+ * Decimal places to render for a given dP display-resolution value (US-022).
+ *
+ * dP is the 5-micron mill default, anchored at the panel-maximum of 4 decimals.
+ * Each decade coarser drops one decimal (display gets less sensitive, AC22.4),
+ * each decade finer would add one but is clamped to the panel maximum. The
+ * mapping is unit-independent so the default reads 4 decimals in both inch and
+ * mm, preserving the device's standard readout (AC22.2); only the coarse
+ * 50-micron value drops to 3 decimals (≈0.002", matching the manual / story).
+ *
+ * @param value - dP value in microns
+ * @returns Number of fractional digits to display (0..MAX_DISPLAY_DECIMALS)
+ */
+export function decimalsForDisplayResolution(value: DisplayResolutionValue): number {
+  const microns = Number(value);
+  // Decades coarser than the 5-micron anchor; floor so the mapping is monotonic
+  // and a value strictly within a decade does not round up to the next step.
+  const decadesCoarser = Math.floor(Math.log10(microns / 5) + 1e-9);
+  const decimals = MAX_DISPLAY_DECIMALS - decadesCoarser;
+  return Math.max(0, Math.min(MAX_DISPLAY_DECIMALS, decimals));
+}
+
+/**
+ * Decimal places to render for a single axis, from its committed dP resolution
+ * (US-022). Independent of scale resolution SC (AC22.3).
+ */
+export function axisDisplayDecimals(axis: Axis, nvMem: NonVolatileMemory): number {
+  return decimalsForDisplayResolution(nvMem.displayResolution[axis]);
+}
 
 /**
  * Pure counting-direction sign for an axis (US-002).
@@ -49,6 +89,21 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
  */
 export function measurementScale(axis: Axis, nvMem: NonVolatileMemory): 1 | 2 {
   return nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+}
+
+/**
+ * Wrap an angle in degrees into the half-open range [0, 360) (US-040).
+ *
+ * Angular (rotary) axes count an angle, so the readout rolls over at a full
+ * revolution: 360° -> 0°, 370° -> 10°, and negatives wrap up (-10° -> 350°).
+ * This is the angular analogue of the linear readout and is applied to angular
+ * axes in place of unit conversion.
+ *
+ * @param degrees - The raw angle in degrees (may be any real value)
+ * @returns The equivalent angle in [0, 360)
+ */
+export function wrapDegrees(degrees: number): number {
+  return ((degrees % 360) + 360) % 360;
 }
 
 /**
@@ -118,9 +173,16 @@ export function computeDisplayPosition(
   const rawMm = computeAxisPositionMm(axis, vMem, context);
   // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
   // transforms applied AFTER datum subtraction; they never mutate stored machine
-  // position, offsets, or macro coordinate math. Diameter mode shows 2× the slide
-  // travel (the turned diameter); radius is 1:1.
-  const signedMm = rawMm * directionSign(axis, context.nvMem) * measurementScale(axis, context.nvMem);
+  // position, offsets, or macro coordinate math.
+  const signed = rawMm * directionSign(axis, context.nvMem);
+  // Angular (rotary) axes read an ANGLE: the raw position is degrees, wrapped to
+  // [0, 360) and NOT unit-converted (US-040, AC 40.4). Diameter ×2 scale applies
+  // only in linear mode (AC41.7 — angular has no diameter concept).
+  if (context.nvMem.countingMode[axis] === 'angular') {
+    return wrapDegrees(signed);
+  }
+  // Diameter mode shows 2× the slide travel (the turned diameter); radius is 1:1.
+  const signedMm = signed * measurementScale(axis, context.nvMem);
   return fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
 }
 

@@ -123,10 +123,13 @@ describe('sdmReducer', () => {
       expect(result?.vMem.inputBuffer).toBe('');
     });
 
-    it('confirming Run exits to idle (US-011 not implemented yet)', () => {
+    it('confirming Run enters run step-select with step 1 and a cleared buffer (AC 11.1, AC 11.2)', () => {
       const state = createTestState('sdm-menu-run', { ...INITIAL_SDM_DATA, sdmMode: 'RUN' });
       const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('idle');
+      expect(result?.stateName).toBe('sdm-run-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+      expect((result?.stateData as SdmData).sdmMode).toBe('RUN');
+      expect(result?.vMem.inputBuffer).toBe('');
     });
 
     it('exits to idle on clear', () => {
@@ -547,6 +550,205 @@ describe('sdmReducer — Program mode (US-010)', () => {
       // Stays on the step view, current step unchanged.
       expect(result?.stateName).toBe('sdm-program-step');
       expect((result?.stateData as SdmData).currentStep).toBe(1);
+    });
+  });
+});
+
+/**
+ * Run (Recall) Mode — Unit Tests (US-011)
+ *
+ * Authoritative behaviour per manual §8.2.3 (Run mode):
+ *  - Select Run at the SDM menu, press Enter. The run menu shows step number 1.
+ *  - Enter the required step number by pressing Y and numeric keys; press ent to
+ *    confirm. Pressing ent displays the DISTANCE-TO-GO (stored sub-datum minus
+ *    current machine position) for the selected step, live.
+ *  - Press 6► to go to the next step (4◄ to the previous step). The DTG follows
+ *    the selected step.
+ *  - Press C to exit.
+ *
+ * Distance-to-go is computed from the SAME points map US-009 Learn / US-010
+ * Program write (mm internally), converted to the operator's unit for display.
+ */
+describe('sdmReducer — Run mode (US-011)', () => {
+  /** A payload in the run step-select state with the given SDM data. */
+  function runStepState(data: Partial<SdmData> = {}) {
+    const sdmData: SdmData = { ...INITIAL_SDM_DATA, sdmMode: 'RUN', ...data };
+    return createTestState('sdm-run-step', sdmData);
+  }
+
+  /** A payload in the run distance-to-go (active) state with the given SDM data. */
+  function runActiveState(data: Partial<SdmData> = {}) {
+    const sdmData: SdmData = { ...INITIAL_SDM_DATA, sdmMode: 'RUN', ...data };
+    return createTestState('sdm-run-active', sdmData);
+  }
+
+  /** Two stored steps in mm for navigation tests. */
+  const TWO_STEPS = { 1: { X: 50, Y: 0, Z: 0 }, 2: { X: 80, Y: 0, Z: 0 } };
+
+  // ───────────────────────── step select (AC 11.2) ─────────────────
+  describe('run step selection (AC 11.2)', () => {
+    it('shows the rUn prompt on X and step number 1 on Y by default', () => {
+      const state = runStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.display.X).toBe('rUn');
+      expect(result?.display.Y).toBe(1);
+    });
+
+    it('accepts digit input into the buffer and shows it on Y', () => {
+      let state = runStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT);
+      expect(state.vMem.inputBuffer).toBe('3');
+      expect(state.display.Y).toBe(3);
+    });
+
+    it('opens a fresh step entry on Y, clearing the buffer (manual §8.2.3)', () => {
+      let state = runStepState({ currentStep: 4 });
+      state = apply(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.vMem.inputBuffer).toBe('');
+    });
+
+    it('confirms a typed step number and shows distance-to-go (AC 11.3)', () => {
+      let state = runStepState({ currentStep: 1, points: TWO_STEPS });
+      state = apply(state, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT); // digit 2
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-run-active');
+      expect((result?.stateData as SdmData).currentStep).toBe(2);
+    });
+
+    it('confirms the default step (1) when the buffer is empty', () => {
+      const state = runStepState({ currentStep: 1, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-run-active');
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+    });
+
+    it('rejects step 0 (below range)', () => {
+      let state = runStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-run-step');
+    });
+
+    it('rejects a step number above MAX_SDM_STEPS', () => {
+      let state = runStepState({ currentStep: 1 });
+      for (const ch of String(MAX_SDM_STEPS + 1)) {
+        state = apply(state, { eventName: `KEY_${ch}` as 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      }
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-run-step');
+    });
+
+    it('exits to idle on clear when the buffer is empty (AC 11.6)', () => {
+      const state = runStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('idle');
+    });
+
+    it('backspaces with clear when the buffer has content', () => {
+      let state = runStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-run-step');
+      expect(result?.vMem.inputBuffer).toBe('1');
+    });
+  });
+
+  // ─────────────────── distance-to-go display (AC 11.3) ─────────────
+  describe('distance-to-go display (AC 11.3)', () => {
+    it('shows DTG = stored sub-datum minus current position (mm unit)', () => {
+      const ctx = { ...contextAt(20, 5, 1), nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      const state = runActiveState({ currentStep: 1, points: { 1: { X: 50, Y: 30, Z: 10 } } });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ctx);
+      // DTG = stored - current
+      expect(result?.display.X).toBeCloseTo(30, 6); // 50 - 20
+      expect(result?.display.Y).toBeCloseTo(25, 6); // 30 - 5
+      expect(result?.display.Z).toBeCloseTo(9, 6);  // 10 - 1
+    });
+
+    it('DTG is non-zero when not yet at the target (AC 11.3 / E2E scenario)', () => {
+      const ctx = { ...contextAt(0, 0, 0), nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      const state = runActiveState({ currentStep: 1, points: { 1: { X: 50, Y: 0, Z: 0 } } });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ctx);
+      expect(result?.display.X).not.toBe(0);
+      expect(result?.display.X).toBeCloseTo(50, 6);
+    });
+
+    it('updates the DTG live on MILL_STATE_CHANGED as the machine moves', () => {
+      const mm = { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const };
+      const state = runActiveState({ currentStep: 1, points: { 1: { X: 50, Y: 0, Z: 0 } } });
+
+      let result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, { ...contextAt(10, 0, 0), nvMem: mm });
+      expect(result?.display.X).toBeCloseTo(40, 6); // 50 - 10
+
+      // Machine jogs closer; a fresh tick recomputes DTG.
+      result = sdmReducer(result!, { eventName: 'MILL_STATE_CHANGED' }, { ...contextAt(45, 0, 0), nvMem: mm });
+      expect(result?.display.X).toBeCloseTo(5, 6); // 50 - 45
+    });
+
+    it('treats an unstored step as a zero sub-datum (DTG = -current position)', () => {
+      const ctx = { ...contextAt(12, 0, 0), nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      // Step 3 was never programmed.
+      const state = runActiveState({ currentStep: 3, points: { 1: { X: 50, Y: 0, Z: 0 } } });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ctx);
+      expect(result?.display.X).toBeCloseTo(-12, 6); // 0 - 12
+    });
+
+    it('converts DTG to inches when the operator unit is inch', () => {
+      // Default unit is inch. Stored 25.4 mm, at origin -> DTG = 1 inch.
+      const state = runActiveState({ currentStep: 1, points: { 1: { X: 25.4, Y: 0, Z: 0 } } });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, contextAt(0, 0, 0));
+      expect(result?.display.X).toBeCloseTo(1, 4);
+    });
+
+    it('uses manual absolute values when the mill is disconnected', () => {
+      const base = runActiveState({ currentStep: 1, points: { 1: { X: 50, Y: 0, Z: 0 } } });
+      const state = {
+        ...base,
+        vMem: { ...base.vMem, manualAbsoluteValues: { X: 20, Y: 0, Z: 0 } },
+      };
+      const ctx = { ...DEFAULT_TEST_CONTEXT, nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ctx);
+      expect(result?.display.X).toBeCloseTo(30, 6); // 50 - 20 (disconnected manual pos)
+    });
+  });
+
+  // ──────────────── step navigation (AC 11.4) ──────────────────────
+  describe('step navigation (AC 11.4)', () => {
+    it('6► advances to the next step and recomputes DTG', () => {
+      const ctx = { ...contextAt(0, 0, 0), nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      const state = runActiveState({ currentStep: 1, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_6_RIGHT' }, ctx);
+      expect(result?.stateName).toBe('sdm-run-active');
+      expect((result?.stateData as SdmData).currentStep).toBe(2);
+      expect(result?.display.X).toBeCloseTo(80, 6); // step 2 stored 80 - 0
+    });
+
+    it('4◄ goes to the previous step', () => {
+      const ctx = { ...contextAt(0, 0, 0), nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
+      const state = runActiveState({ currentStep: 2, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_4_LEFT' }, ctx);
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+      expect(result?.display.X).toBeCloseTo(50, 6); // step 1 stored 50 - 0
+    });
+
+    it('4◄ does not go below step 1', () => {
+      const state = runActiveState({ currentStep: 1, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_4_LEFT' }, contextAt(0, 0, 0));
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+    });
+
+    it('6► does not advance past MAX_SDM_STEPS', () => {
+      const state = runActiveState({ currentStep: MAX_SDM_STEPS, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_6_RIGHT' }, contextAt(0, 0, 0));
+      expect((result?.stateData as SdmData).currentStep).toBe(MAX_SDM_STEPS);
+    });
+
+    it('exits to idle on clear from the DTG view (AC 11.6)', () => {
+      const state = runActiveState({ currentStep: 1, points: TWO_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, contextAt(0, 0, 0));
+      expect(result?.stateName).toBe('idle');
     });
   });
 });
