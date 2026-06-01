@@ -222,6 +222,35 @@ describe('diagnosticsReducer', () => {
       expect(second?.stateName).toBe('idle');
     });
 
+    it('a MILL_STATE_CHANGED tick between the two C presses does NOT disarm the exit', () => {
+      // First C arms the exit and drops to the memory step.
+      const armed = diagnosticsReducer(
+        createTestState('diagnostics-display', INITIAL_DIAGNOSTICS_DATA),
+        { eventName: 'KEY_CLEAR' },
+        contextAt(0, 0, 0)
+      );
+      expect(armed?.stateName).toBe('diagnostics-memory');
+      expect((armed?.stateData as DiagnosticsData).clearPhase).toBe('armed');
+
+      // A connected adapter ticks. This is NOT a key press, so it must not disarm
+      // the gesture -- otherwise the second C never exits on real hardware (AC 46.7).
+      const ticked = diagnosticsReducer(
+        armed!,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(7, 0, 0)
+      );
+      expect(ticked?.stateName).toBe('diagnostics-memory');
+      expect((ticked?.stateData as DiagnosticsData).clearPhase).toBe('armed');
+
+      // Second C still exits Self-Diagnostics to the normal screen.
+      const exited = diagnosticsReducer(
+        ticked!,
+        { eventName: 'KEY_CLEAR' },
+        contextAt(7, 0, 0)
+      );
+      expect(exited?.stateName).toBe('idle');
+    });
+
     it('a non-C key between two C presses disarms the double-C exit', () => {
       const first = diagnosticsReducer(
         createTestState('diagnostics-memory', INITIAL_DIAGNOSTICS_DATA),

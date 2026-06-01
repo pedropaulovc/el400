@@ -59,4 +59,25 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
     await dro.clearButton.click(); // exit diagnostics
     await dro.waitForAxisValue('X', 0);
   });
+
+  test('AC 46.7: encoder activity between the two C presses does not break the exit (connected source)', async ({ dro }) => {
+    await enterDiagnostics(dro);
+    // Walk to the segment test so the first C has a step to exit from.
+    await dro.key1.click();
+    await dro.clearButton.click(); // first C: arm exit, drop to memory step
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    // A connected adapter ticks (real MILL_STATE_CHANGED) while the exit is armed.
+    // It is not a key press, so it must not disarm the gesture (AC 46.7).
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.simulateEncoderRelativeMove('Y', 1);
+    // Still armed on the memory step despite the ticks.
+    await dro.waitForAxisPureTextValue('X', 'rAmPASS');
+
+    await dro.clearButton.click(); // second C still exits to the normal screen
+    // Exit fired: X is back on the normal numeric readout, no longer the rAmPASS
+    // glyph. (getAxisDisplayPureNumberValue throws on text, so a resolved number
+    // proves we left diagnostics; were the gesture disarmed we'd still see rAmPASS.)
+    await expect.poll(() => dro.getAxisDisplayPureNumberValue('X')).toBeGreaterThanOrEqual(0);
+  });
 });
