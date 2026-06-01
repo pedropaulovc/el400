@@ -91,6 +91,23 @@ export interface CountingModeByAxis {
 export type ZDepthSense = 'depth-negative' | 'depth-positive';
 
 /**
+ * `BP DIST` approach distance for the Near-Zero Warning (US-024, manual §8.3,
+ * setup `ZERO AP` / video §1.13). Stored as an inch string — the device's native
+ * tolerance unit — so it is independent of the display unit; the warning engages
+ * once an axis is within this distance of zero. The 0.002" default matches the
+ * manual's "within 50 microns of the set value".
+ */
+export type ZeroApproachDistance = '0.002' | '0.004' | '0.005' | '0.010' | '0.020';
+
+/**
+ * `BP TOLR` departure tolerance for the Near-Zero Warning (US-024). Hysteresis
+ * width (inch string) the axis must travel BEYOND `BP DIST` before the warning
+ * clears, preventing beep flutter at the threshold. Default 0.0000" (the warning
+ * clears as soon as the axis leaves the approach band).
+ */
+export type ZeroApproachTolerance = '0' | '0.002' | '0.005' | '0.010';
+
+/**
  * Per-axis radius/diameter measurement mode (manual section 6.2 `rAd` / `diA`,
  * US-041). `'radius'` (radial) is the mill default: the display equals actual
  * axis movement 1:1. `'diameter'` (diametric) is the lathe convention: the
@@ -141,6 +158,12 @@ export interface NonVolatileMemory {
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Near-Zero Warning on/off — setup `ZERO AP` / `BU22` toggle (US-024, AC24.2) */
+  zeroApproachEnabled: boolean;
+  /** Near-Zero Warning approach distance — setup `BP DIST` (US-024, AC24.4) */
+  zeroApproachDistance: ZeroApproachDistance;
+  /** Near-Zero Warning departure tolerance — setup `BP TOLR` (US-024, AC24.5) */
+  zeroApproachTolerance: ZeroApproachTolerance;
   /** Per-axis radius/diameter display mode - rAd/diA parameter (US-041, manual section 6.2) */
   measurementMode: MeasurementModeByAxis;
   /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
@@ -210,6 +233,11 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  // Near-Zero Warning defaults (US-024): off until the operator enables it, with
+  // the manual's 0.002" (≈50 micron) approach band and no departure hysteresis.
+  zeroApproachEnabled: false,
+  zeroApproachDistance: '0.002',
+  zeroApproachTolerance: '0',
   measurementMode: DEFAULT_MEASUREMENT_MODE,
   countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',

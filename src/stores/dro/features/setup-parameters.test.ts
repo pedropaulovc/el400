@@ -12,6 +12,9 @@ import {
   MEASUREMENT_MODE_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
+  ZERO_APPROACH_ID,
+  ZERO_APPROACH_DIST_ID,
+  ZERO_APPROACH_TOLR_ID,
   ENF_ID,
   getParameterAt,
   wrapItemIndex,
@@ -323,6 +326,64 @@ describe('commit-on-change hooks (US-002)', () => {
     enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
     expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
     expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+  });
+});
+
+describe('Zero-Approach Warning parameters (US-024)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  it('exposes ZERO AP / BP DIST / BP TOLR as global parameters (AC24.1)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(ap).toBeDefined();
+    expect(dist).toBeDefined();
+    expect(tolr).toBeDefined();
+    expect(ap.scope).toBe('global');
+    expect(dist.scope).toBe('global');
+    expect(tolr.scope).toBe('global');
+  });
+
+  it('ZERO AP toggles BU22 ON/OFF (AC24.2)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.choices.map((c) => c.value)).toEqual(['on', 'off']);
+    // BU22 wording surfaces in the labels.
+    expect(ap.choices.map((c) => c.label).join(' ')).toContain('bU22');
+  });
+
+  it('ZERO AP seeds from nvMem.zeroApproachEnabled', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    expect(ap.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    const on = { ...DEFAULT_NON_VOLATILE_MEMORY, zeroApproachEnabled: true };
+    expect(ap.readValue({ nvMem: on, axis: null })).toBe('on');
+  });
+
+  it('ZERO AP.commit persists the toggle immediately (commit-on-change)', () => {
+    const ap = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    ap.commit!({ nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(true);
+    ap.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toBe(false);
+  });
+
+  it('BP DIST default is 0.002" and commits (AC24.4)', () => {
+    const dist = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_DIST_ID)!;
+    expect(dist.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0.002');
+    expect(dist.choices.map((c) => c.value)).toContain('0.010');
+    const nvMem = useSettingsStore.getState().nvMem;
+    dist.commit!({ nvMem, axis: null }, '0.010');
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance).toBe('0.010');
+  });
+
+  it('BP TOLR default is 0 and commits (AC24.5)', () => {
+    const tolr = SETUP_PARAMETERS.find((p) => p.id === ZERO_APPROACH_TOLR_ID)!;
+    expect(tolr.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('0');
+    const nvMem = useSettingsStore.getState().nvMem;
+    tolr.commit!({ nvMem, axis: null }, '0.005');
+    expect(useSettingsStore.getState().nvMem.zeroApproachTolerance).toBe('0.005');
   });
 });
 

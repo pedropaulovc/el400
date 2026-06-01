@@ -17,8 +17,32 @@ import { INITIAL_DRO_STATE_PAYLOAD } from './dro/droStateMachine';
 import { droReducer } from './dro/reducer';
 import type { VolatileMemoryState } from '../types/volatileMemory';
 import type { DisplayState } from './dro/utils/displayComputation';
+import {
+  computeZeroApproach,
+  ZERO_APPROACH_OFF,
+  ALL_ARMED,
+  type ZeroApproachByAxis,
+  type ZeroApproachArmed,
+} from './dro/utils/zeroApproach';
 import { useMillStore, setDRODispatch } from './millStore';
 import { useSettingsStore } from './settingsStore';
+
+/**
+ * Which axes are armed for the Near-Zero Warning (US-024). In distance-to-go /
+ * Preset only axes with a SET target show distance-to-target — the others show
+ * raw position and must not warn merely for reading 0. Every other near-zero
+ * context (SDM, milling functions) treats the whole readout as distance-to-go,
+ * so all axes are armed.
+ */
+function armedAxesFor(stateData: DROStateData): ZeroApproachArmed {
+  if (stateData.stateDataType !== 'preset') return ALL_ARMED;
+  const { presetTargets } = stateData;
+  return {
+    X: presetTargets.X !== null,
+    Y: presetTargets.Y !== null,
+    Z: presetTargets.Z !== null,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────
 // STORE INTERFACE
@@ -30,6 +54,12 @@ interface DROStore {
   stateData: DROStateData;
   vMem: VolatileMemoryState;
   display: DisplayState;
+  /**
+   * Per-axis Near-Zero Warning state (US-024). Derived after every dispatch from
+   * the live readout and committed settings (with hysteresis carried forward),
+   * so it tracks real machine motion toward the target via MILL_STATE_CHANGED.
+   */
+  zeroApproach: ZeroApproachByAxis;
 
   // Actions
   dispatch: (event: DROEventPayload) => void;
@@ -48,6 +78,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
   stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
   vMem: INITIAL_DRO_STATE_PAYLOAD.vMem,
   display: INITIAL_DRO_STATE_PAYLOAD.display,
+  zeroApproach: ZERO_APPROACH_OFF,
 
   // Dispatch action - calls reducer with cross-store context
   dispatch: (event) => {
@@ -67,12 +98,23 @@ export const useDROStore = create<DROStore>()((set, get) => ({
     // Run through reducer
     const newState = droReducer(currentPayload, event, context);
 
+    // Recompute the Near-Zero Warning from the fresh readout (US-024). Carrying
+    // the previous per-axis state forward gives the BP TOLR departure hysteresis.
+    const zeroApproach = computeZeroApproach(
+      newState.display,
+      nvMem,
+      current.zeroApproach,
+      newState.stateName,
+      armedAxesFor(newState.stateData)
+    );
+
     // Update store with new state
     set({
       stateName: newState.stateName,
       stateData: newState.stateData,
       vMem: newState.vMem,
       display: newState.display,
+      zeroApproach,
     });
   },
 
@@ -83,6 +125,13 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       stateData: payload.stateData,
       vMem: payload.vMem,
       display: payload.display,
+      zeroApproach: computeZeroApproach(
+        payload.display,
+        useSettingsStore.getState().nvMem,
+        ZERO_APPROACH_OFF,
+        payload.stateName,
+        armedAxesFor(payload.stateData)
+      ),
     });
   },
 }));
@@ -193,6 +242,21 @@ export const useDisplayZ = () => useDROStore((s) => s.display.Z);
 
 /** Get dispatch function - stable reference, never changes */
 export const useDispatch = () => useDROStore((s) => s.dispatch);
+
+// ─────────────────────────────────────────────────────────────────
+// ZERO-APPROACH WARNING SELECTORS (US-024)
+// ─────────────────────────────────────────────────────────────────
+
+/** Near-Zero Warning active on a specific axis (drives its display flash). */
+export const useZeroApproachX = () => useDROStore((s) => s.zeroApproach.X);
+export const useZeroApproachY = () => useDROStore((s) => s.zeroApproach.Y);
+export const useZeroApproachZ = () => useDROStore((s) => s.zeroApproach.Z);
+
+/**
+ * Near-Zero Warning active on ANY axis (drives the audio beep + audio indicator).
+ */
+export const useZeroApproachActive = () =>
+  useDROStore((s) => s.zeroApproach.X || s.zeroApproach.Y || s.zeroApproach.Z);
 
 // ─────────────────────────────────────────────────────────────────
 // ALIASES for backwards compatibility during migration
