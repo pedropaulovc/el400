@@ -17,6 +17,15 @@
 - [ ] **AC 41.5:** The mode is set **per individual axis**.
 - [ ] **AC 41.6:** The setting persists after power cycle when saved via `SAU CHG`.
 - [ ] **AC 41.7:** Only meaningful when counting mode (US-040) is `LinEAr`.
+- [ ] **AC 41.8:** The ×2 diameter scale composes with the 7-digit panel limit. If the
+  doubled value can't fit at the axis's display resolution — e.g. a stored `999.9999`
+  radius value switched to `diA` would render the 8-cell `1999.9998` — the readout shows
+  an **all-dashes overflow indicator** (`-------`) rather than growing past the physical
+  panel, mirroring the Acu-Rite DRO100 display-overflow behaviour. The stored slide value
+  is untouched, so the reading self-clears when the axis returns in range, the display
+  resolution `dP` is coarsened, or the axis is zeroed. This is the *derived-reading*
+  counterpart to the US-047 *entry-time* clamp (which bounds keyed values at commit and so
+  cannot catch an overflow introduced by a later mode switch).
 
 ## E2E Test Scenarios
 ```typescript
@@ -52,6 +61,7 @@ describe('US-041: Radius/Diameter Mode', () => {
 - US-040: Counting Mode (linear required)
 - US-022: Display Resolution
 - US-002: Sign Convention and Axis Direction
+- US-047: Display Overflow on Value Entry (entry-time clamp; AC 41.8 is the derived-reading counterpart)
 
 ## Notes
 - New story from crosscheck. `rAd`/`diA` appears in the §6.2 table and video §1.7 but had no story.
