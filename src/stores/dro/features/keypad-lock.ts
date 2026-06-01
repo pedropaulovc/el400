@@ -37,7 +37,7 @@
  */
 
 import type { DROStateName, DROEventPayload } from '../droStateMachine';
-import { isSetupActive } from '../droStateMachine';
+import { isSetupActive, isFrontPanelKey } from '../droStateMachine';
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 
 /**
@@ -45,17 +45,6 @@ import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
  * the operator's only way back into setup to turn `LoC` off (AC 43.2 / 43.4).
  */
 const UNLOCK_AFFORDANCE_EVENT = 'BTN_SETUP';
-
-/**
- * True when `eventName` is a front-panel user key/button press (the `KEY_*` and
- * `BTN_*` families). Internal/system events (MILL_STATE_CHANGED, BOOT_*,
- * *_TIMEOUT, ENCODER_REF_MARK_CROSSED, ABS_INC_TOGGLE_COMPLETE, SET_INPUT_BUFFER)
- * are NOT front-panel keys and so are never gated -- the live readout and boot
- * sequence keep running while locked.
- */
-function isFrontPanelKey(eventName: DROEventPayload['eventName']): boolean {
-  return eventName.startsWith('KEY_') || eventName.startsWith('BTN_');
-}
 
 /**
  * Decide whether a locked keypad should drop this event before the feature

@@ -114,8 +114,7 @@ describe('Angular display-resolution DMS formats — setup + live readout (US-04
   }
 
   it('dP offers the angular formats once the axis is AnGULAr (AC 40.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     await openSetupForAxis(user, 'X');
@@ -139,8 +138,7 @@ describe('Angular display-resolution DMS formats — setup + live readout (US-04
   });
 
   it('a linear axis keeps the micron dP options (regression, AC 40.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     // X stays LinEAr; open setup and scroll to dP — it must show the micron form.
@@ -153,8 +151,7 @@ describe('Angular display-resolution DMS formats — setup + live readout (US-04
   });
 
   it('the chosen angular format drives the live DMS readout (AC 40.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm so 12.5 is exact

@@ -109,8 +109,7 @@ describe('Counting mode angular display — live readout integration (US-040)', 
   }
 
   it('shows the live X readout in degrees once X is set to AnGULAr (AC 40.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     // Switch to mm so the raw magnitude is exact, then establish a known position.
@@ -134,8 +133,7 @@ describe('Counting mode angular display — live readout integration (US-040)', 
   });
 
   it('angular X does not unit-convert when the display is in inch (AC 40.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator(); // default unit is inch
+    const { user } = await renderSimulator({ millSource: 'noop' }); // default unit is inch
     const mock = await connectMockMill();
 
     await setAxisAngular(user, 'X');
@@ -146,8 +144,7 @@ describe('Counting mode angular display — live readout integration (US-040)', 
   });
 
   it('switches only X to angular — Y keeps reading linear distance (AC 40.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm

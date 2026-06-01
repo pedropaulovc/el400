@@ -26,6 +26,7 @@ import {
   INITIAL_DRO_STATE_DATA,
   INITIAL_SETUP_DATA,
   isSetupActive,
+  isFrontPanelKey,
 } from '../droStateMachine';
 import { computeNormalDisplay, createDisplay, type DisplayState } from '../utils/displayComputation';
 import { useSettingsStore } from '../../settingsStore';
@@ -248,17 +249,25 @@ function reduceParameter(
 }
 
 /**
- * Handle the SAU CHG confirmation screen (US-027). Any event — the auto-dismiss
- * timeout or an impatient key press — returns to the setup menu with SAV CHG
- * still highlighted, so the operator can continue (typically scroll to End to
- * exit). The draft is carried through unchanged; the save already happened on
- * ENT, so nothing here touches nvMem.
+ * Handle the SAU CHG confirmation screen (US-027). The `StorEd` message is
+ * dismissed by the auto-dismiss timeout (`SETUP_SAVED_TIMEOUT`) or an impatient
+ * front-panel key press, returning to the setup menu with SAV CHG still
+ * highlighted so the operator can continue (typically scroll to End to exit).
+ *
+ * Internal/system events — chiefly the MILL_STATE_CHANGED encoder tick a
+ * connected DRO emits every ~100ms — must NOT dismiss it, or the confirmation
+ * would be wiped before the operator ever sees it. Those return null (no-op,
+ * screen holds). The draft is carried through unchanged; the save already
+ * happened on ENT, so nothing here touches nvMem.
  */
 function reduceSaved(
+  eventName: DROEventPayload['eventName'],
   data: SetupData,
   vMem: VolatileMemoryState,
   nvMem: NonVolatileMemory
-): DROStatePayload {
+): DROStatePayload | null {
+  const isDismissal = eventName === 'SETUP_SAVED_TIMEOUT' || isFrontPanelKey(eventName);
+  if (!isDismissal) return null;
   return {
     stateName: 'setup-parameter',
     stateData: data,
@@ -290,7 +299,7 @@ export const setupReducer: FeatureReducer = (statePayload, eventPayload, context
   }
 
   if (state === 'setup-saved') {
-    return reduceSaved(setupData, vMem, context.nvMem);
+    return reduceSaved(eventName, setupData, vMem, context.nvMem);
   }
 
   return reduceParameter(eventName, setupData, vMem, context.nvMem, context);

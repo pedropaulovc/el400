@@ -236,8 +236,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
   }
 
   it('navigates to the bEEP parameter showing its default ON (AC25.1, AC25.2)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     await openBeepParameter(user);
@@ -246,8 +245,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
   });
 
   it('toggles bEEP OFF with the 4 / 6 keys (AC25.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     await openBeepParameter(user);
@@ -263,8 +261,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
   });
 
   it('beeps on every key press while bEEP is ON (default) — AC25.4', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     // Leave bEEP at its default ON; back out to idle without changing it.
@@ -282,8 +279,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
   });
 
   it('keys are silent after toggling bEEP OFF — AC25.5 (keypad half)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     await connectMockMill();
 
     await openBeepParameter(user);
@@ -301,8 +297,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
   });
 
   it('with bEEP OFF, the zero-approach warning STILL beeps while keys stay silent (AC25.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
     await emitPosition(mock, 0, 0, 0);

@@ -18,7 +18,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -61,8 +61,7 @@ describe('US-027 Save Changes (integration)', () => {
   }
 
   it('ENT on SAV CHG persists an SC change and shows the confirmation (AC27.2-27.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoSC(user);
     expect(getAxisDisplayPureTextValue('X')).toBe('SC 5.0');
@@ -91,8 +90,7 @@ describe('US-027 Save Changes (integration)', () => {
   });
 
   it('the confirmation auto-returns to the SAV CHG item (AC27.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoSC(user);
     await user.click(screen.getByTestId('key-4')); // draft SC 2.0
@@ -108,8 +106,7 @@ describe('US-027 Save Changes (integration)', () => {
   });
 
   it('exiting via End WITHOUT SAV CHG discards the SC change (AC27.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoSC(user);
     await user.click(screen.getByTestId('key-4')); // draft SC 2.0
@@ -125,8 +122,7 @@ describe('US-027 Save Changes (integration)', () => {
   });
 
   it('exiting via C (clear) WITHOUT SAV CHG discards the SC change (AC27.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoSC(user);
     await user.click(screen.getByTestId('key-4')); // draft SC 2.0
@@ -137,8 +133,7 @@ describe('US-027 Save Changes (integration)', () => {
   });
 
   it('a saved change followed by a NEW unsaved change keeps only the saved one (AC27.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Save SC -> 2.0.
     await gotoSC(user);

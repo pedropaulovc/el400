@@ -16,7 +16,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
-  enterValue,
+  typeValue,
+  pressEnter,
   getAxisDisplayPureNumberValue,
   startTestProfiling,
   endTestProfiling,
@@ -131,9 +132,9 @@ describe('Unit Test Render Performance', () => {
 
 describe('Integration Test Render Performance', () => {
   describe('Basic Simulator Render', () => {
-    it('measures initial render', () => {
+    it('measures initial render', async () => {
       startTestProfiling('Simulator - initial render', 'integration');
-      renderSimulator({ profile: true });
+      await renderSimulator({ profile: true, millSource: 'noop' });
 
       // Verify simulator rendered
       expect(screen.getByTestId('axis-select-x')).toBeInTheDocument();
@@ -146,8 +147,7 @@ describe('Integration Test Render Performance', () => {
   describe('Axis Selection', () => {
     it('measures renders when selecting axes', async () => {
       startTestProfiling('Simulator - axis selection', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       // Select each axis
       await user.click(screen.getByTestId('axis-select-x'));
@@ -162,11 +162,10 @@ describe('Integration Test Render Performance', () => {
   describe('Numeric Entry', () => {
     it('measures renders during numeric entry', async () => {
       startTestProfiling('Simulator - numeric entry', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '12.345');
+      await typeValue(user, '12.345'); await pressEnter(user);
 
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(12.345, 3);
 
@@ -176,14 +175,13 @@ describe('Integration Test Render Performance', () => {
 
     it('measures renders during longer numeric entry', async () => {
       startTestProfiling('Simulator - long numeric entry', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '123.4567');
+      await typeValue(user, '123.4567'); await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '-987.654');
+      await typeValue(user, '-987.654'); await pressEnter(user);
 
       const report = endTestProfiling();
       console.log(`Long numeric entry - renders: ${String(report.totalRenderCount)}, time: ${report.totalRenderTime.toFixed(2)}ms`);
@@ -193,8 +191,7 @@ describe('Integration Test Render Performance', () => {
   describe('Calculator Operations', () => {
     it('measures renders during calculator usage', async () => {
       startTestProfiling('Simulator - calculator', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       // Enter calculator mode
       await user.click(screen.getByTestId('btn-calculator'));
@@ -221,15 +218,14 @@ describe('Integration Test Render Performance', () => {
   describe('Zero Operations', () => {
     it('measures renders when zeroing axes', async () => {
       startTestProfiling('Simulator - zero axes', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       // Set values first
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '50');
+      await typeValue(user, '50'); await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '60');
+      await typeValue(user, '60'); await pressEnter(user);
 
       // Zero axes
       await user.click(screen.getByTestId('axis-zero-x'));
@@ -246,28 +242,27 @@ describe('Integration Test Render Performance', () => {
   describe('Complex Workflow', () => {
     it('measures renders during a complex user workflow', async () => {
       startTestProfiling('Simulator - complex workflow', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       // Simulate a typical machinist workflow
       // 1. Set X position
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '100.5');
+      await typeValue(user, '100.5'); await pressEnter(user);
 
       // 2. Set Y position
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '50.25');
+      await typeValue(user, '50.25'); await pressEnter(user);
 
       // 3. Set Z position
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '-10.125');
+      await typeValue(user, '-10.125'); await pressEnter(user);
 
       // 4. Zero X
       await user.click(screen.getByTestId('axis-zero-x'));
 
       // 5. Enter new X value
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '25.0');
+      await typeValue(user, '25.0'); await pressEnter(user);
 
       // 6. Use calculator to add to Y
       await user.click(screen.getByTestId('btn-calculator'));
@@ -285,8 +280,7 @@ describe('Component-Level Profiling', () => {
   describe('Detailed Component Metrics', () => {
     it('measures individual component renders during axis selection', async () => {
       startTestProfiling('Component - axis selection', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ componentProfiling: true });
+      const { user } = await renderSimulator({ componentProfiling: true, millSource: 'noop' });
 
       // Select each axis to trigger renders
       await user.click(screen.getByTestId('axis-select-x'));
@@ -299,11 +293,10 @@ describe('Component-Level Profiling', () => {
 
     it('measures individual component renders during numeric entry', async () => {
       startTestProfiling('Component - numeric entry', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ componentProfiling: true });
+      const { user } = await renderSimulator({ componentProfiling: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '12.345');
+      await typeValue(user, '12.345'); await pressEnter(user);
 
       const report = endTestProfiling();
       console.log(`Component numeric entry - renders: ${String(report.totalRenderCount)}`);
@@ -311,15 +304,14 @@ describe('Component-Level Profiling', () => {
 
     it('measures individual component renders during complex workflow', async () => {
       startTestProfiling('Component - complex workflow', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ componentProfiling: true });
+      const { user } = await renderSimulator({ componentProfiling: true, millSource: 'noop' });
 
       // Full workflow to see all components
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '100');
+      await typeValue(user, '100'); await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '200');
+      await typeValue(user, '200'); await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-zero-x'));
 
@@ -343,12 +335,11 @@ describe('Performance Regression Tests', () => {
   describe('Component Update Budgets', () => {
     it('stateless components should not update after mount', async () => {
       clearComponentMetrics();
-      const user = userEvent.setup();
-      renderSimulator({ componentProfiling: true });
+      const { user } = await renderSimulator({ componentProfiling: true, millSource: 'noop' });
 
       // Perform various interactions
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '123.45');
+      await typeValue(user, '123.45'); await pressEnter(user);
       await user.click(screen.getByTestId('axis-select-y'));
       await user.click(screen.getByTestId('btn-calculator'));
       await user.click(screen.getByTestId('key-5'));
@@ -379,14 +370,13 @@ describe('Performance Regression Tests', () => {
 
     it('MultiAxisSection should have limited updates', async () => {
       clearComponentMetrics();
-      const user = userEvent.setup();
-      renderSimulator({ componentProfiling: true });
+      const { user } = await renderSimulator({ componentProfiling: true, millSource: 'noop' });
 
       // Select axes and enter values
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '100');
+      await typeValue(user, '100'); await pressEnter(user);
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '200');
+      await typeValue(user, '200'); await pressEnter(user);
 
       const metrics = getComponentMetrics();
       const multiAxis = metrics.get('MultiAxisSection');
@@ -403,8 +393,7 @@ describe('Performance Regression Tests', () => {
   describe('Render Count Budgets', () => {
     it('axis selection should have limited total renders', async () => {
       startTestProfiling('Regression - axis selection', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
       await user.click(screen.getByTestId('axis-select-y'));
@@ -421,11 +410,10 @@ describe('Performance Regression Tests', () => {
 
     it('numeric entry should have limited total renders', async () => {
       startTestProfiling('Regression - numeric entry', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '12.345');
+      await typeValue(user, '12.345'); await pressEnter(user);
 
       const report = endTestProfiling();
 
@@ -438,13 +426,12 @@ describe('Performance Regression Tests', () => {
 
     it('complex workflow should have bounded render count', async () => {
       startTestProfiling('Regression - complex workflow', 'integration');
-      const user = userEvent.setup();
-      renderSimulator({ profile: true });
+      const { user } = await renderSimulator({ profile: true, millSource: 'noop' });
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '100');
+      await typeValue(user, '100'); await pressEnter(user);
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '200');
+      await typeValue(user, '200'); await pressEnter(user);
       await user.click(screen.getByTestId('axis-zero-x'));
       await user.click(screen.getByTestId('btn-calculator'));
       await user.click(screen.getByTestId('key-5'));

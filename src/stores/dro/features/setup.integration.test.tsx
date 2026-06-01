@@ -7,7 +7,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -29,8 +28,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('enters setup, shows SELECT, then first parameter after axis select (AC 39.1, 39.2)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     expect(getAxisDisplayPureTextValue('X')).toBe('SELECt');
@@ -40,8 +38,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('up/down scrolls items and wraps around (AC 39.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
@@ -67,8 +64,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('left/right cycles choices for the current item with wrap (AC 39.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
@@ -81,8 +77,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('re-pressing setup returns to SELECT to pick another axis (AC 39.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-y'));
@@ -96,8 +91,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('End + ent exits to the normal operating screen (AC 39.7)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
@@ -114,8 +108,7 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
   });
 
   it('does not log a multi-reducer conflict during navigation', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));

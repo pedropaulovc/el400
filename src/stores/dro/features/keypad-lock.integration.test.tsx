@@ -116,8 +116,7 @@ describe('Keypad Lock — setup affordance + live readout integration (US-043)',
   }
 
   it('locked number/zero keys are no-ops while the live readout keeps tracking a jog (AC 43.3/43.5/43.7)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     // mm for exact magnitudes; establish a known X and zero it (datum at X=10).
@@ -152,8 +151,7 @@ describe('Keypad Lock — setup affordance + live readout integration (US-043)',
   });
 
   it('wrench still enters setup while locked, and unlocking restores key input (AC 43.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm

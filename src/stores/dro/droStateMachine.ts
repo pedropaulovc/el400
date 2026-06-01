@@ -708,6 +708,20 @@ export const isProbeActive = (s: DROStateName): boolean =>
 export const isDiagnosticsActive = (s: DROStateName): boolean =>
   s.startsWith('diagnostics-');
 
+/**
+ * True when `eventName` is a front-panel user key/button press (the `KEY_*` and
+ * `BTN_*` families). Internal/system events — MILL_STATE_CHANGED position ticks,
+ * BOOT_*, *_TIMEOUT, ENCODER_REF_MARK_CROSSED, ABS_INC_TOGGLE_COMPLETE,
+ * SET_INPUT_BUFFER — are NOT front-panel keys.
+ *
+ * Use this to distinguish "the operator pressed something" from "the live
+ * encoder ticked." A confirmation/dwell screen that dismisses on a key press
+ * must NOT dismiss on a MILL_STATE_CHANGED tick — under a connected encoder
+ * those arrive every ~100ms and would wipe the screen before it's seen.
+ */
+export const isFrontPanelKey = (eventName: DROEventPayload['eventName']): boolean =>
+  eventName.startsWith('KEY_') || eventName.startsWith('BTN_');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────

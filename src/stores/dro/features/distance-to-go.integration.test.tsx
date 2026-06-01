@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -22,8 +21,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('AC 8.1: Pressing Distance-to-Go shows SELECT', () => {
     it('should show SELECT on all axes when pressing Distance-to-Go button', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Click Distance-to-Go button
       await user.click(screen.getByTestId('btn-distance-to-go'));
@@ -38,8 +36,7 @@ describe('Distance-to-Go Integration', () => {
     });
 
     it('should only be available in ABS mode', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Switch to INC mode
       await user.click(screen.getByTestId('btn-abs-inc'));
@@ -61,8 +58,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('AC 8.2: Entering preset values', () => {
     it('should allow entering preset value for X axis', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Enter preset mode
       await user.click(screen.getByTestId('btn-distance-to-go'));
@@ -94,8 +90,7 @@ describe('Distance-to-Go Integration', () => {
     });
 
     it('should allow entering negative preset values', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-distance-to-go'));
       await user.click(screen.getByTestId('axis-select-x'));
@@ -116,8 +111,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('AC 8.2 + 8.3: Setting multiple axes', () => {
     it('should allow setting multiple axes before executing', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-distance-to-go'));
 
@@ -149,8 +143,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('Canceling and exiting', () => {
     it('should cancel preset entry with Clear key', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-distance-to-go'));
       expect(useDROStore.getState().stateName).toBe('preset-select');
@@ -164,8 +157,7 @@ describe('Distance-to-Go Integration', () => {
     });
 
     it('should exit distance-to-go mode with Clear key and restore ABS mode', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Set up and execute preset
       await user.click(screen.getByTestId('btn-distance-to-go'));
@@ -190,8 +182,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('INC LED behavior', () => {
     it('should turn on INC LED when displaying distance-to-go', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Initially in ABS mode
       expect(useDROStore.getState().vMem.mode).toBe('abs');
@@ -215,8 +206,7 @@ describe('Distance-to-Go Integration', () => {
     });
 
     it('should restore ABS mode when re-entering preset-select', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Set up and execute
       await user.click(screen.getByTestId('btn-distance-to-go'));
@@ -239,8 +229,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('Modifying targets', () => {
     it('should allow re-entering preset mode to modify targets', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Set initial preset X=50
       await user.click(screen.getByTestId('btn-distance-to-go'));
@@ -273,8 +262,7 @@ describe('Distance-to-Go Integration', () => {
 
   describe('State data preservation', () => {
     it('should preserve preset targets in stateData', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('btn-distance-to-go'));
       await user.click(screen.getByTestId('axis-select-x'));

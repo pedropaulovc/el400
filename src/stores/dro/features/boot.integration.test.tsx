@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import { act, screen } from '@testing-library/react';
 import { BOOT_MESSAGE_DURATION_MS } from '../index';
 import {
@@ -19,9 +18,9 @@ describe('Boot sequence integration tests', () => {
     localStorage.clear();
   });
 
-  it('shows model and version on power-on', () => {
+  it('shows model and version on power-on', async () => {
     vi.useFakeTimers();
-    renderSimulator({ bootMessageMode: 'show' });
+    await renderSimulator({ bootMessageMode: 'show', millSource: 'noop' });
 
     expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
     expect(getAxisDisplayPureTextValue('Y')).toBe('vEr 1.0.0');
@@ -35,7 +34,7 @@ describe('Boot sequence integration tests', () => {
 
   it('transitions to counting mode after timeout', async () => {
     vi.useFakeTimers();
-    renderSimulator({ bootMessageMode: 'show' });
+    await renderSimulator({ bootMessageMode: 'show', millSource: 'noop' });
 
     await act(async () => {
       vi.advanceTimersByTime(BOOT_MESSAGE_DURATION_MS);
@@ -52,8 +51,7 @@ describe('Boot sequence integration tests', () => {
   });
 
   it('allows bypassing the power-on message with the clear key', async () => {
-    const user = userEvent.setup();
-    renderSimulator({ bootMessageMode: 'show' });
+    const { user } = await renderSimulator({ bootMessageMode: 'show', millSource: 'noop' });
 
     await user.click(screen.getByTestId('key-clear'));
 

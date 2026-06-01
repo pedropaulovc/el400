@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureNumberValue,
-  enterValue,
+  typeValue,
+  pressEnter,
 } from '../tests/helpers/integration-test-utils';
 
 describe('AxisPanel Integration', () => {
@@ -21,11 +21,11 @@ describe('AxisPanel Integration', () => {
 
   describe('Zero Axis Button', () => {
     it('zeros the X axis when zero button is clicked', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '12.5');
+      await typeValue(user, '12.5');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(12.5, 4);
 
       await user.click(screen.getByTestId('axis-zero-x'));
@@ -33,11 +33,11 @@ describe('AxisPanel Integration', () => {
     });
 
     it('zeros the Y axis when zero button is clicked', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '25.75');
+      await typeValue(user, '25.75');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(25.75, 4);
 
       await user.click(screen.getByTestId('axis-zero-y'));
@@ -45,11 +45,11 @@ describe('AxisPanel Integration', () => {
     });
 
     it('zeros the Z axis when zero button is clicked', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '5.123');
+      await typeValue(user, '5.123');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(5.123, 4);
 
       await user.click(screen.getByTestId('axis-zero-z'));
@@ -57,17 +57,19 @@ describe('AxisPanel Integration', () => {
     });
 
     it('only zeros the specified axis, leaving others unchanged', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '10');
+      await typeValue(user, '10');
+      await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-select-y'));
-      await enterValue(user, '20');
+      await typeValue(user, '20');
+      await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-select-z'));
-      await enterValue(user, '30');
+      await typeValue(user, '30');
+      await pressEnter(user);
 
       await user.click(screen.getByTestId('axis-zero-y'));
 
@@ -79,12 +81,12 @@ describe('AxisPanel Integration', () => {
 
   describe('Clear Button', () => {
     it('cancels numeric entry when clear button is pressed', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       // Set X to a known value
       await user.click(screen.getByTestId('axis-select-x'));
-      await enterValue(user, '50');
+      await typeValue(user, '50');
+      await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
 
       // Try to enter a new value but clear it
@@ -104,8 +106,7 @@ describe('AxisPanel Integration', () => {
     });
 
     it('clears partial entry and allows new entry', async () => {
-      const user = userEvent.setup();
-      renderSimulator();
+      const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-y'));
       
@@ -118,7 +119,8 @@ describe('AxisPanel Integration', () => {
       await user.click(screen.getByTestId('key-clear'));
       
       // Enter the correct value
-      await enterValue(user, '45.6');
+      await typeValue(user, '45.6');
+      await pressEnter(user);
 
       // Verify only the second value was set
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(45.6, 4);

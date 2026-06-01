@@ -117,8 +117,7 @@ describe('Diameter ×2 — live readout integration (US-041 AC 41.4/41.5)', () =
   }
 
   it('doubles the live X readout when X is set to diA via the setup menu (AC 41.4)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     // Switch to mm so magnitudes are exact, establish a known X = 1.000.
@@ -134,8 +133,7 @@ describe('Diameter ×2 — live readout integration (US-041 AC 41.4/41.5)', () =
   });
 
   it('keeps the doubling on a subsequent MILL_STATE_CHANGED (persisted, not one-shot)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm
@@ -151,8 +149,7 @@ describe('Diameter ×2 — live readout integration (US-041 AC 41.4/41.5)', () =
   });
 
   it('doubles only X — Y readout stays 1:1 (per-axis, AC 41.5)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator({ millSource: 'noop' });
     const mock = await connectMockMill();
 
     await user.click(screen.getByTestId('btn-toggle-unit')); // mm

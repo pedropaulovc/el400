@@ -98,8 +98,7 @@ describe('US-044 OEM Mode (integration)', () => {
   }
 
   it('reaches the oEm mod row and opens a password prompt on ENT (AC 44.1/44.2)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoOemRow(user);
     expect(getAxisDisplayPureTextValue('X')).toBe(OEM_MODE_SETUP_LABEL);
@@ -109,8 +108,7 @@ describe('US-044 OEM Mode (integration)', () => {
   });
 
   it('the correct password enters OEM Mode (AC 44.2)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoOemRow(user);
     await user.click(screen.getByTestId('key-enter')); // password prompt
@@ -122,8 +120,7 @@ describe('US-044 OEM Mode (integration)', () => {
   });
 
   it('storing in OEM Mode captures the live config as the baseline (AC 44.3)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     expect(useSettingsStore.getState().nvMem.oemDefaults).toBeNull();
 
@@ -140,8 +137,7 @@ describe('US-044 OEM Mode (integration)', () => {
   });
 
   it('worked example: EnF on becomes the OEM baseline and round-trips localStorage (AC 44.5/44.6)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     // Turn ENF on first (real setup buttons), then store it as the OEM baseline.
     await setEnfOn(user);
@@ -167,8 +163,7 @@ describe('US-044 OEM Mode (integration)', () => {
   });
 
   it('a wrong password is rejected — OEM Mode not entered, no baseline (AC 44.7)', async () => {
-    const user = userEvent.setup();
-    renderSimulator();
+    const { user } = await renderSimulator();
 
     await gotoOemRow(user);
     await user.click(screen.getByTestId('key-enter')); // password prompt
