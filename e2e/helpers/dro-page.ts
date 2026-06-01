@@ -571,6 +571,56 @@ export class DROPage {
   }
 
   /**
+   * Set the keypad lock (US-043, manual §6.2 `LoC`) by driving the REAL setup
+   * menu: open setup, pick X (the SELECT prompt asks for an axis even for global
+   * params), scroll to the `LoC` parameter, cycle its choice to the requested
+   * label, then exit via the terminal End item + ent.
+   *
+   * Works whether or not the panel is already locked: while locked the gate keeps
+   * the wrench/setup key and all in-setup navigation live (the unlock path), so
+   * the same helper can both lock and unlock. No window hooks, no forced state.
+   *
+   * Label contract (manual §6.2): the parameter renders `LoC oFF` (value 'off')
+   * and `LoC on` (value 'on') — the seven-segment panel has no lowercase f pair,
+   * so OFF renders `oFF`.
+   *
+   * @param target - 'on' to lock the panel, 'off' to unlock
+   */
+  async setKeypadLock(target: 'on' | 'off'): Promise<void> {
+    const targetLabel = target === 'on' ? 'LoC on' : 'LoC oFF';
+    const isLockLabel = (t: string) => t === 'LoC oFF' || t === 'LoC on';
+
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis('X');
+
+    // Scroll down to the LoC parameter.
+    let guard = 0;
+    while (!isLockLabel(await this.getAxisRawText('X'))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('LoC parameter not found in setup menu after 30 steps');
+    }
+
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== targetLabel) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) throw new Error(`LoC choice "${targetLabel}" not reachable by cycling`);
+    }
+
+    // Exit setup via the terminal End item + ent (US-039 AC 39.7).
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) throw new Error('End item not found while exiting setup');
+    }
+    await this.enterButton.click();
+  }
+
+  /**
    * Configure the `tAPEr on` axis (Section 6.2) by reloading with the taperOn
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).

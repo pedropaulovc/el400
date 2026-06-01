@@ -83,6 +83,17 @@ export type ZDepthSense = 'depth-negative' | 'depth-positive';
 export type ProbeDroType = 'transmit' | 'freeze';
 
 /**
+ * Keypad lock state (manual §6.2 `LoC`, note *3; video §1.12). Modelled as an
+ * enum (not a leaked boolean) so the lock status can cross module boundaries
+ * safely (the root reducer reads it, the `LoC` setup parameter commits it).
+ * - 'off' (`LoC off`, default): the front panel is live.
+ * - 'on'  (`LoC on`): every front-panel key is disabled except the wrench/setup
+ *   key, so the operator cannot accidentally zero an axis or change a value and
+ *   lose the datum. The live position readout keeps updating regardless (US-043).
+ */
+export type KeypadLockState = 'off' | 'on';
+
+/**
  * User-configurable settings that persist across sessions
  */
 export interface NonVolatileMemory {
@@ -106,6 +117,8 @@ export interface NonVolatileMemory {
   zDepthSense: ZDepthSense;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
+  /** Keypad lock: 'off' (live) or 'on' (front panel locked) - LoC parameter (US-043, §6.2) */
+  keypadLock: KeypadLockState;
 }
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
@@ -147,6 +160,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
   probeDroType: 'transmit',
+  keypadLock: 'off',
 };
 
 /**

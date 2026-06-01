@@ -38,6 +38,7 @@ function resetStores(initialState?: DROShape) {
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
       probeDroType: 'transmit',
+      keypadLock: 'off',
     },
   });
 

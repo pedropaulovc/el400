@@ -34,6 +34,7 @@ import type {
   AxisDirection,
   ZDepthSense,
   ProbeDroType,
+  KeypadLockState,
   DisplayResolutionValue,
 } from '../../../types/nonVolatileMemory';
 import {
@@ -147,6 +148,9 @@ export const Z_DEPTH_ID = 'z-depth';
 
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
+
+/** The global keypad-lock parameter id (US-043, §6.2 `LoC`) -- its draft key. */
+export const KEYPAD_LOCK_ID = 'keypad-lock';
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -298,6 +302,27 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // behaviour takes hold on exit (same path as Direction / Z depth).
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
+    },
+  },
+  {
+    id: KEYPAD_LOCK_ID,
+    label: 'LoC oFF',
+    scope: 'global',
+    choices: [
+      { value: 'off', label: 'LoC oFF' },
+      { value: 'on', label: 'LoC on' },
+    ],
+    // Global keypad lock (US-043, §6.2 `LoC`). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.keypadLock,
+    // Commit-on-change: persist immediately so the lock takes hold the moment the
+    // operator cycles the choice (same surgical path as Direction / Z depth /
+    // probe type). Persisting to nvMem (localStorage-backed) also means the lock
+    // survives a power cycle (AC 43.6). Crucially, committing on cycle -- not only
+    // on exit -- keeps the UNLOCK reachable: while `LoC on`, the gate already lets
+    // the wrench/setup key and all in-setup navigation through, so cycling back to
+    // `LoC oFF` here unlocks even though the panel was locked on entry.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
     },
   },
   {
