@@ -38,6 +38,8 @@ import type {
   ProbeDroType,
   KeypadLockState,
   DisplayResolutionValue,
+  ScaleResolutionValue,
+  TaperOnAxis,
   AngularFormat,
   ZeroApproachDistance,
   ZeroApproachTolerance,
@@ -107,11 +109,20 @@ export interface SetupParameter {
    * chosen value to nvMem the moment the user cycles the choice (left/right),
    * instead of buffering it in the discard-on-exit draft. This is the surgical
    * per-parameter persistence path used by parameters whose effect must take
-   * hold immediately (e.g. Direction, US-002); it is NOT the generic SAU CHG
-   * save engine (US-027), which remains unimplemented. Parameters WITHOUT a
-   * `commit` keep the draft-only semantics (changes discarded on exit).
+   * hold immediately (e.g. Direction, US-002). Parameters WITHOUT a `commit`
+   * keep the draft-only semantics (changes buffered in `draftValues`).
    */
   readonly commit?: (ctx: SetupReadContext, value: string) => void;
+  /**
+   * Optional SAU CHG persistence hook (US-027). When present, the SAV CHG menu
+   * item writes this parameter's buffered draft value to nvMem on ENT. This is
+   * the draft/commit counterpart to `commit`: draft-only parameters define
+   * `persist` (not `commit`), so their edits live in `draftValues` and are
+   * written through here only when the operator confirms SAV CHG — exiting setup
+   * any other way discards them (AC27.6). Commit-on-change parameters do NOT
+   * define `persist` (they already wrote on every cycle), so SAV CHG skips them.
+   */
+  readonly persist?: (ctx: SetupReadContext, value: string) => void;
 }
 
 /** The SC (scale resolution) parameter id -- used as its per-axis draft key. */
@@ -247,6 +258,9 @@ export function sleepTimeoutLabel(minutes: number): string {
 export const SLEEP_TIMEOUT_CHOICES: readonly SetupParameterChoice[] =
   SLEEP_TIMEOUT_MINUTES.map((m) => ({ value: String(m), label: sleepTimeoutLabel(m) }));
 
+/** The SAU CHG (save changes) parameter id (US-027) -- ENT commits drafts to nvMem. */
+export const SAVE_CHANGES_ID = 'save-changes';
+
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
 
@@ -302,6 +316,8 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     readValue: (ctx) => (ctx.nvMem.encoderFailWarning ? 'on' : 'off'),
     // Commit-on-change (US-042): persist immediately so a later signal-loss
     // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
+    // ENF is therefore NOT a draft-only / SAU CHG (US-027) param -- it has NO
+    // `persist`; SAV CHG skips commit-on-change params (already saved).
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
     },
@@ -321,6 +337,17 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
       // falling back to the mill default for that axis.
       const isValid = SCALE_RESOLUTION_CHOICES.some((c) => c.value === committed);
       return isValid ? committed : DEFAULT_SCALE_RESOLUTION[axis];
+    },
+    // Draft-only: SC buffers its edit and is written to nvMem only on SAU CHG
+    // (US-027). Exiting setup without saving discards the change (AC27.6).
+    persist: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        scaleResolution: {
+          ...ctx.nvMem.scaleResolution,
+          [axis]: value as ScaleResolutionValue,
+        },
+      });
     },
   },
   {
@@ -385,9 +412,12 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
       { value: 'Z', label: 'tAPEr Z' },
       { value: 'Zprime', label: 'tAPEr Z1' },
     ],
-    // Reads the committed taper-on axis (US-045). Full commit wiring lands with
-    // setup save (US-027); the value is seeded from nvMem here.
+    // Reads the committed taper-on axis (US-045); the value is seeded from nvMem.
     readValue: (ctx) => ctx.nvMem.taperOnAxis,
+    // Draft-only: the taper-on axis is written to nvMem only on SAU CHG (US-027).
+    persist: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ taperOnAxis: value as TaperOnAxis });
+    },
   },
   {
     id: DIRECTION_ID,
@@ -560,6 +590,16 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: SAVE_CHANGES_ID,
+    // Manual section 6.2 names this `SAu ChG`; the seven-segment panel has no
+    // lowercase 'u' glyph, so the renderable label uses uppercase 'U' (as in
+    // 'AnGULAr'). Terminal item: no choices, acted on with ENT (AC27.1/27.2).
+    label: 'SAU ChG',
+    scope: 'global',
+    choices: [],
+    readValue: () => '',
+  },
+  {
     id: SETUP_END_ID,
     label: 'End',
     scope: 'global',
@@ -667,4 +707,50 @@ export function labelForValue(
   const choices = ctx ? resolveChoices(param, ctx) : param.choices;
   const choice = choices.find((c) => c.value === value);
   return choice?.label ?? param.label;
+}
+
+/** Index of registry parameters by id for O(1) draft-key resolution. */
+const PARAMETERS_BY_ID = new Map(SETUP_PARAMETERS.map((p) => [p.id, p]));
+
+/** A parsed draft key: the scope (axis or GLOBAL) and the parameter id. */
+interface ParsedDraftKey {
+  readonly axis: SetupAxis;
+  readonly paramId: string;
+}
+
+/**
+ * Parse a `draftValues` key of the form `<axis|GLOBAL>:<paramId>`. Parameter ids
+ * may contain hyphens but never colons, so split on the FIRST colon only. A
+ * `GLOBAL` scope resolves to a null axis; otherwise the scope is the X/Y/Z axis.
+ */
+function parseDraftKey(key: string): ParsedDraftKey | null {
+  const sep = key.indexOf(':');
+  if (sep === -1) return null;
+  const scope = key.slice(0, sep);
+  const paramId = key.slice(sep + 1);
+  const axis = scope === 'GLOBAL' ? null : (scope as SetupAxis);
+  return { axis, paramId };
+}
+
+/**
+ * Commit buffered draft values to nvMem on SAU CHG (US-027). For each draft key,
+ * resolve its parameter and, if the parameter defines a `persist` writer, call it
+ * with the draft value and an axis-scoped read context. Parameters that persist
+ * on every change (`commit`-based, e.g. Direction) define no `persist`, so they
+ * are skipped here — they are already saved. Unknown ids and `persist`-less
+ * parameters are ignored, making this safe to call with any draft map.
+ *
+ * Each writer reads the LIVE nvMem (not a captured snapshot) so that successive
+ * per-axis writes to the same nested object (e.g. SC on X then SC on Y) compose
+ * instead of clobbering one another.
+ */
+export function commitDrafts(draftValues: Record<string, string>): void {
+  for (const [key, value] of Object.entries(draftValues)) {
+    const parsed = parseDraftKey(key);
+    if (parsed === null) continue;
+    const param = PARAMETERS_BY_ID.get(parsed.paramId);
+    if (param?.persist === undefined) continue;
+    const liveNvMem = useSettingsStore.getState().nvMem;
+    param.persist({ nvMem: liveNvMem, axis: parsed.axis }, value);
+  }
 }

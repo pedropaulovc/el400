@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useSleepTimer } from "../stores/dro/features/sleep";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
@@ -65,6 +65,9 @@ const MultiAxisSection = () => {
 
   // SDM intro timing - auto-advances after delay (US-009)
   useSdmIntro(dispatch, droState);
+
+  // SAV CHG save-confirmation timing - auto-returns to setup after delay (US-027)
+  useSetupSavedConfirmation(dispatch, droState);
 
   // Reference-mark crossing hook for E2E (US-012)
   useReferenceMarkTestHook(dispatch);
