@@ -5,12 +5,20 @@ import AxisSelectionSection from "./AxisSelectionSection";
 import KeypadSection from "./KeypadSection";
 import PrimaryFunctionSection from "./PrimaryFunctionSection";
 import SecondaryFunctionSection from "./SecondaryFunctionSection";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 const EL400Simulator = () => {
+  // Power-user keyboard shortcuts (US-038). Scoped to this container so they
+  // only fire while focus is inside the simulator and never hijack the page.
+  const { onKeyDown } = useKeyboardShortcuts();
 
   return (
     <div
-      className="relative rounded-2xl select-none overflow-hidden"
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+      aria-label="EL400 digital readout simulator"
+      data-testid="el400-simulator"
+      className="relative rounded-2xl select-none overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
       style={{
         background: 'linear-gradient(160deg, #5a5a5a 0%, #404040 20%, #353535 50%, #2a2a2a 80%, #1a1a1a 100%)',
         border: '2px solid transparent',

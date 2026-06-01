@@ -25,6 +25,29 @@ export const SOFTWARE_VERSION = 'vEr 1.0.0';
  */
 export const BOOT_DISPLAY: DisplayState = createDisplay(MODEL_NUMBER, SOFTWARE_VERSION, '');
 
+/**
+ * Self-Diagnostics Mode display labels (US-046, manual §11.1, §12 text list).
+ *
+ * The manual prints the memory-pass text as "RAMPASS" (OCR renders it
+ * "rAnPASS"; the spec approximates the seven-segment 'm' as 'ñ'). The
+ * seven-segment panel has no uppercase 'R' or 'M' glyph, so the renderable
+ * literal is `rAmPASS` (lowercase r, 'm' for the M). The keyboard-step prompt
+ * and the encoder label likewise use only glyphs the panel can show (no 'K' in
+ * the font, so the manual's "KEY" prompt renders as `PrESS`; "ENC_DIG" as
+ * `EnCodEr`).
+ */
+export const DIAGNOSTICS_TEXT = {
+  memoryPass: 'rAmPASS',
+  keyboard: 'PrESS',
+  encoder: 'EnCodEr',
+} as const;
+
+/**
+ * Display/lamp test pattern (manual §11.1 display diagnostics): every segment of
+ * every cell lit. Eight '8' glyphs fill the readout width.
+ */
+export const DISPLAY_TEST_PATTERN = '88888888';
+
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates
 // ─────────────────────────────────────────────────────────────────
@@ -133,6 +156,12 @@ export type DROStateName =
   | 'sdm-menu-run'
   | 'sdm-learn-step'
   | 'sdm-learn-position'
+  // SDM Program / direct-entry states (US-010)
+  | 'sdm-program-step'
+  | 'sdm-program-jump'
+  | 'sdm-program-input-x'
+  | 'sdm-program-input-y'
+  | 'sdm-program-input-z'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -151,7 +180,12 @@ export type DROStateName =
   | 'reference-home-select'
   | 'reference-home-waiting'
   | 'reference-machine-select'
-  | 'reference-machine-waiting';
+  | 'reference-machine-waiting'
+  // Self-diagnostics states (US-046, manual §11.1)
+  | 'diagnostics-memory'
+  | 'diagnostics-display'
+  | 'diagnostics-keyboard'
+  | 'diagnostics-encoder';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -178,7 +212,8 @@ export type DROStateData =
   | SetupData
   | TaperData
   | ReferenceData
-  | ProbeData;
+  | ProbeData
+  | DiagnosticsData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -426,6 +461,38 @@ export interface StoredPoint {
   Z: number;
 }
 
+/**
+ * Which of the four self-diagnostic sub-tests is active (manual §11.1).
+ * Mirrors the flat `diagnostics-*` state names; kept as a string enum so it can
+ * cross functions safely.
+ */
+export type DiagnosticsStep = 'memory' | 'display' | 'keyboard' | 'encoder';
+
+/**
+ * Tracks the two-press exit gesture (manual §11.1): one `C` exits the current
+ * diagnostic step, a second consecutive `C` exits Self-Diagnostics Mode. Any
+ * other key disarms. Modelled as an enum (not a boolean) per the cross-function
+ * state guideline.
+ */
+export type DiagnosticsClearPhase = 'idle' | 'armed';
+
+/**
+ * Self-Diagnostics Mode context (US-046, manual §11.1).
+ *
+ * `encoderBaseline` is the machine position captured when the encoder step is
+ * entered; each axis is confirmed in `axesMoved` once its live position differs
+ * from that baseline (a real MILL_STATE_CHANGED / scale movement), so the test
+ * cannot be satisfied without actually moving the axis. `lastKey` holds the most
+ * recently echoed keyboard label.
+ */
+export interface DiagnosticsData extends BaseDROStateData {
+  readonly stateDataType: 'diagnostics';
+  encoderBaseline: { x: number; y: number; z: number } | null;
+  axesMoved: { X: boolean; Y: boolean; Z: boolean };
+  lastKey: string;
+  clearPhase: DiagnosticsClearPhase;
+}
+
 // ─────────────────────────────────────────────────────────────────
 // DRO EVENTS - Raw key/button events, state machine interprets
 // ─────────────────────────────────────────────────────────────────
@@ -580,6 +647,10 @@ export const isReferenceActive = (s: DROStateName): boolean =>
 export const isProbeActive = (s: DROStateName): boolean =>
   s.startsWith('probe-');
 
+/** Check if self-diagnostics mode is active (any diagnostics-* state, US-046) */
+export const isDiagnosticsActive = (s: DROStateName): boolean =>
+  s.startsWith('diagnostics-');
+
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
 // ─────────────────────────────────────────────────────────────────
@@ -710,6 +781,14 @@ export const INITIAL_PROBE_DATA: ProbeData = {
   resultMm: null,
   lastProbeTriggered: false,
   probeTriggered: false,
+};
+
+export const INITIAL_DIAGNOSTICS_DATA: DiagnosticsData = {
+  stateDataType: 'diagnostics',
+  encoderBaseline: null,
+  axesMoved: { X: false, Y: false, Z: false },
+  lastKey: '',
+  clearPhase: 'idle',
 };
 
 /**
