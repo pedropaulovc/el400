@@ -1,0 +1,269 @@
+[
+  {
+    "kind": "step",
+    "msg": "US-010 setup: boot to idle (?source=manual)"
+  },
+  {
+    "kind": "shot",
+    "file": "01-idle.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 10.1: enter SDM, navigate to ProGrAn, press ENT"
+  },
+  {
+    "kind": "note",
+    "msg": "SDM menu opens at LEArn",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-sdm-menu-learn.png",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "cycled to ProGrAn",
+    "display": {
+      "X": "ProGrAn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-sdm-menu-program.png",
+    "display": {
+      "X": "ProGrAn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 10.2: step prompt shown (StEP / 1)",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-step-prompt.png",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 10.3: program step 1 coordinates X=50, Y=25, Z=10"
+  },
+  {
+    "kind": "note",
+    "msg": "editing X coordinate",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "05-step1-edit-x.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "typed X=50",
+    "display": {
+      "X": "50.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-step1-x-50.png",
+    "display": {
+      "X": "50.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "typed Y=25, Z=10",
+    "display": {
+      "X": "50.0000",
+      "Y": "25.0000",
+      "Z": "10.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-step1-coords.png",
+    "display": {
+      "X": "50.0000",
+      "Y": "25.0000",
+      "Z": "10.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "step 1 stored, back at step view",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-step1-stored.png",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 10.4: press 6► to advance to step 2"
+  },
+  {
+    "kind": "note",
+    "msg": "advanced to step 2 (StEP / 2)",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "09-step2-view.png",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "step 2 programmed X=100",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "10-step2-stored.png",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 10.5: jump to step 5 via Y → 5 → ENT"
+  },
+  {
+    "kind": "note",
+    "msg": "jump-to-step prompt opened",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "11-jump-prompt.png",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "typed target step 5",
+    "display": {
+      "X": "StEP",
+      "Y": "5.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "12-jump-typed-5.png",
+    "display": {
+      "X": "StEP",
+      "Y": "5.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jumped to step 5 (StEP / 5)",
+    "display": {
+      "X": "StEP",
+      "Y": "5.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "13-jumped-step5.png",
+    "display": {
+      "X": "StEP",
+      "Y": "5.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 10.6: press C to exit Program mode"
+  },
+  {
+    "kind": "note",
+    "msg": "exited to idle",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "14-exited-idle.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  }
+]

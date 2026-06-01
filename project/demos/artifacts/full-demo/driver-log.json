@@ -1,0 +1,1465 @@
+[
+  {
+    "kind": "step",
+    "msg": "1. Boot sequence -> idle readout (?source=manual)"
+  },
+  {
+    "kind": "shot",
+    "file": "01-boot-message.png",
+    "display": {
+      "X": "EL400",
+      "Y": "vEr 1.0.0",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "after boot timeout, idle",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-idle-readout.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2. Core DRO ops with real motion (?source=debug)"
+  },
+  {
+    "kind": "note",
+    "msg": "debug idle (mill at 0,0,0)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-debug-idle.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2a. Jog X then Y then Z (debug jog buttons drive real encoder motion)"
+  },
+  {
+    "kind": "note",
+    "msg": "after jog X+5 Y+3 Z-2",
+    "display": {
+      "X": "0.1969",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-jogged-position.png",
+    "display": {
+      "X": "0.1969",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2b. Select X axis, then ZERO X"
+  },
+  {
+    "kind": "shot",
+    "file": "05-x-selected.png",
+    "display": {
+      "X": "0.1969",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "X zeroed (Y/Z retain offset)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-x-zeroed.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2c. HALF on X (centre-find: halves the displayed value)"
+  },
+  {
+    "kind": "note",
+    "msg": "X jogged to ~4 before HALF",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "after HALF on X",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-half-x.png",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.1181",
+      "Z": "-0.0787"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2d. ZERO ALL"
+  },
+  {
+    "kind": "note",
+    "msg": "all axes zeroed",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-zero-all.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2e. ABS <-> INC toggle"
+  },
+  {
+    "kind": "note",
+    "msg": "toggled positioning mode (led-inc checked=true)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "09-inc-mode.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "10-abs-mode.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "2f. inch <-> mm toggle"
+  },
+  {
+    "kind": "note",
+    "msg": "toggled measurement unit",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "11-unit-toggled.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "3. Setup menu walk (wrench -> SELECT -> axis -> parameters)"
+  },
+  {
+    "kind": "note",
+    "msg": "setup SELECT prompt",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "12-setup-select.png",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "first parameter highlighted (LinEAr / counting mode)",
+    "display": {
+      "X": "LinEAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "13-setup-param-counting.png",
+    "display": {
+      "X": "LinEAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "14-setup-walk-enf.png",
+    "display": {
+      "X": "EnF oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "15-setup-walk-beep.png",
+    "display": {
+      "X": "bEEP on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "16-setup-walk-scale-res.png",
+    "display": {
+      "X": "SC 5.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "17-setup-walk-display-res.png",
+    "display": {
+      "X": "dP 5.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "18-setup-walk-taper.png",
+    "display": {
+      "X": "tAPEr X",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "19-setup-walk-direction.png",
+    "display": {
+      "X": "LEFt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "20-setup-walk-z-depth.png",
+    "display": {
+      "X": "dEP nEG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "21-setup-walk-zero-approach.png",
+    "display": {
+      "X": "bU22 oF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "22-setup-walk-bp-dist.png",
+    "display": {
+      "X": "bP .002",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "23-setup-walk-bp-tolr.png",
+    "display": {
+      "X": "tL .000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "24-setup-walk-measurement-mode.png",
+    "display": {
+      "X": "rAd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "25-setup-walk-probe-type.png",
+    "display": {
+      "X": "dro t",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "26-setup-walk-keypad-lock.png",
+    "display": {
+      "X": "LoC oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "27-setup-walk-sleep-timer.png",
+    "display": {
+      "X": "SLP oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "28-setup-walk-restore.png",
+    "display": {
+      "X": "rSt oEm",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "29-setup-walk-oem-mode.png",
+    "display": {
+      "X": "oEm mod",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "30-setup-walk-save-changes.png",
+    "display": {
+      "X": "SAU ChG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "31-setup-walk-end.png",
+    "display": {
+      "X": "End",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "3a. Navigate back to counting-mode and cycle LinEAr <-> AnGULAr"
+  },
+  {
+    "kind": "note",
+    "msg": "at first param (counting-mode)",
+    "display": {
+      "X": "LinEAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "32-setup-back-to-counting.png",
+    "display": {
+      "X": "LinEAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "cycled counting-mode -> AnGULAr",
+    "display": {
+      "X": "AnGULAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "33-setup-counting-angular.png",
+    "display": {
+      "X": "AnGULAr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "3b. Change SC scale resolution (draft-only), SAV CHG, then reload to prove persistence"
+  },
+  {
+    "kind": "note",
+    "msg": "at SC (scale resolution), seeded value",
+    "display": {
+      "X": "SC 5.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "34-sc-before.png",
+    "display": {
+      "X": "SC 5.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SC cycled to draft value (X='SC 20.0')",
+    "display": {
+      "X": "SC 20.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "35-sc-changed-draft.png",
+    "display": {
+      "X": "SC 20.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "at SAV CHG row",
+    "display": {
+      "X": "SAU ChG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "36-sav-chg-row.png",
+    "display": {
+      "X": "SAU ChG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SAV CHG confirmed (StorEd)",
+    "display": {
+      "X": "StorEd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "37-sav-chg-stored.png",
+    "display": {
+      "X": "StorEd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "3c. RELOAD page (real power-cycle) and re-enter setup to confirm SC persisted"
+  },
+  {
+    "kind": "note",
+    "msg": "after reload, SC seeds from persisted value (X='SC 20.0') expected to match 'SC 20.0'",
+    "display": {
+      "X": "SC 20.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "38-sc-after-reload.png",
+    "display": {
+      "X": "SC 20.0",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "4. OEM chain — define baseline, change, restore"
+  },
+  {
+    "kind": "note",
+    "msg": "at EnF (encoder-fail warning)",
+    "display": {
+      "X": "EnF oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "39-oem-enf-initial.png",
+    "display": {
+      "X": "EnF oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "set EnF on (will be captured into OEM baseline)",
+    "display": {
+      "X": "EnF on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "40-oem-enf-on.png",
+    "display": {
+      "X": "EnF on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "4a. Enter oEm mod with password 3 5 7 2 6, store baseline"
+  },
+  {
+    "kind": "note",
+    "msg": "at oEm mod row",
+    "display": {
+      "X": "oEm mod",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "41-oem-row.png",
+    "display": {
+      "X": "oEm mod",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "OEM password prompt (PASS)",
+    "display": {
+      "X": "PASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "42-oem-password-prompt.png",
+    "display": {
+      "X": "PASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "OEM mode entered (oEm)",
+    "display": {
+      "X": "oEm",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "43-oem-entered.png",
+    "display": {
+      "X": "oEm",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "OEM baseline stored (StorEd) with EnF on",
+    "display": {
+      "X": "StorEd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "44-oem-baseline-stored.png",
+    "display": {
+      "X": "StorEd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "4b. Change EnF off, then rSt oEm to restore baseline (EnF back on)"
+  },
+  {
+    "kind": "note",
+    "msg": "EnF now off (diverged from baseline)",
+    "display": {
+      "X": "EnF oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "45-oem-enf-off.png",
+    "display": {
+      "X": "EnF oFF",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "at rSt oEm row",
+    "display": {
+      "X": "rSt oEm",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "46-restore-row.png",
+    "display": {
+      "X": "rSt oEm",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "restore IN ProG dwell",
+    "display": {
+      "X": "In ProG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "47-restore-in-progress.png",
+    "display": {
+      "X": "In ProG",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "restore complete, back to idle",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "48-restore-complete.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "after restore, EnF = 'EnF on' (expected EnF on)",
+    "display": {
+      "X": "EnF on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "49-restore-verified-enf-on.png",
+    "display": {
+      "X": "EnF on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5a. SDM — Program a sub-datum (direct entry), then Run/recall it"
+  },
+  {
+    "kind": "note",
+    "msg": "SDM menu (LEArn shown first)",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "50-sdm-menu.png",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SDM menu -> ProGrAn",
+    "display": {
+      "X": "ProGrAn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "51-sdm-program-menu.png",
+    "display": {
+      "X": "ProGrAn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SDM program step prompt (StEP / 1)",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "52-sdm-step-prompt.png",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SDM step 1 programmed X10 Y20 Z5",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "53-sdm-programmed.png",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5b. SDM Run/recall step 1 (live distance-to-go from current position)"
+  },
+  {
+    "kind": "note",
+    "msg": "SDM menu -> rUn",
+    "display": {
+      "X": "rUn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "54-sdm-run-menu.png",
+    "display": {
+      "X": "rUn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "55-sdm-run-step.png",
+    "display": {
+      "X": "rUn",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "SDM Run DTG for step 1 (target X10 Y20 Z5 minus live pos)",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "56-sdm-run-dtg.png",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5c. Calculator — 12 + 8 = 20"
+  },
+  {
+    "kind": "note",
+    "msg": "calculator idle",
+    "display": {
+      "X": "0.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "57-calc-idle.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "first operand 12 stored, operation ADD selected",
+    "display": {
+      "X": "12.0000",
+      "Y": "Add",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "58-calc-add-op.png",
+    "display": {
+      "X": "12.0000",
+      "Y": "Add",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "calculator result (12 + 8 = 20)",
+    "display": {
+      "X": "20.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "59-calc-result.png",
+    "display": {
+      "X": "20.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5d. Center finding — line, two points (jog to each, FUNCTION menu)"
+  },
+  {
+    "kind": "note",
+    "msg": "FUNCTION menu opened (CEntrE first)",
+    "display": {
+      "X": "CEntrE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "60-function-menu.png",
+    "display": {
+      "X": "CEntrE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "center-line: collecting point 1 (live position shown)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "61-center-point1-await.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged to edge 1 (X+4)",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "62-center-edge1.png",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "point 1 captured; now collecting point 2",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "63-center-point2-await.png",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged to edge 2 (X+12 total)",
+    "display": {
+      "X": "0.4724",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "64-center-edge2.png",
+    "display": {
+      "X": "0.4724",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "center result: distance-to-go to the line midpoint",
+    "display": {
+      "X": "-0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "65-center-result.png",
+    "display": {
+      "X": "-0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5e. Bolt-hole (PCD) pattern — intro then parameter entry"
+  },
+  {
+    "kind": "note",
+    "msg": "bolt-hole intro screen (b hoLE)",
+    "display": {
+      "X": "b hoLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "66-bolt-hole-intro.png",
+    "display": {
+      "X": "b hoLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "bolt-hole first parameter-entry screen",
+    "display": {
+      "X": "CirCLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "67-bolt-hole-entry.png",
+    "display": {
+      "X": "CirCLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5f. Grid drilling pattern — intro then parameter entry"
+  },
+  {
+    "kind": "note",
+    "msg": "grid intro screen (Grid)",
+    "display": {
+      "X": "Grid",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "68-grid-intro.png",
+    "display": {
+      "X": "Grid",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "grid first parameter-entry screen (EntCnt0)",
+    "display": {
+      "X": "0.0000",
+      "Y": "EntCnt0",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "69-grid-entry.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "EntCnt0",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5g. Self-diagnostics (static steps) — ▲ during boot, ?source=manual"
+  },
+  {
+    "kind": "note",
+    "msg": "diagnostics memory step (rAmPASS) — RAM OK",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "70-diag-mem.png",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "diagnostics display test (all segments lit, 88888888)",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "71-diag-display.png",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "diagnostics keyboard test (PrESS a key)",
+    "display": {
+      "X": "PrESS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "72-diag-keyboard.png",
+    "display": {
+      "X": "PrESS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "keyboard echo of pressed key 7",
+    "display": {
+      "X": "7",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "73-diag-keyboard-echo.png",
+    "display": {
+      "X": "7",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5g(ii). Self-diagnostics encoder step — ?source=debug (real axis motion)"
+  },
+  {
+    "kind": "note",
+    "msg": "diagnostics encoder test (awaiting motion)",
+    "display": {
+      "X": "EnCodEr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "74-diag-encoder.png",
+    "display": {
+      "X": "EnCodEr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "encoder X responded after jog (X label shown)",
+    "display": {
+      "X": "X",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "75-diag-encoder-x.png",
+    "display": {
+      "X": "X",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "exited diagnostics to idle",
+    "display": {
+      "X": "0.0394",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "76-diag-exit.png",
+    "display": {
+      "X": "0.0394",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5h. Keypad lock (LoC on) — keypad ignored but wrench/setup still reachable"
+  },
+  {
+    "kind": "note",
+    "msg": "X jogged out before locking",
+    "display": {
+      "X": "0.2362",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "LoC on (keypad lock engaged)",
+    "display": {
+      "X": "LoC on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "77-keypad-lock-on.png",
+    "display": {
+      "X": "LoC on",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "locked idle, X='0.2362'",
+    "display": {
+      "X": "0.2362",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "attempted ZERO X while locked: X='0.2362' (unchanged = lock works)",
+    "display": {
+      "X": "0.2362",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "78-keypad-lock-blocked.png",
+    "display": {
+      "X": "0.2362",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "readout still tracks encoder while locked (jogged X+1)",
+    "display": {
+      "X": "0.2756",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "79-keypad-lock-readout-live.png",
+    "display": {
+      "X": "0.2756",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "setup still reachable while locked (SELECT shown)",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "80-keypad-lock-setup-reachable.png",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "5i. Touch probe — Edge function; trigger debug probe; prb LED lights on contact"
+  },
+  {
+    "kind": "note",
+    "msg": "idle: probe toggle alone does NOT light prb (it needs an active probe function). led-probe=false",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "FUNCTION ring at ProbE",
+    "display": {
+      "X": "ProbE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "81-probe-function.png",
+    "display": {
+      "X": "ProbE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe sub-function menu (Prob Ed = Edge)",
+    "display": {
+      "X": "Prob Ed",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "82-probe-edge-menu.png",
+    "display": {
+      "X": "Prob Ed",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe armed on X, waiting for contact (live position shown)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "83-probe-waiting.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe contact captured (led-probe checked=true)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "84-probe-triggered.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "85-probe-exit.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "DONE — writing log"
+  }
+]

@@ -1,0 +1,431 @@
+[
+  {
+    "kind": "step",
+    "msg": "US-038 setup: boot to idle (?source=manual), focus the simulator container"
+  },
+  {
+    "kind": "note",
+    "msg": "idle, simulator focused",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "01-idle-focused.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.1/38.3/38.7: press X (select), type 1 2 3, Enter — value entered via keyboard"
+  },
+  {
+    "kind": "note",
+    "msg": "X axis selected via keyboard",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-key-x-select.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "typed 1 2 3 (buffered)",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "Enter confirmed → X shows 123",
+    "display": {
+      "X": "123.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-digit-entry-123.png",
+    "display": {
+      "X": "123.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.4/38.5: decimal point and sign toggle on a new value (X, 4 . 5, minus, Enter)"
+  },
+  {
+    "kind": "note",
+    "msg": "entered -4.5 via . and - keys",
+    "display": {
+      "X": "-4.5000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-decimal-sign-entry.png",
+    "display": {
+      "X": "-4.5000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.8: Shift+X zeros the X axis"
+  },
+  {
+    "kind": "note",
+    "msg": "Shift+X → X zeroed",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "05-shift-x-zero.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.10: A toggles ABS↔INC (watch the abs/inc LEDs)"
+  },
+  {
+    "kind": "note",
+    "msg": "A pressed: abs(before)=true inc(after)=true",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-key-a-abs-inc.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.11: U toggles unit inch↔mm (watch the inch/mm LEDs)"
+  },
+  {
+    "kind": "note",
+    "msg": "U pressed: inch(before)=true mm(after)=true",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-key-u-unit.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.13: Shift+0 zeros ALL axes (set Y and Z first, then Shift+0)"
+  },
+  {
+    "kind": "note",
+    "msg": "Y=10, Z=20 entered via keyboard",
+    "display": {
+      "X": "0.0000",
+      "Y": "10.0000",
+      "Z": "20.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-before-zero-all.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "10.0000",
+      "Z": "20.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "Shift+0 → all axes zeroed",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "09-shift-0-zero-all.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.9: W opens the settings menu (SELECt prompt)"
+  },
+  {
+    "kind": "note",
+    "msg": "W → setup SELECT prompt",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "10-key-w-settings.png",
+    "display": {
+      "X": "SELECt",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "Escape (clear) exited setup",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.2: arrow keys navigate a function menu (F to open, Right/Left cycle)"
+  },
+  {
+    "kind": "note",
+    "msg": "F → FUNCTION menu (CEntrE)",
+    "display": {
+      "X": "CEntrE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "11-key-f-function.png",
+    "display": {
+      "X": "CEntrE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "ArrowRight → next menu item",
+    "display": {
+      "X": "CirCLE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "12-arrow-right-menu.png",
+    "display": {
+      "X": "CirCLE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "ArrowLeft → previous menu item",
+    "display": {
+      "X": "CEntrE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.20: S opens SDM"
+  },
+  {
+    "kind": "note",
+    "msg": "S → SDM menu",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "13-key-s-sdm.png",
+    "display": {
+      "X": "LEArn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.18: K opens calculator"
+  },
+  {
+    "kind": "note",
+    "msg": "K → calculator",
+    "display": {
+      "X": "0.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "14-key-k-calculator.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.14: B opens bolt circle"
+  },
+  {
+    "kind": "note",
+    "msg": "B → bolt-hole intro",
+    "display": {
+      "X": "b hoLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "15-key-b-bolt.png",
+    "display": {
+      "X": "b hoLE",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.17: D opens grid hole"
+  },
+  {
+    "kind": "note",
+    "msg": "D → grid intro",
+    "display": {
+      "X": "Grid",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "16-key-d-grid.png",
+    "display": {
+      "X": "Grid",
+      "Y": "0.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.19: H halves the selected axis value"
+  },
+  {
+    "kind": "note",
+    "msg": "H pressed: X 0.1575 → halved",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "17-key-h-half.png",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 38.22: shortcuts only fire with simulator focused (blur → keypress is a no-op)"
+  },
+  {
+    "kind": "note",
+    "msg": "blurred: pressed 'a', abs LED still on=true (no toggle ⇒ gating works). X unchanged='0.0000'",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "18-focus-gating-blurred.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "re-focused: 'a' now toggles → inc on=true",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "19-focus-gating-refocused.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  }
+]

@@ -1,0 +1,358 @@
+[
+  {
+    "kind": "step",
+    "msg": "FIX #247 in ?source=debug — DebugServer ticks every 100ms; the steps must NOT race past"
+  },
+  {
+    "kind": "step",
+    "msg": "Bug 1 / AC 46.2: ▲ enters Self-Diagnostics; rAmPASS DWELLS while debug ticks flow (no skip)"
+  },
+  {
+    "kind": "note",
+    "msg": "memory diagnostics: rAmPASS shown",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "01-debug-mem-rampass.png",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 46.2 PROVED: rAmPASS held through 10 ticks + live jogging (X='rAmPASS') — no auto-skip",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-debug-rampass-dwells-under-ticks.png",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "Bug 1 / AC 46.3: a real key advances to the 88888888 segment test; it too DWELLS under ticks"
+  },
+  {
+    "kind": "note",
+    "msg": "display/segment test: all segments lit (88888888 every axis)",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-debug-display-test.png",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 46.3 PROVED: segment test held through 10 ticks + jogging (X='88888888') — no auto-skip",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-debug-display-dwells-under-ticks.png",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "Bug 3 / AC 46.4: keyboard step — press 5, echo \"5\" must SURVIVE ticks (not blank out)"
+  },
+  {
+    "kind": "note",
+    "msg": "keyboard test prompt: PrESS",
+    "display": {
+      "X": "PrESS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "05-debug-keyboard-prompt.png",
+    "display": {
+      "X": "PrESS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "pressed 5 → echoed as 5",
+    "display": {
+      "X": "5",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 46.4 PROVED: echo \"5\" survived 10 ticks + jogging (X='5') — did not blank",
+    "display": {
+      "X": "5",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-debug-keyboard-echo-survives-ticks.png",
+    "display": {
+      "X": "5",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "Bug 2 / AC 46.6: first C exits the current step back to memory (arms the exit gesture)"
+  },
+  {
+    "kind": "note",
+    "msg": "one C → back at memory step (rAmPASS), exit gesture armed",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-debug-one-c-armed.png",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "Bug 2 / AC 46.7: ticks + live jog flow between presses, then second C EXITS cleanly to the numeric readout"
+  },
+  {
+    "kind": "note",
+    "msg": "exit stayed armed through 8 ticks + jogging (X='rAmPASS') — latch NOT disarmed by ticks",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 46.7 PROVED: double-C exited to the numeric readout under ticks (X='1.4961')",
+    "display": {
+      "X": "1.4961",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-debug-double-c-exit-idle.png",
+    "display": {
+      "X": "1.4961",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 46.5: encoder diagnostics — each axis confirmed by REAL movement (still works post-fix)"
+  },
+  {
+    "kind": "note",
+    "msg": "encoder test: awaiting motion on each axis",
+    "display": {
+      "X": "EnCodEr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "09-debug-encoder-awaiting.png",
+    "display": {
+      "X": "EnCodEr",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged X → X axis confirmed responding",
+    "display": {
+      "X": "X",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "10-debug-encoder-x-ok.png",
+    "display": {
+      "X": "X",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged Y → Y axis confirmed responding",
+    "display": {
+      "X": "X",
+      "Y": "Y",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "11-debug-encoder-y-ok.png",
+    "display": {
+      "X": "X",
+      "Y": "Y",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged Z → Z axis confirmed responding",
+    "display": {
+      "X": "X",
+      "Y": "Y",
+      "Z": "Z"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "12-debug-encoder-z-ok.png",
+    "display": {
+      "X": "X",
+      "Y": "Y",
+      "Z": "Z"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "encoder-path double-C also exits cleanly under ticks (X='0.0394')",
+    "display": {
+      "X": "0.0394",
+      "Y": "0.0394",
+      "Z": "0.0394"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "13-debug-encoder-exit-idle.png",
+    "display": {
+      "X": "0.0394",
+      "Y": "0.0394",
+      "Z": "0.0394"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "Contrast (?source=manual, no ticks): the same walk a user should always see"
+  },
+  {
+    "kind": "note",
+    "msg": "manual: rAmPASS",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "14-manual-mem-rampass.png",
+    "display": {
+      "X": "rAmPASS",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "manual: segment test 88888888",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "15-manual-display-test.png",
+    "display": {
+      "X": "88888888",
+      "Y": "88888888",
+      "Z": "88888888"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "manual: keyboard echo 7",
+    "display": {
+      "X": "7",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "16-manual-keyboard-echo-7.png",
+    "display": {
+      "X": "7",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "manual: double-C exit to idle",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "17-manual-double-c-exit-idle.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  }
+]
