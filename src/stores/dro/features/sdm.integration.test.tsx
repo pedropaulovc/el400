@@ -274,4 +274,111 @@ describe('SDM Learn Mode Integration (US-009)', () => {
       expect(sdmLed?.className).not.toContain('text-red-400');
     });
   });
+
+  // ──────────────────────── Run / Recall (US-011) ─────────────────────
+  describe('run recall flow (US-011, AC 11.1 - AC 11.6)', () => {
+    /** Program two steps (X=50, X=80 in mm) so Run has data to recall. */
+    async function programTwoSteps(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByTestId('key-6')); // learn -> run
+      await user.click(screen.getByTestId('key-6')); // run -> program
+      expect(getAxisDisplayPureTextValue('X')).toBe('ProGrAn');
+      await user.click(screen.getByTestId('key-enter')); // -> step view
+
+      // Step 1: X = 50.
+      await user.click(screen.getByTestId('key-enter')); // confirm step 1 -> X entry
+      await user.click(screen.getByTestId('key-5'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter')); // X=50 -> Y
+      await user.click(screen.getByTestId('key-enter')); // Y -> Z
+      await user.click(screen.getByTestId('key-enter')); // Z -> step view
+
+      // Advance to step 2 and program X = 80.
+      await user.click(screen.getByTestId('key-6')); // step 2
+      await user.click(screen.getByTestId('key-enter')); // confirm step 2 -> X entry
+      await user.click(screen.getByTestId('key-8'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter')); // X=80 -> Y
+      await user.click(screen.getByTestId('key-enter')); // Y -> Z
+      await user.click(screen.getByTestId('key-enter')); // Z -> step view
+
+      // Exit Program back to idle.
+      await user.click(screen.getByTestId('key-clear'));
+      expect(useDROStore.getState().stateName).toBe('idle');
+    }
+
+    /** Re-enter SDM and confirm Run, landing on the DTG view for step 1. */
+    async function enterRun(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByTestId('btn-sdm'));
+      await advancePastIntro();
+      await user.click(screen.getByTestId('key-6')); // learn -> run
+      expect(getAxisDisplayPureTextValue('X')).toBe('rUn');
+      await user.click(screen.getByTestId('key-enter')); // confirm Run -> step select
+      expect(useDROStore.getState().stateName).toBe('sdm-run-step');
+    }
+
+    it('recalls a step and shows live distance-to-go, advancing with 6► (AC 11.1 - 11.5)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit')); // work in mm
+      await enterSdm(user);
+      await programTwoSteps(user);
+      await enterRun(user);
+
+      // AC 11.2: step number 1 shown on the run prompt.
+      expect(getAxisDisplayPureTextValue('X')).toBe('rUn');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(1);
+
+      // AC 11.3: confirm step 1 -> distance-to-go. Machine at origin, step 1 X=50.
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-run-active');
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 6);
+
+      // AC 11.5: SDM LED glows during run.
+      const sdmLed = screen.getByTestId('led-sdm').querySelector('span');
+      expect(sdmLed?.className).toContain('text-red-400');
+
+      // Live update: jog to X=20 via a real MILL_STATE_CHANGED -> DTG = 30.
+      moveMachineTo(20, 0, 0);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(30, 6);
+
+      // AC 11.4: 6► advances to step 2 (X=80) -> DTG = 60.
+      await user.click(screen.getByTestId('key-6'));
+      expect(sdmData().currentStep).toBe(2);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(60, 6);
+    });
+
+    it('lets the operator pick a starting step number on Y (AC 11.2)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+      await enterSdm(user);
+      await programTwoSteps(user);
+      await enterRun(user);
+
+      // Press Y to start a fresh step entry, type 2, confirm.
+      await user.click(screen.getByTestId('axis-select-y'));
+      await user.click(screen.getByTestId('key-2'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(2);
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-run-active');
+      expect(sdmData().currentStep).toBe(2);
+      // Step 2 X=80, machine at origin -> DTG 80.
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(80, 6);
+    });
+
+    it('exits to idle on clear from the DTG view (AC 11.6, unhappy path)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+      await enterSdm(user);
+      await programTwoSteps(user);
+      await enterRun(user);
+      await user.click(screen.getByTestId('key-enter')); // -> DTG view
+
+      await user.click(screen.getByTestId('key-clear'));
+      expect(useDROStore.getState().stateName).toBe('idle');
+      const sdmLed = screen.getByTestId('led-sdm').querySelector('span');
+      expect(sdmLed?.className).not.toContain('text-red-400');
+    });
+  });
 });
