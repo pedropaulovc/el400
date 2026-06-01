@@ -6,8 +6,8 @@ keypad, ENTER; read the seven-segment displays). No mocks, no store-poking, no
 test scripts — every value was keyed in by hand in a real browser.
 
 - **Branch:** `feature/us-047-display-overflow`
-- **Commit demoed:** `8f530cf`
-- **Mode:** `http://localhost:8080/?source=manual` (manual mode, no backend)
+- **Commit demoed:** `b417926`
+- **Mode:** `?source=manual` for keypad cases; `?source=debug` (in-browser connected adapter) for the connected-ABS jog case (AC 47.5)
 - **Spec:** `project/user-stories/01-foundation/US-047-display-overflow.md`
 
 ## What this feature does
