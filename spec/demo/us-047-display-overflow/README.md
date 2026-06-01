@@ -32,6 +32,12 @@ unambiguously legible.
 | 2 | 47.2 | Select Y, key `5×8`, +/-, ENTER | `-999.9999` | PASS |
 | 3 | 47.6 | Select Z, key `123.4567`, ENTER | `123.4567` verbatim | PASS |
 | 4 | 47.7 | Set X to diameter mode in setup, key `5×8`, ENTER | `999.9999` (not `1999.9998`) | PASS |
+| 5 | 47.3 | Setup → X → `dP 50.0` (50 µm / 3 dec), key `5×8`, ENTER | `9999.999` (4 integer digits) | PASS |
+| 6 | 47.3 | Then key `5×8` into Y (still 4 dec) | `999.9999` — per-axis limit | PASS |
+| 7 | 47.4 | Toggle to **mm** (mm LED lit), key `12345678`, ENTER | `999.9999` in mm | PASS |
+| 8 | 47.6 | Key the exact boundary `999.9999` DIRECTLY, ENTER | `999.9999` verbatim, no clamp | PASS |
+| 9 | 47.5 | ABS/INC → **INC**, key `5×8`, ENTER; hold across ticks | `999.9999`, stable | PASS |
+| 10 | 47.5 | **Connected** (`?source=debug`) ABS preset `5×8`, then jog X | `999.9999`, moves 1:1 | PASS |
 
 ## Step-by-step
 
@@ -82,6 +88,64 @@ With X now a diameter (×2) axis, select X, key `5×8`, ENTER →
 (stored slide value `499.99995`) so the ×2 diameter scale lands exactly on the
 7-cell limit. Read-back: `X999.9999`.
 
+### 5. Resolution-aware clamp — AC 47.3 (the headline gap)
+The clamp limit is `10^(7−decimals) − 10^(−decimals)`, so coarsening the display
+resolution frees an integer cell and *raises* the cap. Reached the resolution
+through the real setup menu (US-022 path), no shortcut:
+- Press **Settings** → `SELECt`, press **X** → `LinEAr`.
+- Press **▼ (`2`)** to scroll to the `dP 5.0` row (5-micron default = 4 decimals).
+- Press **► (`6`)** three times to cycle `5 → 10 → 20 → 50`. `09b-setup-dP50.png`
+  — the X row reads `dP 50.0` (50 micron = 3 decimals).
+- Exit (Settings + CLEAR). The X readout immediately becomes `0.000` (3 decimals)
+  — dP commits on change. localStorage confirms `displayResolution.X = "50"`.
+
+Now select X, key `5×8`, ENTER → **X = `9999.999`** (`09-resolution-9999.999.png`
+full panel, `09c-display-9999.999.png` close-up). Four integer digits + three
+fraction = 7 cells. The decimal point has visibly moved one cell right versus the
+`999.9999` of step 1 — proving the limit tracks `dP`, not a hardcoded `999.9999`.
+
+**Per-axis** — `10-peraxis-limit.png` / `10c-display-peraxis.png`: with X still at
+`dP 50.0`, keying `5×8` into Y (untouched, 4 decimals) pins Y to **`999.9999`**.
+One frame shows both at once: **X `9999.999`** (3 dec) above **Y `999.9999`**
+(4 dec). The resolution-aware limit is scoped to the axis you configured.
+
+### 6. Unit-independent — AC 47.4 (mm)
+`11-mm-clamped.png` / `11c-display-mm.png`: press **Toggle units** so the **`mm`**
+annunciator lights (and `inch` dims — visible at the bottom of the close-up),
+then key `12345678`, ENTER → **X = `999.9999`**. The entered value is in mm
+display space, but the 7-digit panel cap is identical to the inch case. Compare
+the lit `mm` LED here against the lit `inch` LED in every other frame.
+
+### 7. Exact boundary, typed directly — AC 47.6 (disambiguation)
+`12-exact-boundary.png` / `12c-display-boundary.png`: keying `999.9999` *directly*
+(not by clamping `55555555`) enters **`999.9999`** verbatim. This proves the
+result in steps 1/4 is the genuine no-clamp boundary value and the clamp does not
+alter a value that exactly fits — a typed `999.9999` and a clamped one are
+indistinguishable on the panel, so this exercises the no-clamp branch explicitly.
+
+### 8. Displayed == stored across modes — AC 47.5
+The clamp must hit the *stored* value, not just the render, in every mode.
+
+- **INC** — `13-inc-clamped.png` / `13c-display-inc.png`: press **ABS/INC** so the
+  **`inc`** annunciator lights, select Z, key `5×8`, ENTER → **Z = `999.9999`**.
+  Read back across 5 live encoder ticks: stays `999.9999` (a render-only clamp
+  over a larger stored counter would resurface the over-long number on recompute).
+
+- **Connected ABS (work-offset preset)** — the strongest render-vs-storage probe,
+  run against a real connected adapter via `?source=debug` (in-browser, no backend;
+  `controllerType=debug`, `connected=true`, with a live jog control panel). With
+  the machine at origin (jog-reset), select X, key `5×8`, ENTER → **X = `999.9999`**
+  (`14-connected-clamped.png` / `14c-display-connected.png`). This stores a *work
+  offset* of `(machinePos − 999.9999)`; the readout is recomputed `machinePos −
+  offset` on every encoder tick, and it holds at `999.9999` across ticks.
+
+  Then **jog X** through the panel: the readout steps `999.9999 → 999.9605 →
+  999.9212` (`15-connected-motion.png` / `15c-display-motion.png`), moving 1:1 with
+  the live machine position measured against the clamped datum. Had storage kept
+  the un-clamped `55555555`, the offset would be `(0 − 55555555)` and jogging would
+  recompute to an over-long magnitude. It does not — so the clamp lives in storage,
+  and displayed == stored even under live motion.
+
 ## Observation for the reviewer (not a US-047 bug)
 
 When X was switched into diameter mode while it *already held* the clamped
@@ -105,7 +169,15 @@ The seven-segment cells render as styled `seg-on`/`seg-off` spans (no text), so
 read-back used the panel's own accessible mirror — the `table[aria-label="Axis
 positions"]` that exposes the same X/Y/Z values to screen readers. Every
 asserted value above was confirmed against that table *and* visually in the
-screenshots. The persisted diameter setting was confirmed read-only in
-`localStorage` (`el400-dro-non-volatile-memory` → `measurementMode.X = diameter`)
-to show the SAV CHG actually committed; the value was set through the UI, never
-written directly.
+screenshots. Mode/unit states (`abs`/`inc`, `inch`/`mm`) were confirmed by the
+panel's annunciator LEDs (`mode-indicator-active` vs `-inactive`) — visible in
+the close-ups. Persisted setup changes were confirmed read-only in `localStorage`
+(`el400-dro-non-volatile-memory` → `measurementMode.X = diameter`,
+`displayResolution.X = "50"`) to show the menu commit actually took; every value
+was set through the UI, never written directly.
+
+The connected case (AC 47.5) used `?source=debug`, the project's documented
+in-browser connected adapter — a real `MillAdapter` with `connected=true` and a
+live jog control panel, not a mock or stub. All motion was driven by clicking the
+on-screen jog buttons. No route interception, request stubbing, or store-poking
+was used anywhere in this demo.
