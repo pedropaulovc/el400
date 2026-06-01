@@ -9,6 +9,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
       <div className="relative w-full h-12">
         {/* Main raised edge with angled cutout - CSS only */}
         <div
+          aria-hidden="true"
           className="absolute inset-0 w-full"
           style={{
             background: 'linear-gradient(180deg, #555555 0%, #3d3d3d 30%, #252525 100%)',
@@ -29,7 +30,8 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
 
   // Bottom edge - simple straight bar (reduced by 1/3)
   return (
-    <div 
+    <div
+      aria-hidden="true"
       className="relative w-full h-4 mt-4 rounded-b-2xl"
       style={{
         background: 'linear-gradient(180deg, #555555 0%, #3d3d3d 30%, #252525 100%)',
