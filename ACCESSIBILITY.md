@@ -20,7 +20,7 @@ This project targets **WCAG 2.1 Level AAA** compliance where applicable, with pa
 - LED indicators are non-interactive disabled radio buttons showing current state
 - Buttons use `aria-pressed` to indicate active/selected states
 - Section headings use `sr-only` class (e.g., "Numeric keypad", "Primary functions")
-- Decorative icons use `aria-hidden="true"` to avoid screen reader noise
+- Decorative chrome uses `aria-hidden="true"` to avoid screen reader noise: SVG icons, the PowerLED indicator lamp, and the HousingEdge bezel panels. The HousingEdge logo slot stays in the accessibility tree so the BrandLogo `alt` text remains announced (US-048).
 
 ### Keyboard Navigation
 
@@ -51,8 +51,8 @@ The simulator fully supports Windows Forced Colors mode (High Contrast), ensurin
 - Achieved contrast ratio: 20:1 or greater
 
 **Buttons and Controls**
-- All buttons have visible 2px transparent borders that become visible in forced-colors mode
-- Button text uses system colors automatically
+- All buttons carry a 2px bevel border (colored in normal mode); forced-colors mode overrides it to the `ButtonText` system color so the outline stays visible
+- Button face and text switch to `ButtonFace`/`ButtonText` system colors automatically
 - Achieved contrast ratio: 17:1 or greater
 
 **Mode Indicators**
@@ -98,6 +98,8 @@ The simulator fully supports Windows Forced Colors mode (High Contrast), ensurin
 | LED Indicators | Disabled radio in `<fieldset>` | N/A (display only) | System colors |
 | Function Buttons | sr-only text | Enter/Space | Visible borders |
 | Icons | `aria-hidden="true"` | N/A (decorative) | System colors |
+| PowerLED | `aria-hidden="true"` | N/A (decorative) | System colors |
+| HousingEdge | `aria-hidden="true"` panels; logo slot reachable | N/A (decorative) | `CanvasText` border |
 
 ## References
 
