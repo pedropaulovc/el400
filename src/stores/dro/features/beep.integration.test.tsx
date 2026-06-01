@@ -24,19 +24,29 @@ import { MockMillAdapter } from '../../../adapters/MockMillAdapter';
  * `bEEP oFF`. These strings appear on no other parameter, so they uniquely
  * identify the bEEP item while scrolling.
  *
- * AC25.5 note: the zero-approach warning must STILL beep when keypad beep is
- * off. That warning (US-024) is not present on this branch yet; this suite
- * proves the keypad half (silent keys) and that the gate is local to
- * playClickSound, so US-024's independent warning path is unaffected when it
- * lands. The warning-still-fires assertion lands with US-024's own tests.
+ * AC25.5 (zero-approach warning STILL beeps when keypad beep is off): driven
+ * end-to-end here. With bEEP toggled OFF and the Near-Zero Warning (US-024)
+ * enabled — both through the real setup menu — a real distance-to-go approach
+ * (MockMillAdapter position moving toward the target via MILL_STATE_CHANGED)
+ * still fires the warning's oscillator beep, while keypad presses stay silent.
+ * The two paths are counted separately: buffer-source starts (playClickSound)
+ * vs oscillator starts (playZeroApproachBeep).
  *
  * @see project/user-stories/06-configuration/US-025-keypad-beep.md
+ * @see project/user-stories/06-configuration/US-024-zero-approach-warning.md
  */
 
-/** Tracking AudioContext: every started buffer source bumps the shared counter. */
+/**
+ * Tracking AudioContext: counts started nodes by source so the keypad click
+ * (buffer source, playClickSound) and the zero-approach warning (oscillator,
+ * playZeroApproachBeep — US-024) are observed independently. This lets AC25.5
+ * assert the warning STILL beeps while keypad clicks are silenced.
+ */
 let beepCount = 0;
+let warningBeepCount = 0;
 class TrackingAudioContext {
   state = 'running';
+  currentTime = 0;
   destination = {};
   createBufferSource() {
     return {
@@ -48,8 +58,26 @@ class TrackingAudioContext {
       stop: () => undefined,
     };
   }
+  createOscillator() {
+    return {
+      type: 'sine',
+      frequency: { value: 0 },
+      connect: () => ({}),
+      start: () => {
+        warningBeepCount += 1;
+      },
+      stop: () => undefined,
+    };
+  }
   createGain() {
-    return { gain: { value: 1 }, connect: () => ({}) };
+    return {
+      gain: {
+        value: 1,
+        setValueAtTime: () => undefined,
+        linearRampToValueAtTime: () => undefined,
+      },
+      connect: () => ({}),
+    };
   }
   decodeAudioData() {
     return Promise.resolve({});
@@ -68,6 +96,7 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.clear();
     beepCount = 0;
+    warningBeepCount = 0;
     originalAudioContext = global.AudioContext;
     global.AudioContext = TrackingAudioContext as unknown as typeof AudioContext;
   });
@@ -138,6 +167,74 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
     });
   }
 
+  async function emitPosition(mock: MockMillAdapter, x: number, y: number, z: number) {
+    await act(async () => {
+      mock.setPosition(x, y, z);
+    });
+  }
+
+  /** ZERO AP (US-024) renders `bU22 on` / `bU22 oF`; unique to that parameter. */
+  function isZeroApLabel(t: string): boolean {
+    return t === 'bU22 on' || t === 'bU22 oF';
+  }
+
+  /**
+   * In a SINGLE real setup session: turn bEEP OFF and the Near-Zero Warning ON,
+   * then exit. Both are global commit-on-change params, so the order of visiting
+   * them within the scroll does not matter.
+   */
+  async function setBeepOffAndWarningOn(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByTestId('btn-settings'));
+    await waitForAxisText('X', 'SELECt');
+    await user.click(screen.getByTestId('axis-select-x'));
+
+    // bEEP -> oFF.
+    let guard = 0;
+    while (!isBeepLabel(rawAxisText('X'))) {
+      await user.click(screen.getByTestId('key-2'));
+      guard += 1;
+      if (guard > 40) throw new Error('bEEP parameter not found in setup menu');
+    }
+    guard = 0;
+    while (rawAxisText('X') !== 'bEEP oFF') {
+      await user.click(screen.getByTestId('key-6'));
+      guard += 1;
+      if (guard > 4) throw new Error('bEEP oFF choice not reachable by cycling');
+    }
+
+    // ZERO AP -> on.
+    guard = 0;
+    while (!isZeroApLabel(rawAxisText('X'))) {
+      await user.click(screen.getByTestId('key-2'));
+      guard += 1;
+      if (guard > 40) throw new Error('ZERO AP parameter not found in setup menu');
+    }
+    guard = 0;
+    while (rawAxisText('X') !== 'bU22 on') {
+      await user.click(screen.getByTestId('key-6'));
+      guard += 1;
+      if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
+    }
+
+    await exitSetup(user);
+  }
+
+  /**
+   * Enter Distance-to-Go with an X target (mm) so the readout shows
+   * (target - current X) and nears zero as the machine approaches (US-024 AC24.9
+   * auto-enables the warning in this mode).
+   */
+  async function startDistanceToGoX(user: ReturnType<typeof userEvent.setup>, targetMm: string) {
+    await user.click(screen.getByTestId('btn-distance-to-go'));
+    await user.click(screen.getByTestId('axis-select-x'));
+    for (const ch of targetMm) {
+      if (ch === '.') await user.click(screen.getByTestId('key-decimal'));
+      else await user.click(screen.getByTestId(`key-${ch}`));
+    }
+    await user.click(screen.getByTestId('key-enter'));
+    await user.click(screen.getByTestId('btn-distance-to-go'));
+  }
+
   it('navigates to the bEEP parameter showing its default ON (AC25.1, AC25.2)', async () => {
     const user = userEvent.setup();
     renderSimulator();
@@ -200,6 +297,37 @@ describe('Keypad beep — live key-press integration (US-025)', () => {
     await user.click(screen.getByTestId('key-3'));
 
     // No keypad beep — the gate silenced playClickSound.
+    expect(beepCount).toBe(0);
+  });
+
+  it('with bEEP OFF, the zero-approach warning STILL beeps while keys stay silent (AC25.5)', async () => {
+    const user = userEvent.setup();
+    renderSimulator();
+    const mock = await connectMockMill();
+    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
+    await emitPosition(mock, 0, 0, 0);
+
+    // Real setup: bEEP off AND Near-Zero Warning on.
+    await setBeepOffAndWarningOn(user);
+
+    // Keypad presses are silent (gate active) — no buffer-source beep.
+    beepCount = 0;
+    await user.click(screen.getByTestId('key-1'));
+    await user.click(screen.getByTestId('key-2'));
+    expect(beepCount).toBe(0);
+
+    // Drive a real distance-to-go approach toward the target. The warning is
+    // independent of beepEnabled, so its oscillator beep must still fire.
+    warningBeepCount = 0;
+    await startDistanceToGoX(user, '10');
+    await waitForAxisText('X', '10.0000');
+    // Approach to within the band (default BP DIST 0.002" ~= 0.0508 mm).
+    await emitPosition(mock, 9.97, 0, 0);
+
+    await waitFor(() => {
+      expect(warningBeepCount).toBeGreaterThan(0);
+    });
+    // The keypad path stayed silent throughout (only the warning sounded).
     expect(beepCount).toBe(0);
   });
 });

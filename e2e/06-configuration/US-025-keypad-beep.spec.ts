@@ -22,26 +22,45 @@ import type { Page } from '@playwright/test';
 declare global {
   interface Window {
     __beepCount: number;
+    __warningBeepCount: number;
   }
 }
 
-/** Install a browser-native counter of started audio sources before app load. */
+/**
+ * Install browser-native counters of started audio sources before app load.
+ * Keypad clicks drive AudioBufferSourceNode.start (playClickSound); the
+ * zero-approach warning drives OscillatorNode.start (playZeroApproachBeep,
+ * US-024). Counting them separately lets AC25.5 assert the warning still sounds
+ * while keypad clicks are silenced — observing the real Web Audio API, no app
+ * hooks.
+ */
 async function instrumentBeep(page: Page) {
   await page.addInitScript(() => {
     window.__beepCount = 0;
-    const proto = AudioBufferSourceNode.prototype;
-    const originalStart = proto.start;
-    proto.start = function patchedStart(this: AudioBufferSourceNode, ...args: unknown[]) {
+    window.__warningBeepCount = 0;
+
+    const bufProto = AudioBufferSourceNode.prototype;
+    const originalBufStart = bufProto.start;
+    bufProto.start = function patchedBufStart(this: AudioBufferSourceNode, ...args: unknown[]) {
       window.__beepCount += 1;
-      return originalStart.apply(this, args as []);
+      return originalBufStart.apply(this, args as []);
+    };
+
+    const oscProto = OscillatorNode.prototype;
+    const originalOscStart = oscProto.start;
+    oscProto.start = function patchedOscStart(this: OscillatorNode, ...args: unknown[]) {
+      window.__warningBeepCount += 1;
+      return originalOscStart.apply(this, args as []);
     };
   });
 }
 
 const beepCount = (page: Page) => page.evaluate(() => window.__beepCount);
-const resetBeepCount = (page: Page) =>
+const warningBeepCount = (page: Page) => page.evaluate(() => window.__warningBeepCount);
+const resetBeepCounts = (page: Page) =>
   page.evaluate(() => {
     window.__beepCount = 0;
+    window.__warningBeepCount = 0;
   });
 
 /** Open setup, pick X, and scroll to the bEEP parameter. */
@@ -64,7 +83,19 @@ async function exitSetup(dro: DROPage) {
   await dro.waitForAxisValue('X', 0);
 }
 
+/** Toggle bEEP to OFF through the real setup menu (leaves the menu open at bEEP). */
+async function setBeepOff(dro: DROPage) {
+  await gotoBeep(dro);
+  while ((await dro.getAxisRawText('X')) !== 'bEEP oFF') {
+    await dro.key6.click();
+  }
+}
+
 test.describe('US-025: Keypad Beep', () => {
+  // Setup-menu changes commit to persisted nvMem; serialise so parallel workers
+  // do not race on shared localStorage (matches US-024's spec).
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page, dro }) => {
     // Instrument first, then reload so the init script applies to the app page.
     await instrumentBeep(page);
@@ -88,7 +119,7 @@ test.describe('US-025: Keypad Beep', () => {
     expect(await dro.getAxisRawText('X')).toBe('bEEP on');
     await exitSetup(dro);
 
-    await resetBeepCount(page);
+    await resetBeepCounts(page);
     await dro.key1.click();
     await dro.key2.click();
     await dro.key3.click();
@@ -97,16 +128,43 @@ test.describe('US-025: Keypad Beep', () => {
   });
 
   test('after toggling bEEP off, key presses are silent (AC25.5 keypad half)', async ({ page, dro }) => {
-    await gotoBeep(dro);
-    await dro.key6.click(); // -> bEEP oFF
+    await setBeepOff(dro);
     expect(await dro.getAxisRawText('X')).toBe('bEEP oFF');
     await exitSetup(dro);
 
-    await resetBeepCount(page);
+    await resetBeepCounts(page);
     await dro.key1.click();
     await dro.key2.click();
     await dro.key3.click();
 
+    expect(await beepCount(page)).toBe(0);
+  });
+
+  test('with bEEP off, the zero-approach warning still beeps while keys stay silent (AC25.5)', async ({ page, dro }) => {
+    await dro.toggleInchMm(); // mm — clean magnitudes for the 0.0508 mm band
+    expect(await dro.isMmUnits()).toBe(true);
+    await dro.simulateEncoderAbsoluteMove('X', 0);
+
+    // Real setup: bEEP off (exit), then Near-Zero Warning on (own session).
+    await setBeepOff(dro);
+    await exitSetup(dro);
+    await dro.enableZeroApproachWarning(); // re-enters setup, sets bU22 on, exits
+
+    // Keys are silent (gate active).
+    await resetBeepCounts(page);
+    await dro.key1.click();
+    await dro.key2.click();
+    expect(await beepCount(page)).toBe(0);
+
+    // Drive a real distance-to-go approach toward the target.
+    await dro.startDistanceToGo('X', '10');
+    await dro.waitForAxisValue('X', 10);
+    await dro.simulateEncoderAbsoluteMove('X', 9.97); // within BP DIST band
+
+    // Warning indicator shows AND its oscillator beep fired — independent of bEEP.
+    await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
+    expect(await warningBeepCount(page)).toBeGreaterThan(0);
+    // The keypad path never sounded.
     expect(await beepCount(page)).toBe(0);
   });
 });
