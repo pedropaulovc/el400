@@ -17,6 +17,7 @@ import {
   ZERO_APPROACH_DIST_ID,
   ZERO_APPROACH_TOLR_ID,
   ENF_ID,
+  BEEP_ID,
   SLEEP_TIMEOUT_ID,
   SLEEP_TIMEOUT_MINUTES,
   sleepTimeoutLabel,
@@ -161,6 +162,36 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(enf.choices.map((c) => c.value)).toEqual(['off', 'on']);
     expect(enf.choices.map((c) => c.label)).toEqual(['EnF oFF', 'EnF on']);
     expect(typeof enf.commit).toBe('function');
+  });
+
+  it('exposes a global bEEP parameter with on / off choices, default-first (AC25.1, AC25.2, AC25.3)', () => {
+    const beep = SETUP_PARAMETERS.find((p) => p.id === BEEP_ID)!;
+    expect(beep).toBeDefined();
+    expect(beep.scope).toBe('global');
+    // Default-first ordering: 'on' is the default (AC25.2), so it seeds first.
+    expect(beep.choices.map((c) => c.value)).toEqual(['on', 'off']);
+    expect(beep.choices.map((c) => c.label)).toEqual(['bEEP on', 'bEEP oFF']);
+    expect(typeof beep.commit).toBe('function');
+  });
+
+  it('bEEP seeds its current value from nvMem.beepEnabled, NOT encoderFailWarning (AC25.2)', () => {
+    const beep = SETUP_PARAMETERS.find((p) => p.id === BEEP_ID)!;
+    // Default nvMem: beepEnabled on -> seeds 'on'.
+    expect(beep.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('on');
+    // Off when the dedicated flag is cleared.
+    expect(
+      beep.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, beepEnabled: false },
+        axis: null,
+      })
+    ).toBe('off');
+    // Decoupled from encoderFailWarning (US-042): flipping ENF must not change beep.
+    expect(
+      beep.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, encoderFailWarning: true, beepEnabled: false },
+        axis: null,
+      })
+    ).toBe('off');
   });
 
   it('EnF seeds its current value from nvMem.encoderFailWarning, NOT beepEnabled (AC 42.1)', () => {
@@ -388,6 +419,20 @@ describe('commit-on-change hooks (US-002)', () => {
     enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
     expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
     expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+  });
+
+  it('bEEP.commit persists beepEnabled and leaves encoderFailWarning untouched (AC25.3, AC25.4)', () => {
+    const beep = SETUP_PARAMETERS.find((p) => p.id === BEEP_ID)!;
+    const enfBefore = useSettingsStore.getState().nvMem.encoderFailWarning;
+
+    beep.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(false);
+    // US-042's encoder-fail flag must remain independent.
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(enfBefore);
+
+    beep.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(true);
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(enfBefore);
   });
 });
 
