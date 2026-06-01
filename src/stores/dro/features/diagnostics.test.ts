@@ -157,6 +157,27 @@ describe('diagnosticsReducer', () => {
       );
       expect(next?.stateName).toBe('diagnostics-encoder');
     });
+
+    // Only the encoder step consumes MILL_STATE_CHANGED. A connected adapter's
+    // ticks must not be echoed as an (empty) key here -- otherwise the key the
+    // operator just pressed flashes and blanks every 100ms (AC 46.4).
+    it('does NOT echo a MILL_STATE_CHANGED tick over the last pressed key', () => {
+      const echoed = diagnosticsReducer(
+        createTestState('diagnostics-keyboard', INITIAL_DIAGNOSTICS_DATA),
+        { eventName: 'KEY_5' },
+        contextAt(0, 0, 0)
+      );
+      expect(String(echoed?.display.X)).toContain('5');
+
+      const ticked = diagnosticsReducer(
+        echoed!,
+        { eventName: 'MILL_STATE_CHANGED' },
+        contextAt(9, 0, 0)
+      );
+      expect(ticked?.stateName).toBe('diagnostics-keyboard');
+      // The echoed key is preserved, not overwritten with a blank.
+      expect(String(ticked?.display.X)).toContain('5');
+    });
   });
 
   describe('encoder diagnostics (AC 46.5)', () => {

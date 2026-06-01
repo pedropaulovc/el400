@@ -132,14 +132,14 @@ export const diagnosticsReducer: FeatureReducer = (current, event, context) => {
   // Any non-C key disarms the double-C gesture for the steps that consume keys.
   const disarmed: DiagnosticsData = { ...data, clearPhase: 'idle' };
 
-  // The memory and segment steps advance on a real key press only (§11.1). A
-  // connected adapter's MILL_STATE_CHANGED ticks are not keys, so they hold the
-  // current step — otherwise a single ▲ at boot races past RAmPASS / the segment
-  // test before the operator can see them (AC 46.2 / 46.3).
-  if (
-    (state === 'diagnostics-memory' || state === 'diagnostics-display') &&
-    !isFrontPanelKey(eventName)
-  ) {
+  // The memory, segment and keyboard steps react to real key presses only
+  // (§11.1: "Press any key …"). The encoder step is the ONLY one that consumes
+  // MILL_STATE_CHANGED; everywhere else a connected adapter's ticks (every 100ms
+  // in ?source=debug) must be a no-op holding the current step. Otherwise:
+  //   - a single ▲ at boot races past RAmPASS / the segment test (AC 46.2 / 46.3),
+  //   - a tick disarms the double-C exit on the memory step (AC 46.7), and
+  //   - a tick blanks the key just echoed on the keyboard step (AC 46.4).
+  if (state !== 'diagnostics-encoder' && !isFrontPanelKey(eventName)) {
     return current;
   }
 
