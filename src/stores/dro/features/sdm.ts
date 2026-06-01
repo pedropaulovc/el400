@@ -3,9 +3,9 @@
  *
  * The SDM lets the operator store up to 1000 sub-datum points, each holding
  * X/Y/Z coordinates (manual §8.2). This file implements the LEARN sub-function
- * (manual §8.2.2) and the PROGRAM / direct-entry sub-function (manual §8.2.1);
- * the data model (`SdmData`) is shared with RUN (US-011), which plugs into the
- * same menu ring and point store.
+ * (manual §8.2.2), the PROGRAM / direct-entry sub-function (manual §8.2.1), and
+ * the RUN / recall sub-function (manual §8.2.3, US-011); all three plug into the
+ * same menu ring and share the `points` map (`SdmData`).
  *
  * Learn-mode workflow (manual §8.2.2):
  *  - Intro: shows "SdM" briefly, then auto-advances to the menu.
@@ -31,6 +31,17 @@
  *    the next step; 4◄ goes to the previous step (manual: "right and left key …
  *    select previous/next step"; story AC 10.4 binds save+advance to 6►).
  *  - Jump-to-step (AC 10.5): press Y, type the step number, press Enter.
+ *  - Press C (clear) to exit.
+ *
+ * Run-mode workflow (manual §8.2.3, US-011):
+ *  - Confirm Run at the menu → step-select prompt ("rUn" on X, step number on Y),
+ *    defaulting to step 1. Type a step number (or press Y to start a fresh entry)
+ *    and press Enter to confirm.
+ *  - Enter shows the live DISTANCE-TO-GO for the selected step: the stored
+ *    sub-datum (read from the shared `points` map) minus the current machine
+ *    position, per axis, in the operator's unit. The display refreshes on every
+ *    MILL_STATE_CHANGED so it tracks the machine as the operator jogs to zero.
+ *  - 6► advances to the next step, 4◄ goes to the previous step; the DTG follows.
  *  - Press C (clear) to exit.
  *
  * Spec discrepancy: the Learn story (AC 9.4) binds "store" to `6►`; the manual
@@ -131,6 +142,58 @@ function computeMenuDisplay(state: DROStateName): DisplayState {
 function computeStepEntryDisplay(vMem: VolatileMemoryState): DisplayState {
   const value = getBufferValue(vMem.inputBuffer);
   return createDisplay('StEP', value ?? 0, '');
+}
+
+/** "rUn" prompt text shown on X during run step-select (manual §8.2.3). */
+const SDM_RUN_PROMPT = 'rUn';
+
+/**
+ * Run step-select display (manual §8.2.3): X shows the "rUn" prompt; Y shows the
+ * buffered step number if one is being typed, otherwise the current step.
+ */
+function computeRunStepDisplay(data: SdmData, vMem: VolatileMemoryState): DisplayState {
+  const buffered = getBufferValue(vMem.inputBuffer);
+  return createDisplay(SDM_RUN_PROMPT, buffered ?? data.currentStep, '');
+}
+
+/**
+ * Absolute machine position (mm) for an axis, ignoring vMem.mode — distance-to-go
+ * is always measured against the absolute datum (mirrors the US-008 preset DTG).
+ */
+function absolutePositionMm(
+  axis: ProgramAxis,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): number {
+  const { workOffsets, manualAbsoluteValues } = vMem;
+  const { millState } = context;
+  if (millState.connected) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    return millState.position[axisKey] - workOffsets[axis];
+  }
+  return manualAbsoluteValues[axis];
+}
+
+/**
+ * Run distance-to-go display (manual §8.2.3): each axis shows the stored
+ * sub-datum for the current step minus the live machine position, converted to
+ * the operator's unit. An unstored step is treated as a zero sub-datum.
+ */
+function computeRunDtgDisplay(
+  data: SdmData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  const unit = context.nvMem.defaultUnit;
+  const stored = data.points[data.currentStep];
+
+  const dtgFor = (axis: ProgramAxis): number => {
+    const targetMm = stored?.[axis] ?? 0;
+    const currentMm = absolutePositionMm(axis, vMem, context);
+    return fromMmToAnyUnit(targetMm - currentMm, unit);
+  };
+
+  return createDisplay(dtgFor('X'), dtgFor('Y'), dtgFor('Z'));
 }
 
 /** Axes handled by program direct-entry, in confirmation order. */
@@ -286,8 +349,14 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
         };
       }
 
-      // Run (US-011) not implemented yet; exit for now.
-      return exitToIdle(vMem, context);
+      // Run / recall (US-011, manual §8.2.3): step-select prompt at step 1.
+      const runData: SdmData = { ...data, sdmMode: 'RUN', currentStep: 1 };
+      return {
+        stateName: 'sdm-run-step',
+        stateData: runData,
+        vMem: newVMem,
+        display: computeRunStepDisplay(runData, newVMem),
+      };
     }
     return statePayload;
   }
@@ -347,15 +416,17 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
       // Second press: store the live position and advance to the next step.
       const point = captureCurrentPosition(vMem, context);
       const nextStep = Math.min(data.currentStep + 1, MAX_SDM_STEPS);
+      const newPoints = { ...data.points, [data.currentStep]: point };
       const newData: SdmData = {
         ...data,
-        points: { ...data.points, [data.currentStep]: point },
+        points: newPoints,
         currentStep: nextStep,
         learnPhase: 'awaiting-first-press',
       };
       return {
         ...statePayload,
         stateData: newData,
+        vMem: { ...vMem, sdmPoints: newPoints },
         display: computePositionDisplay(newData, vMem, context),
       };
     }
@@ -474,6 +545,70 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
     return statePayload;
   }
 
+  // ── run: step select (manual §8.2.3) ─────────────────────────────
+  if (state === 'sdm-run-step') {
+    if (eventName === 'KEY_CLEAR') {
+      if (vMem.inputBuffer !== '') {
+        const newVMem = { ...vMem, inputBuffer: removeLastChar(vMem.inputBuffer) };
+        return { ...statePayload, vMem: newVMem, display: computeRunStepDisplay(data, newVMem) };
+      }
+      return exitToIdle(vMem, context);
+    }
+
+    if (eventName === 'MILL_STATE_CHANGED') {
+      return { ...statePayload, display: computeRunStepDisplay(data, vMem) };
+    }
+
+    // Y starts a fresh step entry (manual §8.2.3: "press Y and numeric values").
+    if (eventName === 'BTN_SELECT_Y') {
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return { ...statePayload, vMem: newVMem, display: computeRunStepDisplay(data, newVMem) };
+    }
+
+    const runDigit = KEY_TO_DIGIT[eventName];
+    if (runDigit !== undefined) {
+      const newVMem = { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, runDigit) };
+      return { ...statePayload, vMem: newVMem, display: computeRunStepDisplay(data, newVMem) };
+    }
+
+    if (eventName === 'KEY_ENTER') {
+      const typed = getBufferValue(vMem.inputBuffer);
+      const step = typed === null ? data.currentStep : Math.floor(typed);
+      if (step < 1 || step > MAX_SDM_STEPS) return statePayload;
+      const newData: SdmData = { ...data, currentStep: step };
+      const newVMem = { ...vMem, inputBuffer: '' };
+      return {
+        stateName: 'sdm-run-active',
+        stateData: newData,
+        vMem: newVMem,
+        display: computeRunDtgDisplay(newData, newVMem, context),
+      };
+    }
+    return statePayload;
+  }
+
+  // ── run: distance-to-go view (manual §8.2.3) ─────────────────────
+  if (state === 'sdm-run-active') {
+    if (eventName === 'KEY_CLEAR') return exitToIdle(vMem, context);
+
+    if (eventName === 'MILL_STATE_CHANGED') {
+      return { ...statePayload, display: computeRunDtgDisplay(data, vMem, context) };
+    }
+
+    // 6► / 4◄ move to the next / previous step; the DTG follows.
+    if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
+      const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
+      const nextStep = Math.min(Math.max(data.currentStep + delta, 1), MAX_SDM_STEPS);
+      const newData: SdmData = { ...data, currentStep: nextStep };
+      return {
+        ...statePayload,
+        stateData: newData,
+        display: computeRunDtgDisplay(newData, vMem, context),
+      };
+    }
+    return statePayload;
+  }
+
   // ── program: per-axis coordinate entry (manual §8.2.1) ───────────
   const inputAxis = PROGRAM_INPUT_AXIS[state];
   if (inputAxis !== undefined) {
@@ -532,7 +667,8 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
           ? stored?.[inputAxis] ?? 0
           : fromAnyUnitToMm(typed, context.nvMem.defaultUnit);
       const newData = storeProgramCoordinate(data, inputAxis, valueMm);
-      const newVMem = { ...vMem, inputBuffer: '' };
+      // Persist to the retained store so Run (US-011) can recall it later.
+      const newVMem = { ...vMem, inputBuffer: '', sdmPoints: newData.points };
 
       // Advance X → Y → Z → back to the step view.
       const axisIdx = PROGRAM_AXES.indexOf(inputAxis);

@@ -25,6 +25,29 @@ export const SOFTWARE_VERSION = 'vEr 1.0.0';
  */
 export const BOOT_DISPLAY: DisplayState = createDisplay(MODEL_NUMBER, SOFTWARE_VERSION, '');
 
+/**
+ * Self-Diagnostics Mode display labels (US-046, manual §11.1, §12 text list).
+ *
+ * The manual prints the memory-pass text as "RAMPASS" (OCR renders it
+ * "rAnPASS"; the spec approximates the seven-segment 'm' as 'ñ'). The
+ * seven-segment panel has no uppercase 'R' or 'M' glyph, so the renderable
+ * literal is `rAmPASS` (lowercase r, 'm' for the M). The keyboard-step prompt
+ * and the encoder label likewise use only glyphs the panel can show (no 'K' in
+ * the font, so the manual's "KEY" prompt renders as `PrESS`; "ENC_DIG" as
+ * `EnCodEr`).
+ */
+export const DIAGNOSTICS_TEXT = {
+  memoryPass: 'rAmPASS',
+  keyboard: 'PrESS',
+  encoder: 'EnCodEr',
+} as const;
+
+/**
+ * Display/lamp test pattern (manual §11.1 display diagnostics): every segment of
+ * every cell lit. Eight '8' glyphs fill the readout width.
+ */
+export const DISPLAY_TEST_PATTERN = '88888888';
+
 // ─────────────────────────────────────────────────────────────────
 // DRO STATE - Flat string union, no nested substates
 // ─────────────────────────────────────────────────────────────────
@@ -43,6 +66,13 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  | 'function-menu-probe'
+  // Touch probe function states (US-032)
+  | 'probe-menu-function'
+  | 'probe-diameter'
+  | 'probe-axis-select'
+  | 'probe-waiting'
+  | 'probe-result'
   // Polar coordinate display states (US-030)
   | 'polar-select-plane'
   | 'polar-coordinates'
@@ -132,6 +162,9 @@ export type DROStateName =
   | 'sdm-program-input-x'
   | 'sdm-program-input-y'
   | 'sdm-program-input-z'
+  // SDM Run / recall states (US-011)
+  | 'sdm-run-step'
+  | 'sdm-run-active'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -150,7 +183,12 @@ export type DROStateName =
   | 'reference-home-select'
   | 'reference-home-waiting'
   | 'reference-machine-select'
-  | 'reference-machine-waiting';
+  | 'reference-machine-waiting'
+  // Self-diagnostics states (US-046, manual §11.1)
+  | 'diagnostics-memory'
+  | 'diagnostics-display'
+  | 'diagnostics-keyboard'
+  | 'diagnostics-encoder';
 
 // ─────────────────────────────────────────────────────────────────
 // DRO CONTEXT - Discriminated union for feature-specific data
@@ -176,7 +214,9 @@ export type DROStateData =
   | PolarData
   | SetupData
   | TaperData
-  | ReferenceData;
+  | ReferenceData
+  | ProbeData
+  | DiagnosticsData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
 type _AssertContextHasType = DROStateData extends BaseDROStateData ? true : never;
@@ -378,11 +418,82 @@ export interface ReferenceData extends BaseDROStateData {
   markArmedFromPos: number | null;
 }
 
+/**
+ * Touch probe special function (manual §10.1.2). Selected from the probe menu:
+ * - 'edge'     : Datum by edge - sets the axis datum at the trigger edge (§10.1.2)
+ * - 'midpoint' : Datum by midpoint - datum at the midpoint of two edges
+ * - 'inside'   : Inside measurement - internal width = travel + probe diameter
+ * - 'outside'  : Outside measurement - external width = travel - probe diameter
+ */
+export type ProbeFunction = 'edge' | 'midpoint' | 'inside' | 'outside';
+
+/**
+ * Touch probe function context (US-032, manual §10.1).
+ *
+ * Drives the probe function menu and the probe-triggered capture flow. Probe
+ * contacts arrive as rising edges on `MillState.probe.triggered`; this data
+ * tracks the edge across MILL_STATE_CHANGED ticks (`lastProbeTriggered`) so a
+ * held or pre-armed probe never double-captures.
+ */
+export interface ProbeData extends BaseDROStateData {
+  readonly stateDataType: 'probe';
+  /** Selected special function (cycled in the probe menu). */
+  probeFunction: ProbeFunction;
+  /** Axis being probed; null until selected. */
+  probeAxis: 'X' | 'Y' | 'Z' | null;
+  /** Probe tip diameter in mm (inside/outside compensation); 0 until entered. */
+  probeDiameterMm: number;
+  /** Captured contact positions (mm) for the selected axis, in order. */
+  captures: number[];
+  /** Computed measurement result in mm (inside/outside); null otherwise. */
+  resultMm: number | null;
+  /**
+   * Probe trigger state seen on the previous tick. Rising edge =
+   * `!lastProbeTriggered && current.triggered`. Seeded from the live pin state
+   * when arming so a probe held high on entry does not auto-fire.
+   */
+  lastProbeTriggered: boolean;
+  /** True for one capture; drives the visual/audible trigger indication (AC 32.8). */
+  probeTriggered: boolean;
+}
+
 /** Stored point for center finding operations */
 export interface StoredPoint {
   X: number;
   Y: number;
   Z: number;
+}
+
+/**
+ * Which of the four self-diagnostic sub-tests is active (manual §11.1).
+ * Mirrors the flat `diagnostics-*` state names; kept as a string enum so it can
+ * cross functions safely.
+ */
+export type DiagnosticsStep = 'memory' | 'display' | 'keyboard' | 'encoder';
+
+/**
+ * Tracks the two-press exit gesture (manual §11.1): one `C` exits the current
+ * diagnostic step, a second consecutive `C` exits Self-Diagnostics Mode. Any
+ * other key disarms. Modelled as an enum (not a boolean) per the cross-function
+ * state guideline.
+ */
+export type DiagnosticsClearPhase = 'idle' | 'armed';
+
+/**
+ * Self-Diagnostics Mode context (US-046, manual §11.1).
+ *
+ * `encoderBaseline` is the machine position captured when the encoder step is
+ * entered; each axis is confirmed in `axesMoved` once its live position differs
+ * from that baseline (a real MILL_STATE_CHANGED / scale movement), so the test
+ * cannot be satisfied without actually moving the axis. `lastKey` holds the most
+ * recently echoed keyboard label.
+ */
+export interface DiagnosticsData extends BaseDROStateData {
+  readonly stateDataType: 'diagnostics';
+  encoderBaseline: { x: number; y: number; z: number } | null;
+  axesMoved: { X: boolean; Y: boolean; Z: boolean };
+  lastKey: string;
+  clearPhase: DiagnosticsClearPhase;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -513,7 +624,8 @@ export const isFnLedActive = (s: DROStateName): boolean =>
   isLinearBoltHoleActive(s) ||
   isGridActive(s) ||
   isPolarActive(s) ||
-  isTaperActive(s);
+  isTaperActive(s) ||
+  isProbeActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -530,6 +642,17 @@ export const isTaperActive = (s: DROStateName): boolean =>
 /** Check if reference / datum recall mode is active (any reference-* state) */
 export const isReferenceActive = (s: DROStateName): boolean =>
   s.startsWith('reference-');
+
+/**
+ * Check if a touch probe function state is active (US-032). Excludes the
+ * function-menu-probe selection tile, which is owned by the menu reducer.
+ */
+export const isProbeActive = (s: DROStateName): boolean =>
+  s.startsWith('probe-');
+
+/** Check if self-diagnostics mode is active (any diagnostics-* state, US-046) */
+export const isDiagnosticsActive = (s: DROStateName): boolean =>
+  s.startsWith('diagnostics-');
 
 // ─────────────────────────────────────────────────────────────────
 // INITIAL VALUES
@@ -650,6 +773,25 @@ export const INITIAL_REFERENCE_DATA: ReferenceData = {
   referenceMode: 'HOME',
   selectedAxis: null,
   markArmedFromPos: null,
+};
+
+export const INITIAL_PROBE_DATA: ProbeData = {
+  stateDataType: 'probe',
+  probeFunction: 'edge',
+  probeAxis: null,
+  probeDiameterMm: 0,
+  captures: [],
+  resultMm: null,
+  lastProbeTriggered: false,
+  probeTriggered: false,
+};
+
+export const INITIAL_DIAGNOSTICS_DATA: DiagnosticsData = {
+  stateDataType: 'diagnostics',
+  encoderBaseline: null,
+  axesMoved: { X: false, Y: false, Z: false },
+  lastKey: '',
+  clearPhase: 'idle',
 };
 
 /**

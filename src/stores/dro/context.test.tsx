@@ -33,10 +33,12 @@ function resetStores(initialState?: DROShape) {
       precision: 4,
       bootMessageMode: 'skip',
       scaleResolution: { X: '5', Y: '5', Z: '5' },
+      displayResolution: { X: '5', Y: '5', Z: '5' },
       taperOnAxis: 'X',
       axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
       zDepthSense: 'depth-negative',
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
+      probeDroType: 'transmit',
     },
   });
 

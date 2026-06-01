@@ -36,6 +36,7 @@ describe('menuReducer', () => {
         'function-menu-linear',
         'function-menu-polar',
         'function-menu-taper',
+        'function-menu-probe',
       ];
 
       for (const menuState of menuStates) {
@@ -77,8 +78,14 @@ describe('menuReducer', () => {
       expect(result?.stateName).toBe('function-menu-taper');
     });
 
-    it('should wrap from taper to center', () => {
+    it('should navigate from taper to probe', () => {
       const state = createTestState('function-menu-taper');
+      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('function-menu-probe');
+    });
+
+    it('should wrap from probe to center', () => {
+      const state = createTestState('function-menu-probe');
       const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-center');
     });
@@ -122,8 +129,14 @@ describe('menuReducer', () => {
       expect(result?.stateName).toBe('function-menu-polar');
     });
 
-    it('should wrap from center to taper', () => {
+    it('should wrap from center to probe', () => {
       const state = createTestState('function-menu-center');
+      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('function-menu-probe');
+    });
+
+    it('should navigate from probe to taper', () => {
+      const state = createTestState('function-menu-probe');
       const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
       expect(result?.stateName).toBe('function-menu-taper');
     });
@@ -138,6 +151,7 @@ describe('menuReducer', () => {
         'function-menu-linear',
         'function-menu-polar',
         'function-menu-taper',
+        'function-menu-probe',
       ];
 
       let state = createTestState('function-menu-center');
@@ -160,6 +174,7 @@ describe('menuReducer', () => {
         'function-menu-linear',
         'function-menu-polar',
         'function-menu-taper',
+        'function-menu-probe',
       ];
 
       let state = createTestState('function-menu-center');

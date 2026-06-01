@@ -1,8 +1,8 @@
 import LEDIndicator from "./LEDIndicator";
 import BeveledFrame from "./BeveledFrame";
 import Axis, { type AxisDisplayValue } from "./Axis";
-import { useDisplayX, useDisplayY, useDisplayZ } from "../stores/droStore";
-import { useDefaultUnit, useNvMem } from "../stores/settingsStore";
+import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered } from "../stores/droStore";
+import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 
 export interface AxisValues {
@@ -22,8 +22,10 @@ const SCREEN_READER_AXIS_HOOKS = {
 /** Screen-reader-only value display - subscribes to its own axis only */
 const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
   const value = SCREEN_READER_AXIS_HOOKS[axis]();
-  // Format numeric values to exactly 4 decimal places, keep text values as-is
-  const formatted = typeof value === 'number' ? value.toFixed(4) : value;
+  // dP display resolution (US-022): render numeric values to this axis's decimal
+  // count; keep text values (menu labels) as-is.
+  const decimals = useAxisDisplayDecimals(axis);
+  const formatted = typeof value === 'number' ? value.toFixed(decimals) : value;
   return (
     <tr>
       <th scope="row">{axis}</th>
@@ -68,6 +70,9 @@ const MultiAxisSection = () => {
   // LED indicators
   const mode = useMode();
   const defaultUnit = useDefaultUnit();
+  // Touch-probe trigger indication (US-032, AC 32.8): lights when a probe
+  // contact is captured during a probe function.
+  const probeTriggered = useProbeTriggered();
 
   const isAbs = mode === 'abs';
   const isInch = defaultUnit === 'inch';
@@ -155,6 +160,12 @@ const MultiAxisSection = () => {
                 name="status"
                 isOn={isSdmActive(droState)}
                 data-testid="led-sdm"
+              />
+              <LEDIndicator
+                label="prb"
+                name="status"
+                isOn={probeTriggered}
+                data-testid="led-probe"
               />
             </fieldset>
           </div>

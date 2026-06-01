@@ -34,8 +34,13 @@ import type {
   AxisDirection,
   ZDepthSense,
   CountingMode,
+  ProbeDroType,
+  DisplayResolutionValue,
 } from '../../../types/nonVolatileMemory';
-import { DEFAULT_SCALE_RESOLUTION } from '../../../types/nonVolatileMemory';
+import {
+  DEFAULT_SCALE_RESOLUTION,
+  DEFAULT_DISPLAY_RESOLUTION,
+} from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
 
 /** Scope of a setup parameter: per-axis values differ per X/Y/Z; global apply to all. */
@@ -117,11 +122,35 @@ export const SCALE_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
 /** The per-axis counting-mode parameter id (US-040) -- its draft key. */
 export const COUNTING_MODE_ID = 'counting-mode';
 
+/** The dP (display resolution) parameter id (US-022) -- its per-axis draft key. */
+export const DISPLAY_RESOLUTION_ID = 'display-resolution';
+
+/**
+ * dP choices: the same nine measuring resolutions in microns as SC, ascending.
+ * Labels carry the `dP` prefix and a one-decimal micron value as shown on the
+ * device ("dP 5.0"). dP is the display-only counterpart of SC (US-022) and is
+ * independent of it (AC22.3).
+ */
+export const DISPLAY_RESOLUTION_CHOICES: readonly SetupParameterChoice[] = [
+  { value: '0.1', label: 'dP 0.1' },
+  { value: '0.2', label: 'dP 0.2' },
+  { value: '0.5', label: 'dP 0.5' },
+  { value: '1', label: 'dP 1.0' },
+  { value: '2', label: 'dP 2.0' },
+  { value: '5', label: 'dP 5.0' },
+  { value: '10', label: 'dP 10.0' },
+  { value: '20', label: 'dP 20.0' },
+  { value: '50', label: 'dP 50.0' },
+];
+
 /** The per-axis counting-direction parameter id (US-002) -- its draft key. */
 export const DIRECTION_ID = 'direction';
 
 /** The global Z depth-sense parameter id (US-002, AC 2.4) -- its draft key. */
 export const Z_DEPTH_ID = 'z-depth';
+
+/** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
+export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
@@ -193,6 +222,35 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: DISPLAY_RESOLUTION_ID,
+    label: 'dP 5.0',
+    scope: 'per-axis',
+    choices: DISPLAY_RESOLUTION_CHOICES,
+    // Seed from the selected axis's committed display resolution (nvMem). On the
+    // SELECT prompt (axis null) fall back to X. Guard against a stale persisted
+    // value no longer in the choice set by defaulting to the mill default.
+    readValue: (ctx) => {
+      const axis = ctx.axis ?? 'X';
+      const committed = ctx.nvMem.displayResolution[axis];
+      const isValid = DISPLAY_RESOLUTION_CHOICES.some((c) => c.value === committed);
+      return isValid ? committed : DEFAULT_DISPLAY_RESOLUTION[axis];
+    },
+    // Commit-on-change (US-022): persist the per-axis display resolution
+    // immediately so the readout's decimal precision updates on exit. dP is a
+    // display-only transform (AC22.5); SAU CHG (US-027) is not yet wired, so this
+    // surgical path -- the same one Direction (US-002) uses -- makes the effect
+    // visible without the generic save engine.
+    commit: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        displayResolution: {
+          ...ctx.nvMem.displayResolution,
+          [axis]: value as DisplayResolutionValue,
+        },
+      });
+    },
+  },
+  {
     id: 'taper-on',
     label: 'tAPEr on',
     scope: 'global',
@@ -241,6 +299,22 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // Commit-on-change (US-002): persist immediately, same path as Direction.
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ zDepthSense: value as ZDepthSense });
+    },
+  },
+  {
+    id: PROBE_DRO_TYPE_ID,
+    label: 'dro t',
+    scope: 'global',
+    choices: [
+      { value: 'transmit', label: 'dro t' },
+      { value: 'freeze', label: 'dro F' },
+    ],
+    // Global touch-probe DRO type (US-032, §10.1.1). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.probeDroType,
+    // Commit-on-change: persist immediately so the probe freeze/transmit
+    // behaviour takes hold on exit (same path as Direction / Z depth).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
     },
   },
   {

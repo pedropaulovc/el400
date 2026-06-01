@@ -8,6 +8,7 @@
 import type { DROStatePayload, FeatureReducer, DROReducerContext } from './types';
 import type { DROEventPayload } from './droStateMachine';
 import { bootReducer } from './features/boot';
+import { diagnosticsReducer } from './features/diagnostics';
 import { idleReducer } from './features/idle';
 import { absIncReducer } from './features/abs-inc';
 import { inchMmReducer } from './features/inch-mm';
@@ -28,6 +29,7 @@ import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
+import { probeReducer } from './features/probe';
 
 /**
  * All feature reducers in priority order.
@@ -38,6 +40,7 @@ import { taperReducer } from './features/taper';
  */
 const featureReducers: FeatureReducer[] = [
   bootReducer,
+  diagnosticsReducer, // Handles Self-Diagnostics Mode (US-046); owns diagnostics-* states and the ▲-at-boot entry
   calculatorReducer,
   centerFindingReducer, // Handles MILL_STATE_CHANGED for point collection and result states
   boltHoleReducer, // Handles bolt hole circle pattern generation
@@ -58,6 +61,7 @@ const featureReducers: FeatureReducer[] = [
   halfReducer, // Handles half function
   // State transition reducers
   polarReducer, // Handles polar coordinate display mode (US-030)
+  probeReducer, // Handles touch probe functions + Freeze-mode idle (US-032); before idle so it owns the frozen display
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
   // Future features:

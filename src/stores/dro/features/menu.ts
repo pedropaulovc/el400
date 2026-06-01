@@ -12,6 +12,7 @@ import {
   INITIAL_POLAR_DATA,
   INITIAL_LINEAR_BOLT_HOLE_DATA,
   INITIAL_TAPER_DATA,
+  INITIAL_PROBE_DATA,
   isFunctionMenuSelectionState,
 } from '../droStateMachine';
 import {
@@ -30,6 +31,7 @@ export const MENU_TEXT_MAP: Record<string, string> = {
   'function-menu-linear': 'LinEAr',
   'function-menu-polar': 'PoLAr',
   'function-menu-taper': 'tAPEr',
+  'function-menu-probe': 'ProbE',
 };
 
 /** Compute menu display: X shows menu text, Y and Z are blank */
@@ -47,6 +49,7 @@ const MENU_RING: DROStateName[] = [
   'function-menu-linear',
   'function-menu-polar',
   'function-menu-taper',
+  'function-menu-probe',
 ];
 
 function getNextMenuState(current: DROStateName): DROStateName {
@@ -103,6 +106,15 @@ function handleMenuEnter(
         stateData: INITIAL_POLAR_DATA,
         vMem,
         display: createDisplay('h-Y', '', ''),
+      };
+    case 'function-menu-probe':
+      // Touch probe (US-032): enter the special-function selection menu,
+      // defaulting to the Edge function (manual §10.1.2).
+      return {
+        stateName: 'probe-menu-function',
+        stateData: INITIAL_PROBE_DATA,
+        vMem,
+        display: createDisplay('Prob Ed', '', ''),
       };
     case 'function-menu-taper': {
       // Capture the machine position at entry; the taper Radius and Angle are

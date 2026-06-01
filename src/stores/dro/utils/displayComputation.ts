@@ -6,9 +6,49 @@
  */
 
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
-import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import type {
+  NonVolatileMemory,
+  DisplayResolutionValue,
+} from '../../../types/nonVolatileMemory';
 import type { DROReducerContext } from '../types';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+
+/**
+ * Maximum fractional digits the 8-cell seven-segment panel can render
+ * (1 sign cell + 3 integer cells + 4 decimal cells). Finer dP settings clamp to
+ * this, which also keeps the device's and simulator's default 4-decimal readout.
+ */
+export const MAX_DISPLAY_DECIMALS = 4;
+
+/**
+ * Decimal places to render for a given dP display-resolution value (US-022).
+ *
+ * dP is the 5-micron mill default, anchored at the panel-maximum of 4 decimals.
+ * Each decade coarser drops one decimal (display gets less sensitive, AC22.4),
+ * each decade finer would add one but is clamped to the panel maximum. The
+ * mapping is unit-independent so the default reads 4 decimals in both inch and
+ * mm, preserving the device's standard readout (AC22.2); only the coarse
+ * 50-micron value drops to 3 decimals (≈0.002", matching the manual / story).
+ *
+ * @param value - dP value in microns
+ * @returns Number of fractional digits to display (0..MAX_DISPLAY_DECIMALS)
+ */
+export function decimalsForDisplayResolution(value: DisplayResolutionValue): number {
+  const microns = Number(value);
+  // Decades coarser than the 5-micron anchor; floor so the mapping is monotonic
+  // and a value strictly within a decade does not round up to the next step.
+  const decadesCoarser = Math.floor(Math.log10(microns / 5) + 1e-9);
+  const decimals = MAX_DISPLAY_DECIMALS - decadesCoarser;
+  return Math.max(0, Math.min(MAX_DISPLAY_DECIMALS, decimals));
+}
+
+/**
+ * Decimal places to render for a single axis, from its committed dP resolution
+ * (US-022). Independent of scale resolution SC (AC22.3).
+ */
+export function axisDisplayDecimals(axis: Axis, nvMem: NonVolatileMemory): number {
+  return decimalsForDisplayResolution(nvMem.displayResolution[axis]);
+}
 
 /**
  * Pure counting-direction sign for an axis (US-002).
