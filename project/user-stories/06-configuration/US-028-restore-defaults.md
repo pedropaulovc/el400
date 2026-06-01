@@ -214,9 +214,18 @@ two **separate adjacent** rows:
 list, ~line 2080-2097) — model-config indicators, not a restore confirm chain.
 The manual's restore step is simply: scroll to `r5t oEñ` → ENT → `IN PROG` → done.
 
-The ACs above (28.4 password / 28.5 `3 AXIS`,`MILL`,`OPT OFF` / 28.6 SAV CHG)
-conflate the adjacent password-protected **`oEñ ñod`** (OEM Mode) row with the
-restore row — an OCR-era reading. Implemented per the manual:
+### Per-AC mapping (deviating ACs — evidence, not omission)
+
+| Story AC | Disposition | Evidence |
+|----------|-------------|----------|
+| **28.4** "Enter password 3 5 7 2 6" | The privileged op the password guards is *defining* the OEM baseline (**US-044 `oEm mod`**); the **restore** itself is not password-gated. | §6.2 line 483 marks `oEñ ñod` "Password protected"; line 482 `r5t oEñ` carries **no** password marker. |
+| **28.5** "Confirm 3 AXIS, MILL, OPT OFF" | **Not applicable** — these are model/options-config glyphs, not a restore confirm chain. | §12 glossary line 2097 `oPt oFF` = "Options off"; `3 AXIS`/`MILL` are model indicators, not menu steps. |
+| **28.6** "Confirm SAV CHG" | **Not a separate step** — `rSt oEm` persists the restored config directly through the settings store on ENT. | §6.2: `r5t oEñ` is a single terminal row ("Press to Restore default settings"), no chained save. |
+| **28.8/28.9** "IN PROG / wait 2 min" | Implemented as a brief test-controllable `In ProG` dwell, not a literal 2-min sleep. | Story Implementation Notes: "In simulation, can be instant or shorter". |
+| 28.1/28.2/28.3/28.7/28.10 + "verify data cleared" | Implemented as written. | — |
+
+The ACs 28.4-28.6 conflate the adjacent password-protected **`oEñ ñod`** (OEM
+Mode) row with the restore row — an OCR-era reading. Implemented per the manual:
 
 - **`rSt oEm`** is its own terminal-action setup row (mirrors SAV CHG / oEm mod).
   ENT runs the restore directly — **no password, no confirm chain.** The privileged
