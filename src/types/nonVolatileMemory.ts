@@ -147,6 +147,12 @@ export interface NonVolatileMemory {
   countingMode: CountingModeByAxis;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
+  /**
+   * Encoder-fail warning - EnF parameter (US-042, manual section 6.2). When
+   * true, an axis that loses its encoder signal shows `no SIG`. Default off
+   * (legacy behavior). Independent of beepEnabled (US-025).
+   */
+  encoderFailWarning: boolean;
 }
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
@@ -207,6 +213,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   measurementMode: DEFAULT_MEASUREMENT_MODE,
   countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',
+  encoderFailWarning: false,
 };
 
 /**

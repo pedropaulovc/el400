@@ -6,9 +6,15 @@
 import { io, Socket } from 'socket.io-client';
 import type { Dispatch } from 'react';
 import type { MillAdapter } from './MillAdapter';
-import type { MillStateListener, MillState, MillPosition } from '../types/millState';
+import type {
+  MillStateListener,
+  MillState,
+  MillPosition,
+  EncoderSignalByAxis,
+  EncoderSignalState,
+} from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
-import { createProbeState, createDefaultMillState } from '../types/millState';
+import { createProbeState, createDefaultMillState, DEFAULT_ENCODER_SIGNAL } from '../types/millState';
 
 export interface CncjsMillAdapterOptions {
   host: string;
@@ -34,6 +40,29 @@ interface CncjsControllerState {
     posz?: number;
     prb?: number;
   };
+  /**
+   * Per-axis encoder signal state (US-042). The real device surfaces a scale
+   * dropout as the `no SIG` measuring-system error; GRBL controllers do not
+   * model this natively, so when a connected source reports it (e.g. a DRO-aware
+   * gateway or the simulator's mock server) it is carried here and normalized
+   * into MillState.encoderSignal. Absent on stock controllers (treated as 'ok').
+   */
+  encoderSignal?: Partial<Record<'X' | 'Y' | 'Z', EncoderSignalState>>;
+}
+
+/**
+ * Normalizes an optional per-axis encoder-signal report into a full
+ * EncoderSignalByAxis, defaulting any unreported axis to 'ok' (US-042).
+ */
+function normalizeEncoderSignal(
+  signal: CncjsControllerState['encoderSignal']
+): EncoderSignalByAxis {
+  if (!signal) return { ...DEFAULT_ENCODER_SIGNAL };
+  return {
+    X: signal.X ?? 'ok',
+    Y: signal.Y ?? 'ok',
+    Z: signal.Z ?? 'ok',
+  };
 }
 
 /**
@@ -54,6 +83,7 @@ function normalizeGrbl(state: CncjsControllerState): Partial<MillState> {
   const result: Partial<MillState> = {
     position,
     probe: createProbeState(pn),
+    encoderSignal: normalizeEncoderSignal(state.encoderSignal),
   };
 
   if (wpos) {

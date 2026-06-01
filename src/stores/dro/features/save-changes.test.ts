@@ -97,21 +97,27 @@ describe('SAV CHG commit on ENT (AC27.2, AC27.3)', () => {
     expect(String(saved?.display.X)).toBe(SETUP_SAVED_TEXT);
   });
 
-  it('persists multiple draft params at once (per-axis SC + global ENF)', () => {
-    const enfIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'enf');
-    // Draft: SC X -> 1, ENF -> off (beepEnabled false stand-in).
+  it('persists multiple draft params at once (per-axis SC + global taper-on)', () => {
+    // taper-on is a genuinely draft-only global param (US-045): it has a
+    // `persist` writer but no commit-on-change hook, so its edit is buffered
+    // until SAU CHG — unlike ENF, which is commit-on-change as of US-042.
+    const taperIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'taper-on');
+    // Draft: SC X -> 1, taper-on X -> Z.
     let s = paramState({ selectedAxis: 'X', currentParamIndex: scIdx });
     s = setupReducer(s, { eventName: 'KEY_4_LEFT' }, liveCtx())!; // 2.0
     s = setupReducer(s, { eventName: 'KEY_4_LEFT' }, liveCtx())!; // 1.0
-    s = { ...s, stateData: { ...(s.stateData as SetupData), currentParamIndex: enfIdx } };
-    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // EnF on -> EnF oFF
+    s = { ...s, stateData: { ...(s.stateData as SetupData), currentParamIndex: taperIdx } };
+    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // tAPEr X -> tAPEr Z
+    // Neither draft has hit nvMem yet.
+    expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
+    expect(useSettingsStore.getState().nvMem.taperOnAxis).toBe('X');
 
     s = { ...s, stateData: { ...(s.stateData as SetupData), currentParamIndex: saveIdx } };
     setupReducer(s, { eventName: 'KEY_ENTER' }, liveCtx());
 
     const nv = useSettingsStore.getState().nvMem;
     expect(nv.scaleResolution.X).toBe('1');
-    expect(nv.beepEnabled).toBe(false);
+    expect(nv.taperOnAxis).toBe('Z');
   });
 
   it('per-axis SC drafts commit only to the edited axis', () => {
@@ -170,12 +176,14 @@ describe('exit WITHOUT SAV CHG discards draft (AC27.6)', () => {
     expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
   });
 
-  it('KEY_CLEAR after an ENF draft leaves nvMem untouched', () => {
-    const enfIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'enf');
-    let s = paramState({ selectedAxis: 'X', currentParamIndex: enfIdx });
-    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // draft EnF oFF
+  it('KEY_CLEAR after a taper-on draft leaves nvMem untouched', () => {
+    // taper-on is draft-only (US-045): cycling it buffers the change without
+    // touching nvMem, so a C exit reverts to the committed default ('X').
+    const taperIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'taper-on');
+    let s = paramState({ selectedAxis: 'X', currentParamIndex: taperIdx });
+    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // draft tAPEr Z
     const exited = setupReducer(s, { eventName: 'KEY_CLEAR' }, liveCtx());
     expect(exited?.stateName).toBe('idle');
-    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(true);
+    expect(useSettingsStore.getState().nvMem.taperOnAxis).toBe('X');
   });
 });

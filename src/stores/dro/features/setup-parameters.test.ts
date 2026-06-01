@@ -13,6 +13,7 @@ import {
   MEASUREMENT_MODE_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
+  ENF_ID,
   getParameterAt,
   wrapItemIndex,
   choiceIndexOf,
@@ -142,6 +143,36 @@ describe('SETUP_PARAMETERS registry', () => {
       displayResolution: { X: '999' as unknown as '5', Y: '5' as const, Z: '5' as const },
     };
     expect(dp.choices.map((c) => c.value)).toContain(dp.readValue({ nvMem, axis: 'X' }));
+  });
+
+  it('exposes a global EnF parameter with on / off choices (AC 42.1, AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    expect(enf).toBeDefined();
+    expect(enf.scope).toBe('global');
+    // Default-first ordering: 'off' is the default (AC 42.1), so it seeds first.
+    expect(enf.choices.map((c) => c.value)).toEqual(['off', 'on']);
+    expect(enf.choices.map((c) => c.label)).toEqual(['EnF oFF', 'EnF on']);
+    expect(typeof enf.commit).toBe('function');
+  });
+
+  it('EnF seeds its current value from nvMem.encoderFailWarning, NOT beepEnabled (AC 42.1)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    // Default nvMem: encoderFailWarning off -> seeds 'off'.
+    expect(enf.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    // On when the dedicated flag is set.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
+    // Decoupled from beepEnabled (US-025): flipping beep must not change EnF.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, beepEnabled: false, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
   });
 
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
@@ -283,6 +314,20 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     dp.commit!({ nvMem, axis: null }, '50');
     expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('50');
+  });
+
+  it('enf.commit persists encoderFailWarning and leaves beepEnabled untouched (AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    const beepBefore = useSettingsStore.getState().nvMem.beepEnabled;
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(true);
+    // US-025's beep flag must remain independent.
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
   });
 });
 
