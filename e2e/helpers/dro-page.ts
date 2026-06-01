@@ -11,6 +11,9 @@ export class DROPage {
   private readonly mockServerPort: number;
   private readonly sessionId: string;
 
+  // Simulator root — carries data-dro-state, the deterministic readiness signal
+  readonly simulatorRoot: Locator;
+
   // Display elements
   readonly xDisplay: Locator;
   readonly yDisplay: Locator;
@@ -64,6 +67,8 @@ export class DROPage {
     this.page = page;
     this.mockServerPort = mockServerPort;
     this.sessionId = sessionId || `test-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+
+    this.simulatorRoot = page.getByTestId('el400-simulator');
 
     // Initialize display elements using testids (values are in sr-only table)
     this.xDisplay = page.getByTestId('axis-value-x');
@@ -141,19 +146,43 @@ export class DROPage {
     await this.page.goto(url);
     await this.page.waitForLoadState('domcontentloaded');
 
-    // Wait for Socket.IO connection and boot sequence to complete
-    // Initial display is blank until useEffect runs and sets display
+    // Boot readiness barrier. In skip mode the state machine reaches `idle` on the
+    // mount BOOT_STARTED dispatch (boot.ts) — synchronously, with no timer and
+    // before the Socket.IO handshake. Await that committed state instead of polling
+    // the socket-derived display value (see waitForReady).
     if (skipBoot) {
-      await this.waitForAxisValue('X', 0);
+      await this.waitForReady('idle');
     }
   }
 
   /**
+   * Deterministic boot-readiness barrier: wait until the state machine has
+   * committed `expected` to the root's data-dro-state attribute. This is a
+   * web-first assertion that resolves the instant React renders the state — no
+   * value polling, no socket dependency, no load-sensitive ceiling (the timeout
+   * here is only a hang guard). `'idle'` is the post-skip-boot resting state;
+   * `'boot-show-message'` is the version-message screen reached with skipBootMessage
+   * off (both are reached synchronously on mount, so this works under a frozen
+   * page clock).
+   */
+  async waitForReady(expected: 'idle' | 'boot-show-message' = 'idle'): Promise<void> {
+    await expect(this.simulatorRoot).toHaveAttribute('data-dro-state', expected);
+  }
+
+  /**
    * Reload the page preserving current URL params.
+   *
+   * Mirrors goto()'s readiness barrier: domcontentloaded fires before React
+   * mounts and the Zustand store hydrates, so a one-shot read of LED/unit state
+   * immediately after reload() would race the first render. The reloaded URL
+   * keeps bootMessageMode=skip, so boot settles to an idle readout of 0 at the
+   * mock's origin; waiting for that closes the race for every caller (LED
+   * classes are committed in the same render that shows the numeric value).
    */
   async reload() {
     await this.page.reload();
     await this.page.waitForLoadState('domcontentloaded');
+    await this.waitForReady('idle');
   }
 
   /**

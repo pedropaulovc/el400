@@ -17,8 +17,10 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
   async function enterDiagnostics(dro: import('../helpers/dro-page').DROPage) {
     await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
     await dro.goto({ skipBootMessage: false });
-    // Version message must be on screen before ▲ enters diagnostics.
-    await dro.waitForAxisPureTextValue('X', 'EL400');
+    // The version-message screen must be committed before ▲ enters diagnostics.
+    // Await the state machine reaching boot-show-message (deterministic, frozen-clock
+    // safe) rather than polling the 'EL400' glyph behind a load-sensitive timeout.
+    await dro.waitForReady('boot-show-message');
     await dro.key8.click();
   }
 
