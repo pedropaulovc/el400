@@ -1,0 +1,183 @@
+[
+  {
+    "kind": "step",
+    "msg": "US-011 setup: boot (?source=debug), program steps 1 (X10 Y20 Z5) and 2 (X30 Y0 Z0)"
+  },
+  {
+    "kind": "note",
+    "msg": "step 1 programmed X10 Y20 Z5",
+    "display": {
+      "X": "StEP",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "step 2 programmed X30 Y0 Z0",
+    "display": {
+      "X": "StEP",
+      "Y": "2.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "01-after-programming.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.1: SDM → navigate to rUn → ENT"
+  },
+  {
+    "kind": "note",
+    "msg": "SDM menu at rUn",
+    "display": {
+      "X": "rUn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-sdm-menu-run.png",
+    "display": {
+      "X": "rUn",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 11.2: run step-select prompt (rUn / 1)",
+    "display": {
+      "X": "rUn",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-run-step-select.png",
+    "display": {
+      "X": "rUn",
+      "Y": "1.0000",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.3: ENT → distance-to-go for step 1 (target X10 Y20 Z5 minus live pos)"
+  },
+  {
+    "kind": "note",
+    "msg": "DTG for step 1 (machine at origin)",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-run-dtg-step1.png",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.5: confirm the SDM LED glows during Run"
+  },
+  {
+    "kind": "note",
+    "msg": "SDM LED on during Run = true",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "05-run-sdm-led.png",
+    "display": {
+      "X": "10.0000",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.3 (live): jog X toward the target; distance-to-go shrinks"
+  },
+  {
+    "kind": "note",
+    "msg": "jogged X +5mm toward target; DTG X decreased",
+    "display": {
+      "X": "9.8031",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-run-dtg-after-jog.png",
+    "display": {
+      "X": "9.8031",
+      "Y": "20.0000",
+      "Z": "5.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.4: 6► advances to step 2 (target X30 Y0 Z0)"
+  },
+  {
+    "kind": "note",
+    "msg": "advanced to step 2; DTG recomputed",
+    "display": {
+      "X": "29.8031",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-run-dtg-step2.png",
+    "display": {
+      "X": "29.8031",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 11.6: C exits Run mode"
+  },
+  {
+    "kind": "note",
+    "msg": "exited to idle",
+    "display": {
+      "X": "0.1969",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-exited-idle.png",
+    "display": {
+      "X": "0.1969",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  }
+]

@@ -1,0 +1,395 @@
+[
+  {
+    "kind": "step",
+    "msg": "AC 32.1: configure probe DRO type in setup — dro t (Transmit) / dro F (Freeze)"
+  },
+  {
+    "kind": "note",
+    "msg": "probe DRO-type parameter (default dro t = Transmit)",
+    "display": {
+      "X": "dro t",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "01-setup-probe-type-transmit.png",
+    "display": {
+      "X": "dro t",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "cycled to dro F (Freeze)",
+    "display": {
+      "X": "dro F",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "02-setup-probe-type-freeze.png",
+    "display": {
+      "X": "dro F",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "back to dro t (Transmit) for the probe-function demos",
+    "display": {
+      "X": "dro t",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 32.4: Probe Edge — Fn→ProbE→ENT→Prob Ed→ENT→select X→jog→contact sets datum to 0"
+  },
+  {
+    "kind": "note",
+    "msg": "probe sub-function menu: Prob Ed (Edge)",
+    "display": {
+      "X": "Prob Ed",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "03-edge-menu.png",
+    "display": {
+      "X": "Prob Ed",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "armed on X, jogged to the edge (live position)",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "04-edge-waiting.png",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "AC 32.8: probe contact captured, prb LED on=true; X datum set to 0 at edge",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "05-edge-triggered.png",
+    "display": {
+      "X": "0.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 32.5: Probe Midpoint — two contacts; datum set at the midpoint between them"
+  },
+  {
+    "kind": "note",
+    "msg": "probe sub-function: Prob nd (Midpoint)",
+    "display": {
+      "X": "Prob nd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "06-midpoint-menu.png",
+    "display": {
+      "X": "Prob nd",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "at edge 1",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "07-midpoint-edge1.png",
+    "display": {
+      "X": "0.0787",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "jogged to edge 2",
+    "display": {
+      "X": "0.3937",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "two edges captured → X reads distance to the midpoint",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "08-midpoint-result.png",
+    "display": {
+      "X": "0.1575",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 32.6: Inside — enter probe tip diameter, two inner walls → inside width = span + dia"
+  },
+  {
+    "kind": "note",
+    "msg": "probe sub-function: inS dE (Inside)",
+    "display": {
+      "X": "inS dE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "09-inside-menu.png",
+    "display": {
+      "X": "inS dE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe tip-diameter prompt (Prb d A)",
+    "display": {
+      "X": "Prb d A",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "10-inside-diameter-prompt.png",
+    "display": {
+      "X": "Prb d A",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "armed on X for inside measurement",
+    "display": {
+      "X": "4.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "11-inside-wall1.png",
+    "display": {
+      "X": "4.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "two inner walls captured → inside width = span + 6mm tip",
+    "display": {
+      "X": "16.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "12-inside-result.png",
+    "display": {
+      "X": "16.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 32.6: Outside — two outer faces → outside width = span − dia"
+  },
+  {
+    "kind": "note",
+    "msg": "probe sub-function: oUtS dE (Outside)",
+    "display": {
+      "X": "oUtS dE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "13-outside-menu.png",
+    "display": {
+      "X": "oUtS dE",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "14-outside-face1.png",
+    "display": {
+      "X": "14.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "two outer faces captured → outside width = span − 6mm tip",
+    "display": {
+      "X": "4.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "15-outside-result.png",
+    "display": {
+      "X": "4.0000",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "step",
+    "msg": "AC 32.3: Freeze mode — set dro F, then a probe contact FREEZES the readout"
+  },
+  {
+    "kind": "note",
+    "msg": "configured dro F (Freeze)",
+    "display": {
+      "X": "dro F",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "16-freeze-configured.png",
+    "display": {
+      "X": "dro F",
+      "Y": "",
+      "Z": ""
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "idle readout before freeze: X='29.0000'",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "17-freeze-before.png",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe contact: display frozen at X='29.0000'",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "18-freeze-on-contact.png",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "kept jogging while held: X='29.0000' (unchanged ⇒ frozen)",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "19-freeze-held-while-moving.png",
+    "display": {
+      "X": "29.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "note",
+    "msg": "probe released: counting resumes, X='34.0000'",
+    "display": {
+      "X": "34.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  },
+  {
+    "kind": "shot",
+    "file": "20-freeze-released-resumes.png",
+    "display": {
+      "X": "34.0000",
+      "Y": "0.0000",
+      "Z": "0.0000"
+    }
+  }
+]
