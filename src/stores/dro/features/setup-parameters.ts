@@ -159,6 +159,9 @@ export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 /** The global encoder-fail warning parameter id (US-042) -- its draft key. */
 export const ENF_ID = 'enf';
 
+/** The global keypad-beep parameter id (US-025) -- its draft key. */
+export const BEEP_ID = 'beep';
+
 /** The terminal `End` parameter id -- selecting it with `ent` exits setup. */
 export const SETUP_END_ID = 'end';
 
@@ -216,6 +219,28 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
+    },
+  },
+  {
+    id: BEEP_ID,
+    label: 'bEEP on',
+    scope: 'global',
+    // Default-first ordering: 'on' is the default (AC25.2), so it seeds first.
+    // The manual section 6.2 table omits a buzzer row, so the on/off glyphs
+    // follow the device's sibling on/off parameters (`EnF on`/`EnF oFF`,
+    // `LoC on`/`LoC off`): `bEEP on` / `bEEP oFF`.
+    choices: [
+      { value: 'on', label: 'bEEP on' },
+      { value: 'off', label: 'bEEP oFF' },
+    ],
+    // Keypad beep (US-025). Reads its OWN nvMem flag, decoupled from
+    // encoderFailWarning (US-042's field).
+    readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
+    // Commit-on-change (US-025): persist immediately so key presses fall silent
+    // (or resume beeping) the moment the operator cycles the choice -- the gate
+    // in playClickSound reads beepEnabled live on every press (AC25.3, AC25.4).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ beepEnabled: value === 'on' });
     },
   },
   {
