@@ -155,7 +155,7 @@ This directory contains the merged and deduplicated user stories from:
 | US-034 | Forced Colors Mode (High Contrast) Support | P0 | Accessibility requirements | [US-034-forced-colors-mode.md](08-accessibility/US-034-forced-colors-mode.md) |
 | US-037 | Keyboard Navigation | P1 | Accessibility requirements | [US-037-keyboard-navigation.md](08-accessibility/US-037-keyboard-navigation.md) |
 | US-038 | Keyboard Shortcuts | P2 | Accessibility / power-user features | [US-038-keyboard-shortcuts.md](08-accessibility/US-038-keyboard-shortcuts.md) |
-| US-048 | Screen Reader Support | P0 | Accessibility requirements | [US-048-screen-reader-support.md](08-accessibility/US-048-screen-reader-support.md) |
+| US-048 | Screen Reader Support | P1 | Accessibility requirements | [US-048-screen-reader-support.md](08-accessibility/US-048-screen-reader-support.md) |
 
 **Summary:** Accessibility features for users with visual impairments and assistive technologies.
 
@@ -176,8 +176,8 @@ This directory contains the merged and deduplicated user stories from:
 
 | Priority | Description | Count | Stories |
 |----------|-------------|-------|---------|
-| **P0** | Must-have foundation | 4 | US-001, US-002, US-034, US-048 |
-| **P1** | Essential DRO features | 7 | US-003, US-004, US-005, US-006, US-035, US-036, US-037 |
+| **P0** | Must-have foundation | 3 | US-001, US-002, US-034 |
+| **P1** | Essential DRO features | 8 | US-003, US-004, US-005, US-006, US-035, US-036, US-037, US-048 |
 | **P2** | Advanced navigation | 7 | US-007, US-008, US-009, US-010, US-011, US-012, US-038 |
 | **P3** | Value-added calculations | 3 | US-013, US-014, US-015 |
 | **P4** | Specialized milling/auxiliary | 9 | US-016, US-017, US-018, US-019, US-020, US-029, US-030, US-032, US-045 |
@@ -187,15 +187,14 @@ This directory contains the merged and deduplicated user stories from:
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (P0) - 4 stories
+### Phase 1: Foundation (P0) - 3 stories
 **Goal:** Basic DRO display, position tracking, and accessibility
 
 - [ ] US-001: Power-up display
 - [ ] US-002: Sign convention
 - [ ] US-034: Forced Colors Mode (High Contrast) support
-- [x] US-048: Screen reader support (ARIA labels, live regions, decorative chrome hidden)
 
-**Deliverable:** DRO powers up, displays axis positions correctly, and is fully accessible in high contrast mode and to screen readers
+**Deliverable:** DRO powers up, displays axis positions correctly, and is fully accessible in high contrast mode
 
 ---
 
