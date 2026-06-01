@@ -53,3 +53,33 @@ export const playClickSound = async (): Promise<void> => {
   gainNode.connect(audioContext.destination);
   source.start(0);
 };
+
+/**
+ * Play the Near-Zero Warning beep (US-024, AC24.8). Synthesised as a short
+ * sine tone so it is DISTINCT from the sampled key-press click, signalling the
+ * operator that an axis is within BP DIST of the target. Called repeatedly by
+ * the warning hook while the approach condition holds, producing the manual's
+ * "continuous beeping near zero" (AC24.3) without overlapping notes.
+ */
+export const playZeroApproachBeep = async (): Promise<void> => {
+  audioContext ??= new AudioContext();
+
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+
+  const now = audioContext.currentTime;
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  // A higher, pure tone clearly differentiated from the key click (AC24.8).
+  oscillator.type = 'sine';
+  oscillator.frequency.value = 1760; // A6
+  // Short envelope to avoid clicks at start/stop.
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+  gainNode.gain.linearRampToValueAtTime(0, now + 0.12);
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.13);
+};
