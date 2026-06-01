@@ -97,6 +97,16 @@ export {
 } from './features/oem-mode';
 export { isOemActive } from './droStateMachine';
 
+// Re-export Restore Defaults feature (US-028): `rSt oEm` reset + `IN ProG` dwell
+export {
+  useRestoreProgress,
+  restoreDefaults,
+  RESTORE_DEFAULTS_ID,
+  RESTORE_DEFAULTS_LABEL,
+  RESTORE_IN_PROGRESS_TEXT,
+  RESTORE_DURATION_MS,
+} from './features/restore-defaults';
+
 // Re-export reference / datum recall feature (US-012)
 export {
   useReferenceMarkTestHook,

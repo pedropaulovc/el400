@@ -9,6 +9,7 @@ import {
   SETUP_END_ID,
   SAVE_CHANGES_ID,
   OEM_MODE_ID,
+  RESTORE_DEFAULTS_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
@@ -57,11 +58,25 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(SETUP_PARAMETERS[SETUP_PARAMETER_COUNT - 1]!.id).toBe(SETUP_END_ID);
   });
 
+  it('exposes the rSt oEm (Restore Defaults) terminal item with no choices (US-028 AC28.3)', () => {
+    const restore = SETUP_PARAMETERS.find((p) => p.id === RESTORE_DEFAULTS_ID)!;
+    expect(restore).toBeDefined();
+    expect(restore.label).toBe('rSt oEm');
+    expect(restore.choices).toHaveLength(0);
+    // The End sentinel stays LAST even after appending the restore row.
+    expect(SETUP_PARAMETERS[SETUP_PARAMETER_COUNT - 1]!.id).toBe(SETUP_END_ID);
+  });
+
   it('non-terminal parameters have at least two choices', () => {
-    // Terminal action items (End, SAV CHG, OEM Mode) carry no choices — they are
-    // acted on with ENT rather than cycled. Every other (choice-bearing)
-    // parameter offers at least two options to cycle between.
-    const terminalIds = new Set<string>([SETUP_END_ID, SAVE_CHANGES_ID, OEM_MODE_ID]);
+    // Terminal action items (End, SAV CHG, OEM Mode, Restore Defaults) carry no
+    // choices — they are acted on with ENT rather than cycled. Every other
+    // (choice-bearing) parameter offers at least two options to cycle between.
+    const terminalIds = new Set<string>([
+      SETUP_END_ID,
+      SAVE_CHANGES_ID,
+      OEM_MODE_ID,
+      RESTORE_DEFAULTS_ID,
+    ]);
     for (const p of SETUP_PARAMETERS) {
       if (terminalIds.has(p.id)) continue;
       expect(p.choices.length).toBeGreaterThanOrEqual(2);
