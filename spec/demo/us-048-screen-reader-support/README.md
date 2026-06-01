@@ -4,32 +4,41 @@ Manual, real-user demonstration of the EL400 DRO simulator's screen-reader /
 assistive-technology (AT) experience. Driven through a real Chromium browser
 (Playwright in manual mode) — **no test suites, no mocking, no forced state.**
 Every state change below was produced by clicking the actual on-screen controls
-or pressing keys, and every assertion was read back from the **live browser
-accessibility tree** and computed ARIA attributes — i.e. the exact surface a
+or pressing keys, and **every assertion is evidenced by a captured snapshot of
+the live accessibility tree / ARIA attributes** — i.e. the exact surface a
 screen reader consumes.
 
-- **App:** `npm run dev` → http://localhost:8080/ (Vite). Default manual mode for
-  the static tree; `?source=mock` used only to drive deterministic position values
-  through real keypad/zero actions.
+> **Evidence note (why no seven-segment screenshots):** AC 48.8 deliberately
+> marks the visual seven-segment panel `aria-hidden="true"` — it is *absent* from
+> the AT surface. A photo of that panel therefore proves nothing about what a
+> screen reader hears. So for the three dynamic criteria (48.3, 48.5, 48.6) the
+> evidence here is **AT-tree / DOM-attribute dumps captured after each real
+> action**, saved as their own `accessibility-tree-after-*.txt` files — read
+> those, not a panel image. The lone `03-full-app.png` is included only for
+> sighted orientation and is explicitly **not** AC evidence.
+
+- **App:** `npm run dev` → Vite (run on port 8090 here to avoid the test suite on the default port). `?source=mock` used only so positions are deterministic; all changes still come from real keypad/Zero/toggle clicks.
 - **Branch:** `feat/us-048-screen-reader-accessibility`
 - **Spec:** `project/user-stories/08-accessibility/US-048-screen-reader-support.md`
-- **Full captured a11y tree:** [`accessibility-tree.txt`](accessibility-tree.txt)
 
-The single most important artifact is the **rendered accessibility tree**
-([`accessibility-tree.txt`](accessibility-tree.txt)) — it is the literal,
-role-by-role view a screen reader navigates, and it confirms nearly every
-acceptance criterion at a glance.
+## Artifacts
+
+| File | Evidence for | What it shows |
+|------|--------------|---------------|
+| [`accessibility-tree.txt`](accessibility-tree.txt) | AC 48.1, 48.2, 48.4, 48.7, 48.8 | Full idle AT tree: names, directional keypad hints, fieldset groups, headings, brand logo present + decorative chrome absent. |
+| [`accessibility-tree-after-select-x.txt`](accessibility-tree-after-select-x.txt) | **AC 48.6** | After clicking *Select X axis*: `button "Select X axis" [pressed]`; aria-pressed readback X=true, Y=false, Z=false; momentary `btn-abs-inc` / `btn-toggle-unit` stay false. |
+| [`accessibility-tree-after-preset-5.txt`](accessibility-tree-after-preset-5.txt) | **AC 48.3** | After keypad `5`+Enter: the *Axis positions* table cell reads `row "X 5.0000"`; X cell DOM has `aria-live="polite"`, `aria-atomic="true"`. |
+| [`accessibility-tree-after-zero-x.txt`](accessibility-tree-after-zero-x.txt) | **AC 48.3** | After *Zero X axis*: the same live cell reads `row "X 0.0000"` — the value actually changed (5.0000 → 0.0000). |
+| [`accessibility-tree-after-absinc.txt`](accessibility-tree-after-absinc.txt) | **AC 48.5** | Before/after *Abs/Inc*: `[checked]` moves from `radio "abs"` to `radio "inc"`; the momentary button stays `aria-pressed=false`. |
+| `03-full-app.png` | (orientation only) | The visual panel, for sighted context. **Not AC evidence.** |
 
 ---
 
-## Step 1 — App at idle, accessibility tree captured
+## Step 1 — Static AT tree at idle (AC 48.1, 48.2, 48.4, 48.7, 48.8)
 
-After boot completes (`data-dro-state="idle"`), the page renders. The full
-ARIA tree was captured from the live DOM via `body.ariaSnapshot()`.
-
-![App at idle](01-app-initial.png)
-
-The captured tree (excerpt — see [`accessibility-tree.txt`](accessibility-tree.txt) for all 89 lines):
+After boot (`data-dro-state="idle"`), the full ARIA tree was captured from the
+live DOM via `body.ariaSnapshot()` — see [`accessibility-tree.txt`](accessibility-tree.txt).
+Excerpt:
 
 ```
 - main:
@@ -37,165 +46,126 @@ The captured tree (excerpt — see [`accessibility-tree.txt`](accessibility-tree
   - img "Electronica Logo"
   - heading "Axis display" [level=2]
   - table "Axis positions":
-    - rowgroup:
-      - row "X 0.0000": ...
-      - row "Y 0.0000": ...
-      - row "Z 0.0000": ...
-  - group "Positioning mode":
-    - radio "abs" [checked] [disabled]
-    - radio "inc" [disabled]
-  - group "Measurement units":
-    - radio "inch" [checked] [disabled]
-    - radio "mm" [disabled]
-  - group "Status":
-    - radio "fn" [disabled] / "sdm" / "prb" / "slp"
+      - row "X 0.0000" / "Y 0.0000" / "Z 0.0000"
+  - group "Positioning mode":  radio "abs" [checked] [disabled] / radio "inc" [disabled]
+  - group "Measurement units": radio "inch" [checked] [disabled] / radio "mm" [disabled]
+  - group "Status":            radio "fn"/"sdm"/"prb"/"slp" [disabled]
   - heading "Axis selection" [level=2]
   - button "Select X axis" / "Zero X axis" / "Select Y axis" / ...
   - heading "Numeric keypad" [level=2]
   - button "1" / "2 (Down)" / "3" / "4 (Left)" / "5" / "6 (Right)" /
            "7" / "8 (Up)" / "9" / "0" / "Toggle sign" / "." / "Clear" / "Enter"
-  - heading "Primary functions" [level=2]
-  - button "Settings" / "Abs/Inc" / "Toggle units" / "Reference" / "Distance to Go"
-  - heading "Secondary functions" [level=2]
-  - button "Bolt hole" / "Arc contour" / "Angle hole" / "Grid hole" /
-           "Calculator" / "Half" / "SDM" / "Function"
+  - heading "Primary functions" [level=2]   ...buttons "Settings"/"Abs/Inc"/...
+  - heading "Secondary functions" [level=2] ...buttons "Bolt hole"/"Calculator"/...
 ```
 
-This one capture already satisfies, by inspection:
-
-| AC | What the tree proves |
-|----|----------------------|
-| **48.1** | Every control has a descriptive accessible NAME ("Select X axis", "Zero X axis", "Settings", "Bolt hole", …) — not an icon glyph. |
-| **48.2** | Directional keypad keys announce direction: `"2 (Down)"`, `"4 (Left)"`, `"6 (Right)"`, `"8 (Up)"`; plain digits announce the bare digit (`"1"`, `"5"`, `"9"`). |
-| **48.3** | `table "Axis positions"` with X/Y/Z value cells exposed to AT. |
-| **48.4** | Three `group`s with legends `"Positioning mode"`, `"Measurement units"`, `"Status"`. |
-| **48.5** | LEDs are `[disabled]` radios; the active option carries `[checked]` (abs, inch). |
-| **48.7** | Five `[level=2]` headings: "Axis display", "Axis selection", "Numeric keypad", "Primary functions", "Secondary functions". |
-| **48.8 (+)** | `img "Electronica Logo"` is present and announced. |
+| AC | Proof in the tree |
+|----|-------------------|
+| **48.1** | Every control has a descriptive accessible NAME, not an icon glyph. |
+| **48.2** | Directional keypad keys announce direction: `"2 (Down)"`, `"4 (Left)"`, `"6 (Right)"`, `"8 (Up)"`; plain digits announce the bare digit. |
+| **48.4** | Three `group`s: `"Positioning mode"`, `"Measurement units"`, `"Status"`. |
+| **48.7** | Five `[level=2]` headings. |
+| **48.8** | `img "Electronica Logo"` announced; PowerLED / HousingEdge / seven-segment chrome absent (negative check below). |
 
 ---
 
-## Step 2 — Keyboard navigation: visible focus + accessible name on every control
+## Step 2 — AC 48.6: axis selection flips `aria-pressed`
+**Evidence:** [`accessibility-tree-after-select-x.txt`](accessibility-tree-after-select-x.txt)
 
-Pressing **Tab** from the top of the document walks the controls in a logical
-order. Each focused element exposes an accessible name and shows a visible focus
-ring (measured `outline: solid 2px` + box-shadow ring via computed style).
-
-Tab order from document top (first 8 stops):
+Real action: `getByRole('button', { name: 'Select X axis' }).click()`. Captured AT tree + attribute readback:
 
 ```
-1. Axis positions readout region
-2. button "Select X axis"     (outline 2px)
-3. button "Zero X axis"       (outline 2px)
-4. button "Select Y axis"     (outline 2px)
-5. button "Zero Y axis"       (outline 2px)
-6. button "Select Z axis"     (outline 2px)
-7. button "Zero Z axis"       (outline 2px)
-8. button "1"                 (outline 2px)
+- group "Axis selection and zeroing":
+  - button "Select X axis" [pressed]
+  - button "Zero X axis"
+  - button "Select Y axis"
+  ...
+
+  Select X axis    testid=axis-select-x    aria-pressed=true
+  Select Y axis    testid=axis-select-y    aria-pressed=false
+  Select Z axis    testid=axis-select-z    aria-pressed=false
+  Abs/Inc          testid=btn-abs-inc      aria-pressed=false
+  Toggle units     testid=btn-toggle-unit  aria-pressed=false
 ```
 
-"Select X axis" focused via keyboard — note the focus indicator on the button:
-
-![Keyboard focus on Select X axis](02-keyboard-focus-select-x.png)
-
-Focus-ring close-up (the focused button shows the dark inset focus ring inside
-its yellow border):
-
-![Focus ring close-up](02b-focus-ring-closeup.png)
-
-Computed style while focused: `outlineWidth: 2px`, `boxShadow: <ring present>`,
-accessible name `"Select X axis"`. A keyboard-only user always sees where they are.
+The selected axis reports `[pressed]` / `aria-pressed="true"`; the other selects
+stay `false`. The momentary `Abs/Inc` and `Toggle units` buttons correctly stay
+`aria-pressed="false"` — the spec carve-out (their state is conveyed by the LED
+radio group, not a pressed toggle). A screen reader announces "Select X axis, pressed".
 
 ---
 
-## Step 3 — Full panel reference
+## Step 3 — AC 48.3: the live region value actually changes
+**Evidence:** [`accessibility-tree-after-preset-5.txt`](accessibility-tree-after-preset-5.txt) and [`accessibility-tree-after-zero-x.txt`](accessibility-tree-after-zero-x.txt)
 
-The full simulator panel for orientation. The decorative red power LED (lower
-left) and the `electronica` brand logo (top right) are both visible to sighted
-users; Steps 5–6 show how AT treats each differently.
-
-![Full app](03-full-app.png)
-
----
-
-## Step 4 — Real state change #1: axis selection flips `aria-pressed` (AC 48.6)
-
-Clicking **"Select X axis"** (via its accessible role/name — the same path a
-screen reader's "activate" uses):
-
-| Control | `aria-pressed` before | `aria-pressed` after click |
-|---------|----------------------|----------------------------|
-| Select X axis | `false` | **`true`** |
-| Select Y axis | `false` | `false` |
-
-![Select X pressed](04-select-x-pressed.png)
-
-The selected axis reports `aria-pressed="true"`; the others stay `false`. A
-screen reader announces "Select X axis, pressed".
-
----
-
-## Step 5 — Real state change #2: live region updates (AC 48.3)
-
-With X selected, I typed **5** on the keypad and pressed **Enter** (real clicks
-on the accessible-named keypad buttons). The X value cell —
-`aria-live="polite" aria-atomic="true"` — re-announces:
-
-| Cell | Before | After keypad `5` + Enter | After "Zero X axis" |
-|------|--------|--------------------------|---------------------|
-| `axis-value-x` | `0.0000` | **`5.0000`** | **`0.0000`** |
-
-`aria-live="polite"` and `aria-atomic="true"` confirmed on the cell throughout.
-
-![Live region shows X = 5.0000](05-live-region-preset-5.png)
-
-Then clicking **"Zero X axis"** drove the same live cell back to `0.0000` — the
-canonical AC 48.3 path (a position change re-announces only that axis). Two
-independent real-UI actions both moved the live region.
-
----
-
-## Step 6 — Real state change #3: checked radio MOVES on mode toggle (AC 48.5)
-
-Clicking the momentary **"Abs/Inc"** button:
-
-| Radio | `checked` before | `checked` after toggle |
-|-------|------------------|------------------------|
-| `led-abs` | `true` | `false` |
-| `led-inc` | `false` | **`true`** |
-| **button** `Abs/Inc` `aria-pressed` | `false` | `false` (unchanged) |
-
-![ABS/INC toggled — checked moved to inc](06-absinc-toggled.png)
-
-Post-toggle "Positioning mode" group tree:
+With X selected, I typed **5** on the keypad and pressed **Enter** (real button
+clicks). Captured from the *Axis positions* table — the AT surface, not the panel:
 
 ```
+- table "Axis positions":
+    - row "X 5.0000":  rowheader "X" / cell "5.0000"
+    - row "Y 0.0000"
+    - row "Z 0.0000"
+
+  X value cell (testid=axis-value-x): <td> text='5.0000'
+  aria-live=polite   aria-atomic=true
+```
+
+Then I clicked **Zero X axis**. The same cell re-announces back to zero:
+
+```
+- table "Axis positions":
+    - row "X 0.0000":  rowheader "X" / cell "0.0000"
+
+  X value cell (testid=axis-value-x): <td> text='0.0000'
+  aria-live=polite   aria-atomic=true
+```
+
+Two independent real-UI actions each moved the `aria-live="polite"
+aria-atomic="true"` cell (0.0000 → 5.0000 → 0.0000), proving the live region
+re-announces position changes to assistive tech.
+
+---
+
+## Step 4 — AC 48.5: the checked radio MOVES on mode toggle
+**Evidence:** [`accessibility-tree-after-absinc.txt`](accessibility-tree-after-absinc.txt)
+
+Real action: click the momentary **Abs/Inc** button. Captured *Positioning mode*
+group before and after:
+
+```
+BEFORE:
 - group "Positioning mode":
-  - radio "abs" [disabled]
-  - radio "inc" [checked] [disabled]
+    - radio "abs" [checked] [disabled]
+    - radio "inc" [disabled]
+  radio .checked DOM: abs=True  inc=False
+
+AFTER:
+- group "Positioning mode":
+    - radio "abs" [disabled]
+    - radio "inc" [checked] [disabled]
+  radio .checked DOM: abs=False  inc=True
+  'Abs/Inc' button aria-pressed: false
 ```
 
-The **checked state moved abs → inc**, so AT reports the new active mode within
-the group. Per spec, the Abs/Inc button is **momentary** and stays
-`aria-pressed="false"` — its state is conveyed by the LED radio group, *not* by a
-pressed toggle. (This is the correct, deliberate design; we did not claim a
-pressed-toggle there.)
+The `[checked]` state **moved** abs → inc, so AT reports the newly-active
+positioning mode within the group. The momentary `Abs/Inc` button stays
+`aria-pressed="false"` (spec carve-out).
 
 ---
 
-## Step 7 — Negative check: decorative chrome is absent from the a11y tree (AC 48.8)
+## Step 5 — AC 48.8 negative check: decorative chrome absent, brand logo announced
 
-The decorative power LED and housing bezels must be **invisible** to AT, while
-the brand logo stays announced. Verified against the live DOM and the rendered tree:
+Verified against the live DOM and the rendered tree:
 
-| Element | In DOM? | Inside an `aria-hidden` subtree? | In the a11y tree? |
-|---------|---------|----------------------------------|-------------------|
-| PowerLED glow (`radial-gradient` lamp) | yes | **yes** (`aria-hidden="true"` ancestor) | **no** |
-| HousingEdge bezels | yes | **yes** (`aria-hidden="true"`) | **no** |
-| Seven-segment display X/Y/Z (`axis-display-*`) | yes | **yes** (`aria-hidden="true"`) | **no** (would duplicate the live value) |
+| Element | In DOM? | Inside `aria-hidden`? | In the a11y tree? |
+|---------|---------|----------------------|-------------------|
+| PowerLED glow (`radial-gradient` lamp) | yes | **yes** | **no** |
+| HousingEdge bezels | yes | **yes** | **no** |
+| Seven-segment display X/Y/Z (`axis-display-*`) | yes | **yes** | **no** (would duplicate the live value) |
 | **BrandLogo** `img alt="Electronica Logo"` | yes | **no** | **yes — announced** |
 
-Definitive grep of the captured tree for any decorative leak:
+Definitive grep of the captured idle tree for any decorative leak:
 
 ```
 $ grep -iE "power|bezel|housing|glow|lamp|seven|segment" accessibility-tree.txt
@@ -203,29 +173,27 @@ NONE — decorative chrome is correctly hidden
 ```
 
 So a screen-reader user hears the brand ("Electronica Logo") but never the
-decorative lamp, bezels, or the visual seven-segment glyphs that would otherwise
-double-announce the position already provided by the live region.
+decorative lamp, bezels, or the visual seven-segment glyphs (which would
+double-announce the position already provided by the live region).
 
 ---
 
-## Result
+## Result — all 8 ACs evidenced from the AT surface
 
-All eight acceptance criteria (AC 48.1–48.8) were demonstrated through real
-browser interaction and confirmed against the live accessibility tree:
+| AC | Evidence file | Verdict |
+|----|---------------|---------|
+| 48.1 names | accessibility-tree.txt | PASS |
+| 48.2 directional keypad hints | accessibility-tree.txt | PASS |
+| **48.3 live-region updates** | accessibility-tree-after-preset-5.txt + after-zero-x.txt | PASS |
+| 48.4 fieldset/legend groups | accessibility-tree.txt | PASS |
+| **48.5 checked radio moves** | accessibility-tree-after-absinc.txt | PASS |
+| **48.6 aria-pressed flips** | accessibility-tree-after-select-x.txt | PASS |
+| 48.7 section headings | accessibility-tree.txt | PASS |
+| 48.8 decorative hidden / brand kept | accessibility-tree.txt + DOM negative check | PASS |
 
-- **Names** — every control has a sensible sr-only accessible name (incl.
-  directional keypad hints). *AC 48.1, 48.2*
-- **Live readout** — `table "Axis positions"` with `aria-live="polite"`
-  `aria-atomic="true"` cells that update on real position changes (keypad preset
-  and Zero). *AC 48.3*
-- **Grouping** — three fieldset/legend groups; active option is a `[checked]`
-  disabled radio that **moves** on mode toggle. *AC 48.4, 48.5*
-- **Pressed state** — axis-select buttons flip `aria-pressed` on selection;
-  momentary mode buttons correctly do not. *AC 48.6*
-- **Headings** — five `[level=2]` section headings for landmark navigation. *AC 48.7*
-- **Decorative hidden / brand kept** — PowerLED, HousingEdge bezels, and the
-  seven-segment display are absent from the a11y tree; `img "Electronica Logo"`
-  remains announced. *AC 48.8*
+Focus-visibility (visible focus ring) is **not** part of US-048's acceptance
+criteria — it belongs to US-037 (Keyboard Navigation) — so it is intentionally
+omitted from this demo's claims.
 
 No "no user-reachable trigger" gaps: every state change was reachable through
 ordinary on-screen controls.

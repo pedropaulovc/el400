@@ -1,0 +1,30 @@
+=== AC 48.3 - Live-region readback AFTER real keypad entry '5' + Enter (X selected) ===
+Source: live 'Axis positions' table ARIA tree + the X value CELL's DOM attributes.
+This is the assistive-tech surface (the sr-only table), NOT the aria-hidden seven-segment panel.
+Actions: click '5' on keypad, then click 'Enter'.
+
+--- ARIA snapshot: table 'Axis positions' ---
+- table "Axis positions":
+  - rowgroup:
+    - row "Axis Value":
+      - columnheader "Axis"
+      - columnheader "Value"
+  - rowgroup:
+    - row "X 5.0000":
+      - rowheader "X"
+      - cell "5.0000"
+    - row "Y 0.0000":
+      - rowheader "Y"
+      - cell "0.0000"
+    - row "Z 0.0000":
+      - rowheader "Z"
+      - cell "0.0000"
+
+--- X value cell DOM readback (testid=axis-value-x) ---
+  element:     <td>
+  text:        '5.0000'
+  aria-live:   polite
+  aria-atomic: true
+
+Result: the X live-region cell now reads '5.0000' with aria-live=polite + aria-atomic=true,
+so a screen reader re-announces the X axis as 5.0000. Compare with accessibility-tree-after-zero-x.txt.

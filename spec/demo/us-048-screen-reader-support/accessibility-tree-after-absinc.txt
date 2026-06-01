@@ -1,0 +1,27 @@
+=== AC 48.5 - Positioning-mode group readback BEFORE/AFTER real click on 'Abs/Inc' ===
+Source: live ARIA tree of the 'Positioning mode' fieldset/group + radio .checked DOM state.
+Action: click the momentary 'Abs/Inc' button.
+
+--- BEFORE toggle: ARIA snapshot of group 'Positioning mode' ---
+- group "Positioning mode":
+  - text: Positioning mode
+  - radio "abs" [checked] [disabled]
+  - text: abs
+  - radio "inc" [disabled]
+  - text: inc
+  radio .checked DOM: abs=True  inc=False
+
+--- AFTER toggle: ARIA snapshot of group 'Positioning mode' ---
+- group "Positioning mode":
+  - text: Positioning mode
+  - radio "abs" [disabled]
+  - text: abs
+  - radio "inc" [checked] [disabled]
+  - text: inc
+  radio .checked DOM: abs=False  inc=True
+  'Abs/Inc' button aria-pressed: false
+
+Result: the [checked] state MOVED from the 'abs' radio to the 'inc' radio
+(abs: checked->unchecked, inc: unchecked->checked), so assistive tech reports the
+newly-active positioning mode within the group. The momentary 'Abs/Inc' button itself
+stays aria-pressed=false (state lives in the LED radio group, not a pressed toggle).
