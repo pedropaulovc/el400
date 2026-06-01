@@ -9,6 +9,7 @@ import {
   SETUP_END_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
+  MEASUREMENT_MODE_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
   getParameterAt,
@@ -143,6 +144,29 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(taper.commit).toBeUndefined();
   });
 
+  it('exposes a per-axis measurement-mode parameter with rAd / diA choices (AC 41.1, 41.2)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    expect(mode).toBeDefined();
+    expect(mode.scope).toBe('per-axis');
+    expect(mode.choices.map((c) => c.value)).toEqual(['radius', 'diameter']);
+    expect(mode.choices.map((c) => c.label)).toEqual(['rAd', 'diA']);
+    // radius is listed first so it is the default landing choice (AC 41.3).
+    expect(mode.choices[0]!.value).toBe('radius');
+    expect(typeof mode.commit).toBe('function');
+  });
+
+  it('measurement-mode seeds its current value from nvMem.measurementMode per axis (AC 41.5)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      measurementMode: { X: 'radius' as const, Y: 'diameter' as const, Z: 'radius' as const },
+    };
+    expect(mode.readValue({ nvMem, axis: 'X' })).toBe('radius');
+    expect(mode.readValue({ nvMem, axis: 'Y' })).toBe('diameter');
+    // SELECT prompt (axis null) falls back to X.
+    expect(mode.readValue({ nvMem, axis: null })).toBe('radius');
+  });
+
   it('exposes a per-axis counting-mode parameter with linear / angular choices (US-040)', () => {
     const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
     expect(counting).toBeDefined();
@@ -195,6 +219,21 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     zDepth.commit!({ nvMem, axis: null }, 'depth-positive');
     expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
+  });
+
+  it('measurement-mode.commit persists the chosen value to the selected axis only (AC 41.5)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    mode.commit!({ nvMem, axis: 'Y' }, 'diameter');
+    const after = useSettingsStore.getState().nvMem.measurementMode;
+    expect(after).toEqual({ X: 'radius', Y: 'diameter', Z: 'radius' });
+  });
+
+  it('measurement-mode.commit falls back to X on the SELECT prompt (axis null)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    mode.commit!({ nvMem, axis: null }, 'diameter');
+    expect(useSettingsStore.getState().nvMem.measurementMode.X).toBe('diameter');
   });
 
   it('counting-mode.commit persists the chosen mode to the selected axis only (US-040)', () => {

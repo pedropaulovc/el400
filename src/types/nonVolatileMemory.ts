@@ -91,6 +91,26 @@ export interface CountingModeByAxis {
 export type ZDepthSense = 'depth-negative' | 'depth-positive';
 
 /**
+ * Per-axis radius/diameter measurement mode (manual section 6.2 `rAd` / `diA`,
+ * US-041). `'radius'` (radial) is the mill default: the display equals actual
+ * axis movement 1:1. `'diameter'` (diametric) is the lathe convention: the
+ * displayed value is doubled, so a 1.000 cut depth shows 2.000 (the turned
+ * diameter). It is a display-only ×2 scale applied in `displayComputation`; it
+ * never mutates stored machine position, offsets, or macro coordinate math.
+ * Setup-menu labels map `'radius'→rAd` and `'diameter'→diA`. Per note *6 it is
+ * configurable per individual axis (AC 41.5) and is meaningful only while the
+ * axis counting mode is Linear (AC 41.7).
+ */
+export type MeasurementMode = 'radius' | 'diameter';
+
+/** Per-axis measurement mode (radius vs diameter). */
+export interface MeasurementModeByAxis {
+  X: MeasurementMode;
+  Y: MeasurementMode;
+  Z: MeasurementMode;
+}
+
+/**
  * Touch-probe DRO type (manual §10.1.1, setup `dro t` / `dro F`).
  * - 'transmit' (`dro t`): the readout keeps counting on a probe trigger and
  *   flashes the probe message; used with the datum/measurement functions.
@@ -121,6 +141,8 @@ export interface NonVolatileMemory {
   axisDirection: AxisDirectionByAxis;
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
+  /** Per-axis radius/diameter display mode - rAd/diA parameter (US-041, manual section 6.2) */
+  measurementMode: MeasurementModeByAxis;
   /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
   countingMode: CountingModeByAxis;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
@@ -139,6 +161,13 @@ export const DEFAULT_SCALE_RESOLUTION: ScaleResolutionByAxis = {
   X: '5',
   Y: '5',
   Z: '5',
+};
+
+/** Mill default measurement mode: radius (1:1) on every axis (AC 41.3, manual section 6.2). */
+export const DEFAULT_MEASUREMENT_MODE: MeasurementModeByAxis = {
+  X: 'radius',
+  Y: 'radius',
+  Z: 'radius',
 };
 
 /**
@@ -175,6 +204,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
+  measurementMode: DEFAULT_MEASUREMENT_MODE,
   countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',
 };
