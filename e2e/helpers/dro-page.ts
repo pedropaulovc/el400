@@ -119,7 +119,7 @@ export class DROPage {
    * Navigate to the DRO simulator connected to the mock CNCjs server.
    * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime' }) {
+  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime'; probeDroType?: 'transmit' | 'freeze' }) {
     const params = new URLSearchParams();
     params.set('source', 'cncjs');
     params.set('host', 'localhost');
@@ -132,6 +132,9 @@ export class DROPage {
     }
     if (options?.taperOn) {
       params.set('taperOn', options.taperOn);
+    }
+    if (options?.probeDroType) {
+      params.set('probeDroType', options.probeDroType);
     }
 
     const url = `/?${params.toString()}`;
@@ -305,6 +308,51 @@ export class DROPage {
   }
 
   /**
+   * Simulate a touch-probe contact (US-032).
+   *
+   * Hits the mock CNCjs server's probe-trigger endpoint, which sets the GRBL
+   * pin state to 'P' and broadcasts controller:state. The REAL CncjsMillAdapter
+   * parses that pin state into MillState.probe.triggered and dispatches
+   * MILL_STATE_CHANGED - the same path a physical probe input takes. No window
+   * hook, no forced state.
+   */
+  async simulateProbeContact(): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/probe-trigger?sessionId=${this.sessionId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to simulate probe contact: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Release the touch probe (pin state back to open). Pair with
+   * simulateProbeContact to produce a fresh rising edge for the next capture.
+   */
+  async simulateProbeClear(): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/probe-clear?sessionId=${this.sessionId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to clear probe: ${response.statusText}`);
+    }
+  }
+
+  /** Open the probe sub-function menu: Fn -> ProbE -> ENT. */
+  async openProbeMenu(): Promise<void> {
+    await this.functionButton.click();
+    // Ring: center, circle, line, linear, polar, taper, probe => 6 right presses.
+    for (let i = 0; i < 6; i++) {
+      await this.key6.click();
+    }
+    await this.waitForAxisPureTextValue('X', 'ProbE');
+    await this.enterButton.click();
+    await this.waitForAxisPureTextValue('X', 'Prob Ed');
+  }
+
+  /**
    * Get the raw text displayed for an axis (for text assertions)
    */
   async getAxisRawText(axis: 'X' | 'Y' | 'Z'): Promise<string> {
@@ -379,6 +427,42 @@ export class DROPage {
 
     if (!response.ok) {
       throw new Error(`Failed to simulate relative encoder move: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Simulate an encoder signal loss on an axis (US-042).
+   * Calls the mock CNCjs server, which emits the lost signal on controller:state.
+   * The CncjsMillAdapter normalizes it into MillState.encoderSignal and fires
+   * MILL_STATE_CHANGED — the real signal-loss path, no in-app test hook.
+   *
+   * @param axis - The axis whose encoder signal drops ('X', 'Y', or 'Z')
+   */
+  async simulateEncoderSignalLoss(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'lost');
+  }
+
+  /**
+   * Restore a previously dropped encoder signal on an axis (US-042).
+   *
+   * @param axis - The axis whose encoder signal is restored
+   */
+  async simulateEncoderSignalRestore(axis: 'X' | 'Y' | 'Z'): Promise<void> {
+    await this.setEncoderSignal(axis, 'ok');
+  }
+
+  private async setEncoderSignal(axis: 'X' | 'Y' | 'Z', signal: 'ok' | 'lost'): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/encoder-signal?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, signal }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to set encoder signal: ${response.statusText}`);
     }
   }
 
@@ -549,11 +633,99 @@ export class DROPage {
       guard += 1;
       if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
     }
+   * Set the per-axis radius/diameter measurement mode (US-041, manual section 6.2
+   * `rAd` / `diA`) by driving the REAL setup menu: open setup, pick the axis,
+   * scroll to the rAd/diA parameter, cycle its choice to the requested label, then
+   * exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only the buttons
+   * an operator presses. The parameter renders `rAd` (radius / 1:1) and `diA`
+   * (diameter / ×2); those two labels appear on no other parameter, so they
+   * uniquely identify the item while scrolling.
+   *
+   * @param axis - Axis whose measurement mode is being configured
+   * @param target - Desired mode label: 'rAd' (radius) or 'diA' (diameter)
+   */
+  async setMeasurementMode(axis: 'X' | 'Y' | 'Z', target: 'rAd' | 'diA'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Scroll (down) through the parameter list until the measurement-mode
+    // parameter is highlighted; recognise it by its `rAd` / `diA` labels.
+    const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
+    let guard = 0;
+    while (!isMeasurementLabel(await this.getAxisRawText(axis))) {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('measurement-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice (right key) until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`measurement-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup back to the idle readout via the terminal `End` item + ent.
+    guard = 0;
+    while ((await this.getAxisRawText(axis)) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
+    }
+    await this.enterButton.click();
+  }
+
+  /**
+   * Set the per-axis counting mode (US-040, manual section 6.2 `LinEAr` /
+   * `AnGULAr`) by driving the REAL setup menu: open setup, pick the axis, scroll
+   * to the counting-mode parameter (the first item), cycle its choice to the
+   * requested label, then exit via the terminal `End` item + ent.
+   *
+   * Mirrors `setAxisDirection`. No window hooks, no forced state — only buttons.
+   * Counting-mode renders `LinEAr` (linear) / `AnGULAr` (angular); these strings
+   * appear on no other parameter, so they uniquely identify the item.
+   *
+   * @param axis - Axis whose counting mode is being configured
+   * @param target - Desired mode label
+   */
+  async setAxisCountingMode(axis: 'X' | 'Y' | 'Z', target: 'LinEAr' | 'AnGULAr'): Promise<void> {
+    await this.settingsButton.click();
+    await this.waitForAxisPureTextValue('X', 'SELECt');
+    await this.selectAxis(axis);
+    // Counting-mode is the first parameter; scroll up (key8) until it is shown.
+    const isCountingLabel = (t: string) => t === 'LinEAr' || t === 'AnGULAr';
+    let guard = 0;
+    while (!isCountingLabel(await this.getAxisRawText('X'))) {
+      await this.key8.click();
+      guard += 1;
+      if (guard > 30) {
+        throw new Error('counting-mode parameter not found in setup menu after 30 steps');
+      }
+    }
+    // Cycle the choice until the requested label is shown.
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== target) {
+      await this.key6.click();
+      guard += 1;
+      if (guard > 4) {
+        throw new Error(`counting-mode choice "${target}" not reachable by cycling`);
+      }
+    }
+    // Exit setup to the idle readout via the terminal `End` item + ent.
     guard = 0;
     while ((await this.getAxisRawText('X')) !== 'End') {
       await this.key2.click();
       guard += 1;
-      if (guard > 40) throw new Error('End item not found while exiting setup');
+      if (guard > 30) {
+        throw new Error('End item not found while exiting setup');
+      }
     }
     await this.enterButton.click();
   }

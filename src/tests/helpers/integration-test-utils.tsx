@@ -97,6 +97,10 @@ export function resetStores(): void {
       zeroApproachEnabled: false,
       zeroApproachDistance: '0.002',
       zeroApproachTolerance: '0',
+      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
+      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
+      probeDroType: 'transmit',
+      encoderFailWarning: false,
     },
   });
 

@@ -5,9 +5,9 @@
 
 import type { Dispatch } from 'react';
 import type { MillAdapter } from './MillAdapter';
-import type { MillStateListener, MillState } from '../types/millState';
+import type { MillStateListener, MillState, EncoderSignalByAxis } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
-import { createDefaultMillState, createProbeState } from '../types/millState';
+import { createDefaultMillState, createProbeState, DEFAULT_ENCODER_SIGNAL } from '../types/millState';
 import { DebugServer } from '../debug/DebugServer';
 
 /** Raw controller state from DebugServer */
@@ -21,6 +21,7 @@ interface DebugControllerState {
     pinState: string;
     triggered: boolean;
   };
+  encoderSignal?: EncoderSignalByAxis;
 }
 
 export class DebugMillAdapter implements MillAdapter {
@@ -56,6 +57,7 @@ export class DebugMillAdapter implements MillAdapter {
           z: mpos[2] ?? 0,
         },
         probe: createProbeState(pn),
+        encoderSignal: state.encoderSignal ?? { ...DEFAULT_ENCODER_SIGNAL },
         connected: true,
       });
     });

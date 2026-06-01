@@ -66,6 +66,23 @@ export interface AxisDirectionByAxis {
 }
 
 /**
+ * Per-axis counting mode (manual section 6.2 `LinEAr` / `AnGULAr`, US-040).
+ * `'linear'` is a translation scale (glass/magnetic) reading distance in the
+ * user's linear unit; `'angular'` is a rotary encoder reading an angle in
+ * degrees. The choice picks which display-resolution option set applies (linear
+ * micron values vs. the angular degree formats) and, for angular axes, switches
+ * the readout to wrapped degrees instead of unit-converted distance.
+ */
+export type CountingMode = 'linear' | 'angular';
+
+/** Per-axis counting mode. */
+export interface CountingModeByAxis {
+  X: CountingMode;
+  Y: CountingMode;
+  Z: CountingMode;
+}
+
+/**
  * Z depth-sense preference (AC 2.4). `'depth-negative'` is the standard
  * convention (cutting deeper makes Z more negative); `'depth-positive'` inverts
  * the Z display sign so increasing cutting depth increases the displayed value.
@@ -89,6 +106,35 @@ export type ZeroApproachDistance = '0.002' | '0.004' | '0.005' | '0.010' | '0.02
  * clears as soon as the axis leaves the approach band).
  */
 export type ZeroApproachTolerance = '0' | '0.002' | '0.005' | '0.010';
+
+/**
+ * Per-axis radius/diameter measurement mode (manual section 6.2 `rAd` / `diA`,
+ * US-041). `'radius'` (radial) is the mill default: the display equals actual
+ * axis movement 1:1. `'diameter'` (diametric) is the lathe convention: the
+ * displayed value is doubled, so a 1.000 cut depth shows 2.000 (the turned
+ * diameter). It is a display-only ×2 scale applied in `displayComputation`; it
+ * never mutates stored machine position, offsets, or macro coordinate math.
+ * Setup-menu labels map `'radius'→rAd` and `'diameter'→diA`. Per note *6 it is
+ * configurable per individual axis (AC 41.5) and is meaningful only while the
+ * axis counting mode is Linear (AC 41.7).
+ */
+export type MeasurementMode = 'radius' | 'diameter';
+
+/** Per-axis measurement mode (radius vs diameter). */
+export interface MeasurementModeByAxis {
+  X: MeasurementMode;
+  Y: MeasurementMode;
+  Z: MeasurementMode;
+}
+
+/**
+ * Touch-probe DRO type (manual §10.1.1, setup `dro t` / `dro F`).
+ * - 'transmit' (`dro t`): the readout keeps counting on a probe trigger and
+ *   flashes the probe message; used with the datum/measurement functions.
+ * - 'freeze' (`dro F`): the readout freezes the coordinates on a probe trigger
+ *   until the probe clears.
+ */
+export type ProbeDroType = 'transmit' | 'freeze';
 
 /**
  * User-configurable settings that persist across sessions
@@ -118,6 +164,18 @@ export interface NonVolatileMemory {
   zeroApproachDistance: ZeroApproachDistance;
   /** Near-Zero Warning departure tolerance — setup `BP TOLR` (US-024, AC24.5) */
   zeroApproachTolerance: ZeroApproachTolerance;
+  /** Per-axis radius/diameter display mode - rAd/diA parameter (US-041, manual section 6.2) */
+  measurementMode: MeasurementModeByAxis;
+  /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
+  countingMode: CountingModeByAxis;
+  /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
+  probeDroType: ProbeDroType;
+  /**
+   * Encoder-fail warning - EnF parameter (US-042, manual section 6.2). When
+   * true, an axis that loses its encoder signal shows `no SIG`. Default off
+   * (legacy behavior). Independent of beepEnabled (US-025).
+   */
+  encoderFailWarning: boolean;
 }
 
 /** Mill default counting direction: normal (standard convention) on every axis. */
@@ -132,6 +190,23 @@ export const DEFAULT_SCALE_RESOLUTION: ScaleResolutionByAxis = {
   X: '5',
   Y: '5',
   Z: '5',
+};
+
+/** Mill default measurement mode: radius (1:1) on every axis (AC 41.3, manual section 6.2). */
+export const DEFAULT_MEASUREMENT_MODE: MeasurementModeByAxis = {
+  X: 'radius',
+  Y: 'radius',
+  Z: 'radius',
+};
+
+/**
+ * Mill default counting mode: linear on every axis (AC 40.6 — all DRO PROS mill
+ * kits ship with linear scales; angular is for rotary-axis installs).
+ */
+export const DEFAULT_COUNTING_MODE: CountingModeByAxis = {
+  X: 'linear',
+  Y: 'linear',
+  Z: 'linear',
 };
 
 /**
@@ -163,6 +238,10 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   zeroApproachEnabled: false,
   zeroApproachDistance: '0.002',
   zeroApproachTolerance: '0',
+  measurementMode: DEFAULT_MEASUREMENT_MODE,
+  countingMode: DEFAULT_COUNTING_MODE,
+  probeDroType: 'transmit',
+  encoderFailWarning: false,
 };
 
 /**

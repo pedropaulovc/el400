@@ -10,8 +10,18 @@ const __dirname = resolve(__filename, '..');
 
 const PORT = process.env['E2E_MOCK_CNCJS_PORT'] ? parseInt(process.env['E2E_MOCK_CNCJS_PORT'], 10) : 8765;
 
-// State per session (sessionId -> { position, probeState })
-const sessions = new Map<string, { position: { x: number; y: number; z: number }; probeState?: { pinState: string } }>();
+type EncoderSignalState = 'ok' | 'lost';
+type EncoderSignalByAxis = { X: EncoderSignalState; Y: EncoderSignalState; Z: EncoderSignalState };
+
+// State per session (sessionId -> { position, probeState, encoderSignal })
+const sessions = new Map<
+  string,
+  {
+    position: { x: number; y: number; z: number };
+    probeState?: { pinState: string };
+    encoderSignal?: EncoderSignalByAxis;
+  }
+>();
 
 const httpServer = createServer((req, res) => {
   const { pathname, query } = parse(req.url || '', true);
@@ -204,6 +214,51 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  // Simulate per-axis encoder signal loss / restore (US-042)
+  if (pathname === '/api/encoder-signal' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const { axis, signal } = JSON.parse(body);
+        if (!['X', 'Y', 'Z'].includes(axis) || !['ok', 'lost'].includes(signal)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid axis or signal' }));
+          return;
+        }
+
+        let session = sessions.get(sessionId);
+        if (!session) {
+          session = { position: { x: 0, y: 0, z: 0 } };
+          sessions.set(sessionId, session);
+        }
+
+        session.encoderSignal = {
+          X: 'ok',
+          Y: 'ok',
+          Z: 'ok',
+          ...session.encoderSignal,
+          [axis]: signal,
+        };
+        console.log(`[MockCncjs] encoder-signal ${sessionId}: ${axis}=${signal}`);
+        emitStateToSession(sessionId);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, encoderSignal: session.encoderSignal }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
   // 404 for unknown routes
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -237,8 +292,12 @@ function emitStateToSession(sessionId: string) {
         activeState: 'Idle',
         mpos: [x, y, z],
         wpos: [x, y, z],
+        // GRBL exposes pin state in `pn`; the real CncjsMillAdapter parses the
+        // probe trigger from here, so a probe contact must surface in `pn`.
+        pn: session.probeState?.pinState ?? '',
       },
       probe: session.probeState || '',
+      encoderSignal: session.encoderSignal,
     });
     console.log(`[MockCncjs] emit successful for ${sessionId}`);
   } catch (error) {
@@ -279,8 +338,10 @@ io.on('connection', (socket) => {
       activeState: 'Idle',
       mpos: [x, y, z],
       wpos: [x, y, z],
+      pn: session.probeState?.pinState ?? '',
     },
     probe: session.probeState || '',
+    encoderSignal: session.encoderSignal,
   });
 
   socket.on('disconnect', (reason) => {
@@ -299,8 +360,10 @@ io.on('connection', (socket) => {
             activeState: 'Idle',
             mpos: [x, y, z],
             wpos: [x, y, z],
+            pn: s.probeState?.pinState ?? '',
           },
           probe: s.probeState || '',
+          encoderSignal: s.encoderSignal,
         });
       }
     }

@@ -18,8 +18,13 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
   if (state !== 'idle') return null;
 
   switch (eventName) {
-    // Handle position updates - update display when mill position changes
+    // Handle position updates - update display when mill position changes.
+    // In probe Freeze mode the probeReducer owns the idle display (it may hold
+    // the readout frozen on a probe trigger), so defer to it (US-032, AC 32.3).
     case 'MILL_STATE_CHANGED':
+      if (context.nvMem.probeDroType === 'freeze') {
+        return null;
+      }
       return {
         ...statePayload,
         display: computeNormalDisplay(vMem, context),
@@ -78,9 +83,11 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
         display: createDisplay('Grid', 0, ''),
       };
     case 'BTN_SDM':
+      // Seed the session from the retained sub-datum store so Run (US-011) can
+      // recall points learned/programmed in a previous SDM session.
       return {
         stateName: 'sdm-intro',
-        stateData: INITIAL_SDM_DATA,
+        stateData: { ...INITIAL_SDM_DATA, points: { ...vMem.sdmPoints } },
         vMem,
         display: createDisplay('Sdm', '', ''),
       };

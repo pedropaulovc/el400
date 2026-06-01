@@ -1,6 +1,10 @@
+import type { EncoderSignalByAxis, EncoderSignalState } from '../types/millState';
+import { DEFAULT_ENCODER_SIGNAL } from '../types/millState';
+
 interface SessionState {
   position: { x: number; y: number; z: number };
   probeState: string;
+  encoderSignal: EncoderSignalByAxis;
 }
 
 /**
@@ -49,6 +53,7 @@ export class DebugServer extends EventEmitter {
   private sessionState: SessionState = {
     position: { x: 0, y: 0, z: 0 },
     probeState: '',
+    encoderSignal: { ...DEFAULT_ENCODER_SIGNAL },
   };
   private broadcastInterval: number | null = null;
 
@@ -90,11 +95,25 @@ export class DebugServer extends EventEmitter {
   }
 
   /**
+   * Set the encoder signal state for an axis (US-042). Simulates an encoder
+   * cable dropping ('lost') or being restored ('ok').
+   */
+  setEncoderSignal(axis: 'x' | 'y' | 'z', signal: EncoderSignalState): void {
+    const key = axis.toUpperCase() as 'X' | 'Y' | 'Z';
+    this.sessionState.encoderSignal = {
+      ...this.sessionState.encoderSignal,
+      [key]: signal,
+    };
+    this.broadcastState();
+  }
+
+  /**
    * Reset position to origin
    */
   reset(): void {
     this.sessionState.position = { x: 0, y: 0, z: 0 };
     this.sessionState.probeState = '';
+    this.sessionState.encoderSignal = { ...DEFAULT_ENCODER_SIGNAL };
     this.broadcastState();
   }
 
@@ -127,6 +146,7 @@ export class DebugServer extends EventEmitter {
         pinState: this.sessionState.probeState,
         triggered: this.sessionState.probeState.includes('P'),
       },
+      encoderSignal: { ...this.sessionState.encoderSignal },
     };
 
     this.emit('controller:state', state);

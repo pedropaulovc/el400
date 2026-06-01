@@ -36,6 +36,29 @@ export interface ProbeState {
 export type ControllerType = 'cncjs' | 'linuxcnc' | 'mock' | 'debug' | 'noop';
 
 /**
+ * Per-axis encoder signal state (US-042). `'ok'` is a valid live encoder;
+ * `'lost'` means the scale's signal dropped — the cable disconnected or was
+ * damaged (manual section 6.2, note *2). Drives the `no SIG` warning when the
+ * Encoder-Fail (`EnF`) parameter is enabled. Modeled as a string enum rather
+ * than a boolean so future fault kinds (e.g. 'degraded') can be added.
+ */
+export type EncoderSignalState = 'ok' | 'lost';
+
+/** Per-axis encoder signal state. */
+export interface EncoderSignalByAxis {
+  X: EncoderSignalState;
+  Y: EncoderSignalState;
+  Z: EncoderSignalState;
+}
+
+/** Default encoder signal: all axes reporting a valid signal. */
+export const DEFAULT_ENCODER_SIGNAL: EncoderSignalByAxis = {
+  X: 'ok',
+  Y: 'ok',
+  Z: 'ok',
+};
+
+/**
  * Mill state from connection
  */
 export interface MillState {
@@ -49,6 +72,8 @@ export interface MillState {
   connected: boolean;
   /** Type of controller providing the data */
   controllerType: ControllerType;
+  /** Per-axis encoder signal state - drives the `no SIG` warning (US-042) */
+  encoderSignal: EncoderSignalByAxis;
 }
 
 /**
@@ -85,5 +110,6 @@ export function createDefaultMillState(controllerType: ControllerType = 'noop'):
     probe: createProbeState(''),
     connected: false,
     controllerType,
+    encoderSignal: { ...DEFAULT_ENCODER_SIGNAL },
   };
 }

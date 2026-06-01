@@ -66,6 +66,13 @@ export type DROStateName =
   | 'function-menu-line'
   | 'function-menu-linear'
   | 'function-menu-polar'
+  | 'function-menu-probe'
+  // Touch probe function states (US-032)
+  | 'probe-menu-function'
+  | 'probe-diameter'
+  | 'probe-axis-select'
+  | 'probe-waiting'
+  | 'probe-result'
   // Polar coordinate display states (US-030)
   | 'polar-select-plane'
   | 'polar-coordinates'
@@ -155,6 +162,9 @@ export type DROStateName =
   | 'sdm-program-input-x'
   | 'sdm-program-input-y'
   | 'sdm-program-input-z'
+  // SDM Run / recall states (US-011)
+  | 'sdm-run-step'
+  | 'sdm-run-active'
   // Preset / Distance-to-Go states (US-008)
   | 'preset-select'
   | 'preset-input-x'
@@ -205,6 +215,7 @@ export type DROStateData =
   | SetupData
   | TaperData
   | ReferenceData
+  | ProbeData
   | DiagnosticsData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -407,6 +418,45 @@ export interface ReferenceData extends BaseDROStateData {
   markArmedFromPos: number | null;
 }
 
+/**
+ * Touch probe special function (manual §10.1.2). Selected from the probe menu:
+ * - 'edge'     : Datum by edge - sets the axis datum at the trigger edge (§10.1.2)
+ * - 'midpoint' : Datum by midpoint - datum at the midpoint of two edges
+ * - 'inside'   : Inside measurement - internal width = travel + probe diameter
+ * - 'outside'  : Outside measurement - external width = travel - probe diameter
+ */
+export type ProbeFunction = 'edge' | 'midpoint' | 'inside' | 'outside';
+
+/**
+ * Touch probe function context (US-032, manual §10.1).
+ *
+ * Drives the probe function menu and the probe-triggered capture flow. Probe
+ * contacts arrive as rising edges on `MillState.probe.triggered`; this data
+ * tracks the edge across MILL_STATE_CHANGED ticks (`lastProbeTriggered`) so a
+ * held or pre-armed probe never double-captures.
+ */
+export interface ProbeData extends BaseDROStateData {
+  readonly stateDataType: 'probe';
+  /** Selected special function (cycled in the probe menu). */
+  probeFunction: ProbeFunction;
+  /** Axis being probed; null until selected. */
+  probeAxis: 'X' | 'Y' | 'Z' | null;
+  /** Probe tip diameter in mm (inside/outside compensation); 0 until entered. */
+  probeDiameterMm: number;
+  /** Captured contact positions (mm) for the selected axis, in order. */
+  captures: number[];
+  /** Computed measurement result in mm (inside/outside); null otherwise. */
+  resultMm: number | null;
+  /**
+   * Probe trigger state seen on the previous tick. Rising edge =
+   * `!lastProbeTriggered && current.triggered`. Seeded from the live pin state
+   * when arming so a probe held high on entry does not auto-fire.
+   */
+  lastProbeTriggered: boolean;
+  /** True for one capture; drives the visual/audible trigger indication (AC 32.8). */
+  probeTriggered: boolean;
+}
+
 /** Stored point for center finding operations */
 export interface StoredPoint {
   X: number;
@@ -574,7 +624,8 @@ export const isFnLedActive = (s: DROStateName): boolean =>
   isLinearBoltHoleActive(s) ||
   isGridActive(s) ||
   isPolarActive(s) ||
-  isTaperActive(s);
+  isTaperActive(s) ||
+  isProbeActive(s);
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -600,6 +651,13 @@ export const isTaperActive = (s: DROStateName): boolean =>
 /** Check if reference / datum recall mode is active (any reference-* state) */
 export const isReferenceActive = (s: DROStateName): boolean =>
   s.startsWith('reference-');
+
+/**
+ * Check if a touch probe function state is active (US-032). Excludes the
+ * function-menu-probe selection tile, which is owned by the menu reducer.
+ */
+export const isProbeActive = (s: DROStateName): boolean =>
+  s.startsWith('probe-');
 
 /** Check if self-diagnostics mode is active (any diagnostics-* state, US-046) */
 export const isDiagnosticsActive = (s: DROStateName): boolean =>
@@ -724,6 +782,17 @@ export const INITIAL_REFERENCE_DATA: ReferenceData = {
   referenceMode: 'HOME',
   selectedAxis: null,
   markArmedFromPos: null,
+};
+
+export const INITIAL_PROBE_DATA: ProbeData = {
+  stateDataType: 'probe',
+  probeFunction: 'edge',
+  probeAxis: null,
+  probeDiameterMm: 0,
+  captures: [],
+  resultMm: null,
+  lastProbeTriggered: false,
+  probeTriggered: false,
 };
 
 export const INITIAL_DIAGNOSTICS_DATA: DiagnosticsData = {

@@ -9,10 +9,13 @@ import {
   SETUP_END_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
+  MEASUREMENT_MODE_ID,
+  PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
   ZERO_APPROACH_ID,
   ZERO_APPROACH_DIST_ID,
   ZERO_APPROACH_TOLR_ID,
+  ENF_ID,
   getParameterAt,
   wrapItemIndex,
   choiceIndexOf,
@@ -140,11 +143,88 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(dp.choices.map((c) => c.value)).toContain(dp.readValue({ nvMem, axis: 'X' }));
   });
 
+  it('exposes a global EnF parameter with on / off choices (AC 42.1, AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    expect(enf).toBeDefined();
+    expect(enf.scope).toBe('global');
+    // Default-first ordering: 'off' is the default (AC 42.1), so it seeds first.
+    expect(enf.choices.map((c) => c.value)).toEqual(['off', 'on']);
+    expect(enf.choices.map((c) => c.label)).toEqual(['EnF oFF', 'EnF on']);
+    expect(typeof enf.commit).toBe('function');
+  });
+
+  it('EnF seeds its current value from nvMem.encoderFailWarning, NOT beepEnabled (AC 42.1)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    // Default nvMem: encoderFailWarning off -> seeds 'off'.
+    expect(enf.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('off');
+    // On when the dedicated flag is set.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
+    // Decoupled from beepEnabled (US-025): flipping beep must not change EnF.
+    expect(
+      enf.readValue({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, beepEnabled: false, encoderFailWarning: true },
+        axis: null,
+      })
+    ).toBe('on');
+  });
+
   it('non-commit parameters expose no commit hook (surgical commit path)', () => {
-    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
     const taper = SETUP_PARAMETERS.find((p) => p.id === 'taper-on')!;
-    expect(counting.commit).toBeUndefined();
     expect(taper.commit).toBeUndefined();
+  });
+
+  it('exposes a per-axis measurement-mode parameter with rAd / diA choices (AC 41.1, 41.2)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    expect(mode).toBeDefined();
+    expect(mode.scope).toBe('per-axis');
+    expect(mode.choices.map((c) => c.value)).toEqual(['radius', 'diameter']);
+    expect(mode.choices.map((c) => c.label)).toEqual(['rAd', 'diA']);
+    // radius is listed first so it is the default landing choice (AC 41.3).
+    expect(mode.choices[0]!.value).toBe('radius');
+    expect(typeof mode.commit).toBe('function');
+  });
+
+  it('measurement-mode seeds its current value from nvMem.measurementMode per axis (AC 41.5)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      measurementMode: { X: 'radius' as const, Y: 'diameter' as const, Z: 'radius' as const },
+    };
+    expect(mode.readValue({ nvMem, axis: 'X' })).toBe('radius');
+    expect(mode.readValue({ nvMem, axis: 'Y' })).toBe('diameter');
+    // SELECT prompt (axis null) falls back to X.
+    expect(mode.readValue({ nvMem, axis: null })).toBe('radius');
+  });
+
+  it('exposes a per-axis counting-mode parameter with linear / angular choices (US-040)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    expect(counting).toBeDefined();
+    expect(counting.scope).toBe('per-axis');
+    expect(counting.choices.map((c) => c.value)).toEqual(['linear', 'angular']);
+    expect(counting.choices.map((c) => c.label)).toEqual(['LinEAr', 'AnGULAr']);
+    // First choice (default) is LinEAr (AC 40.1).
+    expect(counting.choices[0]!.value).toBe('linear');
+    // Real committed parameter now (US-040) — exposes a commit hook.
+    expect(typeof counting.commit).toBe('function');
+  });
+
+  it('counting-mode seeds its current value from nvMem.countingMode per axis (AC 40.1, 40.5)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    // Default is linear on every axis (AC 40.6).
+    expect(counting.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' })).toBe('linear');
+    const nvMem = {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
+      countingMode: { X: 'angular' as const, Y: 'linear' as const, Z: 'linear' as const },
+    };
+    expect(counting.readValue({ nvMem, axis: 'X' })).toBe('angular');
+    expect(counting.readValue({ nvMem, axis: 'Y' })).toBe('linear');
+    // SELECT prompt (axis null) falls back to X.
+    expect(counting.readValue({ nvMem, axis: null })).toBe('angular');
   });
 });
 
@@ -175,6 +255,50 @@ describe('commit-on-change hooks (US-002)', () => {
     expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
   });
 
+  it('measurement-mode.commit persists the chosen value to the selected axis only (AC 41.5)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    mode.commit!({ nvMem, axis: 'Y' }, 'diameter');
+    const after = useSettingsStore.getState().nvMem.measurementMode;
+    expect(after).toEqual({ X: 'radius', Y: 'diameter', Z: 'radius' });
+  });
+
+  it('measurement-mode.commit falls back to X on the SELECT prompt (axis null)', () => {
+    const mode = SETUP_PARAMETERS.find((p) => p.id === MEASUREMENT_MODE_ID)!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    mode.commit!({ nvMem, axis: null }, 'diameter');
+    expect(useSettingsStore.getState().nvMem.measurementMode.X).toBe('diameter');
+  });
+
+  it('counting-mode.commit persists the chosen mode to the selected axis only (US-040)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    counting.commit!({ nvMem, axis: 'Y' }, 'angular');
+    expect(useSettingsStore.getState().nvMem.countingMode).toEqual({
+      X: 'linear',
+      Y: 'angular',
+      Z: 'linear',
+    });
+  });
+
+  it('counting-mode.commit falls back to X on the SELECT prompt (axis null)', () => {
+    const counting = SETUP_PARAMETERS.find((p) => p.id === 'counting-mode')!;
+    const nvMem = useSettingsStore.getState().nvMem;
+    counting.commit!({ nvMem, axis: null }, 'angular');
+    expect(useSettingsStore.getState().nvMem.countingMode.X).toBe('angular');
+  });
+
+  it('probe-dro-type seeds from nvMem and commits the chosen DRO type (US-032, AC 32.1)', () => {
+    const probe = SETUP_PARAMETERS.find((p) => p.id === PROBE_DRO_TYPE_ID)!;
+    // Seeds the committed value (default transmit).
+    expect(probe.readValue({ nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: null })).toBe('transmit');
+    expect(probe.choices.map((c) => c.label)).toEqual(['dro t', 'dro F']);
+    // Commit persists Freeze immediately.
+    const nvMem = useSettingsStore.getState().nvMem;
+    probe.commit!({ nvMem, axis: null }, 'freeze');
+    expect(useSettingsStore.getState().nvMem.probeDroType).toBe('freeze');
+  });
+
   it('dP.commit persists the chosen value to the selected axis only (US-022)', () => {
     const dp = SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
     const nvMem = useSettingsStore.getState().nvMem;
@@ -188,6 +312,20 @@ describe('commit-on-change hooks (US-002)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     dp.commit!({ nvMem, axis: null }, '50');
     expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('50');
+  });
+
+  it('enf.commit persists encoderFailWarning and leaves beepEnabled untouched (AC 42.2)', () => {
+    const enf = SETUP_PARAMETERS.find((p) => p.id === ENF_ID)!;
+    const beepBefore = useSettingsStore.getState().nvMem.beepEnabled;
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'on');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(true);
+    // US-025's beep flag must remain independent.
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
+
+    enf.commit!({ nvMem: useSettingsStore.getState().nvMem, axis: null }, 'off');
+    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
+    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(beepBefore);
   });
 });
 
