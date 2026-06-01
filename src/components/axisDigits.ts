@@ -53,6 +53,49 @@ export const formatNumberValue = (num: number, decimals = 4): AxisDigit[] => {
   return result;
 };
 
+import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
+
+/** Options governing how an axis display value is routed to seven-segment cells. */
+export interface FormatAxisDigitsOptions {
+  /** dP fractional-digit count applied to NUMERIC values (US-022). */
+  decimals: number;
+  /**
+   * Whether this axis counts in angular mode (US-040). Angular values arrive as
+   * pre-formatted DMS strings (e.g. "12.30.00", or "90.00" which must stay two
+   * decimals) and are rendered verbatim through the text path, never re-parsed
+   * as a number and re-padded to `decimals`.
+   */
+  isAngular: boolean;
+}
+
+/**
+ * Route an axis display value to its seven-segment cells (US-040 AC 40.3).
+ *
+ * - Angular axes always render their pre-formatted DMS string verbatim (text path).
+ * - Otherwise a number, or a numeric-looking string, renders through the number
+ *   path with the dP `decimals`; any other string (menu labels) renders as text.
+ */
+export const formatAxisDigits = (
+  value: number | string,
+  options: FormatAxisDigitsOptions
+): AxisDigit[] => {
+  // Angular DMS strings are pre-formatted (intentional digit counts and group
+  // separators); render verbatim so dP decimals never re-pad them.
+  if (options.isAngular && typeof value === 'string') {
+    return formatTextValue(value);
+  }
+
+  if (typeof value === 'number') {
+    return formatNumberValue(value, options.decimals);
+  }
+  // A numeric-looking string gets the dP number path; any other string (menu
+  // labels) renders as text.
+  if (VALID_NUMBER_PATTERN.test(value.trim())) {
+    return formatNumberValue(parseFloat(value), options.decimals);
+  }
+  return formatTextValue(value);
+};
+
 /** Convert a text value (e.g. menu label) into right-aligned seven-segment cells. */
 export const formatTextValue = (text: string): AxisDigit[] => {
   const raw: AxisDigit[] = [];

@@ -19,7 +19,9 @@ import {
   SLEEP_TIMEOUT_ID,
   SLEEP_TIMEOUT_MINUTES,
   sleepTimeoutLabel,
+  ANGULAR_RESOLUTION_CHOICES,
   getParameterAt,
+  resolveChoices,
   wrapItemIndex,
   choiceIndexOf,
   wrapChoiceIndex,
@@ -439,6 +441,72 @@ describe('Zero-Approach Warning parameters (US-024)', () => {
     const nvMem = useSettingsStore.getState().nvMem;
     tolr.commit!({ nvMem, axis: null }, '0.005');
     expect(useSettingsStore.getState().nvMem.zeroApproachTolerance).toBe('0.005');
+  });
+});
+
+describe('dP angular display-resolution formats (US-040 AC 40.4)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+  });
+
+  const dp = () => SETUP_PARAMETERS.find((p) => p.id === DISPLAY_RESOLUTION_ID)!;
+
+  const angularNvMem = (axis: 'X' | 'Y' | 'Z' = 'X') => ({
+    ...DEFAULT_NON_VOLATILE_MEMORY,
+    countingMode: { ...DEFAULT_NON_VOLATILE_MEMORY.countingMode, [axis]: 'angular' as const },
+  });
+
+  it('exposes the three angular format choices with the manual labels', () => {
+    expect(ANGULAR_RESOLUTION_CHOICES.map((c) => c.value)).toEqual([
+      'dd-mn', 'dd-mn-ss', 'dd-dec',
+    ]);
+    expect(ANGULAR_RESOLUTION_CHOICES.map((c) => c.label)).toEqual([
+      'dd.mn', 'dd.mn.SS', 'dd.dEC',
+    ]);
+  });
+
+  it('resolveChoices returns the linear micron set for a linear axis', () => {
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
+    expect(resolveChoices(dp(), ctx).map((c) => c.value)).toEqual([
+      '0.1', '0.2', '0.5', '1', '2', '5', '10', '20', '50',
+    ]);
+  });
+
+  it('resolveChoices returns the angular DMS set when the axis is angular', () => {
+    const ctx = { nvMem: angularNvMem('X'), axis: 'X' as const };
+    expect(resolveChoices(dp(), ctx)).toEqual(ANGULAR_RESOLUTION_CHOICES);
+  });
+
+  it('resolveChoices is per-axis: angular X but linear Y keep their own sets', () => {
+    const nvMem = angularNvMem('X');
+    expect(resolveChoices(dp(), { nvMem, axis: 'X' })).toEqual(ANGULAR_RESOLUTION_CHOICES);
+    expect(resolveChoices(dp(), { nvMem, axis: 'Y' }).map((c) => c.value)).toContain('5');
+  });
+
+  it('resolveChoices falls back to a parameters static choices when no choicesFor', () => {
+    const dir = SETUP_PARAMETERS.find((p) => p.id === DIRECTION_ID)!;
+    const ctx = { nvMem: DEFAULT_NON_VOLATILE_MEMORY, axis: 'X' as const };
+    expect(resolveChoices(dir, ctx)).toBe(dir.choices);
+  });
+
+  it('dP seeds from nvMem.angularResolution for an angular axis', () => {
+    const nvMem = {
+      ...angularNvMem('X'),
+      angularResolution: {
+        ...DEFAULT_NON_VOLATILE_MEMORY.angularResolution,
+        X: 'dd-dec' as const,
+      },
+    };
+    expect(dp().readValue({ nvMem, axis: 'X' })).toBe('dd-dec');
+  });
+
+  it('dP.commit persists an angular format to nvMem.angularResolution for the axis only', () => {
+    const nvMem = angularNvMem('Y');
+    dp().commit!({ nvMem, axis: 'Y' }, 'dd-mn-ss');
+    const after = useSettingsStore.getState().nvMem.angularResolution;
+    expect(after).toEqual({ X: 'dd-mn', Y: 'dd-mn-ss', Z: 'dd-mn' });
+    // The linear micron resolution for Y is left untouched.
+    expect(useSettingsStore.getState().nvMem.displayResolution.Y).toBe('5');
   });
 });
 
