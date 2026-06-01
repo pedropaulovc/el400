@@ -23,6 +23,34 @@ import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 export const MAX_DISPLAY_DECIMALS = 4;
 
 /**
+ * Number of seven-segment DIGIT cells on the panel, excluding the +/- sign cell.
+ *
+ * The panel is physically 8 cells: 1 sign cell + 7 digit cells (this constant).
+ * `DISPLAY_WIDTH` in `axisDigits.ts` is 8 because it counts the sign cell; here we
+ * count only the digits that hold the number, since the integer-vs-fraction budget
+ * is split across these 7 cells (`integer cells = PANEL_DIGIT_CELLS − decimals`).
+ */
+export const PANEL_DIGIT_CELLS = 7;
+
+/**
+ * Largest magnitude the 7-digit panel can render at a given fractional precision
+ * (US-047). The integer part gets `PANEL_DIGIT_CELLS − decimals` cells and the
+ * fraction gets `decimals`, so every cell at 9 is:
+ *
+ *   maxDisplayableMagnitude(decimals) = 10^(PANEL_DIGIT_CELLS − decimals) − 10^(−decimals)
+ *
+ * e.g. 4 decimals -> 999.9999, 3 decimals -> 9999.999, 0 decimals -> 9999999.
+ * A value keyed larger than this cannot be shown, so it is clamped (keeping sign)
+ * at the value-commit boundary so the stored value equals what the panel shows.
+ *
+ * @param decimals - Fractional digits the axis currently displays (0..PANEL_DIGIT_CELLS)
+ * @returns The maximum displayable magnitude (always non-negative)
+ */
+export function maxDisplayableMagnitude(decimals: number): number {
+  return 10 ** (PANEL_DIGIT_CELLS - decimals) - 10 ** -decimals;
+}
+
+/**
  * Decimal places to render for a given dP display-resolution value (US-022).
  *
  * dP is the 5-micron mill default, anchored at the panel-maximum of 4 decimals.

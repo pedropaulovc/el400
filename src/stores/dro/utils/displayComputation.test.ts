@@ -16,6 +16,8 @@ import {
   computeNormalDisplay,
   ENCODER_FAIL_TEXT,
   measurementScale,
+  maxDisplayableMagnitude,
+  PANEL_DIGIT_CELLS,
 } from './displayComputation';
 import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
@@ -424,5 +426,32 @@ describe('Encoder-fail warning — no SIG override (US-042)', () => {
     expect(computeDisplayPosition('X', connectedVMem, lost)).toBe(ENCODER_FAIL_TEXT);
     const restored = enfContext({ X: 'ok', Y: 'ok', Z: 'ok' }, true);
     expect(computeDisplayPosition('X', connectedVMem, restored)).toBe(10);
+  });
+});
+
+describe('maxDisplayableMagnitude — 7-digit panel limit (US-047)', () => {
+  it('the panel has 7 digit cells (8 total minus the sign cell)', () => {
+    expect(PANEL_DIGIT_CELLS).toBe(7);
+  });
+
+  it('caps at 999.9999 for the 4-decimal default (AC 47.1)', () => {
+    expect(maxDisplayableMagnitude(4)).toBeCloseTo(999.9999, 6);
+  });
+
+  it('frees a fourth integer digit at 3 decimals: 9999.999 (AC 47.3)', () => {
+    expect(maxDisplayableMagnitude(3)).toBeCloseTo(9999.999, 6);
+  });
+
+  it('is all 7 digits integer at 0 decimals: 9999999', () => {
+    expect(maxDisplayableMagnitude(0)).toBe(9999999);
+  });
+
+  it('matches 10^(7 − decimals) − 10^(−decimals) for every precision', () => {
+    for (let decimals = 0; decimals <= PANEL_DIGIT_CELLS; decimals++) {
+      expect(maxDisplayableMagnitude(decimals)).toBeCloseTo(
+        10 ** (PANEL_DIGIT_CELLS - decimals) - 10 ** -decimals,
+        6
+      );
+    }
   });
 });

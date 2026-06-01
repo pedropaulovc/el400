@@ -10,7 +10,11 @@ import type { DROEventPayload } from '../droStateMachine';
 import type { Axis } from '../../../types/volatileMemory';
 import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
-import { computeNormalDisplay } from '../utils/displayComputation';
+import {
+  computeNormalDisplay,
+  axisDisplayDecimals,
+  maxDisplayableMagnitude,
+} from '../utils/displayComputation';
 
 /**
  * Get the machine position for an axis.
@@ -70,8 +74,16 @@ function setAxisValue(
   context: DROReducerContext
 ): DROStatePayload['vMem'] {
   const { nvMem } = context;
+  // Clamp the entered magnitude to what the physical 7-digit panel can show at
+  // this axis's current display resolution (US-047), keeping sign. The value is
+  // in the displayed unit (what the user typed); clamping here — at the commit
+  // boundary, before mm conversion — keeps the stored value equal to the
+  // displayed reading (AC 47.5). Angular axes wrap to [0,360) and never reach the
+  // limit, so this is a harmless no-op for them.
+  const limit = maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem));
+  const clamped = Math.sign(value) * Math.min(Math.abs(value), limit);
   // Convert from display unit to mm for internal storage
-  const valueMm = fromAnyUnitToMm(value, nvMem.defaultUnit);
+  const valueMm = fromAnyUnitToMm(clamped, nvMem.defaultUnit);
   return setAxisValueMm(vMem, axis, valueMm, context);
 }
 
