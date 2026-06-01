@@ -180,4 +180,98 @@ describe('SDM Learn Mode Integration (US-009)', () => {
       expect(useDROStore.getState().stateName).toBe('sdm-learn-step');
     });
   });
+
+  // ──────────────────── Program / direct-entry (US-010) ───────────────
+  describe('program direct-entry flow (US-010, AC 10.1 - AC 10.6)', () => {
+    /** Confirm Program, leaving the session at the step prompt. */
+    async function startProgram(user: ReturnType<typeof userEvent.setup>) {
+      await enterSdm(user);
+      // Navigate learn -> run -> program.
+      await user.click(screen.getByTestId('key-6'));
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('ProGrAn');
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-program-step');
+    }
+
+    it('enters Program, shows the step prompt, and accepts X/Y/Z coordinates in mm (AC 10.1 - AC 10.3)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      // Work in mm so entered values map directly to stored mm.
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+      await startProgram(user);
+
+      // AC 10.2: step prompt with step number 1.
+      expect(getAxisDisplayPureTextValue('X')).toBe('StEP');
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(1);
+
+      // Confirm step 1 -> coordinate entry on X.
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-program-input-x');
+
+      // AC 10.3: enter X=50, Y=25, Z=10.
+      await user.click(screen.getByTestId('key-5'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-program-input-y');
+
+      await user.click(screen.getByTestId('key-2'));
+      await user.click(screen.getByTestId('key-5'));
+      await user.click(screen.getByTestId('key-enter'));
+      expect(useDROStore.getState().stateName).toBe('sdm-program-input-z');
+
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter'));
+
+      // Back at the step view; coordinates stored (mm).
+      expect(useDROStore.getState().stateName).toBe('sdm-program-step');
+      expect(sdmData().points[1]).toEqual({ X: 50, Y: 25, Z: 10 });
+    });
+
+    it('saves and advances to the next step with 6► (AC 10.4)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await user.click(screen.getByTestId('btn-toggle-unit'));
+      await startProgram(user);
+
+      // Program step 1 X only.
+      await user.click(screen.getByTestId('key-enter')); // confirm step 1
+      await user.click(screen.getByTestId('key-1'));
+      await user.click(screen.getByTestId('key-0'));
+      await user.click(screen.getByTestId('key-enter')); // X=10 -> Y
+      await user.click(screen.getByTestId('key-enter')); // Y unchanged -> Z
+      await user.click(screen.getByTestId('key-enter')); // Z unchanged -> step view
+
+      // 6► advances to step 2.
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(2);
+      expect(sdmData().currentStep).toBe(2);
+      // Step 1 coordinates preserved.
+      expect(sdmData().points[1]?.X).toBe(10);
+    });
+
+    it('jumps directly to a step with Y + number + ent (AC 10.5)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await startProgram(user);
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      await user.click(screen.getByTestId('key-7'));
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureNumberValue('Y')).toBe(7);
+      expect(sdmData().currentStep).toBe(7);
+    });
+
+    it('exits to idle on clear (AC 10.6, unhappy path)', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderSimulator();
+      await startProgram(user);
+
+      await user.click(screen.getByTestId('key-clear'));
+      expect(useDROStore.getState().stateName).toBe('idle');
+      const sdmLed = screen.getByTestId('led-sdm').querySelector('span');
+      expect(sdmLed?.className).not.toContain('text-red-400');
+    });
+  });
 });

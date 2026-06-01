@@ -114,10 +114,13 @@ describe('sdmReducer', () => {
       expect(result?.vMem.inputBuffer).toBe('');
     });
 
-    it('confirming Program exits to idle (US-010 not implemented yet)', () => {
+    it('confirming Program enters program step-entry with step 1 and a cleared buffer (AC 10.1, AC 10.2)', () => {
       const state = createTestState('sdm-menu-program', { ...INITIAL_SDM_DATA, sdmMode: 'PROGRAM' });
       const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('idle');
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+      expect((result?.stateData as SdmData).sdmMode).toBe('PROGRAM');
+      expect(result?.vMem.inputBuffer).toBe('');
     });
 
     it('confirming Run exits to idle (US-011 not implemented yet)', () => {
@@ -286,6 +289,264 @@ describe('sdmReducer', () => {
       const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, contextAt(12, 0, 0));
       // inch default unit: 12 mm -> ~0.4724 in; X should reflect a number, not the step
       expect(typeof result?.display.X).toBe('number');
+    });
+  });
+});
+
+/**
+ * Program (Direct-Entry) Mode — Unit Tests (US-010)
+ *
+ * Authoritative behaviour per manual §8.2.1 (Program mode):
+ *  - Select Program at the SDM menu, press Enter. Step number 1 is displayed
+ *    ("StEPno" prompt). Edit the step by pressing Y then typing a step number.
+ *  - Select the required axis (X / Y / Z), type a coordinate, press ent to
+ *    confirm each value. Coordinates are entered in the operator's current unit.
+ *  - Press 6► to save and advance to the next step; 4◄ goes to the previous
+ *    step (manual: "right and left key user can select previous/next step";
+ *    story AC 10.4 binds save+advance to 6►).
+ *  - Jump to a specific step: press Y, type the step number, press ent.
+ *  - Press C to exit (AC 10.6).
+ *
+ * Programmed coordinates are stored in the SAME points map US-009 Learn uses
+ * (mm internally), so US-011 Run can read them back.
+ */
+describe('sdmReducer — Program mode (US-010)', () => {
+  /** A payload in the program step-entry state. */
+  function programStepState(data: Partial<SdmData> = {}) {
+    const sdmData: SdmData = { ...INITIAL_SDM_DATA, sdmMode: 'PROGRAM', ...data };
+    return createTestState('sdm-program-step', sdmData);
+  }
+
+  /** A payload in the program coordinate-entry state for X. */
+  function programInputState(
+    stateName: 'sdm-program-input-x' | 'sdm-program-input-y' | 'sdm-program-input-z',
+    data: Partial<SdmData> = {}
+  ) {
+    const sdmData: SdmData = { ...INITIAL_SDM_DATA, sdmMode: 'PROGRAM', ...data };
+    return createTestState(stateName, sdmData);
+  }
+
+  // ───────────────────────── step entry (AC 10.2) ──────────────────
+  describe('program step entry (AC 10.2)', () => {
+    it('shows the StEP prompt on X and the step number on Y', () => {
+      const state = programStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.display.X).toBe('StEP');
+      expect(result?.display.Y).toBe(1);
+    });
+
+    it('accepts digit input into the buffer and shows it on Y', () => {
+      let state = programStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_7' }, DEFAULT_TEST_CONTEXT);
+      expect(state.vMem.inputBuffer).toBe('7');
+      expect(state.display.Y).toBe(7);
+    });
+
+    it('confirms a typed step number and moves to coordinate entry on X (AC 10.3)', () => {
+      let state = programStepState({ currentStep: 1 });
+      // Non-arrow digit keys edit the step number directly (4◄/6► are navigation).
+      state = apply(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-input-x');
+      expect((result?.stateData as SdmData).currentStep).toBe(5);
+    });
+
+    it('confirms the default step (1) when the buffer is empty', () => {
+      const state = programStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-input-x');
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+    });
+
+    it('rejects step 0 (below range)', () => {
+      let state = programStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+    });
+
+    it('rejects a step number above MAX_SDM_STEPS', () => {
+      let state = programStepState({ currentStep: 1 });
+      for (const ch of String(MAX_SDM_STEPS + 1)) {
+        state = apply(state, { eventName: `KEY_${ch}` as 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      }
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+    });
+
+    it('pre-loads the coordinate buffer with the previously stored X value when re-entering a step', () => {
+      const state = programStepState({
+        currentStep: 1,
+        points: { 1: { X: 25, Y: 0, Z: 0 } },
+      });
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      // X coordinate prompt should reflect the stored value (mm, default unit inch -> ~0.9843)
+      expect(result?.stateName).toBe('sdm-program-input-x');
+    });
+
+    it('exits to idle on clear when the buffer is empty (AC 10.6)', () => {
+      const state = programStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('idle');
+    });
+
+    it('backspaces with clear when the buffer has content', () => {
+      let state = programStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect(result?.vMem.inputBuffer).toBe('1');
+    });
+  });
+
+  // ─────────────────── coordinate entry (AC 10.3) ──────────────────
+  describe('coordinate entry per axis (AC 10.3)', () => {
+    it('accepts digits and shows the prompt+buffer for the X coordinate', () => {
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT);
+      expect(state.vMem.inputBuffer).toBe('50');
+    });
+
+    it('confirms the X coordinate (mm) and advances to Y entry', () => {
+      // Default unit is inch; enter 1 inch -> 25.4 mm stored.
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-input-y');
+      expect((result?.stateData as SdmData).points[1]?.X).toBeCloseTo(25.4, 3);
+    });
+
+    it('confirms X then Y then Z, storing all three coordinates for the step', () => {
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      // X = 1 in -> 25.4 mm
+      state = apply(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(state.stateName).toBe('sdm-program-input-y');
+      // Y = 2 in -> 50.8 mm
+      state = apply(state, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(state.stateName).toBe('sdm-program-input-z');
+      // Z = 3 in -> 76.2 mm
+      state = apply(state, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+      const data = state.stateData as SdmData;
+      expect(data.points[1]?.X).toBeCloseTo(25.4, 3);
+      expect(data.points[1]?.Y).toBeCloseTo(50.8, 3);
+      expect(data.points[1]?.Z).toBeCloseTo(76.2, 3);
+    });
+
+    it('after the last axis (Z) returns to the step view for the same step', () => {
+      let state = programInputState('sdm-program-input-z', { currentStep: 2 });
+      state = apply(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(2);
+    });
+
+    it('stores coordinates in mm regardless of unit (mm direct entry)', () => {
+      const ctx: DROReducerContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+      };
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_5' }, ctx);
+      state = apply(state, { eventName: 'KEY_0' }, ctx);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, ctx);
+      expect((result?.stateData as SdmData).points[1]?.X).toBeCloseTo(50, 6);
+    });
+
+    it('accepts a negative coordinate via the sign key', () => {
+      const ctx: DROReducerContext = {
+        ...DEFAULT_TEST_CONTEXT,
+        nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+      };
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_1' }, ctx);
+      state = apply(state, { eventName: 'KEY_0' }, ctx);
+      state = apply(state, { eventName: 'KEY_SIGN' }, ctx);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, ctx);
+      expect((result?.stateData as SdmData).points[1]?.X).toBeCloseTo(-10, 6);
+    });
+
+    it('selecting another axis (Z) during X entry jumps directly to that axis (AC 10.3)', () => {
+      const state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'BTN_SELECT_Z' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-input-z');
+    });
+
+    it('backspaces with clear when the coordinate buffer has content', () => {
+      let state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      state = apply(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.vMem.inputBuffer).toBe('1');
+      expect(result?.stateName).toBe('sdm-program-input-x');
+    });
+
+    it('exits to idle on clear with an empty coordinate buffer (AC 10.6)', () => {
+      const state = programInputState('sdm-program-input-x', { currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('idle');
+    });
+  });
+
+  // ──────────────── save & advance / navigate (AC 10.4, AC 10.5) ────
+  describe('save & advance and step navigation (AC 10.4, AC 10.5)', () => {
+    it('6► from the step view advances to the next step (AC 10.4)', () => {
+      const state = programStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(2);
+    });
+
+    it('4◄ from the step view goes to the previous step', () => {
+      const state = programStepState({ currentStep: 3 });
+      const result = sdmReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
+      expect((result?.stateData as SdmData).currentStep).toBe(2);
+    });
+
+    it('4◄ does not go below step 1', () => {
+      const state = programStepState({ currentStep: 1 });
+      const result = sdmReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
+    });
+
+    it('6► does not advance past MAX_SDM_STEPS', () => {
+      const state = programStepState({ currentStep: MAX_SDM_STEPS });
+      const result = sdmReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect((result?.stateData as SdmData).currentStep).toBe(MAX_SDM_STEPS);
+    });
+
+    it('preserves stored points when advancing between steps', () => {
+      const state = programStepState({
+        currentStep: 1,
+        points: { 1: { X: 10, Y: 20, Z: 30 } },
+      });
+      const result = sdmReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect((result?.stateData as SdmData).points[1]).toEqual({ X: 10, Y: 20, Z: 30 });
+    });
+
+    it('Y then number then ent jumps directly to that step (AC 10.5)', () => {
+      let state = programStepState({ currentStep: 1 });
+      // Y opens a jump-target prompt (buffer cleared).
+      state = apply(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_8_UP' }, DEFAULT_TEST_CONTEXT); // digit 8
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(8);
+    });
+
+    it('rejects an out-of-range jump target', () => {
+      let state = programStepState({ currentStep: 1 });
+      state = apply(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
+      state = apply(state, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT);
+      const result = sdmReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      // Stays on the step view, current step unchanged.
+      expect(result?.stateName).toBe('sdm-program-step');
+      expect((result?.stateData as SdmData).currentStep).toBe(1);
     });
   });
 });
