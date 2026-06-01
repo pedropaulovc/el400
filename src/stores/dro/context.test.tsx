@@ -44,6 +44,7 @@ function resetStores(initialState?: DROShape) {
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
       encoderFailWarning: false,
+      keypadLock: 'off',
     },
   });
 

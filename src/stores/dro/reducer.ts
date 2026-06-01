@@ -30,6 +30,7 @@ import { setupReducer } from './features/setup';
 import { referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
 import { probeReducer } from './features/probe';
+import { isEventBlockedByKeypadLock } from './features/keypad-lock';
 
 /**
  * All feature reducers in priority order.
@@ -80,6 +81,16 @@ export function droReducer(
   event: DROEventPayload,
   context: DROReducerContext
 ): DROStatePayload {
+  // Keypad lock gate (US-043, §6.2 `LoC`): when the panel is locked, drop every
+  // front-panel key press (except the wrench/setup key and in-setup navigation)
+  // before the feature reducers run, returning the current state unchanged so the
+  // press is a true no-op (AC 43.3/43.7). Internal events -- crucially the
+  // MILL_STATE_CHANGED position tick -- are never gated, so the live readout keeps
+  // updating while locked (AC 43.5).
+  if (isEventBlockedByKeypadLock(current.stateName, event.eventName, context.nvMem)) {
+    return current;
+  }
+
   let firstResult: DROStatePayload | null = null;
   const handlers: string[] = [];
 

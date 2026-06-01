@@ -85,6 +85,7 @@ function resetStoresForTest(): void {
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
       encoderFailWarning: false,
+      keypadLock: 'off',
     },
   });
 

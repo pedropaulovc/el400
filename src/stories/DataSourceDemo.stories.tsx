@@ -33,6 +33,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
       countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
       probeDroType: 'transmit',
       encoderFailWarning: false,
+      keypadLock: 'off',
     },
   });
 
