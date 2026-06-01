@@ -87,3 +87,6 @@ export {
 
 // Re-export bolt hole / arc / angle hole / grid / SDM types and guards
 export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';
+
+// Re-export self-diagnostics guard (US-046)
+export { isDiagnosticsActive } from './droStateMachine';
