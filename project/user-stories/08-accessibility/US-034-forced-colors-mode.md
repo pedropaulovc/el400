@@ -9,14 +9,16 @@
 **So that** I can clearly read the display and interact with all controls using my system's high contrast theme
 
 ## Acceptance Criteria
-- [ ] **AC 34.1:** When forced-colors mode is active, lit seven-segment display segments have a contrast ratio of 20:1 or greater against the background.
-- [ ] **AC 34.2:** When forced-colors mode is active, unlit seven-segment display segments are visually distinct from lit segments.
-- [ ] **AC 34.3:** When forced-colors mode is active, unlit seven-segment display segments and inactive mode indicators have a contrast ratio of approximately 1:1 against the background (essentially invisible/blending with background).
-- [ ] **AC 34.4:** When forced-colors mode is active, all button elements have visible borders.
-- [ ] **AC 34.5:** When forced-colors mode is active, button colors are visually distinct from seven-segment display colors.
-- [ ] **AC 34.6:** When forced-colors mode is active, buttons have a contrast ratio of 17:1 or greater against the background.
-- [ ] **AC 34.7:** All interactive elements (buttons, input areas) remain clearly identifiable and usable in forced-colors mode.
-- [ ] **AC 34.8:** Active mode indicators (ABS/INC, IN/MM) are clearly visible in forced-colors mode with appropriate contrast.
+- [x] **AC 34.1:** When forced-colors mode is active, lit seven-segment display segments have a contrast ratio of 20:1 or greater against the background.
+- [x] **AC 34.2:** When forced-colors mode is active, unlit seven-segment display segments are visually distinct from lit segments.
+- [x] **AC 34.3:** When forced-colors mode is active, unlit seven-segment display segments and inactive mode indicators have a contrast ratio of approximately 1:1 against the background (essentially invisible/blending with background).
+- [x] **AC 34.4:** When forced-colors mode is active, all button elements have visible borders.
+- [x] **AC 34.5:** When forced-colors mode is active, button colors are visually distinct from seven-segment display colors.
+- [x] **AC 34.6:** When forced-colors mode is active, buttons have a contrast ratio of 17:1 or greater against the background.
+- [x] **AC 34.7:** All interactive elements (buttons, input areas) remain clearly identifiable and usable in forced-colors mode.
+- [x] **AC 34.8:** Active mode indicators (ABS/INC, IN/MM) are clearly visible in forced-colors mode with appropriate contrast.
+
+_Verified: e2e smoke test (`e2e/08-accessibility/US-034-forced-colors-mode.spec.ts`) + `*.forced-colors.stories.tsx` Storybook tests (both green in CI), and the manual high-contrast demo in [`spec/demo/us-034-forced-colors-mode/`](../../../spec/demo/us-034-forced-colors-mode/README.md) (all 8 ACs measured at ≥20:1 / 17:1 / ~1:1 in dark and light themes)._
 
 ## E2E Test Scenarios
 ```typescript
