@@ -1,0 +1,32 @@
+
+=== NORMAL (no forced colors, baseline) ===
+system: Canvas=rgb(255, 255, 255) CanvasText=rgb(0, 0, 0) ButtonText=rgb(0, 0, 0) ButtonFace=rgb(239, 239, 239)
+AC 34.1 lit-seg vs bg contrast      : 1.4:1  (>= 20 check)
+AC 34.2/34.3 off-seg vs bg contrast : 15.94:1 (~1:1, <1.5 check; off raw="rgb(0, 41, 0)")
+AC 34.4 button border               : 2px solid rgb(80, 80, 80) (PASS)
+AC 34.6 button text vs face contrast: 15.1:1  (>= 17 check)
+AC 34.5 button-face vs lit-seg fill  : btnBg=rgba(0, 0, 0, 0) litSeg=rgb(0, 255, 0) (distinct PASS)
+AC 34.8 active indicator contrast   : 2.8:1 (>= 17 check); glow textShadow="rgb(255, 77, 77) 0px 0px 8px, rgb(255, 26, 26) 0px 0px 16px, rgb(230, 0, 0) 0px 0px 24px" (check)
+AC 34.3 inactive indicator contrast : 10.02:1 (~1:1, <1.5 check)
+
+=== FORCED-COLORS active + dark theme ===
+system: Canvas=rgb(0, 0, 0) CanvasText=rgb(255, 255, 255) ButtonText=rgb(255, 255, 255) ButtonFace=rgb(0, 0, 0)
+AC 34.1 lit-seg vs bg contrast      : 21.0:1  (>= 20 PASS)
+AC 34.2/34.3 off-seg vs bg contrast : 1.00:1 (~1:1, <1.5 PASS; off raw="rgba(0, 0, 0, 0)")
+AC 34.4 button border               : 2px solid rgb(255, 255, 255) (PASS)
+AC 34.6 button text vs face contrast: 21.0:1  (>= 17 PASS)
+AC 34.5 button-face vs lit-seg fill  : btnBg=rgb(0, 0, 0) litSeg=rgb(255, 255, 255) (distinct PASS)
+AC 34.8 active indicator contrast   : 21.0:1 (>= 17 PASS); glow textShadow="none" (no-glow PASS)
+AC 34.3 inactive indicator contrast : 1.00:1 (~1:1, <1.5 PASS)
+
+=== FORCED-COLORS active + light theme ===
+system: Canvas=rgb(255, 255, 255) CanvasText=rgb(0, 0, 0) ButtonText=rgb(0, 0, 0) ButtonFace=rgb(255, 255, 255)
+AC 34.1 lit-seg vs bg contrast      : 21.0:1  (>= 20 PASS)
+AC 34.2/34.3 off-seg vs bg contrast : 1.00:1 (~1:1, <1.5 PASS; off raw="rgba(255, 255, 255, 0)")
+AC 34.4 button border               : 2px solid rgb(0, 0, 0) (PASS)
+AC 34.6 button text vs face contrast: 21.0:1  (>= 17 PASS)
+AC 34.5 button-face vs lit-seg fill  : btnBg=rgb(255, 255, 255) litSeg=rgb(0, 0, 0) (distinct PASS)
+AC 34.8 active indicator contrast   : 21.0:1 (>= 17 PASS); glow textShadow="none" (no-glow PASS)
+AC 34.3 inactive indicator contrast : 1.00:1 (~1:1, <1.5 PASS)
+
+Screenshots written to spec/demo/us-034-forced-colors-mode
