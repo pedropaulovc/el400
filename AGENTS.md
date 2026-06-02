@@ -40,6 +40,10 @@ npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybo
 | E2E | `e2e/**/*.spec.ts` | Playwright. Critical flows only |
 | Stories | `src/**/*.stories.tsx` | Visual docs only, no behavior tests |
 
+### Debugging E2E test failures
+
+If you are debugging Playwright E2E test errors, don't guess the root cause: fetch the `trace.zip` from the CI/CD build outputs or from the local tests output folder and run `npx playwright-trace-llm path/to/trace.zip -o ./trace-export` to export the trace into LLM-friendly Markdown and HTML. It contains all information available in the Playwright trace viewer.
+
 ## Architecture
 
 ```
