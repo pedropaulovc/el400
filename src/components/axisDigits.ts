@@ -37,7 +37,14 @@ export const formatNumberValue = (num: number, decimals = 4): AxisDigit[] => {
   const parts = formatted.split('.');
   const intPart = parts[0] ?? '';
   const decPart = parts[1] ?? '';
-  const paddedInt = intPart.padStart(3, ' ');
+  // The panel has DISPLAY_WIDTH cells: 1 sign cell + (DISPLAY_WIDTH - 1) digit
+  // cells, split between integer and fraction. Pad the integer to the cells the
+  // fraction leaves free so the reading right-aligns at ANY dP resolution. A
+  // hardcoded 3 only right-aligns the 4-decimal default; coarser dP (e.g. the
+  // 50-micron / 3-decimal setting) would otherwise under-pad and shift the
+  // reading left, leaving a trailing blank instead of a leading one.
+  const intCells = DISPLAY_WIDTH - 1 - decimals;
+  const paddedInt = intPart.padStart(intCells, ' ');
 
   for (let i = 0; i < paddedInt.length; i++) {
     result.push({
