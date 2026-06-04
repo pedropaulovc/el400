@@ -16,6 +16,7 @@
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
+    "pretest:storybook": "node scripts/check-worktree-deps.mjs",
     "test:storybook": "vitest --config=vitest.storybook.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

@@ -28,6 +28,18 @@ npm run test:e2e         # Playwright E2E
 npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybook)
 ```
 
+### Git worktrees need their own `node_modules`
+
+Each git worktree must have its **own** real `node_modules` — run `npm ci` once
+after creating the worktree. A symlink won't do (Vite resolves it to the real
+path). Unit tests and E2E tolerate a missing install (Node resolves up to the
+main repo's `node_modules`), but **`test:storybook` does not**: Storybook runs
+through Vitest browser mode, whose Vite server only serves files under the
+worktree root, so deps resolving to a sibling `node_modules` fail. A
+`pretest:storybook` guard (`scripts/check-worktree-deps.mjs`) catches this and
+prints `Run: npm ci` instead of an opaque "Failed to fetch dynamically imported
+module".
+
 ## Testing Exit Criteria
 
 **All changes:** `npm run test:all` must pass
