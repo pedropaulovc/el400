@@ -72,7 +72,7 @@ async function coarsenToThreeDecimals(
   await user.click(screen.getByTestId('btn-settings'));
   await user.click(screen.getByTestId(`axis-select-${axis}`));
   for (let i = 0; i < DP_INDEX; i++) {
-    await user.click(screen.getByTestId('key-8'));
+    await user.click(screen.getByTestId('key-2'));
   }
   // 5 -> 10 -> 20 -> 50 via right arrow (three presses).
   await user.click(screen.getByTestId('key-6'));
