@@ -10,6 +10,9 @@ import {
   SAVE_CHANGES_ID,
   OEM_MODE_ID,
   RESTORE_DEFAULTS_ID,
+  COUNTING_MODE_ID,
+  SCALE_RESOLUTION_ID,
+  KEYPAD_LOCK_ID,
   DIRECTION_ID,
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
@@ -42,6 +45,34 @@ describe('SETUP_PARAMETERS registry', () => {
 
   it('ends with the terminal End item', () => {
     expect(SETUP_PARAMETERS[SETUP_PARAMETER_COUNT - 1]!.id).toBe(SETUP_END_ID);
+  });
+
+  // The registry order is the authoritative menu order. It follows the operation
+  // manual section 6.2 "table 2" for the parameters that table lists, with the
+  // implemented extras the table omits (z-depth, the zero-approach trio, beep)
+  // slotted where the video walkthrough demonstrates them. LinEAr first, End last.
+  it('lists parameters in the manual section 6.2 / video order', () => {
+    expect(SETUP_PARAMETERS.map((p) => p.id)).toEqual([
+      COUNTING_MODE_ID, // LinEAr
+      SCALE_RESOLUTION_ID, // SC 5.0
+      DISPLAY_RESOLUTION_ID, // dP 5.0
+      MEASUREMENT_MODE_ID, // rAd
+      DIRECTION_ID, // LEFt / riGht
+      ENF_ID, // EnF oFF
+      PROBE_DRO_TYPE_ID, // dro t
+      'taper-on', // tAPEr on
+      Z_DEPTH_ID, // dEP nEG
+      KEYPAD_LOCK_ID, // LoC oFF
+      ZERO_APPROACH_ID, // bU22 oF
+      ZERO_APPROACH_DIST_ID, // bP .002
+      ZERO_APPROACH_TOLR_ID, // tL .000
+      BEEP_ID, // bEEP on
+      SLEEP_TIMEOUT_ID, // SLP oFF
+      SAVE_CHANGES_ID, // SAU ChG
+      RESTORE_DEFAULTS_ID, // rSt oEm
+      OEM_MODE_ID, // oEm mod
+      SETUP_END_ID, // End
+    ]);
   });
 
   it('the End item has no choices', () => {

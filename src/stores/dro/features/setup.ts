@@ -157,9 +157,11 @@ function reduceParameter(
     };
   }
 
-  // Item navigation up/down with wrap-around (AC 39.3).
+  // Item navigation up/down with wrap-around (AC 39.3). The menu is a vertical
+  // list (LinEAr at the top, End at the bottom — manual section 6.2 / video
+  // walkthrough): DOWN advances toward End, UP goes back toward LinEAr.
   if (eventName === 'KEY_8_UP' || eventName === 'KEY_2_DOWN') {
-    const delta = eventName === 'KEY_8_UP' ? 1 : -1;
+    const delta = eventName === 'KEY_2_DOWN' ? 1 : -1;
     const newData: SetupData = {
       ...data,
       currentParamIndex: wrapItemIndex(data.currentParamIndex, delta),

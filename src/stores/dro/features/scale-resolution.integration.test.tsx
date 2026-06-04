@@ -21,9 +21,9 @@ const SC_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === SCALE_RESOLUTION_ID)
 async function gotoSC(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('btn-settings'));
   await user.click(screen.getByTestId('axis-select-x'));
-  // currentParamIndex starts at 0; press up (key-8) SC_INDEX times.
+  // currentParamIndex starts at 0; press down (key-2) SC_INDEX times to reach SC.
   for (let i = 0; i < SC_INDEX; i++) {
-    await user.click(screen.getByTestId('key-8'));
+    await user.click(screen.getByTestId('key-2'));
   }
 }
 

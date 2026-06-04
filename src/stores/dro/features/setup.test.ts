@@ -83,25 +83,29 @@ describe('setupReducer - axis selection (AC 39.2)', () => {
 });
 
 describe('setupReducer - item navigation up/down with wrap (AC 39.3)', () => {
-  it('KEY_8_UP advances to the next item', () => {
-    const result = setupReducer(paramState({ currentParamIndex: 0 }), { eventName: 'KEY_8_UP' }, ctx);
+  // The setup menu is a vertical list: LinEAr at the top, End at the bottom
+  // (manual section 6.2 / video walkthrough). Pressing DOWN (KEY_2_DOWN) moves
+  // toward End -- the video uses it to scroll "down past SLEEP to SAU CHG" and
+  // "down twice to End". Pressing UP (KEY_8_UP) moves back toward LinEAr.
+  it('KEY_2_DOWN advances to the next item (toward End)', () => {
+    const result = setupReducer(paramState({ currentParamIndex: 0 }), { eventName: 'KEY_2_DOWN' }, ctx);
     expect((result?.stateData as SetupData).currentParamIndex).toBe(1);
     expect(xText(result)).toBe(SETUP_PARAMETERS[1]!.label);
   });
 
-  it('KEY_2_DOWN goes to the previous item', () => {
-    const result = setupReducer(paramState({ currentParamIndex: 1 }), { eventName: 'KEY_2_DOWN' }, ctx);
+  it('KEY_8_UP goes to the previous item (toward LinEAr)', () => {
+    const result = setupReducer(paramState({ currentParamIndex: 1 }), { eventName: 'KEY_8_UP' }, ctx);
     expect((result?.stateData as SetupData).currentParamIndex).toBe(0);
   });
 
-  it('scrolling up past the last item wraps to the first', () => {
+  it('scrolling down past the last item wraps to the first', () => {
     const last = SETUP_PARAMETER_COUNT - 1;
-    const result = setupReducer(paramState({ currentParamIndex: last }), { eventName: 'KEY_8_UP' }, ctx);
+    const result = setupReducer(paramState({ currentParamIndex: last }), { eventName: 'KEY_2_DOWN' }, ctx);
     expect((result?.stateData as SetupData).currentParamIndex).toBe(0);
   });
 
-  it('scrolling down before the first item wraps to the last', () => {
-    const result = setupReducer(paramState({ currentParamIndex: 0 }), { eventName: 'KEY_2_DOWN' }, ctx);
+  it('scrolling up before the first item wraps to the last', () => {
+    const result = setupReducer(paramState({ currentParamIndex: 0 }), { eventName: 'KEY_8_UP' }, ctx);
     expect((result?.stateData as SetupData).currentParamIndex).toBe(SETUP_PARAMETER_COUNT - 1);
   });
 });

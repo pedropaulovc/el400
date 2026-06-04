@@ -289,17 +289,24 @@ export const OEM_MODE_ID = 'oem-mode';
 export const SETUP_END_ID = 'end';
 
 /**
- * The ordered list of setup parameters, following the section 6.2 table.
+ * The ordered list of setup parameters. This array order IS the authoritative
+ * menu order the operator scrolls with up/down (DOWN = toward End).
  *
- * Only a foundational subset is wired here as proof of the framework (US-039):
- * - `counting-mode` (per-axis): Linear / Angular -- a real per-axis nvMem-backed
- *   parameter with commit-on-change; angular axes display wrapped degrees (US-040).
- * - `enf` (global): encoder-fail warning On / Off, backed by its own
- *   nvMem.encoderFailWarning flag with commit-on-change; a lost encoder signal
- *   shows `no SIG` on the affected axis when on (US-042).
- * - `End`: terminal exit item.
+ * Ordering source, in priority order:
+ * - EL400 operation manual section 6.2 "Parameters Setting" / "table 2" is the
+ *   canonical navigable order: LinEAr, SC, dP, rAd, LEFt, (CALiB), EnF,
+ *   (AUH Fn / SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
+ *   SAU ChG, rSt oEm, oEm mod, End. Parenthesised rows are not yet implemented
+ *   here, so they are simply absent.
+ * - The DRO PROS video walkthrough (el400-dro-overview-video/MANUAL.md, Part 1
+ *   §1.4-1.19) covers the implemented extras the §6.2 table omits: the
+ *   zero-approach trio (bU22 / bP / tL, §1.13) and bEEP (§1.14) sit just after
+ *   LoC and before SLEEP. `dEP nEG` (Z depth-sense, US-002 AC2.4) has no §6.2
+ *   row and is grouped with the other geometry settings.
  *
- * Later stories append their own entries here.
+ * When adding a new parameter, insert it at the position the §6.2 table (or, for
+ * a table-less extra, the video) dictates -- NOT merely appended before End.
+ * The `setup.integration.test.tsx` order test locks this sequence end-to-end.
  */
 export const SETUP_PARAMETERS: readonly SetupParameter[] = [
   {
@@ -324,48 +331,6 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
           [axis]: value as CountingMode,
         },
       });
-    },
-  },
-  {
-    id: ENF_ID,
-    label: 'EnF oFF',
-    scope: 'global',
-    // Default-first ordering: 'off' (the default, AC 42.1) seeds before 'on'.
-    choices: [
-      { value: 'off', label: 'EnF oFF' },
-      { value: 'on', label: 'EnF on' },
-    ],
-    // Encoder-fail warning (US-042). Reads its OWN nvMem flag, decoupled from
-    // beepEnabled (US-025's field).
-    readValue: (ctx) => (ctx.nvMem.encoderFailWarning ? 'on' : 'off'),
-    // Commit-on-change (US-042): persist immediately so a later signal-loss
-    // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
-    // ENF is therefore NOT a draft-only / SAU CHG (US-027) param -- it has NO
-    // `persist`; SAV CHG skips commit-on-change params (already saved).
-    commit: (_ctx, value) => {
-      useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
-    },
-  },
-  {
-    id: BEEP_ID,
-    label: 'bEEP on',
-    scope: 'global',
-    // Default-first ordering: 'on' is the default (AC25.2), so it seeds first.
-    // The manual section 6.2 table omits a buzzer row, so the on/off glyphs
-    // follow the device's sibling on/off parameters (`EnF on`/`EnF oFF`,
-    // `LoC on`/`LoC off`): `bEEP on` / `bEEP oFF`.
-    choices: [
-      { value: 'on', label: 'bEEP on' },
-      { value: 'off', label: 'bEEP oFF' },
-    ],
-    // Keypad beep (US-025). Reads its OWN nvMem flag, decoupled from
-    // encoderFailWarning (US-042's field).
-    readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
-    // Commit-on-change (US-025): persist immediately so key presses fall silent
-    // (or resume beeping) the moment the operator cycles the choice -- the gate
-    // in playClickSound reads beepEnabled live on every press (AC25.3, AC25.4).
-    commit: (_ctx, value) => {
-      useSettingsStore.getState().updateNvMem({ beepEnabled: value === 'on' });
     },
   },
   {
@@ -450,19 +415,27 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
-    id: 'taper-on',
-    label: 'tAPEr on',
-    scope: 'global',
+    id: MEASUREMENT_MODE_ID,
+    label: 'rAd',
+    scope: 'per-axis',
     choices: [
-      { value: 'X', label: 'tAPEr X' },
-      { value: 'Z', label: 'tAPEr Z' },
-      { value: 'Zprime', label: 'tAPEr Z1' },
+      { value: 'radius', label: 'rAd' },
+      { value: 'diameter', label: 'diA' },
     ],
-    // Reads the committed taper-on axis (US-045); the value is seeded from nvMem.
-    readValue: (ctx) => ctx.nvMem.taperOnAxis,
-    // Draft-only: the taper-on axis is written to nvMem only on SAU CHG (US-027).
-    persist: (_ctx, value) => {
-      useSettingsStore.getState().updateNvMem({ taperOnAxis: value as TaperOnAxis });
+    // Seed from the selected axis's committed measurement mode (US-041). On the
+    // SELECT prompt (axis null) fall back to X. radius is the mill default (AC 41.3).
+    readValue: (ctx) => ctx.nvMem.measurementMode[ctx.axis ?? 'X'],
+    // Commit-on-change (US-041): persist the per-axis mode immediately so the
+    // readout switches between 1:1 (radius) and 2× (diameter) on exit and on
+    // every later position update -- the same surgical path as Direction (US-002).
+    commit: (ctx, value) => {
+      const axis = ctx.axis ?? 'X';
+      useSettingsStore.getState().updateNvMem({
+        measurementMode: {
+          ...ctx.nvMem.measurementMode,
+          [axis]: value as MeasurementMode,
+        },
+      });
     },
   },
   {
@@ -489,6 +462,58 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: ENF_ID,
+    label: 'EnF oFF',
+    scope: 'global',
+    // Default-first ordering: 'off' (the default, AC 42.1) seeds before 'on'.
+    choices: [
+      { value: 'off', label: 'EnF oFF' },
+      { value: 'on', label: 'EnF on' },
+    ],
+    // Encoder-fail warning (US-042). Reads its OWN nvMem flag, decoupled from
+    // beepEnabled (US-025's field).
+    readValue: (ctx) => (ctx.nvMem.encoderFailWarning ? 'on' : 'off'),
+    // Commit-on-change (US-042): persist immediately so a later signal-loss
+    // event shows `no SIG` without waiting for SAU CHG (recommended on, AC 42.6).
+    // ENF is therefore NOT a draft-only / SAU CHG (US-027) param -- it has NO
+    // `persist`; SAV CHG skips commit-on-change params (already saved).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
+    },
+  },
+  {
+    id: PROBE_DRO_TYPE_ID,
+    label: 'dro t',
+    scope: 'global',
+    choices: [
+      { value: 'transmit', label: 'dro t' },
+      { value: 'freeze', label: 'dro F' },
+    ],
+    // Global touch-probe DRO type (US-032, §10.1.1). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.probeDroType,
+    // Commit-on-change: persist immediately so the probe freeze/transmit
+    // behaviour takes hold on exit (same path as Direction / Z depth).
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
+    },
+  },
+  {
+    id: 'taper-on',
+    label: 'tAPEr on',
+    scope: 'global',
+    choices: [
+      { value: 'X', label: 'tAPEr X' },
+      { value: 'Z', label: 'tAPEr Z' },
+      { value: 'Zprime', label: 'tAPEr Z1' },
+    ],
+    // Reads the committed taper-on axis (US-045); the value is seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.taperOnAxis,
+    // Draft-only: the taper-on axis is written to nvMem only on SAU CHG (US-027).
+    persist: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ taperOnAxis: value as TaperOnAxis });
+    },
+  },
+  {
     id: Z_DEPTH_ID,
     label: 'dEP nEG',
     scope: 'global',
@@ -501,6 +526,27 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // Commit-on-change (US-002): persist immediately, same path as Direction.
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ zDepthSense: value as ZDepthSense });
+    },
+  },
+  {
+    id: KEYPAD_LOCK_ID,
+    label: 'LoC oFF',
+    scope: 'global',
+    choices: [
+      { value: 'off', label: 'LoC oFF' },
+      { value: 'on', label: 'LoC on' },
+    ],
+    // Global keypad lock (US-043, §6.2 `LoC`). Seeded from nvMem.
+    readValue: (ctx) => ctx.nvMem.keypadLock,
+    // Commit-on-change: persist immediately so the lock takes hold the moment the
+    // operator cycles the choice (same surgical path as Direction / Z depth /
+    // probe type). Persisting to nvMem (localStorage-backed) also means the lock
+    // survives a power cycle (AC 43.6). Crucially, committing on cycle -- not only
+    // on exit -- keeps the UNLOCK reachable: while `LoC on`, the gate already lets
+    // the wrench/setup key and all in-setup navigation through, so cycling back to
+    // `LoC oFF` here unlocks even though the panel was locked on entry.
+    commit: (_ctx, value) => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
     },
   },
   {
@@ -555,64 +601,25 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
-    id: MEASUREMENT_MODE_ID,
-    label: 'rAd',
-    scope: 'per-axis',
-    choices: [
-      { value: 'radius', label: 'rAd' },
-      { value: 'diameter', label: 'diA' },
-    ],
-    // Seed from the selected axis's committed measurement mode (US-041). On the
-    // SELECT prompt (axis null) fall back to X. radius is the mill default (AC 41.3).
-    readValue: (ctx) => ctx.nvMem.measurementMode[ctx.axis ?? 'X'],
-    // Commit-on-change (US-041): persist the per-axis mode immediately so the
-    // readout switches between 1:1 (radius) and 2× (diameter) on exit and on
-    // every later position update -- the same surgical path as Direction (US-002).
-    commit: (ctx, value) => {
-      const axis = ctx.axis ?? 'X';
-      useSettingsStore.getState().updateNvMem({
-        measurementMode: {
-          ...ctx.nvMem.measurementMode,
-          [axis]: value as MeasurementMode,
-        },
-      });
-    },
-  },
-  {
-    id: PROBE_DRO_TYPE_ID,
-    label: 'dro t',
+    id: BEEP_ID,
+    label: 'bEEP on',
     scope: 'global',
+    // Default-first ordering: 'on' is the default (AC25.2), so it seeds first.
+    // The manual section 6.2 table omits a buzzer row, so the on/off glyphs
+    // follow the device's sibling on/off parameters (`EnF on`/`EnF oFF`,
+    // `LoC on`/`LoC off`): `bEEP on` / `bEEP oFF`.
     choices: [
-      { value: 'transmit', label: 'dro t' },
-      { value: 'freeze', label: 'dro F' },
+      { value: 'on', label: 'bEEP on' },
+      { value: 'off', label: 'bEEP oFF' },
     ],
-    // Global touch-probe DRO type (US-032, §10.1.1). Seeded from nvMem.
-    readValue: (ctx) => ctx.nvMem.probeDroType,
-    // Commit-on-change: persist immediately so the probe freeze/transmit
-    // behaviour takes hold on exit (same path as Direction / Z depth).
+    // Keypad beep (US-025). Reads its OWN nvMem flag, decoupled from
+    // encoderFailWarning (US-042's field).
+    readValue: (ctx) => (ctx.nvMem.beepEnabled ? 'on' : 'off'),
+    // Commit-on-change (US-025): persist immediately so key presses fall silent
+    // (or resume beeping) the moment the operator cycles the choice -- the gate
+    // in playClickSound reads beepEnabled live on every press (AC25.3, AC25.4).
     commit: (_ctx, value) => {
-      useSettingsStore.getState().updateNvMem({ probeDroType: value as ProbeDroType });
-    },
-  },
-  {
-    id: KEYPAD_LOCK_ID,
-    label: 'LoC oFF',
-    scope: 'global',
-    choices: [
-      { value: 'off', label: 'LoC oFF' },
-      { value: 'on', label: 'LoC on' },
-    ],
-    // Global keypad lock (US-043, §6.2 `LoC`). Seeded from nvMem.
-    readValue: (ctx) => ctx.nvMem.keypadLock,
-    // Commit-on-change: persist immediately so the lock takes hold the moment the
-    // operator cycles the choice (same surgical path as Direction / Z depth /
-    // probe type). Persisting to nvMem (localStorage-backed) also means the lock
-    // survives a power cycle (AC 43.6). Crucially, committing on cycle -- not only
-    // on exit -- keeps the UNLOCK reachable: while `LoC on`, the gate already lets
-    // the wrench/setup key and all in-setup navigation through, so cycling back to
-    // `LoC oFF` here unlocks even though the panel was locked on entry.
-    commit: (_ctx, value) => {
-      useSettingsStore.getState().updateNvMem({ keypadLock: value as KeypadLockState });
+      useSettingsStore.getState().updateNvMem({ beepEnabled: value === 'on' });
     },
   },
   {
@@ -636,6 +643,16 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     },
   },
   {
+    id: SAVE_CHANGES_ID,
+    // Manual section 6.2 names this `SAu ChG`; the seven-segment panel has no
+    // lowercase 'u' glyph, so the renderable label uses uppercase 'U' (as in
+    // 'AnGULAr'). Terminal item: no choices, acted on with ENT (AC27.1/27.2).
+    label: 'SAU ChG',
+    scope: 'global',
+    choices: [],
+    readValue: () => '',
+  },
+  {
     id: RESTORE_DEFAULTS_ID,
     // Manual §6.2 `r5t oEñ` (Restore default settings). The panel renders
     // r,S,t,o,E,m, so the faithful label is `rSt oEm`. Terminal-entry item: no
@@ -651,16 +668,6 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     // OCR's 'ñ'), so the faithful label is `oEm mod`. Terminal-entry item: no
     // choices; ENT opens the password gate (AC 44.1/44.2). Handled in setup.ts.
     label: 'oEm mod',
-    scope: 'global',
-    choices: [],
-    readValue: () => '',
-  },
-  {
-    id: SAVE_CHANGES_ID,
-    // Manual section 6.2 names this `SAu ChG`; the seven-segment panel has no
-    // lowercase 'u' glyph, so the renderable label uses uppercase 'U' (as in
-    // 'AnGULAr'). Terminal item: no choices, acted on with ENT (AC27.1/27.2).
-    label: 'SAU ChG',
     scope: 'global',
     choices: [],
     readValue: () => '',
