@@ -146,13 +146,14 @@ export class DROPage {
     await this.page.goto(url);
     await this.page.waitForLoadState('domcontentloaded');
 
-    // Boot readiness barrier. In skip mode the state machine reaches `idle` on the
-    // mount BOOT_STARTED dispatch (boot.ts) — synchronously, with no timer and
-    // before the Socket.IO handshake. Await that committed state instead of polling
-    // the socket-derived display value (see waitForReady).
-    if (skipBoot) {
-      await this.waitForReady('idle');
-    }
+    // Boot readiness barrier. The mount BOOT_STARTED dispatch (boot.ts) commits a
+    // state synchronously — with no timer and before the Socket.IO handshake — so
+    // await the committed state instead of polling the socket-derived display
+    // value (see waitForReady). In skip mode that resting state is `idle`; with the
+    // boot message shown it is `boot-show-message`, the version screen. Either way
+    // domcontentloaded fires before React mounts, so without this barrier a one-shot
+    // read of the display races the first render and can sample an empty string.
+    await this.waitForReady(skipBoot ? 'idle' : 'boot-show-message');
   }
 
   /**
