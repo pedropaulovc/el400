@@ -17,6 +17,7 @@ import {
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
   CALIBRATION_ID,
+  AUX_FN_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
   ZERO_APPROACH_ID,
@@ -61,6 +62,7 @@ describe('SETUP_PARAMETERS registry', () => {
       DIRECTION_ID, // LEFt / riGht
       CALIBRATION_ID, // CALib (non-functional placeholder)
       ENF_ID, // EnF oFF
+      AUX_FN_ID, // AUH Fn (hardware-absent dwell)
       PROBE_DRO_TYPE_ID, // dro t
       'taper-on', // tAPEr on
       Z_DEPTH_ID, // dEP nEG
@@ -114,6 +116,22 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(ids.indexOf(ENF_ID)).toBe(ids.indexOf(CALIBRATION_ID) + 1);
   });
 
+  it('exposes the AUX Fn (auxiliary function) terminal row with no choices', () => {
+    const auxFn = SETUP_PARAMETERS.find((p) => p.id === AUX_FN_ID)!;
+    expect(auxFn).toBeDefined();
+    // Manual §6.2 / §12 "AUX Fn"; the seven-segment font renders 'X' (an axis
+    // glyph) but not uppercase 'H', so the renderable label keeps the 'X'.
+    expect(auxFn.label).toBe('AUX Fn');
+    expect(auxFn.choices).toHaveLength(0);
+    // Terminal-entry, not a cycler: no commit/persist (ENT is handled in setup.ts).
+    expect(auxFn.commit).toBeUndefined();
+    expect(auxFn.persist).toBeUndefined();
+    // Sits immediately after EnF (encoder-fail) and before dro t per manual §6.2.
+    const ids = SETUP_PARAMETERS.map((p) => p.id);
+    expect(ids.indexOf(AUX_FN_ID)).toBe(ids.indexOf(ENF_ID) + 1);
+    expect(ids.indexOf(PROBE_DRO_TYPE_ID)).toBe(ids.indexOf(AUX_FN_ID) + 1);
+  });
+
   it('non-terminal parameters have at least two choices', () => {
     // Terminal action items (End, SAV CHG, OEM Mode, Restore Defaults) carry no
     // choices — they are acted on with ENT rather than cycled. Every other
@@ -124,6 +142,7 @@ describe('SETUP_PARAMETERS registry', () => {
       OEM_MODE_ID,
       RESTORE_DEFAULTS_ID,
       CALIBRATION_ID,
+      AUX_FN_ID,
     ]);
     for (const p of SETUP_PARAMETERS) {
       if (terminalIds.has(p.id)) continue;

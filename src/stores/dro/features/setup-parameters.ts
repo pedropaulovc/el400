@@ -240,6 +240,18 @@ export const MEASUREMENT_MODE_ID = 'measurement-mode';
  */
 export const CALIBRATION_ID = 'calibration';
 
+/**
+ * The `AUH Fn` ("AUX Fn") parameter id. Manual §6.2 lists it between EnF and the
+ * probe/serial rows; its setting column reads "Press for Auxiliary Function Menu"
+ * (Section 10). The backing hardware -- an optional DB15 connector -- is "not
+ * present on current displays" (video manual §1.11), and the full auxiliary
+ * feature set behind it (six-output/serial, US-033) is unimplemented. So this is
+ * a terminal-entry row whose ENT flashes the `no Conn` dwell (see `aux-fn.ts`)
+ * rather than a value-cycling parameter: choiceless, with the ENT hand-off in
+ * `setup.ts`. Left/right are no-ops (no choices).
+ */
+export const AUX_FN_ID = 'aux-fn';
+
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
@@ -303,8 +315,8 @@ export const SETUP_END_ID = 'end';
  *
  * Ordering source, in priority order:
  * - EL400 operation manual section 6.2 "Parameters Setting" / "table 2" is the
- *   canonical navigable order: LinEAr, SC, dP, rAd, LEFt, CALiB, EnF,
- *   (AUH Fn / SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
+ *   canonical navigable order: LinEAr, SC, dP, rAd, LEFt, CALiB, EnF, AUH Fn,
+ *   (SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
  *   SAU ChG, rSt oEm, oEm mod, End. Parenthesised rows are not yet implemented
  *   here, so they are simply absent.
  * - The DRO PROS video walkthrough (el400-dro-overview-video/MANUAL.md, Part 1
@@ -500,6 +512,21 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
     commit: (_ctx, value) => {
       useSettingsStore.getState().updateNvMem({ encoderFailWarning: value === 'on' });
     },
+  },
+  {
+    id: AUX_FN_ID,
+    // Manual §12 text list maps the OCR'd `AUH Fn` to `AUX Fn` ("Auxiliary
+    // function settings"). This simulator's seven-segment font renders 'X' (an
+    // axis glyph) but not an uppercase 'H', so the faithful renderable label is
+    // `AUX Fn` -- the manual's own expansion, with the OCR's 'H'-for-'X' artifact
+    // reconciled (cf. CALib's `d iA`->`diA` reconciliation above).
+    // Terminal-entry row (choiceless): unlike the CALib placeholder above, ENT is
+    // NOT a no-op -- it is handled in `setup.ts` to flash the `no Conn` dwell
+    // (the optional DB15 auxiliary connector is absent). Left/right are no-ops.
+    label: 'AUX Fn',
+    scope: 'global',
+    choices: [],
+    readValue: () => '',
   },
   {
     id: PROBE_DRO_TYPE_ID,

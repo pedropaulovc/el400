@@ -42,10 +42,12 @@ import {
   SAVE_CHANGES_ID,
   OEM_MODE_ID,
   RESTORE_DEFAULTS_ID,
+  AUX_FN_ID,
   type SetupParameter,
   type SetupReadContext,
 } from './setup-parameters';
 import { SETUP_SAVED_TEXT } from './save-changes';
+import { enterAuxFnNoConn } from './aux-fn';
 import { enterOemPassword } from './oem-mode';
 import { enterRestoreInProgress } from './restore-defaults';
 
@@ -233,6 +235,13 @@ function reduceParameter(
     if (param.id === OEM_MODE_ID) {
       return enterOemPassword(vMem, data.currentParamIndex);
     }
+    // AUH Fn + ent flashes the `no Conn` dwell: the optional DB15 auxiliary
+    // connector is absent (video manual §1.11), so there is no Auxiliary Function
+    // Menu to enter. The SetupData is carried through so the row stays highlighted
+    // on return; nothing is stored.
+    if (param.id === AUX_FN_ID) {
+      return enterAuxFnNoConn(data, vMem);
+    }
     // rSt oEm + ent runs the restore (US-028, AC28.7/28.8): reset nvMem to the
     // OEM baseline or factory, wipe user data, and show the `IN ProG` dwell. The
     // reset is durable synchronously here; unsaved drafts are discarded with it.
@@ -278,6 +287,30 @@ function reduceSaved(
   };
 }
 
+/**
+ * Handle the AUX Fn `no Conn` dwell (`AUH Fn`). Dismissed by the auto-dismiss
+ * timeout (`AUX_FN_TIMEOUT`) or an impatient front-panel key press, returning to
+ * the setup menu with `AUH Fn` still highlighted (the SetupData is carried
+ * through unchanged). Mirrors `reduceSaved`: internal/system events — chiefly the
+ * ~100ms MILL_STATE_CHANGED encoder tick — must NOT dismiss it, or the message
+ * would be wiped before the operator sees it, so those return null (screen holds).
+ */
+function reduceAuxFn(
+  eventName: DROEventPayload['eventName'],
+  data: SetupData,
+  vMem: VolatileMemoryState,
+  nvMem: NonVolatileMemory
+): DROStatePayload | null {
+  const isDismissal = eventName === 'AUX_FN_TIMEOUT' || isFrontPanelKey(eventName);
+  if (!isDismissal) return null;
+  return {
+    stateName: 'setup-parameter',
+    stateData: data,
+    vMem,
+    display: computeParameterDisplay(data, nvMem),
+  };
+}
+
 export const setupReducer: FeatureReducer = (statePayload, eventPayload, context) => {
   const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
@@ -302,6 +335,10 @@ export const setupReducer: FeatureReducer = (statePayload, eventPayload, context
 
   if (state === 'setup-saved') {
     return reduceSaved(eventName, setupData, vMem, context.nvMem);
+  }
+
+  if (state === 'setup-aux-fn') {
+    return reduceAuxFn(eventName, setupData, vMem, context.nvMem);
   }
 
   return reduceParameter(eventName, setupData, vMem, context.nvMem, context);

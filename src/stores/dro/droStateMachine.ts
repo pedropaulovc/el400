@@ -176,6 +176,9 @@ export type DROStateName =
   | 'setup-parameter'
   // SAV CHG save-confirmation state (US-027) - shows StorEd, auto-returns to setup
   | 'setup-saved'
+  // AUX Fn hardware-absent dwell (§6.2 `AUH Fn`): shows `no Conn` because the
+  // optional DB15 auxiliary connector is not present, then auto-returns to setup.
+  | 'setup-aux-fn'
   // OEM Mode states (US-044): password-gated capture of a custom default baseline.
   // `oem-password` collects the code; `oem-mode` is the entered screen where ENT
   // stores the live config as nvMem.oemDefaults; `oem-rejected` flashes on a wrong
@@ -544,6 +547,8 @@ export type DROEventPayload =
   | { eventName: 'GRID_INTRO_TIMEOUT' }
   | { eventName: 'SDM_INTRO_TIMEOUT' }
   | { eventName: 'SETUP_SAVED_TIMEOUT' }
+  // AUX Fn `no Conn` dwell elapsed (§6.2 `AUH Fn`); dispatched by useAuxFnNoConn.
+  | { eventName: 'AUX_FN_TIMEOUT' }
   // Wrong OEM password flash elapsed (US-044); dispatched by useOemRejectedDismiss.
   | { eventName: 'OEM_REJECTED_TIMEOUT' }
   // Restore Defaults dwell elapsed (US-028); dispatched by useRestoreProgress.
