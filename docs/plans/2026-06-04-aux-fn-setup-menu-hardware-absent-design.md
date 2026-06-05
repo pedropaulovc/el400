@@ -8,7 +8,7 @@ Add the missing `AUH Fn` ("AUX Fn") option to the setup menu, between `EnF oFF`
 (encoder-fail) and `dro t` (probe DRO type). Per the EL400 manual §6.2 it is a
 terminal-entry row whose setting column reads *"Press for Auxiliary Function
 Menu"* (Section 10) — like `CALiB`'s "Press for error compensation". Unlike the
-`CALib` placeholder (a silent no-op), pressing ENT on `AUH Fn` flashes a brief
+`CALib` placeholder (a silent no-op), pressing ENT on `AUX Fn` flashes a brief
 **`no Conn`** dwell, then returns to the row.
 
 ## Why this behavior (not a no-op, not the full sub-menu)
@@ -29,12 +29,14 @@ Manual §6.2 "table 2" canonical navigable order:
 LinEAr, SC, dP, rAd, LEFt, CALiB, EnF, AUH Fn, (SErIAL), dro, …
 ```
 
-`AUH Fn` sits immediately after `EnF` and before `dro` (probe DRO type). The
+`AUX Fn` sits immediately after `EnF` and before `dro` (probe DRO type). The
 registry header comment and `setup.integration.test.tsx` source-of-truth comment
 already reserve this slot as a parenthesized "not yet implemented" row. Label
-rendering: the §12 text list maps `AUH Fn → AUX Fn` ("Auxiliary function
-settings"); the seven-segment panel has no 'X' glyph and approximates it as 'H',
-so the faithful label is `AUH Fn`.
+rendering: the §12 text list maps the OCR'd `AUH Fn → AUX Fn` ("Auxiliary
+function settings"); this simulator's seven-segment font renders `X` (an axis
+glyph) but **not** an uppercase `H`, so the faithful renderable label is `AUX Fn`
+— the manual's own expansion, with the OCR's `H`-for-`X` artifact reconciled
+(cf. CALib's `d iA → diA`).
 
 ## Approach
 
@@ -42,10 +44,10 @@ A dwell state modelled exactly on the `setup-saved` / `StorEd` confirmation
 (US-027). Because the new state name starts with `setup-`, `isSetupActive`
 already routes it to `setupReducer` — **no `reducer.ts` change**.
 
-- ENT on the `AUH Fn` row → enter `setup-aux-fn`, display `no Conn` on X (Y/Z
+- ENT on the `AUX Fn` row → enter `setup-aux-fn`, display `no Conn` on X (Y/Z
   blank), carrying `SetupData` through so the row stays highlighted on return.
 - The dwell is dismissed by its timeout **or** any front-panel key
-  (`isFrontPanelKey`), returning to `setup-parameter` with `AUH Fn` highlighted.
+  (`isFrontPanelKey`), returning to `setup-parameter` with `AUX Fn` highlighted.
 - It returns **`null` on everything else** — critically the ~100 ms
   `MILL_STATE_CHANGED` encoder tick must not wipe the screen (the known dwell
   footgun; same discipline as `reduceSaved` / `restore-in-progress`).
@@ -59,9 +61,9 @@ already routes it to `setupReducer` — **no `reducer.ts` change**.
 2. `src/stores/dro/features/setup-parameters.ts`
    - Add `export const AUX_FN_ID = 'aux-fn';`
    - Insert a `SetupParameter` between the `ENF` (`EnF oFF`) and `PROBE_DRO_TYPE`
-     (`dro t`) entries: `{ id: AUX_FN_ID, label: 'AUH Fn', scope: 'global',
+     (`dro t`) entries: `{ id: AUX_FN_ID, label: 'AUX Fn', scope: 'global',
      choices: [], readValue: () => '' }`.
-   - Un-parenthesize `AUH Fn` in the ordering-source header comment.
+   - Un-parenthesize `AUX Fn` in the ordering-source header comment.
 3. `src/stores/dro/features/aux-fn.ts` (new, sibling of `save-changes.ts`)
    - `AUX_FN_NO_CONN_TEXT = 'no Conn'`, `AUX_FN_DURATION_MS = 1500`.
    - `enterAuxFnNoConn(data, vMem)` → builds the `setup-aux-fn` payload.
@@ -81,13 +83,13 @@ already routes it to `setupReducer` — **no `reducer.ts` change**.
 - `src/stores/dro/features/setup-parameters.test.ts`: add `AUX_FN_ID` to the
   order list (between `ENF_ID` and `PROBE_DRO_TYPE_ID`), to the `terminalIds` set
   (choiceless), an adjacency assertion (`AUX_FN` is `ENF + 1`), and a focused row
-  test (`label === 'AUH Fn'`, no choices).
-- `src/stores/dro/features/setup.integration.test.tsx`: insert `'AUH Fn'` into
+  test (`label === 'AUX Fn'`, no choices).
+- `src/stores/dro/features/setup.integration.test.tsx`: insert `'AUX Fn'` into
   `EXPECTED_SETUP_MENU_ORDER` between `'EnF oFF'` and `'dro t'`; un-parenthesize
   in the source-of-truth comment.
 - `src/stores/dro/features/aux-fn.test.ts` (new, unit): ENT on the row enters the
   dwell with `no Conn`; `AUX_FN_TIMEOUT` and a front-panel key each return to the
-  menu with `AUH Fn` highlighted; `MILL_STATE_CHANGED` is ignored (no wipe).
-- `e2e/`: 1 spec — scroll to `AUH Fn` → ENT → assert `no Conn` → returns to row.
+  menu with `AUX Fn` highlighted; `MILL_STATE_CHANGED` is ignored (no wipe).
+- `e2e/`: 1 spec — scroll to `AUX Fn` → ENT → assert `no Conn` → returns to row.
 
 `npm run test:all` (lint + coverage + e2e + storybook) before push.

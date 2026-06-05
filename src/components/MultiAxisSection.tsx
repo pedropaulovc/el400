@@ -4,7 +4,7 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useSleepTimer } from "../stores/dro/features/sleep";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useAuxFnNoConn, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
 
 export interface AxisValues {
@@ -68,6 +68,9 @@ const MultiAxisSection = () => {
 
   // SAV CHG save-confirmation timing - auto-returns to setup after delay (US-027)
   useSetupSavedConfirmation(dispatch, droState);
+
+  // AUX Fn `no Conn` dwell - auto-returns to setup after delay (`AUH Fn`, §6.2)
+  useAuxFnNoConn(dispatch, droState);
 
   // OEM Mode wrong-password flash - auto-returns to setup after delay (US-044)
   useOemRejectedDismiss(dispatch, droState);
