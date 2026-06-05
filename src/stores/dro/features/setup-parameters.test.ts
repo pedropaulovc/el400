@@ -16,6 +16,7 @@ import {
   DIRECTION_ID,
   Z_DEPTH_ID,
   MEASUREMENT_MODE_ID,
+  CALIBRATION_ID,
   PROBE_DRO_TYPE_ID,
   DISPLAY_RESOLUTION_ID,
   ZERO_APPROACH_ID,
@@ -58,6 +59,7 @@ describe('SETUP_PARAMETERS registry', () => {
       DISPLAY_RESOLUTION_ID, // dP 5.0
       MEASUREMENT_MODE_ID, // rAd
       DIRECTION_ID, // LEFt / riGht
+      CALIBRATION_ID, // CALib (non-functional placeholder)
       ENF_ID, // EnF oFF
       PROBE_DRO_TYPE_ID, // dro t
       'taper-on', // tAPEr on
@@ -98,6 +100,20 @@ describe('SETUP_PARAMETERS registry', () => {
     expect(SETUP_PARAMETERS[SETUP_PARAMETER_COUNT - 1]!.id).toBe(SETUP_END_ID);
   });
 
+  it('exposes the CALib (calibration) placeholder row with no choices', () => {
+    const calib = SETUP_PARAMETERS.find((p) => p.id === CALIBRATION_ID)!;
+    expect(calib).toBeDefined();
+    expect(calib.label).toBe('CALib');
+    expect(calib.choices).toHaveLength(0);
+    // It is a non-functional placeholder: no commit/persist hooks.
+    expect(calib.commit).toBeUndefined();
+    expect(calib.persist).toBeUndefined();
+    // Sits between LEFt (direction) and EnF (encoder-fail) per manual §6.2.
+    const ids = SETUP_PARAMETERS.map((p) => p.id);
+    expect(ids.indexOf(CALIBRATION_ID)).toBe(ids.indexOf(DIRECTION_ID) + 1);
+    expect(ids.indexOf(ENF_ID)).toBe(ids.indexOf(CALIBRATION_ID) + 1);
+  });
+
   it('non-terminal parameters have at least two choices', () => {
     // Terminal action items (End, SAV CHG, OEM Mode, Restore Defaults) carry no
     // choices — they are acted on with ENT rather than cycled. Every other
@@ -107,6 +123,7 @@ describe('SETUP_PARAMETERS registry', () => {
       SAVE_CHANGES_ID,
       OEM_MODE_ID,
       RESTORE_DEFAULTS_ID,
+      CALIBRATION_ID,
     ]);
     for (const p of SETUP_PARAMETERS) {
       if (terminalIds.has(p.id)) continue;
