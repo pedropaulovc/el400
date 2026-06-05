@@ -107,6 +107,19 @@ jobs:
         timeout-minutes: 6
         run: npm run test:e2e
 
+      # trace: 'on-first-retry' captures a trace when a flake hits on CI, but it
+      # dies with the runner unless uploaded. Keep it so the next flake is
+      # debuggable from the trace (npx playwright show-trace) instead of a log.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 10
+
   storybook-tests:
     runs-on: ubuntu-latest
     steps:
