@@ -19,7 +19,7 @@ import {
  * Source of truth, in priority order:
  *  - EL400 operation manual section 6.2 "Parameters Setting" / "table 2"
  *    (references/el400-operation-manual/ocr/markdown.md lines 450-484): the
- *    canonical navigable order — LinEAr, SC, dP, rAd, LEFt, (CALiB), EnF,
+ *    canonical navigable order — LinEAr, SC, dP, rAd, LEFt, CALiB, EnF,
  *    (AUH Fn / SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
  *    SAU ChG, rSt oEm, oEm mod, End. Items in parentheses are not yet
  *    implemented in this simulator and are therefore absent here.
@@ -38,6 +38,7 @@ const EXPECTED_SETUP_MENU_ORDER = [
   'dP 5.0',
   'rAd',
   'LEFt',
+  'CALib',
   'EnF oFF',
   'dro t',
   'tAPEr X',

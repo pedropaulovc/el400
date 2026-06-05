@@ -231,6 +231,15 @@ export const ZERO_APPROACH_TOLR_CHOICES: readonly SetupParameterChoice[] = [
 /** The per-axis radius/diameter measurement-mode parameter id (US-041) -- its draft key. */
 export const MEASUREMENT_MODE_ID = 'measurement-mode';
 
+/**
+ * The `CALib` (calibration) parameter id. Manual §6.2 lists CALiB between LEFt
+ * and EnF; the routine itself (scale calibration / error compensation, §6.3) is
+ * not modelled, so this row is a non-functional placeholder added for menu
+ * completeness: it is choiceless and has no ENT handler, so the setup reducer's
+ * fall-through makes ENT and left/right no-ops.
+ */
+export const CALIBRATION_ID = 'calibration';
+
 /** The global touch-probe DRO-type parameter id (US-032, §10.1.1) -- its draft key. */
 export const PROBE_DRO_TYPE_ID = 'probe-dro-type';
 
@@ -294,7 +303,7 @@ export const SETUP_END_ID = 'end';
  *
  * Ordering source, in priority order:
  * - EL400 operation manual section 6.2 "Parameters Setting" / "table 2" is the
- *   canonical navigable order: LinEAr, SC, dP, rAd, LEFt, (CALiB), EnF,
+ *   canonical navigable order: LinEAr, SC, dP, rAd, LEFt, CALiB, EnF,
  *   (AUH Fn / SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
  *   SAU ChG, rSt oEm, oEm mod, End. Parenthesised rows are not yet implemented
  *   here, so they are simply absent.
@@ -460,6 +469,17 @@ export const SETUP_PARAMETERS: readonly SetupParameter[] = [
         },
       });
     },
+  },
+  {
+    id: CALIBRATION_ID,
+    // Manual §6.2 abbreviation table renders this `CAL ib`; the OCR's pre-`i`
+    // space is a glyph-width artifact (cf. `d iA`->`diA`, `r iGht`->`riGht`), so
+    // the faithful label is `CALib`. Non-functional placeholder (see id comment):
+    // no choices, no commit/persist; ENT and left/right are no-ops in the reducer.
+    label: 'CALib',
+    scope: 'global',
+    choices: [],
+    readValue: () => '',
   },
   {
     id: ENF_ID,
