@@ -85,14 +85,78 @@ npm run dev
 
 ## Using with CNCjs
 
-The DRO can display live position data from your CNC machine when used with [CNCjs](https://github.com/cncjs/cncjs):
+The DRO can display live position data from your CNC machine when used with
+[CNCjs](https://github.com/cncjs/cncjs). It connects over CNCjs's Socket.IO
+interface and mirrors the controller's machine position and probe state, so
+jogging, running G-code, or a `G38.2` probe cycle in CNCjs is reflected on the
+readout in real time.
 
-1. **As an embedded widget**: Add the DRO as a CNCjs widget to your workspace
-2. **As a standalone window**: Open `http://your-cncjs-host:8000/?source=cncjs&host=localhost&port=8000`
+Supported controllers: GRBL, GrblHAL, TinyG, Smoothie, Marlin.
 
-Supported controllers: GRBL, GrblHAL, TinyG, Smoothie, Marlin
+### 1. Install and run CNCjs
 
-For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+```sh
+# Install CNCjs globally (Node.js 18+ recommended)
+npm install -g cncjs
+
+# Start it (defaults to http://localhost:8000)
+cncjs
+```
+
+Open CNCjs, choose your serial port and controller, and click **Open** to
+connect to the machine.
+
+### 2. Build the DRO and serve it from CNCjs
+
+Build the app with a base path, then mount the build into CNCjs so it is served
+same-origin (this avoids cross-origin and mixed-content issues behind HTTPS
+proxies):
+
+```sh
+# Build with the path it will be mounted at
+npm install
+npm run build -- --base=/el400/
+
+# Serve the build at /el400 alongside CNCjs
+cncjs --mount /el400:/absolute/path/to/el400/dist
+```
+
+The DRO is now available at `http://localhost:8000/el400/`.
+
+### 3. Add it as a custom widget
+
+1. In the CNCjs workspace, open the **≡ Manage Widgets** menu and enable
+   **Custom Widget**.
+2. On the new widget, click the **⚙ (Edit)** icon and set:
+   - **Title**: `EL400 DRO`
+   - **URL**: `/el400/?source=cncjs`
+3. Toggle the widget **Enable** control. CNCjs appends its auth token to the
+   iframe URL automatically, and the DRO joins the active serial port and
+   starts mirroring position.
+
+### Standalone window
+
+You can also open the DRO in its own tab. When served same-origin via
+`--mount`, no host/port is needed:
+
+```
+http://localhost:8000/el400/?source=cncjs&token=<CNCjs session token>
+```
+
+To point at a CNCjs instance on a different origin, pass `host`/`port`
+explicitly (`host` may be a bare hostname or a full `https://…` origin).
+
+### Query parameters
+
+| Parameter    | Description                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `source`     | Set to `cncjs` to use the CNCjs adapter.                                                     |
+| `host`       | CNCjs host. Omit when served same-origin; accepts a bare host or a full `https://…` origin.  |
+| `port`       | CNCjs port (default `8000`). Ignored if `host` already includes a port.                      |
+| `token`      | CNCjs auth token. Added automatically for embedded widgets; required for a standalone tab.   |
+| `serialport` | Optional. Join this specific serial port instead of auto-discovering the active one.         |
+
+For implementation details, see the CNCjs adapter in [`src/adapters/CncjsMillAdapter.ts`](src/adapters/CncjsMillAdapter.ts).
 
 ## How to Edit This Code
 

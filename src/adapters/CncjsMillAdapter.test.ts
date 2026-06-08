@@ -5,13 +5,30 @@ import { CncjsMillAdapter, normalizeControllerState } from './CncjsMillAdapter';
 const mockSocket = {
   on: vi.fn(),
   off: vi.fn(),
+  emit: vi.fn(),
   disconnect: vi.fn(),
   connected: false,
 };
 
-vi.mock('socket.io-client', () => ({
+vi.mock('./cncjsSocket', () => ({
   io: vi.fn(() => mockSocket),
 }));
+
+describe('normalizeControllerState with CNCjs 1.x object positions', () => {
+  it('parses mpos/wpos objects with string values and pinState pin field', () => {
+    const result = normalizeControllerState('Grbl', {
+      status: {
+        mpos: { x: '3.000', y: '2.000', z: '-0.280' },
+        wpos: { x: '3.000', y: '2.000', z: '-0.280' },
+        pinState: 'P',
+      },
+    });
+
+    expect(result.position).toEqual({ x: 3, y: 2, z: -0.28 });
+    expect(result.workPosition).toEqual({ x: 3, y: 2, z: -0.28 });
+    expect(result.probe?.triggered).toBe(true);
+  });
+});
 
 describe('CncjsMillAdapter', () => {
   beforeEach(() => {
@@ -19,12 +36,143 @@ describe('CncjsMillAdapter', () => {
     // Reset mock socket handlers
     mockSocket.on.mockReset();
     mockSocket.off.mockReset();
+    mockSocket.emit.mockReset();
     mockSocket.disconnect.mockReset();
   });
 
   describe('connection', () => {
+    const fireConnect = () => {
+      const h = mockSocket.on.mock.calls.find(([e]) => e === 'connect')?.[1];
+      h?.();
+    };
+    const fireSerialportList = (ports: { port: string; inuse?: boolean }[]) => {
+      const h = mockSocket.on.mock.calls.find(([e]) => e === 'serialport:list')?.[1];
+      h?.(ports);
+    };
+
+    it('uses a scheme-qualified host verbatim when it already has a port', async () => {
+      const { io } = await import('./cncjsSocket');
+      const adapter = new CncjsMillAdapter({ host: 'https://cncjs.example.com:443', port: 443 });
+      const connectPromise = adapter.connect();
+      expect(io).toHaveBeenCalledWith('https://cncjs.example.com:443', expect.anything());
+      fireConnect();
+      await connectPromise;
+    });
+
+    it('appends the port to a scheme-qualified host that has none', async () => {
+      const { io } = await import('./cncjsSocket');
+      const adapter = new CncjsMillAdapter({ host: 'https://cncjs.example.com', port: 8000 });
+      const connectPromise = adapter.connect();
+      expect(io).toHaveBeenCalledWith('https://cncjs.example.com:8000', expect.anything());
+      fireConnect();
+      await connectPromise;
+    });
+
+    it('joins a port that is already in use', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      mockSocket.emit.mockClear();
+      fireSerialportList([{ port: '/dev/ttyA', inuse: false }, { port: '/dev/ttyB', inuse: true }]);
+      expect(mockSocket.emit).toHaveBeenCalledWith('open', '/dev/ttyB', expect.anything(), expect.any(Function));
+    });
+
+    it('does not auto-open a lone idle port', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      mockSocket.emit.mockClear();
+      fireSerialportList([{ port: '/dev/ttyOnly', inuse: false }]);
+      expect(mockSocket.emit).not.toHaveBeenCalledWith('open', expect.anything(), expect.anything(), expect.anything());
+    });
+
+    it('connects to the page origin when no host is given (same-origin widget)', async () => {
+      const { io } = await import('./cncjsSocket');
+      const adapter = new CncjsMillAdapter({ host: '', port: 8000 });
+      const connectPromise = adapter.connect();
+      expect(io).toHaveBeenCalledWith(window.location.origin, expect.anything());
+      fireConnect();
+      await connectPromise;
+    });
+
+    it('opens the explicit serialport when one is provided', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000, serialport: '/dev/ttyEXPLICIT' });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      // Discovery skips `list` and opens the explicit port directly.
+      expect(mockSocket.emit).toHaveBeenCalledWith('open', '/dev/ttyEXPLICIT', expect.anything(), expect.any(Function));
+      expect(mockSocket.emit).not.toHaveBeenCalledWith('list');
+    });
+
+    it('marks the adapter connected once the port open succeeds', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const states: boolean[] = [];
+      adapter.subscribe((s) => states.push(s.connected));
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      fireSerialportList([{ port: '/dev/ttyB', inuse: true }]);
+      const openCall = mockSocket.emit.mock.calls.find(([e]) => e === 'open');
+      const cb = openCall?.[3] as ((err: unknown) => void) | undefined;
+      cb?.(null);
+      expect(states[states.length - 1]).toBe(true);
+    });
+
+    it('re-joins the active port after the serial port closes and reopens', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      fireSerialportList([{ port: '/dev/ttyB', inuse: true }]);
+      const cb = mockSocket.emit.mock.calls.find(([e]) => e === 'open')?.[3] as ((err: unknown) => void) | undefined;
+      cb?.(null);
+      // Port closes (e.g. from the CNCjs UI), then a fresh list arrives.
+      const closeHandler = mockSocket.on.mock.calls.find(([e]) => e === 'serialport:close')?.[1];
+      closeHandler?.();
+      mockSocket.emit.mockClear();
+      fireSerialportList([{ port: '/dev/ttyB', inuse: true }]);
+      expect(mockSocket.emit).toHaveBeenCalledWith('open', '/dev/ttyB', expect.anything(), expect.any(Function));
+    });
+
+    it('tracks the current controller type from controller:state', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      const handler = mockSocket.on.mock.calls.find(([e]) => e === 'controller:state')?.[1];
+      handler?.('grbl', { status: { mpos: [1, 2, 3] } });
+      expect(adapter.getCurrentControllerType()).toBe('grbl');
+    });
+
+    it('cleans up the socket and discovery on disconnect', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      adapter.disconnect();
+      expect(mockSocket.disconnect).toHaveBeenCalled();
+      expect(adapter.getState().connected).toBe(false);
+    });
+
+    it('rejects with a timeout error if the socket never connects', async () => {
+      vi.useFakeTimers();
+      try {
+        const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+        const connectPromise = adapter.connect();
+        const assertion = expect(connectPromise).rejects.toThrow('Connection timeout');
+        await vi.advanceTimersByTimeAsync(10000);
+        await assertion;
+        expect(mockSocket.disconnect).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should create socket with correct URL and options', async () => {
-      const { io } = await import('socket.io-client');
+      const { io } = await import('./cncjsSocket');
       const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
 
       // Start connection but don't await (it won't resolve without manual trigger)
@@ -43,7 +191,7 @@ describe('CncjsMillAdapter', () => {
     });
 
     it('should include token in query when provided', async () => {
-      const { io } = await import('socket.io-client');
+      const { io } = await import('./cncjsSocket');
       const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000, token: 'my-token' });
 
       const connectPromise = adapter.connect();

@@ -273,6 +273,10 @@ const io = new SocketIOServer(httpServer, {
   pingTimeout: 60000,
   path: '/socket.io/',
   transports: ['websocket', 'polling'],
+  // The CNCjs adapter uses a socket.io v2 client (Engine.IO 3) to match
+  // CNCjs 1.x servers. Accept EIO3 here so the v2 client can handshake
+  // with this v4 mock during E2E runs.
+  allowEIO3: true,
 });
 
 function emitStateToSession(sessionId: string) {
