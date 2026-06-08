@@ -5,13 +5,30 @@ import { CncjsMillAdapter, normalizeControllerState } from './CncjsMillAdapter';
 const mockSocket = {
   on: vi.fn(),
   off: vi.fn(),
+  emit: vi.fn(),
   disconnect: vi.fn(),
   connected: false,
 };
 
-vi.mock('socket.io-client', () => ({
+vi.mock('./cncjsSocket', () => ({
   io: vi.fn(() => mockSocket),
 }));
+
+describe('normalizeControllerState with CNCjs 1.x object positions', () => {
+  it('parses mpos/wpos objects with string values and pinState pin field', () => {
+    const result = normalizeControllerState('Grbl', {
+      status: {
+        mpos: { x: '3.000', y: '2.000', z: '-0.280' },
+        wpos: { x: '3.000', y: '2.000', z: '-0.280' },
+        pinState: 'P',
+      },
+    });
+
+    expect(result.position).toEqual({ x: 3, y: 2, z: -0.28 });
+    expect(result.workPosition).toEqual({ x: 3, y: 2, z: -0.28 });
+    expect(result.probe?.triggered).toBe(true);
+  });
+});
 
 describe('CncjsMillAdapter', () => {
   beforeEach(() => {
@@ -19,12 +36,60 @@ describe('CncjsMillAdapter', () => {
     // Reset mock socket handlers
     mockSocket.on.mockReset();
     mockSocket.off.mockReset();
+    mockSocket.emit.mockReset();
     mockSocket.disconnect.mockReset();
   });
 
   describe('connection', () => {
+    const fireConnect = () => {
+      const h = mockSocket.on.mock.calls.find(([e]) => e === 'connect')?.[1];
+      h?.();
+    };
+    const fireSerialportList = (ports: { port: string; inuse?: boolean }[]) => {
+      const h = mockSocket.on.mock.calls.find(([e]) => e === 'serialport:list')?.[1];
+      h?.(ports);
+    };
+
+    it('uses a scheme-qualified host verbatim when it already has a port', async () => {
+      const { io } = await import('./cncjsSocket');
+      const adapter = new CncjsMillAdapter({ host: 'https://cncjs.example.com:443', port: 443 });
+      const connectPromise = adapter.connect();
+      expect(io).toHaveBeenCalledWith('https://cncjs.example.com:443', expect.anything());
+      fireConnect();
+      await connectPromise;
+    });
+
+    it('appends the port to a scheme-qualified host that has none', async () => {
+      const { io } = await import('./cncjsSocket');
+      const adapter = new CncjsMillAdapter({ host: 'https://cncjs.example.com', port: 8000 });
+      const connectPromise = adapter.connect();
+      expect(io).toHaveBeenCalledWith('https://cncjs.example.com:8000', expect.anything());
+      fireConnect();
+      await connectPromise;
+    });
+
+    it('joins a port that is already in use', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      mockSocket.emit.mockClear();
+      fireSerialportList([{ port: '/dev/ttyA', inuse: false }, { port: '/dev/ttyB', inuse: true }]);
+      expect(mockSocket.emit).toHaveBeenCalledWith('open', '/dev/ttyB', expect.anything(), expect.any(Function));
+    });
+
+    it('does not auto-open a lone idle port', async () => {
+      const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+      const connectPromise = adapter.connect();
+      fireConnect();
+      await connectPromise;
+      mockSocket.emit.mockClear();
+      fireSerialportList([{ port: '/dev/ttyOnly', inuse: false }]);
+      expect(mockSocket.emit).not.toHaveBeenCalledWith('open', expect.anything(), expect.anything(), expect.anything());
+    });
+
     it('should create socket with correct URL and options', async () => {
-      const { io } = await import('socket.io-client');
+      const { io } = await import('./cncjsSocket');
       const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
 
       // Start connection but don't await (it won't resolve without manual trigger)
@@ -43,7 +108,7 @@ describe('CncjsMillAdapter', () => {
     });
 
     it('should include token in query when provided', async () => {
-      const { io } = await import('socket.io-client');
+      const { io } = await import('./cncjsSocket');
       const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000, token: 'my-token' });
 
       const connectPromise = adapter.connect();

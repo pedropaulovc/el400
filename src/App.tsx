@@ -22,7 +22,13 @@ const queryClient = new QueryClient();
  */
 function createAdapter(config: DataSourceConfig): MillAdapter {
   if (config.type === 'cncjs') {
-    return new CncjsMillAdapter({ host: config.host, port: config.port, sessionId: config.sessionId });
+    return new CncjsMillAdapter({
+      host: config.host,
+      port: config.port,
+      sessionId: config.sessionId,
+      token: config.token,
+      serialport: config.serialport,
+    });
   }
   if (config.type === 'debug') {
     return new DebugMillAdapter();

@@ -3,7 +3,7 @@
  * Supports all CNCjs controllers: GRBL, GrblHAL, TinyG, Smoothie, Marlin.
  */
 
-import { io, Socket } from 'socket.io-client';
+import { io, type CncjsSocket } from './cncjsSocket';
 import type { Dispatch } from 'react';
 import type { MillAdapter } from './MillAdapter';
 import type {
@@ -21,6 +21,13 @@ export interface CncjsMillAdapterOptions {
   port: number;
   token?: string | undefined;
   sessionId?: string | undefined;
+  /**
+   * Serial port to open/join (e.g. /dev/ttyUSB0). When omitted, the adapter
+   * discovers ports via the CNCjs `list` command and joins the one in use.
+   * Joining the port room is required: CNCjs only forwards controller:state
+   * events to sockets that have opened the port.
+   */
+  serialport?: string | undefined;
 }
 
 export type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'TinyG' | 'tinyg' | 'Smoothie' | 'smoothie' | 'Marlin' | 'marlin';
@@ -28,9 +35,13 @@ export type CncjsControllerType = 'Grbl' | 'grbl' | 'GrblHAL' | 'grblhal' | 'Tin
 /** Raw controller state from CNCjs WebSocket - structure varies by controller type */
 interface CncjsControllerState {
   status?: {
-    mpos?: number[];
-    wpos?: number[];
+    /** [x, y, z] array, or {x, y, z} object with string values (CNCjs 1.x) */
+    mpos?: (number | string)[] | Record<string, number | string>;
+    /** [x, y, z] array, or {x, y, z} object with string values (CNCjs 1.x) */
+    wpos?: (number | string)[] | Record<string, number | string>;
     pn?: string;
+    /** Triggered input pins, e.g. 'P' - field name used by CNCjs 1.x Grbl */
+    pinState?: string;
     pos?: { x?: number; y?: number; z?: number };
     substate?: { probe?: number };
   };
@@ -66,32 +77,47 @@ function normalizeEncoderSignal(
 }
 
 /**
+ * Converts a CNCjs position report to MillPosition. CNCjs 1.x sends
+ * {x, y, z} objects with string values; the DRO-aware mock server sends
+ * [x, y, z] number arrays. Both are supported.
+ */
+function toMillPosition(
+  value: (number | string)[] | Record<string, number | string> | undefined
+): MillPosition {
+  if (!value) {
+    return { x: 0, y: 0, z: 0 };
+  }
+  if (Array.isArray(value)) {
+    return {
+      x: Number(value[0] ?? 0),
+      y: Number(value[1] ?? 0),
+      z: Number(value[2] ?? 0),
+    };
+  }
+  return {
+    x: Number(value['x'] ?? 0),
+    y: Number(value['y'] ?? 0),
+    z: Number(value['z'] ?? 0),
+  };
+}
+
+/**
  * Normalizes GRBL controller state to MillState.
- * GRBL provides position as [x, y, z] arrays and pin state in 'pn' field.
+ * Position arrives as [x, y, z] arrays or {x, y, z} objects depending on the
+ * source; triggered pins arrive in 'pn' or 'pinState' (CNCjs 1.x).
  */
 function normalizeGrbl(state: CncjsControllerState): Partial<MillState> {
-  const mpos = state.status?.mpos ?? [0, 0, 0];
   const wpos = state.status?.wpos;
-  const pn = state.status?.pn ?? '';
-
-  const position: MillPosition = {
-    x: mpos[0] ?? 0,
-    y: mpos[1] ?? 0,
-    z: mpos[2] ?? 0,
-  };
+  const pn = state.status?.pn ?? state.status?.pinState ?? '';
 
   const result: Partial<MillState> = {
-    position,
+    position: toMillPosition(state.status?.mpos),
     probe: createProbeState(pn),
     encoderSignal: normalizeEncoderSignal(state.encoderSignal),
   };
 
   if (wpos) {
-    result.workPosition = {
-      x: wpos[0] ?? 0,
-      y: wpos[1] ?? 0,
-      z: wpos[2] ?? 0,
-    };
+    result.workPosition = toMillPosition(wpos);
   }
 
   return result;
@@ -199,7 +225,7 @@ export function normalizeControllerState(
 export class CncjsMillAdapter implements MillAdapter {
   readonly controllerType = 'cncjs' as const;
 
-  private socket: Socket | null = null;
+  private socket: CncjsSocket | null = null;
   private listeners = new Set<MillStateListener>();
   private dispatch: Dispatch<DROEventPayload> | null = null;
   private state: MillState = {
@@ -208,6 +234,8 @@ export class CncjsMillAdapter implements MillAdapter {
   };
   private options: CncjsMillAdapterOptions;
   private currentControllerType: CncjsControllerType = 'grbl';
+  private discoveryTimer: ReturnType<typeof setInterval> | null = null;
+  private portJoined = false;
 
   constructor(options: CncjsMillAdapterOptions) {
     this.options = options;
@@ -217,9 +245,32 @@ export class CncjsMillAdapter implements MillAdapter {
     this.dispatch = dispatch;
   }
 
+  /**
+   * Builds the socket.io URL.
+   * - Empty host: connect to the page's own origin (same-origin custom
+   *   widget served via `cncjs --mount`; works behind https proxies).
+   * - Host with scheme (http:// or https://): treated as a full origin. The
+   *   port is appended only if the origin does not already carry one, so a
+   *   value like `https://cncjs.example.com:443` is used verbatim.
+   * - Bare host: legacy behavior, http://host:port.
+   */
+  private buildUrl(): string {
+    const { host, port } = this.options;
+    if (!host) {
+      return typeof window !== 'undefined' ? window.location.origin : `http://localhost:${String(port)}`;
+    }
+    if (host.includes('://')) {
+      // Already a port in the authority (e.g. ":8000", but not the "://" scheme)?
+      const authority = host.slice(host.indexOf('://') + 3);
+      const hasPort = /:\d+(?:\/|$)/.test(authority);
+      return hasPort ? host : `${host}:${String(port)}`;
+    }
+    return `http://${host}:${String(port)}`;
+  }
+
   async connect(): Promise<void> {
-    const { host, port, token, sessionId } = this.options;
-    const url = `http://${host}:${String(port)}`;
+    const { token, sessionId } = this.options;
+    const url = this.buildUrl();
 
     return new Promise((resolve, reject) => {
       const query: Record<string, string> = {};
@@ -229,8 +280,14 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket = io(url, {
         query,
         reconnection: true,
-        reconnectionAttempts: 5,
+        // A DRO must keep trying: losing the readout on a transient network
+        // blip is worse than a little reconnect traffic.
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
+        // Prefer websocket: long-polling is unreliable behind buffering
+        // https proxies/tunnels (requests get cut and the server times the
+        // session out every pingInterval+pingTimeout).
+        transports: ['websocket', 'polling'],
       });
 
       const connectTimeout = setTimeout(() => {
@@ -241,6 +298,11 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket.on('connect', () => {
         clearTimeout(connectTimeout);
         this.updateState({ connected: true });
+        // Fires on reconnects too: the new server-side socket has no room
+        // membership, so always rediscover and re-join the port.
+        this.portJoined = false;
+        this.stopPortDiscovery();
+        this.startPortDiscovery();
         resolve();
       });
 
@@ -248,10 +310,10 @@ export class CncjsMillAdapter implements MillAdapter {
         this.updateState({ connected: false });
       });
 
-      this.socket.on('connect_error', (error) => {
+      this.socket.on('connect_error', (error: unknown) => {
         clearTimeout(connectTimeout);
         this.updateState({ connected: false });
-        reject(error);
+        reject(error instanceof Error ? error : new Error(String(error)));
       });
 
       // Controller state updates
@@ -272,11 +334,80 @@ export class CncjsMillAdapter implements MillAdapter {
       // Serial port close event
       this.socket.on('serialport:close', () => {
         this.updateState({ connected: false });
+        // Port closed (e.g. from the CNCjs UI); resume discovery so we
+        // re-join when it reopens.
+        this.portJoined = false;
+        this.startPortDiscovery();
+      });
+
+      // Port discovery: pick the port already in use, or the explicit one.
+      this.socket.on('serialport:list', (ports: { port: string; inuse?: boolean }[]) => {
+        if (this.portJoined || !Array.isArray(ports) || ports.length === 0) return;
+        // Only join a port that is already open by another client (the active
+        // controller). Never auto-open an idle port: we don't know its
+        // controller type or baud rate, and doing so would start a connection
+        // the user never asked for. To target a specific idle port, pass it
+        // explicitly via the `serialport` option.
+        const inUse = ports.find((p) => p.inuse);
+        if (inUse) {
+          this.tryOpenPort(inUse.port);
+        }
       });
     });
   }
 
+  /**
+   * Joins the controller's socket room by issuing an `open` for the port.
+   * CNCjs adds this socket to the controller's connections, after which
+   * controller:state updates stream to us. If the port is already open
+   * (e.g. opened from the CNCjs UI), this is a pure join with no side effects.
+   */
+  private tryOpenPort(port: string): void {
+    if (this.portJoined || !this.socket) return;
+    this.socket.emit(
+      'open',
+      port,
+      { controllerType: 'Grbl', baudrate: 115200 },
+      (err: unknown) => {
+        if (!err) {
+          this.portJoined = true;
+          this.stopPortDiscovery();
+          this.updateState({ connected: true });
+        }
+      }
+    );
+  }
+
+  private startPortDiscovery(): void {
+    if (!this.socket || this.discoveryTimer !== null) return;
+    const { serialport } = this.options;
+
+    const probe = (): void => {
+      if (this.portJoined || !this.socket) {
+        this.stopPortDiscovery();
+        return;
+      }
+      if (serialport) {
+        this.tryOpenPort(serialport);
+      } else {
+        this.socket.emit('list');
+      }
+    };
+
+    probe();
+    this.discoveryTimer = setInterval(probe, 2000);
+  }
+
+  private stopPortDiscovery(): void {
+    if (this.discoveryTimer !== null) {
+      clearInterval(this.discoveryTimer);
+      this.discoveryTimer = null;
+    }
+  }
+
   disconnect(): void {
+    this.stopPortDiscovery();
+    this.portJoined = false;
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;

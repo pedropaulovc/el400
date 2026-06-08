@@ -4,7 +4,15 @@
  *
  * URL format:
  * - /?source=cncjs&host=192.168.1.100&port=8000
+ * - /?source=cncjs (no host - connects to the page's own origin; used when
+ *   served same-origin as a CNCjs custom widget via `cncjs --mount`)
  * - / (no params - uses NoOpMillAdapter)
+ *
+ * Additional params:
+ * - token: CNCjs auth token. CNCjs appends this automatically to custom
+ *   widget URLs; required for the socket.io handshake.
+ * - serialport: serial port to open/join (e.g. /dev/ttyFAKE). When omitted,
+ *   the adapter discovers and joins the port that is already in use.
  */
 
 import { useMemo } from 'react';
@@ -38,16 +46,23 @@ export function useDataSourceConfig(): DataSourceConfig {
 
   return useMemo(() => {
     const type = parseControllerType(searchParams.get('source'));
-    const host = searchParams.get('host') ?? DEFAULT_CONFIG.host;
+    const hostParam = searchParams.get('host');
+    // For cncjs, no host param means "connect to the page's own origin"
+    // (same-origin custom widget). Other sources keep the localhost default.
+    const host = hostParam ?? (type === 'cncjs' ? '' : DEFAULT_CONFIG.host);
     const portStr = searchParams.get('port');
     const port = portStr ? parseInt(portStr, 10) : DEFAULT_CONFIG.port;
     const sessionId = searchParams.get('sessionId') ?? undefined;
+    const token = searchParams.get('token') ?? undefined;
+    const serialport = searchParams.get('serialport') ?? undefined;
 
     return {
       type,
       host,
       port: isNaN(port) ? DEFAULT_CONFIG.port : port,
       sessionId,
+      token,
+      serialport,
     };
   }, [searchParams]);
 }

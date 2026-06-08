@@ -89,6 +89,10 @@ export interface DataSourceConfig {
   host: string;
   port: number;
   sessionId?: string | undefined;
+  /** CNCjs auth token (appended automatically by CNCjs to custom widget URLs) */
+  token?: string | undefined;
+  /** Serial port to open/join; when omitted the adapter auto-discovers it */
+  serialport?: string | undefined;
 }
 
 /**
