@@ -1,27 +1,67 @@
-name: Deploy PR Environment
+name: Deploy PPE
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
 concurrency:
-  group: deploy-pr-${{ github.event.pull_request.number }}
+  group: deploy-ppe-${{ github.event_name == 'workflow_dispatch' && 'stable' || github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
-env:
-  WORKER_NAME: el400-pr-${{ github.event.pull_request.number }}
-
 jobs:
-  deploy:
-    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+  deploy-stable:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: cloudflare-ppe
+      url: https://el400-ppe.el400-ppe-vza-net.workers.dev
+    env:
+      WORKER_NAME: el400-ppe
+      WORKER_URL: https://el400-ppe.el400-ppe-vza-net.workers.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy stable PPE Worker
+        run: npx wrangler deploy --name "$WORKER_NAME"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Verify stable PPE origin
+        run: curl --fail --show-error --silent --location "$WORKER_URL/" --output /dev/null
+
+      - name: Record deployment URL
+        run: echo "Deployed [$WORKER_NAME]($WORKER_URL)." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-pr:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: cloudflare-ppe
       url: https://el400-pr-${{ github.event.pull_request.number }}.el400-ppe-vza-net.workers.dev
+    env:
+      WORKER_NAME: el400-pr-${{ github.event.pull_request.number }}
     steps:
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -51,10 +91,12 @@ jobs:
         run: echo "Deployed [$WORKER_NAME](https://$WORKER_NAME.el400-ppe-vza-net.workers.dev)." >> "$GITHUB_STEP_SUMMARY"
 
   deprovision:
-    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: cloudflare-ppe
+    env:
+      WORKER_NAME: el400-pr-${{ github.event.pull_request.number }}
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
