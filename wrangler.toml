@@ -1,6 +1,6 @@
 # Cloudflare Worker static-assets configuration.
-# GitHub Actions deploys branches to the isolated PPE account and main to the
-# production account. The workflows supply the account ID and API token.
+# GitHub Actions deploys main to the isolated production account and each
+# same-repository pull request to its own Worker in the isolated PPE account.
 name = "el400"
 compatibility_date = "2026-05-30"
 

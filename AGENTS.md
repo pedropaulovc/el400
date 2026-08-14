@@ -28,6 +28,33 @@ npm run test:e2e         # Playwright E2E
 npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybook)
 ```
 
+## Cloudflare Deployment
+
+`wrangler.toml` is account-neutral. GitHub Actions supplies the account ID and
+API token from the deployment environment.
+
+| Target | Cloudflare account | Account ID | Worker |
+| --- | --- | --- | --- |
+| Production | `el400-vza-net-prod` | `3e6bc13f9f90e6614641ee115398cafb` | `el400` |
+| PPE | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-ppe` |
+| PR `N` | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-pr-N` |
+
+- `.github/workflows/deploy-production.yml` deploys `main` and manual runs to
+  production using the `cloudflare-production` GitHub environment.
+- `.github/workflows/deploy-ppe.yml` provisions a Worker for same-repository PR
+  `opened`, `synchronize`, and `reopened` events using `cloudflare-ppe`.
+- A PR close or merge deletes its Worker through Cloudflare's Worker service
+  API. Error `10090` is the only idempotent already-absent result.
+- Fork PRs are skipped because GitHub does not expose deployment credentials.
+- PR concurrency is scoped by number; one PR never replaces another PR's Worker.
+- Do not add an account ID to `wrangler.toml`; doing so would couple both
+  workflows to one account.
+
+The `vza.net` zone is not in either EL400 account. `el400.vza.net` and
+`el400.ppe.vza.net` are Custom Domains on `vza-net-router-bridge` in
+`sessions-prod`. That bridge authenticates to the central `vza-net-router`,
+which sends each hostname to its EL400 account-owned `workers.dev` origin.
+
 ### Git worktrees need their own `node_modules`
 
 Each git worktree must have its **own** real `node_modules` — run `npm ci` once

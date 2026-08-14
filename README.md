@@ -53,6 +53,28 @@ The simulator focuses on:
 
 **Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a
 
+## Deployment
+
+Cloudflare Workers hosts the production build and isolated pull-request builds:
+
+| Target | Trigger | Worker | Direct URL |
+| --- | --- | --- | --- |
+| Production | Push to `main` or manual workflow dispatch | `el400` | [el400.el400-vza-net-prod.workers.dev](https://el400.el400-vza-net-prod.workers.dev) |
+| Pull request `N` | Open, update, or reopen a same-repository PR | `el400-pr-N` | `https://el400-pr-N.el400-ppe-vza-net.workers.dev` |
+
+Closing or merging a pull request deletes its Worker. Pull requests from forks do
+not receive Cloudflare credentials and therefore do not get a deployment.
+
+The public production URL, [el400.vza.net](https://el400.vza.net), and the shared
+PPE URL, [el400.ppe.vza.net](https://el400.ppe.vza.net), pass through the
+[`vza-net-router`](https://github.com/pedropaulovc/vza-net-router) account bridge
+before reaching the Workers in the isolated EL400 accounts. The shared
+`el400-ppe` Worker backs the PPE URL; PR deployments do not overwrite it.
+
+GitHub environments `cloudflare-production` and `cloudflare-ppe` provide each
+workflow with its target account ID and API token. `wrangler.toml` remains
+account-neutral so the same static-assets configuration works in both accounts.
+
 ## Tech Stack
 
 - Vite
