@@ -55,25 +55,52 @@ The simulator focuses on:
 
 ## Deployment
 
-Cloudflare Workers hosts the production build and isolated pull-request builds:
+Cloudflare Workers hosts production, stable PPE, and one short-lived Worker for
+each same-repository pull request:
 
-| Target | Trigger | Worker | Direct URL |
-| --- | --- | --- | --- |
-| Production | Push to `main` or manual workflow dispatch | `el400` | [el400.el400-vza-net-prod.workers.dev](https://el400.el400-vza-net-prod.workers.dev) |
-| Pull request `N` | Open, update, or reopen a same-repository PR | `el400-pr-N` | `https://el400-pr-N.el400-ppe-vza-net.workers.dev` |
+| Target | Trigger | Cloudflare account | Account ID | Worker | Direct URL |
+| --- | --- | --- | --- | --- | --- |
+| Production | Push to `main` or manual run of `Deploy Production` | `el400-vza-net-prod` | `3e6bc13f9f90e6614641ee115398cafb` | `el400` | [el400.el400-vza-net-prod.workers.dev](https://el400.el400-vza-net-prod.workers.dev) |
+| Stable PPE | Manual run of `Deploy PPE` | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-ppe` | [el400-ppe.el400-ppe-vza-net.workers.dev](https://el400-ppe.el400-ppe-vza-net.workers.dev) |
+| Pull request `N` | Open, update, or reopen a same-repository PR | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-pr-N` | `https://el400-pr-N.el400-ppe-vza-net.workers.dev` |
 
-Closing or merging a pull request deletes its Worker. Pull requests from forks do
-not receive Cloudflare credentials and therefore do not get a deployment.
+To reproduce the shared PPE origin, open GitHub Actions, choose `Deploy PPE`,
+select the ref, and run the workflow. It deploys only `el400-ppe`, checks the
+direct URL listed above, and records that URL on the GitHub deployment and job
+summary. PR events use a separate concurrency group and can only create or
+delete their own `el400-pr-N` Worker. Closing or merging a PR does not touch the
+stable PPE Worker. Fork PRs are skipped because GitHub does not expose
+deployment credentials to them.
 
-The public production URL, [el400.vza.net](https://el400.vza.net), and the shared
-PPE URL, [el400.ppe.vza.net](https://el400.ppe.vza.net), pass through the
-[`vza-net-router`](https://github.com/pedropaulovc/vza-net-router) account bridge
-before reaching the Workers in the isolated EL400 accounts. The shared
-`el400-ppe` Worker backs the PPE URL; PR deployments do not overwrite it.
+The `cloudflare-production` GitHub environment must define the variable
+`CLOUDFLARE_ACCOUNT_ID=3e6bc13f9f90e6614641ee115398cafb` and a
+`CLOUDFLARE_API_TOKEN` secret scoped to that account. The `cloudflare-ppe`
+environment uses the same variable and secret names, with
+`CLOUDFLARE_ACCOUNT_ID=54c544aebe633c948491c0569efca438` and a token scoped to
+the PPE account. `wrangler.toml` stays account-neutral.
 
-GitHub environments `cloudflare-production` and `cloudflare-ppe` provide each
-workflow with its target account ID and API token. `wrangler.toml` remains
-account-neutral so the same static-assets configuration works in both accounts.
+### Public route
+
+Neither public hostname points straight at an EL400 account. Requests take this
+route:
+
+1. `el400.vza.net` and `el400.ppe.vza.net` terminate on Custom Domains attached
+   to `vza-net-router-bridge` in the source `sessions-prod` account
+   (`18ef3246e9f36d1560485ef53889c0ab`).
+2. The bridge calls the central `vza-net-router` in `vza-net-prod`
+   (`be2aff099f03e835047ba1f8cfd9aa81`). The bridge and router share
+   `ROUTER_BRIDGE_TOKEN`.
+3. The router sends production to
+   `https://el400.el400-vza-net-prod.workers.dev` and PPE to
+   `https://el400-ppe.el400-ppe-vza-net.workers.dev`.
+
+The source account may still contain an older Worker named `el400`. Delete that
+legacy service only after the public routes and isolated origins pass smoke
+checks, source route and Custom Domain inventories show no reference to it, a
+defined analytics or tail window shows no direct legacy traffic, and its
+Workers Builds or Git integration is disabled. This cleanup applies only to the
+legacy `el400` service/build project. The bridge, central router, public
+domains, target origins, and shared `ROUTER_BRIDGE_TOKEN` stay in place.
 
 ## Tech Stack
 

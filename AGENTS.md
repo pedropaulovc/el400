@@ -28,32 +28,63 @@ npm run test:e2e         # Playwright E2E
 npm run test:all         # REQUIRED before push (lint + coverage + e2e + storybook)
 ```
 
-## Cloudflare Deployment
+## Cloudflare deployment
 
 `wrangler.toml` is account-neutral. GitHub Actions supplies the account ID and
 API token from the deployment environment.
 
-| Target | Cloudflare account | Account ID | Worker |
-| --- | --- | --- | --- |
-| Production | `el400-vza-net-prod` | `3e6bc13f9f90e6614641ee115398cafb` | `el400` |
-| PPE | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-ppe` |
-| PR `N` | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-pr-N` |
+| Target | GitHub environment | Cloudflare account | Account ID | Worker |
+| --- | --- | --- | --- | --- |
+| Production | `cloudflare-production` | `el400-vza-net-prod` | `3e6bc13f9f90e6614641ee115398cafb` | `el400` |
+| Stable PPE | `cloudflare-ppe` | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-ppe` |
+| PR `N` | `cloudflare-ppe` | `el400-ppe-vza-net` | `54c544aebe633c948491c0569efca438` | `el400-pr-N` |
 
 - `.github/workflows/deploy-production.yml` deploys `main` and manual runs to
-  production using the `cloudflare-production` GitHub environment.
-- `.github/workflows/deploy-ppe.yml` provisions a Worker for same-repository PR
-  `opened`, `synchronize`, and `reopened` events using `cloudflare-ppe`.
-- A PR close or merge deletes its Worker through Cloudflare's Worker service
-  API. Error `10090` is the only idempotent already-absent result.
+  production.
+- Manually running `.github/workflows/deploy-ppe.yml` deploys the selected ref
+  as `el400-ppe`. The job publishes and checks
+  `https://el400-ppe.el400-ppe-vza-net.workers.dev`, which is the PPE origin
+  configured in the central router.
+- The same PPE workflow creates `el400-pr-N` for same-repository PR `opened`,
+  `synchronize`, and `reopened` events. Closing or merging the PR deletes only
+  that PR Worker through Cloudflare's Worker service API. Error `10090` is the
+  only idempotent already-absent result.
+- Stable PPE and PR runs have separate concurrency groups. A manual stable
+  deployment cannot replace an `el400-pr-N` Worker, and PR cleanup cannot delete
+  `el400-ppe`.
 - Fork PRs are skipped because GitHub does not expose deployment credentials.
-- PR concurrency is scoped by number; one PR never replaces another PR's Worker.
-- Do not add an account ID to `wrangler.toml`; doing so would couple both
-  workflows to one account.
+- Do not add an account ID to `wrangler.toml`; that would couple both deployment
+  environments to one account.
 
-The `vza.net` zone is not in either EL400 account. `el400.vza.net` and
-`el400.ppe.vza.net` are Custom Domains on `vza-net-router-bridge` in
-`sessions-prod`. That bridge authenticates to the central `vza-net-router`,
-which sends each hostname to its EL400 account-owned `workers.dev` origin.
+### Public routing and source cleanup
+
+The `vza.net` zone is outside both EL400 accounts. Public traffic follows this
+path:
+
+1. `el400.vza.net` and `el400.ppe.vza.net` are Custom Domains on
+   `vza-net-router-bridge` in the source `sessions-prod` account
+   (`18ef3246e9f36d1560485ef53889c0ab`).
+2. The bridge authenticates to `vza-net-router` in the central `vza-net-prod`
+   account (`be2aff099f03e835047ba1f8cfd9aa81`). Both Workers must keep the same
+   `ROUTER_BRIDGE_TOKEN`.
+3. The central router sends production to
+   `https://el400.el400-vza-net-prod.workers.dev` and PPE to
+   `https://el400-ppe.el400-ppe-vza-net.workers.dev`.
+
+An older Worker service named `el400` may still exist in the source account. It
+is separate from the bridge and can be retired only after all of these checks:
+
+1. The public production and PPE URLs, their router health endpoints, and both
+   isolated `workers.dev` origins pass smoke checks.
+2. The source account's route and Custom Domain inventory has no reference to
+   the legacy `el400` service.
+3. A defined Cloudflare analytics or tail observation window shows no direct
+   traffic to the legacy Worker's URL.
+4. Workers Builds or any Git integration for the legacy service is disabled.
+
+Delete only that legacy `el400` service/build project. The
+`vza-net-router-bridge`, `vza-net-router`, both public domains, both target
+origins, and `ROUTER_BRIDGE_TOKEN` must remain.
 
 ### Git worktrees need their own `node_modules`
 
