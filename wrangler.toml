@@ -1,11 +1,6 @@
-# Cloudflare Worker (static assets) configuration.
-# Production: main branch -> https://el400.vza.net
-# Previews:   every PR/branch -> a *.el400.<subdomain>.workers.dev preview URL
-#             (provisioned automatically by Workers Builds)
-#
-# Deployed by Workers Builds on each push:
-#   Build command:   npm run build
-#   Deploy command:  npx wrangler deploy
+# Cloudflare Worker static-assets configuration.
+# GitHub Actions deploys branches to the isolated PPE account and main to the
+# production account. The workflows supply the account ID and API token.
 name = "el400"
 compatibility_date = "2026-05-30"
 
