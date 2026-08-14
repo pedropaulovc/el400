@@ -3,7 +3,7 @@ name: Deploy Production
 on:
   workflow_dispatch:
   push:
-    branches: [main, infra/cloudflare-account-split]
+    branches: [main]
 
 concurrency:
   group: deploy-production
