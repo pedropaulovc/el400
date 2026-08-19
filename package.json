@@ -80,9 +80,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.1",
-    "@storybook/addon-vitest": "^10.4.2",
-    "@storybook/react": "^10.4.2",
-    "@storybook/react-vite": "^10.4.2",
+    "@storybook/addon-vitest": "^10.5.8",
+    "@storybook/react": "^10.5.8",
+    "@storybook/react-vite": "^10.5.8",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
