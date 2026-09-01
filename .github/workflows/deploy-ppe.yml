@@ -42,7 +42,7 @@ jobs:
         run: npm run build
 
       - name: Deploy stable PPE Worker
-        run: npx wrangler deploy --name "$WORKER_NAME"
+        run: npx wrangler deploy --env ppe --name "$WORKER_NAME"
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -82,7 +82,7 @@ jobs:
         run: npm run build
 
       - name: Deploy PR Worker
-        run: npx wrangler deploy --name "$WORKER_NAME"
+        run: npx wrangler deploy --env ppe --name "$WORKER_NAME"
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

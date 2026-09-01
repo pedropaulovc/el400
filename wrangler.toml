@@ -2,6 +2,9 @@
 # GitHub Actions deploys main to the isolated production account and each
 # same-repository pull request to its own Worker in the isolated PPE account.
 name = "el400"
+# Pin the dedicated production account so a mis-scoped credential cannot
+# deploy this Worker into someone else's account.
+account_id = "3e6bc13f9f90e6614641ee115398cafb"
 compatibility_date = "2026-05-30"
 
 # Static-assets-only Worker (no server-side `main`): serves the Vite build in ./dist.
@@ -9,3 +12,9 @@ compatibility_date = "2026-05-30"
 directory = "./dist"
 # SPA fallback so React Router deep links resolve to index.html.
 not_found_handling = "single-page-application"
+
+# PPE (stable + per-PR Workers) lives in its own isolated account. A top-level
+# `account_id` outranks $CLOUDFLARE_ACCOUNT_ID, so PPE must override it here.
+# Everything else (assets, compatibility_date) is inherited.
+[env.ppe]
+account_id = "54c544aebe633c948491c0569efca438"
