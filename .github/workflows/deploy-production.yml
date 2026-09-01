@@ -36,7 +36,7 @@ jobs:
         run: npm run build
 
       - name: Deploy production Worker
-        run: npx wrangler deploy --name el400
+        run: npx wrangler deploy --env "" --name el400
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
