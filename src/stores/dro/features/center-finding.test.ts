@@ -113,6 +113,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-point-2',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -131,6 +132,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
@@ -184,6 +186,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-line-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -206,6 +209,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-line-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 50, Z: 0 }],
           centerResult: null,
         },
@@ -224,6 +228,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-line-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 50, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -242,6 +247,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-line-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 10 }],
           centerResult: null,
         },
@@ -261,6 +267,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-line-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: -50, Y: -30, Z: 0 }],
           centerResult: null,
         },
@@ -281,6 +288,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
@@ -306,6 +314,7 @@ describe('centerFindingReducer', () => {
       expect(result?.stateName).toBe('function-menu-center-circle-point-2');
       const data = result?.stateData as CenterFindingData;
       expect(data.storedPoints).toHaveLength(1);
+      expect(result?.display.Z).toBe('Point 2');
     });
 
     it('should store second point and advance to point-3', () => {
@@ -313,6 +322,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-circle-point-2',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 10, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -324,6 +334,7 @@ describe('centerFindingReducer', () => {
       expect(result?.stateName).toBe('function-menu-center-circle-point-3');
       const data = result?.stateData as CenterFindingData;
       expect(data.storedPoints).toHaveLength(2);
+      expect(result?.display.Z).toBe('Point 3');
     });
 
     it('should store third point and calculate circle center', () => {
@@ -331,6 +342,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-circle-point-3',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 10, Y: 0, Z: 0 },
             { X: 0, Y: 10, Z: 0 },
@@ -348,6 +360,7 @@ describe('centerFindingReducer', () => {
       expect(data.centerResult).not.toBeNull();
       expect(data.centerResult?.X).toBeCloseTo(0, 5);
       expect(data.centerResult?.Y).toBeCloseTo(0, 5);
+      expect(result?.display.Z).toBe('CEntrE');
     });
 
     it('should calculate center for circle not at origin', () => {
@@ -355,6 +368,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-circle-point-3',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 15, Y: 5, Z: 0 },  // Right of center (5,5)
             { X: 5, Y: 15, Z: 0 },  // Above center
@@ -376,6 +390,7 @@ describe('centerFindingReducer', () => {
         'function-menu-center-circle-point-3',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 10, Y: 0, Z: 10 },
             { X: 0, Y: 10, Z: 20 },
@@ -391,25 +406,56 @@ describe('centerFindingReducer', () => {
       expect(data.centerResult?.Z).toBe(20); // Average of 10, 20, 30
     });
 
-    it('should handle collinear points (return null center)', () => {
+    it('shows INVALID and restarts at Point 1 for collinear points', () => {
       const current = stateWithPosition(
         'function-menu-center-circle-point-3',
         {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 0, Y: 0, Z: 0 },
             { X: 5, Y: 0, Z: 0 },
           ],
           centerResult: null,
         },
-        { X: 10, Y: 0, Z: 0 }  // Collinear with first two
+        { X: 10, Y: 0, Z: 0 }
       );
 
-      const result = centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      const result = centerFindingReducer(
+        current,
+        { eventName: 'KEY_6_RIGHT' },
+        DEFAULT_TEST_CONTEXT
+      );
 
-      expect(result?.stateName).toBe('function-menu-center-circle-result');
-      const data = result?.stateData as CenterFindingData;
-      expect(data.centerResult).toBeNull();
+      expect(result?.stateName).toBe('function-menu-center-circle-point-1');
+      expect((result?.stateData as CenterFindingData).storedPoints).toEqual([]);
+      expect((result?.stateData as CenterFindingData).captureStatus).toBe('invalid');
+      expect(result?.display.X).toBe('inuAL d');
+      expect(result?.display.Z).toBe('Point 1');
+    });
+
+    it('shows INVALID immediately when a captured point duplicates an earlier point', () => {
+      const current = stateWithPosition(
+        'function-menu-center-circle-point-2',
+        {
+          stateDataType: 'center-finding',
+          captureStatus: 'ready',
+          storedPoints: [{ X: 10, Y: 5, Z: 0 }],
+          centerResult: null,
+        },
+        { X: 10, Y: 5, Z: 20 }
+      );
+
+      const result = centerFindingReducer(
+        current,
+        { eventName: 'KEY_6_RIGHT' },
+        DEFAULT_TEST_CONTEXT
+      );
+
+      expect(result?.stateName).toBe('function-menu-center-circle-point-1');
+      expect((result?.stateData as CenterFindingData).captureStatus).toBe('invalid');
+      expect(result?.display.X).toBe('inuAL d');
+      expect(result?.display.Z).toBe('Point 1');
     });
   });
 
@@ -419,6 +465,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-circle-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 10, Y: 0, Z: 0 },
             { X: 0, Y: 10, Z: 0 },
@@ -448,6 +495,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-point-2',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -463,6 +511,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-circle-point-3',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 10, Y: 0, Z: 0 },
             { X: 0, Y: 10, Z: 0 },
@@ -513,6 +562,41 @@ describe('centerFindingReducer', () => {
       expect(result?.display).toBeDefined();
     });
 
+    it('keeps INVALID readable through position ticks and clears it on the next capture', () => {
+      const invalid: DROStatePayload = {
+        stateName: 'function-menu-center-circle-point-1',
+        stateData: {
+          ...INITIAL_CENTER_FINDING_DATA,
+          captureStatus: 'invalid',
+        },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          manualAbsoluteValues: { X: 25, Y: 10, Z: 0 },
+        },
+        display: { X: 'inuAL d', Y: '', Z: 'Point 1' },
+      };
+
+      const afterMove = centerFindingReducer(
+        invalid,
+        { eventName: 'MILL_STATE_CHANGED' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      expect(afterMove.display).toEqual({ X: 'inuAL d', Y: '', Z: 'Point 1' });
+      expect((afterMove.stateData as CenterFindingData).captureStatus).toBe('invalid');
+
+      const afterCapture = centerFindingReducer(
+        afterMove,
+        { eventName: 'KEY_6_RIGHT' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      expect(afterCapture.stateName).toBe('function-menu-center-circle-point-2');
+      expect((afterCapture.stateData as CenterFindingData).captureStatus).toBe('ready');
+      expect((afterCapture.stateData as CenterFindingData).storedPoints).toEqual([
+        { X: 25, Y: 10, Z: 0 },
+      ]);
+      expect(afterCapture.display.Z).toBe('Point 2');
+    });
+
     it('should recompute normal display for all point collection states', () => {
       const collectStates: DROStateName[] = [
         'function-menu-center-line-point-1',
@@ -530,11 +614,20 @@ describe('centerFindingReducer', () => {
           display: INITIAL_DISPLAY_STATE,
         };
 
-        const result = centerFindingReducer(current, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+        const result = centerFindingReducer(
+          current,
+          { eventName: 'MILL_STATE_CHANGED' },
+          DEFAULT_TEST_CONTEXT
+        );
+        const expectedPrompt = stateName.endsWith('point-1')
+          ? 'Point 1'
+          : stateName.endsWith('point-2')
+            ? 'Point 2'
+            : 'Point 3';
 
         expect(result).not.toBeNull();
         expect(result?.stateName).toBe(stateName);
-        expect(result?.display).toBeDefined();
+        expect(result?.display.Z).toBe(expectedPrompt);
       }
     });
 
@@ -543,6 +636,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: { X: 50, Y: 0, Z: 0 },
         },
@@ -566,6 +660,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-circle-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [
             { X: 10, Y: 0, Z: 0 },
             { X: 0, Y: 10, Z: 0 },
@@ -584,10 +679,10 @@ describe('centerFindingReducer', () => {
 
       expect(result).not.toBeNull();
       expect(result?.stateName).toBe('function-menu-center-circle-result');
-      // Display should show distance to center
-      // X: 0 - 10 = -10, Y: 0 - 10 = -10, Z: 0 - 5 = -5 (all in mm, converted to inches)
+      // X/Y are live distance-to-go; Z retains the authoritative result label.
       expect(result?.display.X).toBeCloseTo(-10 / 25.4, 2);
       expect(result?.display.Y).toBeCloseTo(-10 / 25.4, 2);
+      expect(result?.display.Z).toBe('CEntrE');
     });
 
     it('should return current state for result state without center result', () => {
@@ -595,6 +690,7 @@ describe('centerFindingReducer', () => {
         stateName: 'function-menu-center-line-result',
         stateData: {
           stateDataType: 'center-finding',
+          captureStatus: 'ready',
           storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 100, Y: 0, Z: 0 }],
           centerResult: null,
         },
@@ -672,6 +768,7 @@ describe('centerFindingReducer', () => {
       const data = state.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBeCloseTo(0, 5);
       expect(data.centerResult?.Y).toBeCloseTo(0, 5);
+      expect(state.display.Z).toBe('CEntrE');
     });
   });
 });

@@ -1,88 +1,39 @@
 # US-035: External Machine Connection
 
+**Source:** Data Interface Architecture and CNCjs integration contract
 **Priority:** P1
 **Category:** Integration
-**Source:** Data Interface Architecture
 
 ## User Story
 
-**As a** machinist using CNCjs or another G-code sender
-**I want** the DRO to display live position data from my CNC controller
-**So that** I can use the DRO's advanced functions while machining with real-time position feedback
+**As a** machinist using CNCjs  
+**I want** the DRO to show live controller positions and an honest connection state  
+**So that** simulator functions operate on the connected machine data and degrade clearly when disconnected
 
-## Acceptance Criteria
+## Target Acceptance Criteria
 
-- [ ] AC35.1: When connected to CNCjs, the DRO displays live X, Y, Z positions from the machine
-- [ ] AC35.2: Position updates appear within 100ms of actual machine movement
-- [ ] AC35.3: A visual indicator shows connection status (connected/disconnected)
-- [ ] AC35.4: When disconnected, the DRO continues to function in manual mode
-- [ ] AC35.5: Connection parameters can be specified via URL (host, port)
-- [ ] AC35.6: The DRO works as a CNCjs widget embedded in an iframe
+- [ ] **AC 35.1 — Live data:** With `source=cncjs`, real CNCjs socket/controller reports update visible X/Y/Z positions through the production adapter and mill store.
+- [ ] **AC 35.2 — Responsiveness:** An accepted mock-CNCjs movement becomes visible within 100 ms, measured from received controller event to displayed value.
+- [ ] **AC 35.3 — Connection state:** Outside the EL400 face, a visible `role="status"` element with `data-testid="connection-status"` reports exactly `Machine connection: Connecting`, `Connected`, `Disconnected`, or `Manual input` from production mill-store state.
+- [ ] **AC 35.4 — Disconnect behavior:** A CNCjs serial-port close changes the visible state to Disconnected and leaves the simulator usable for manual value entry; serial-port reopen changes it back to Connected and resumes live updates.
+- [ ] **AC 35.5 — URL configuration:** `source=cncjs` accepts host and port, plus supported token/session/serial-port parameters. With no host, it connects to the page's origin for a same-origin CNCjs mount.
+- [ ] **AC 35.6 — Embedded widget:** The actual application loads inside a same-origin iframe/CNCjs widget fixture, connects through the production CNCjs path, displays a mock movement, and retains operator interaction. A localStorage-only probe is not iframe coverage.
+- [ ] **AC 35.7 — Debug separation:** `source=debug` uses the visible debug adapter and controls for simulator feature tests. `source=mock` is not a supported URL source and must not appear in procedures.
 
-## Background
+No broad per-controller support table is claimed without an exercised production adapter fixture for that controller dialect.
 
-Traditional DRO units require dedicated hardware encoders. This integration allows the simulator to receive position data from CNC controllers through their native interfaces, enabling use with any machine that has a supported G-code sender.
+## Baseline Audit (before this correction/implementation pass)
 
-## Supported Controllers
+The completed headed audit proved the debug adapter path and measured an 11 ms debug-control-to-display update. Static adapter evidence covered CNCjs URL parsing and controller normalization. It confirmed that no visible connection indicator existed. CNCjs live movement, disconnect/reconnect, and an actual iframe/widget were not exercised; the old E2E merely loaded the CNCjs fixture or checked same-origin storage and therefore did not satisfy AC 35.1, 35.3, 35.4, or 35.6.
 
-| Controller | Position Data | Probe State |
-|------------|--------------|-------------|
-| GRBL       | Yes          | Yes         |
-| GrblHAL    | Yes          | Yes         |
-| TinyG      | Yes          | Yes         |
-| Smoothie   | Yes          | No          |
-| Marlin     | Yes          | No          |
+## Verification Procedure
 
-## E2E Test Scenarios
+Use [`e2e/09-integration/US-035-external-machine-connection.spec.ts`](../../../e2e/09-integration/US-035-external-machine-connection.spec.ts) with the real mock CNCjs server. Assert visible X/Y/Z movement, elapsed display latency, `connection-status` text, serial-port close/open transitions, manual operation after disconnect, and recovery. Mount the real app in a same-origin CNCjs iframe fixture and repeat a CNCjs position update inside the frame. Feature-only tests use `DROPage.goto({ source: 'debug', skipBootMessage: true })`; integration tests retain `source: 'cncjs'`.
 
-```typescript
-describe('US-035: External Machine Connection', () => {
-  test('displays position from mock adapter', async ({ page }) => {
-    // Navigate with mock data source
-    await page.goto('/?source=mock');
-
-    // Mock adapter simulates movement
-    // Verify position displays update
-    await expect(page.getByTestId('x-display')).toContainText('1.234');
-  });
-
-  test('shows connection status indicator', async ({ page }) => {
-    await page.goto('/?source=mock');
-
-    // Connected state
-    await expect(page.getByTestId('connection-indicator')).toHaveAttribute('data-connected', 'true');
-  });
-
-  test('continues working when disconnected', async ({ page }) => {
-    await page.goto('/'); // No source = manual mode
-
-    // Should still be able to enter values manually
-    await page.click('[data-testid="axis-select-x"]');
-    await page.click('[data-testid="key-1"]');
-    await page.click('[data-testid="key-enter"]');
-
-    await expect(page.getByTestId('x-display')).toContainText('1');
-  });
-
-  test('parses URL parameters for connection', async ({ page }) => {
-    // URL params configure data source
-    await page.goto('/?source=cncjs&host=192.168.1.100&port=8000');
-
-    // Verify adapter was created with correct config
-    // (Implementation-specific verification)
-  });
-});
-```
-
-## Implementation Notes
-
-- **Data flow**: Controller -> CNCjs WebSocket -> Connection -> MillStateContext -> UI
-- **URL params**: `?source=cncjs&host=localhost&port=8000`
-- **Fallback**: Manual mode when no source specified or connection fails
-- **Iframe context**: Works within CNCjs widget system (same-origin localStorage)
+Newly implemented connection UI and iframe coverage remain pending integrated verification.
 
 ## Related Stories
 
-- US-003: ABS/INC Mode (uses position data for display)
-- US-032: Touch Probe (probe state integration)
-- US-036: Settings Persistence (stores preferences)
+- US-003: ABS/INC Mode
+- US-032: Touch Probe
+- US-036: Settings Persistence

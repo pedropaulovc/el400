@@ -1,204 +1,49 @@
-# US-015: Center of Circle (Macro)
+# US-015: Center of Circle Macro
 
-**Priority:** P3
-**Category:** Calculations
-**Manual Reference:** CENTER-FINDING MACRO ROUTINE (lines 168-191)
+**Priority:** P3  
+**Category:** Calculations  
+**Manual reference:** EL400 Operation Manual §8.4, pp. 42–43 (three-point circle center and distance-to-go); §8.5, pp. 43–44 (separate line-center routine); display text table, pp. 85–86 (`CEntrE`, `CirCLE`, `LinE`, `Point`, `inuAL d`)
 
 ## User Story
 
-**As a** machine operator
-**I want** to find circle center from 3 perimeter points
-**So that** I can center circular workpieces automatically
+**As a** machine operator  
+**I want** to capture three perimeter points and receive live distance-to-go to their circle center  
+**So that** I can center a circular workpiece from the front panel
 
-## Acceptance Criteria
+## Target Acceptance Criteria
 
-- [ ] AC15.1: Press fn key, displays "CENTER"
-- [ ] AC15.2: Press ENT, toggle to "CIRCLE"
-- [ ] AC15.3: Press ENT, displays "Point 1"
-- [ ] AC15.4: Find perimeter point 1, press 6 to save (Y unchanged for next)
-- [ ] AC15.5: Find perimeter point 2, press 6 to save (X unchanged for next)
-- [ ] AC15.6: Find perimeter point 3, press 6 to save
-- [ ] AC15.7: Display shows "CENTER" with calculated X, Y coordinates
-- [ ] AC15.8: Extra decimal point indicates function mode active
-- [ ] AC15.9: Zero display by table movement to reach exact center
-- [ ] AC15.10: C key exits function
+- [ ] **AC15.1:** From the normal display, Fn shows `CEntrE`; ENT opens the nested center submenu with `CirCLE` selected by default.
+- [ ] **AC15.2:** 4/6 toggles the center submenu between `CirCLE` and `LinE`. ENT on `CirCLE` starts circle capture; it must not silently start the two-point line routine.
+- [ ] **AC15.3:** The Z window visibly identifies `Point 1`, `Point 2`, and `Point 3` during the three capture phases.
+- [ ] **AC15.4:** At each perimeter location, 6 stores the current X/Y point and advances the prompt. The recommended procedure is to traverse only X between points 1 and 2 and only Y between points 2 and 3, matching the manual illustration.
+- [ ] **AC15.5:** After point 3, X and Y show live distance-to-go from the current machine position to the computed center, and Z shows `CEntrE`.
+- [ ] **AC15.6:** The center result uses the terminal function decimal shown in the primary manual's center-result image, without placing a marker on the textual Z label.
+- [ ] **AC15.7:** Moving the table toward the center updates X/Y continuously; both read exactly `0.0000` at the computed center.
+- [ ] **AC15.8:** Duplicate or collinear captures do not create a center. The display shows `inuAL d` and restarts circle point capture so the operator can retry.
+- [ ] **AC15.9:** C exits from the submenu, capture, result, or invalid state and restores the previous unit/mode and live coordinate display.
 
-## E2E Test Scenarios
+## Operator Procedure and Independent Oracle
 
-```typescript
-describe('US-015: Center of Circle (Macro)', () => {
-  test('activate center-finding function', async ({ page }) => {
-    await page.goto('/');
+1. Start in the normal display and press Fn, ENT (`CEntrE`), then ENT on the default `CirCLE` choice.
+2. At perimeter point 1, press 6. Traverse X only to point 2 and press 6. Traverse Y only to point 3 and press 6.
+3. Read X/Y distance-to-go while Z reads `CEntrE`; move both displayed values to zero.
 
-    // Press fn key
-    await page.click('[data-testid="fn-button"]');
+For points `(0,0)`, `(10,0)`, and `(10,10)`, the geometric center is `(5,5)`. Immediately after the third capture at `(10,10)`, the independent expected distance-to-go is X=`-5.0000`, Y=`-5.0000`; at physical `(5,5)` it is zero on both axes. `(0,0)`, `(10,0)`, `(20,0)` is the collinear invalid control.
 
-    // Should display CENTER
-    await expect(page.locator('[data-testid="z-axis-display"]')).toContainText('CENTER');
-  });
+## Baseline Audit Status (headed debug audit)
 
-  test('select circle mode', async ({ page }) => {
-    await page.goto('/');
+The pre-implementation audit found correct three-point arithmetic and live move-to-zero only through the alternate Fn→6 `CirCLE` route. Fn→`CEntrE`→ENT incorrectly entered line capture; Point labels and result `CEntrE` were absent; collinear input failed silently. The function marker, live DTG, C exit, and ABS/mm restoration passed on the alternate route. These are baseline facts, not post-change verification.
 
-    await page.click('[data-testid="fn-button"]');
+Evidence: `/tmp/el400-audit-ManualCalculations.json` (`US-015`) and `/tmp/el400-audit/calculations/us015-*.png`.
 
-    // Press ENT
-    await page.click('[data-testid="ent-button"]');
+## Automated Coverage
 
-    // May need to toggle with 4/6 keys to CIRCLE (vs LINE)
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('CIRCLE');
+- [`e2e/04-calculations/US-015-center-circle-macro.spec.ts`](../../../e2e/04-calculations/US-015-center-circle-macro.spec.ts) contains the visible duplicate/collinear invalid-and-retry scenarios.
+- [`e2e/02-core-operations/US-007-center-finding.spec.ts`](../../../e2e/02-core-operations/US-007-center-finding.spec.ts) covers the nested `CEntrE` submenu, `CirCLE` default/`LinE` toggle, Point prompts, `CEntrE` result, and live debug distance-to-go to zero.
 
-    // Press ENT to confirm
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="z-axis-display"]')).toContainText('Point 1');
-  });
-
-  test('save point 1 coordinates', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup function
-    await page.click('[data-testid="fn-button"]');
-    await page.click('[data-testid="ent-button"]');
-    await page.click('[data-testid="ent-button"]');
-
-    // Position at point 1 (example: X=1.0, Y=2.0 on circle perimeter)
-    await page.evaluate(() => {
-      window.setAxisPosition('X', 1.0);
-      window.setAxisPosition('Y', 2.0);
-    });
-
-    // Save point 1
-    await page.click('[data-testid="6-key"]');
-
-    // Point 1 saved, Y axis should remain locked
-  });
-
-  test('save point 2 coordinates (Y locked)', async ({ page }) => {
-    await page.goto('/');
-
-    // After saving point 1
-    // ... setup ...
-
-    // Move to point 2 (Y must not change from point 1)
-    // Only traverse X axis
-    await page.evaluate(() => {
-      window.setAxisPosition('X', 3.0);
-      // Y stays at 2.0 from point 1
-    });
-
-    // Save point 2
-    await page.click('[data-testid="6-key"]');
-
-    // Point 2 saved, X axis now locked
-  });
-
-  test('save point 3 coordinates (X locked)', async ({ page }) => {
-    await page.goto('/');
-
-    // After saving points 1 and 2
-    // ... setup ...
-
-    // Move to point 3 (X must not change from point 2)
-    // Only traverse Y axis
-    await page.evaluate(() => {
-      // X stays at 3.0 from point 2
-      window.setAxisPosition('Y', 3.5);
-    });
-
-    // Save point 3
-    await page.click('[data-testid="6-key"]');
-
-    // Calculation performed automatically
-  });
-
-  test('calculate center coordinates', async ({ page }) => {
-    await page.goto('/');
-
-    // After saving all 3 points
-    // Example: Points at (1,2), (3,2), (3,3.5)
-    // ... setup and save points ...
-
-    // Display should automatically show CENTER
-    await expect(page.locator('[data-testid="z-axis-display"]')).toContainText('CENTER');
-
-    // X and Y windows show center coordinates
-    // Calculated from 3-point circle algorithm
-    const centerX = await page.locator('[data-testid="x-axis-display"]').textContent();
-    const centerY = await page.locator('[data-testid="y-axis-display"]').textContent();
-
-    expect(centerX).toMatch(/\d+\.\d{4}/);
-    expect(centerY).toMatch(/\d+\.\d{4}/);
-  });
-
-  test('display shows CENTER indicator', async ({ page }) => {
-    await page.goto('/');
-
-    // After calculation
-    // ... setup ...
-
-    await expect(page.locator('[data-testid="z-axis-display"]')).toContainText('CENTER');
-  });
-
-  test('extra decimal point visible', async ({ page }) => {
-    await page.goto('/');
-
-    // After calculation, function mode active
-    // ... setup ...
-
-    // Extra decimal point indicates function mode
-    await expect(page.locator('[data-testid="x-decimal-indicator"]')).toBeVisible();
-    await expect(page.locator('[data-testid="y-decimal-indicator"]')).toBeVisible();
-  });
-
-  test('exit function with C key', async ({ page }) => {
-    await page.goto('/');
-
-    // In center function
-    // ... setup ...
-
-    // Exit
-    await page.click('[data-testid="c-button"]');
-
-    // Function mode exited
-    await expect(page.locator('[data-testid="z-axis-display"]')).not.toContainText('CENTER');
-    await expect(page.locator('[data-testid="x-decimal-indicator"]')).not.toBeVisible();
-  });
-});
-```
-
-## Implementation Notes
-
-- **3-point circle algorithm**: Given 3 points, calculate center and radius
-- **Constraint method**:
-  - Point 1 → 2: Y axis locked (traverse only X)
-  - Point 2 → 3: X axis locked (traverse only Y)
-  - Creates perpendicular measurements
-- **Geometry**:
-  - Imagine rectangle touching circle at 3 points
-  - Distance between opposing corners = 2R
-  - Algorithm solves for center (Xc, Yc)
-- **Display**: Shows calculated center as distance-to-go from current position
-- **Workflow**:
-  1. Position spindle over approximate center
-  2. Move back ~2/3 radius
-  3. Press fn, ENT, ENT (CIRCLE mode)
-  4. Find point 1, press 6
-  5. Traverse X only, find point 2, press 6
-  6. Traverse Y only, find point 3, press 6
-  7. Center calculated and displayed
-  8. Move table to zero X and Y
-  9. Spindle now exactly over center
-- **Alternative to**: US-007 Manual Center Finding
+The common Axis marker assertion and all newly changed scenarios remain unverified until Main runs the integrated suite.
 
 ## Related Stories
 
-- US-006: Half Function (manual center-finding method)
-- US-007: Center Finding Manual Method (simpler but less automated) - See TODO about relationship
-- US-016: Bolt Circle Drilling (uses center coordinates)
-
-## Notes
-- Claude-only story
-- Describes automated 3-point circle macro
-- Different from US-007 which uses manual probing
-- Merged from G-008 context
+- US-006 / US-007: half and two-point center methods
+- US-016 / US-017: patterns that consume known center coordinates

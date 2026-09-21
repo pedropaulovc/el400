@@ -1,224 +1,52 @@
-# US-033: Six Output & Serial Communication
+# US-033: Six Output and Serial Communication
 
-**Manual Reference:** Section 10.2 & 10.3
+**Manual Reference:** EL400 Operation Manual §6.2, §10.2, and §10.3, pp. 20–21 and 77–82
 **Priority:** P5
 **Category:** Auxiliary
 
 ## User Story
-**As a** machine operator or system integrator
-**I want** to utilize auxiliary outputs and serial communication
-**So that** I can automate processes or log data
 
-## Acceptance Criteria
+**As a** machine operator or system integrator  
+**I want** faithful six-output and serial simulations  
+**So that** I can practise EL400 programming and inspect the data that physical optional interfaces would produce
 
-### Six Output Function (6oP)
-- [ ] **AC 33.1:** Access `6oP` function from menu.
-- [ ] **AC 33.2:** Program up to 6 position-based outputs.
-- [ ] **AC 33.3:** For each output, configure:
-    - Target position
-    - Output mode: `Pulse` (momentary) or `Continuous` (latched)
-    - Pulse duration (if Pulse mode)
-- [ ] **AC 33.4:** Output activates when axis reaches programmed position.
-- [ ] **AC 33.5:** In Pulse mode, output deactivates after duration.
-- [ ] **AC 33.6:** In Continuous mode, output stays active until manually reset.
-- [ ] **AC 33.7:** Visual indicator shows which outputs are active.
-- [ ] **AC 33.8:** Outputs can be enabled/disabled individually.
+## Target Acceptance Criteria
 
-### Serial Communication
-- [ ] **AC 33.9:** Configure serial port parameters (baud rate, parity, stop bits).
-- [ ] **AC 33.10:** **Request mode (`SEr iAL`)**: Transmit data on request.
-- [ ] **AC 33.11:** **Continuous mode (`SEr Con`)**: Transmit data continuously at set interval.
-- [ ] **AC 33.12:** Data format includes axis positions, mode indicators, and status.
-- [ ] **AC 33.13:** Support standard baud rates (2400, 4800, 9600, 19200, etc.).
-- [ ] **AC 33.14:** Data can be received by PC or external device.
-- [ ] **AC 33.15:** Error handling for communication failures.
+### Six-output function
 
-## E2E Test Scenarios
-```typescript
-describe('US-033: Six Output & Serial Communication', () => {
-  describe('Six Output Function', () => {
-    test('Program output at specific position', async () => {
-      await dro.pressKey('Fn');
-      await dro.selectMenuOption('6oP');
-      await dro.pressKey('ENT');
+- [ ] **AC 33.1 — Entry and programming:** The Function menu provides `6oP`, initially showing `rUn` as in the primary manual; Right selects `ProGrAn`, ENTER selects a count from 1 through 6, then the operator records an axis and numeric threshold for each slot. Returning to `rUn` executes the program.
+- [ ] **AC 33.2 — Signal mode:** Setup selects one global six-output mode, `PULSE` or `Cont`. There is no invented per-output mode or operator-configurable pulse duration.
+- [ ] **AC 33.3 — Continuous semantics:** In `Cont`, each output is high while the current selected-axis tool position is greater than its programmed threshold and low while it is less. It is a level comparator, not a latch requiring manual reset.
+- [ ] **AC 33.4 — Pulse semantics:** In `PULSE`, crossing a programmed threshold in either direction emits a logical pulse. The simulator keeps the visible pulse high for 1000 ms so it can be inspected; this fixed visualization is not a configurable duration or a claim about physical hardware timing.
+- [ ] **AC 33.5 — Run indication and exit:** `rUn` evaluates all six programmed outputs, shows the terminal decimal-point indication described in §10.2, and `C` exits.
+- [ ] **AC 33.6 — Persistence:** The six thresholds and signal mode survive reload through the simulator's non-volatile settings store.
+- [ ] **AC 33.7 — Simulator boundary:** `AuxiliaryIOPanel` exposes `output-1` through `output-6` as visible high/low logical states. They simulate the six optically isolated outputs; they do not claim voltage, isolation, DB15 wiring, or physical hardware verification.
 
-      // Select output number (1-6)
-      await dro.enterNumber(1);
-      await dro.pressKey('ENT');
+### Serial communication
 
-      // Select axis
-      await dro.pressKey('X');
+- [ ] **AC 33.8 — Modes:** Setup selects `SEr iAL` (on request) or `SEr Con` (continuous); `AUH Fn` → `SErIAL` → ENTER starts the selected mode. Continuous mode's simulator sampling cadence is fixed at 250 ms so it is observable, not an operator-configurable interval or a hardware timing claim.
+- [ ] **AC 33.9 — Fixed transport contract:** The simulated physical-link contract is exactly 9600 baud, 8 data bits, no parity, 1 stop bit, and no flow control (9600 8N1), as specified in §10.3. No baud/parity/stop-bit menu is provided.
+- [ ] **AC 33.10 — Payload:** The virtual terminal receives current displayed counts in the documented field/status form, for example `0010.005 ARMX 0086.980 ARMY 0000.000 ARMZ`. Status symbols retain the documented meanings: A/I, R/D, M/N, and X/Y/Z.
+- [ ] **AC 33.11 — Request and continuous behavior:** In `SEr iAL`, pressing the real ENTER key sends one current payload. In `SEr Con`, current displayed counts stream continuously.
+- [ ] **AC 33.12 — Failure and exit:** A failed PC transfer displays `Pc fail`; `C` exits the function.
+- [ ] **AC 33.13 — Simulator boundary:** The visible `serial-terminal` is the acceptance surface for payload/status behavior; `virtual-serial-connect`, `serial-disconnect`, and `serial-failure` exercise connection and failure states. Browser simulation of logical serial output is distinct from optional Web Serial or a physical COM1/COM2 transport, neither of which is required or claimed here.
 
-      // Enter target position
-      await dro.enterNumber(100.0);
-      await dro.pressKey('ENT');
+## Baseline Audit (before this correction/implementation pass)
 
-      // Select mode: Pulse
-      await dro.selectMenuOption('Pulse');
-      await dro.pressKey('ENT');
+The completed headed audit found the function carousel without six-output or serial entries. `AUH Fn` displayed `no Conn`; the debug panel exposed no output or terminal controls. Thus every target behavior above was a confirmed gap. The former story contradicted the manual by specifying per-output duration, latch-until-reset behavior, configurable serial parameters, and multiple baud rates; those requirements have been removed.
 
-      // Enter pulse duration (ms)
-      await dro.enterNumber(500);
-      await dro.pressKey('ENT');
+## Verification Procedure
 
-      await await expect(dro.display.xAxis).toHaveText('Stored');
-    });
+Use the front panel with `?source=debug`, the visible `AuxiliaryIOPanel`, and its virtual terminal:
 
-    test('Output activates at programmed position', async () => {
-      // Program output 1 at X=100, Pulse mode, 500ms
-      await dro.programOutput(1, 'X', 100.0, 'Pulse', 500);
+1. Enter `6oP`, move from initial `rUn` to `ProGrAn` with Right, program all six thresholds, return to `rUn`, and cross each threshold in both directions.
+2. Inspect `output-1` through `output-6`; verify comparator behavior in `Cont`, the fixed visible event per crossing in `PULSE`, the terminal decimal, `C` exit, and persistence after reload.
+3. Connect through `virtual-serial-connect`; verify `SEr iAL` sends exactly one correctly formatted payload only when ENTER is pressed.
+4. Verify `SEr Con` produces successive current payloads in `serial-terminal`; exercise disconnect and `serial-failure`, and observe `Pc fail`.
 
-      // Move to position
-      await dro.simulateEncoderAbsoluteMove('X', 100.0);
+Permanent real-UI coverage belongs in [`e2e/07-auxiliary/US-033-six-output-serial.spec.ts`](../../../e2e/07-auxiliary/US-033-six-output-serial.spec.ts). Newly implemented behavior must remain unchecked until the integrated run; no physical output or RS-232 proof is implied.
 
-      // Output should activate
-      await expect(dro.output1).toBeActive();
+## References
 
-      // Wait for pulse duration
-      await dro.wait(500);
-
-      // Output should deactivate
-      await expect(dro.output1).toBeInactive();
-    });
-
-    test('Continuous mode output', async () => {
-      // Program output 2 at Y=50, Continuous mode
-      await dro.programOutput(2, 'Y', 50.0, 'Continuous');
-
-      // Move to position
-      await dro.simulateEncoderAbsoluteMove('Y', 50.0);
-
-      // Output activates and stays on
-      await expect(dro.output2).toBeActive();
-
-      // Move away
-      await dro.simulateEncoderAbsoluteMove('Y', 60.0);
-
-      // Output still active (continuous mode)
-      await expect(dro.output2).toBeActive();
-
-      // Manual reset required
-      await dro.resetOutput(2);
-      await expect(dro.output2).toBeInactive();
-    });
-  });
-
-  describe('Serial Communication', () => {
-    test('Configure serial port', async () => {
-      await dro.pressKey('Setup');
-      await dro.selectMenuOption('Serial');
-      await dro.pressKey('ENT');
-
-      // Set baud rate
-      await dro.selectMenuOption('Baud');
-      await dro.pressKey('ENT');
-      await dro.selectMenuOption('9600');
-      await dro.pressKey('ENT');
-
-      // Set parity
-      await dro.selectMenuOption('Parity');
-      await dro.pressKey('ENT');
-      await dro.selectMenuOption('None');
-      await dro.pressKey('ENT');
-
-      await await expect(dro.display.xAxis).toHaveText('Saved');
-    });
-
-    test('Request mode - transmit on demand', async () => {
-      // Configure Request mode
-      await dro.configureSerialMode('SEr iAL');
-
-      // Connect serial listener
-      const serialData = [];
-      dro.onSerialData((data) => serialData.push(data));
-
-      // Request transmission
-      await dro.pressKey('Send'); // Or specific key combo
-
-      // Should receive current position data
-      await dro.wait(100);
-      expect(serialData.length).toBeGreaterThan(0);
-      expect(serialData[0]).toMatch(/X:[\d\.-]+,Y:[\d\.-]+,Z:[\d\.-]+/);
-    });
-
-    test('Continuous mode - automatic transmission', async () => {
-      // Configure Continuous mode with 1-second interval
-      await dro.configureSerialMode('SEr Con', 1000);
-
-      const serialData = [];
-      dro.onSerialData((data) => serialData.push(data));
-
-      // Wait for multiple transmissions
-      await dro.wait(3500);
-
-      // Should have received ~3 transmissions
-      expect(serialData.length).toBeGreaterThanOrEqual(3);
-    });
-
-    test('Data format includes all axis positions', async () => {
-      await dro.simulateEncoderAbsoluteMove('X', 123.456);
-      await dro.simulateEncoderAbsoluteMove('Y', 78.910);
-      await dro.simulateEncoderAbsoluteMove('Z', -45.678);
-
-      await dro.configureSerialMode('SEr iAL');
-
-      const data = await dro.requestSerialData();
-
-      expect(data).toContain('123.456');
-      expect(data).toContain('78.910');
-      expect(data).toContain('-45.678');
-    });
-  });
-});
-```
-
-## Implementation Notes
-
-### Six Output Function
-- **Hardware requirements**: 6 digital output pins
-- **Output types**: Relay, solid-state, or TTL level
-- **Use cases**:
-  - Activate coolant at specific Z depth
-  - Trigger tool change at position
-  - Stop spindle at drilling depth
-  - Activate part ejector
-  - Control external equipment
-
-- **Implementation**:
-  - Store output configurations in non-volatile memory
-  - Monitor axis positions in real-time
-  - Trigger outputs when position criteria met
-  - Handle hysteresis to prevent output flutter
-
-### Serial Communication
-- **Protocol**: RS-232 or RS-485
-- **Data format**: ASCII or binary
-- **Typical format**: `X:123.4567,Y:78.9012,Z:-45.6789,ABS,MM`
-- **Baud rates**: 2400, 4800, 9600, 19200, 38400, 57600, 115200
-- **Use cases**:
-  - Data logging to PC
-  - Integration with SPC software
-  - Remote monitoring
-  - CNC program generation
-  - Quality control documentation
-
-- **Implementation**:
-  - Use Web Serial API for browser implementation
-  - Format data with axis values, mode, units
-  - Include timestamp if needed
-  - Handle buffer overflow
-  - Provide error recovery
-
-## Related Stories
-- US-032: Touch Probe (uses similar position-based triggering)
-- US-011: SDM Run Mode (could trigger outputs at each step)
-- US-016-020: Pattern generation (could use outputs for each hole)
-- US-027: Setup Menu - Save Changes (persist configurations)
-
-## Notes
-- New story from G-028 (Gemini-only)
-- Assigned ID US-033 to continue Claude numbering sequence
-- Priority P5 (advanced/specialized feature)
-- Requires hardware support (output pins, serial port)
-- More relevant for production/automation scenarios
-- Six Output and Serial are related but distinct features, combined in one story per G-028
+- EL400 Operation Manual §10.2–§10.3, source at `/home/pedro/src/harmonic-analyzer/references/el400-operation-manual/ocr/markdown.md`, lines 1815–1931
+- US-027: Save Changes

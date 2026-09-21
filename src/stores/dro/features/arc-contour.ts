@@ -35,6 +35,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -170,15 +171,12 @@ function computeArcNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   const pointPos = calculateArcPointPosition(arcData, arcData.currentPoint);
-
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
-
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
@@ -197,7 +195,29 @@ function formatBufferForDisplay(buffer: string): number {
     return 0;
   }
   const value = parseFloat(buffer);
-  return isNaN(value) ? 0 : value;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function computeArcCurrentNumberDisplay(arcData: ArcData): DisplayState {
+  return createDisplay('hoLES', String(arcData.currentPoint), '');
+}
+
+function computeArcJumpDisplay(vMem: VolatileMemoryState): DisplayState {
+  return createDisplay('hoLES', vMem.inputBuffer || '0', '');
+}
+
+function computeArcActiveDisplay(
+  arcData: ArcData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  if (arcData.navigationPhase === 'current-number') {
+    return computeArcCurrentNumberDisplay(arcData);
+  }
+  if (arcData.navigationPhase === 'jump-entry') {
+    return computeArcJumpDisplay(vMem);
+  }
+  return computeArcNavigateDisplay(arcData, vMem, context);
 }
 
 /**
@@ -232,10 +252,10 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
 
   const arcData = data.stateDataType === 'arc' ? data : INITIAL_ARC_DATA;
 
-  // Keep displays in sync when the mill position changes.
+  // Keep the active display in sync when the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
     if (state === 'arc-contour-navigate') {
-      return { ...statePayload, display: computeArcNavigateDisplay(arcData, vMem, context) };
+      return { ...statePayload, display: computeArcActiveDisplay(arcData, vMem, context) };
     }
     if (isParameterEntryState(state)) {
       return { ...statePayload, display: computeParameterEntryDisplay(state, vMem) };
@@ -243,16 +263,33 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     return statePayload;
   }
 
+  if (
+    eventName === 'KEY_CLEAR' &&
+    state === 'arc-contour-navigate' &&
+    arcData.navigationPhase === 'jump-entry' &&
+    vMem.inputBuffer === ''
+  ) {
+    const newData: ArcData = { ...arcData, navigationPhase: 'distance-to-go' };
+    return {
+      ...statePayload,
+      stateData: newData,
+      display: computeArcNavigateDisplay(newData, vMem, context),
+    };
+  }
+
   // KEY_CLEAR: backspace when the buffer has content, otherwise exit to idle.
   if (eventName === 'KEY_CLEAR') {
     if (vMem.inputBuffer !== '') {
       const newBuffer = removeLastChar(vMem.inputBuffer);
+      const newVMem = { ...vMem, inputBuffer: newBuffer };
       return {
         ...statePayload,
-        vMem: { ...vMem, inputBuffer: newBuffer },
+        vMem: newVMem,
         display: isParameterEntryState(state)
-          ? computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer })
-          : statePayload.display,
+          ? computeParameterEntryDisplay(state, newVMem)
+          : state === 'arc-contour-navigate' && arcData.navigationPhase === 'jump-entry'
+            ? computeArcJumpDisplay(newVMem)
+            : statePayload.display,
       };
     }
     const restoredVMem = { ...vMem, mode: 'abs' as const };
@@ -310,8 +347,9 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-center-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...arcData, centerX: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -327,8 +365,9 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-center-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...arcData, centerY: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -344,8 +383,9 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-radius': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         const newData = { ...arcData, radius: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -361,7 +401,7 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-start-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const newData = { ...arcData, startAngle: value };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -377,7 +417,7 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-end-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Reject a zero-span arc - there is nothing to contour.
         if (arcData.startAngle !== null && value === arcData.startAngle) return null;
         const newData = { ...arcData, endAngle: value };
@@ -395,8 +435,9 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-tool-diameter': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 0) return null;
+        if (value === null || !Number.isFinite(value) || value < 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm < 0) return null;
         const newData = { ...arcData, toolDiameter: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -422,8 +463,16 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
           display: computeCutTypeDisplay(newData),
         };
       }
-      // ENTER confirms and moves to MAX CUT entry.
+      // ENTER confirms a physically possible path and moves to MAX CUT entry.
       if (eventName === 'KEY_ENTER') {
+        if (
+          arcData.radius === null ||
+          arcData.toolDiameter === null ||
+          !Number.isFinite(arcData.radius) ||
+          !Number.isFinite(arcData.toolDiameter) ||
+          effectiveRadius(arcData.radius, arcData.toolDiameter, arcData.cutType) <= 0
+        ) return null;
+
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'arc-contour-max-cut',
@@ -438,8 +487,9 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     case 'arc-contour-max-cut': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         if (
           arcData.radius === null ||
           arcData.startAngle === null ||
@@ -456,11 +506,13 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
           cutType: arcData.cutType,
           maxCut: valueMm,
         });
+        if (!Number.isSafeInteger(steps) || steps < 1) return null;
         const newData: ArcData = {
           ...arcData,
           maxCut: valueMm,
           pointCount: steps + 1,
           currentPoint: 1,
+          navigationPhase: 'distance-to-go',
         };
         // Switch to INC mode for distance-to-go navigation.
         const newVMem = { ...vMem, mode: 'inc' as const, inputBuffer: '' };
@@ -475,7 +527,7 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
     }
 
     case 'arc-contour-navigate': {
-      const { pointCount, currentPoint } = arcData;
+      const { pointCount, currentPoint, navigationPhase } = arcData;
 
       if (pointCount === null) {
         return {
@@ -486,61 +538,91 @@ export const arcContourReducer: FeatureReducer = (statePayload, eventPayload, co
         };
       }
 
-      // Key 6: advance to next point (wrap to first).
-      if (eventName === 'KEY_6_RIGHT') {
-        const nextPoint = currentPoint >= pointCount ? 1 : currentPoint + 1;
-        const newData = { ...arcData, currentPoint: nextPoint };
-        return {
-          stateName: 'arc-contour-navigate',
-          stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeArcNavigateDisplay(newData, vMem, context),
-        };
-      }
+      if (navigationPhase === 'jump-entry') {
+        const digit = KEY_TO_DIGIT[eventName];
+        if (digit !== undefined) {
+          const newVMem = {
+            ...vMem,
+            inputBuffer: appendDigit(vMem.inputBuffer, digit),
+          };
+          return {
+            ...statePayload,
+            vMem: newVMem,
+            display: computeArcJumpDisplay(newVMem),
+          };
+        }
 
-      // Key 4: previous point (wrap to last).
-      if (eventName === 'KEY_4_LEFT') {
-        const prevPoint = currentPoint <= 1 ? pointCount : currentPoint - 1;
-        const newData = { ...arcData, currentPoint: prevPoint };
-        return {
-          stateName: 'arc-contour-navigate',
-          stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeArcNavigateDisplay(newData, vMem, context),
-        };
-      }
+        if (eventName === 'KEY_ENTER') {
+          const target = getBufferValue(vMem.inputBuffer);
+          if (
+            target === null ||
+            !Number.isSafeInteger(target) ||
+            target < 1 ||
+            target > pointCount
+          ) return null;
 
-      // Key 8: show current point number in the buffer.
-      if (eventName === 'KEY_8_UP') {
-        return { ...statePayload, vMem: { ...vMem, inputBuffer: String(currentPoint) } };
-      }
-
-      // Key 2: clear buffer to start a jump entry.
-      if (eventName === 'KEY_2_DOWN') {
-        return { ...statePayload, vMem: { ...vMem, inputBuffer: '' } };
-      }
-
-      // ENTER with a buffered number jumps to that point.
-      if (eventName === 'KEY_ENTER' && vMem.inputBuffer !== '') {
-        const target = getBufferValue(vMem.inputBuffer);
-        if (target !== null && target >= 1 && target <= pointCount) {
-          const newData = { ...arcData, currentPoint: Math.floor(target) };
+          const newData: ArcData = {
+            ...arcData,
+            currentPoint: target,
+            navigationPhase: 'distance-to-go',
+          };
+          const newVMem = { ...vMem, inputBuffer: '' };
           return {
             stateName: 'arc-contour-navigate',
             stateData: newData,
-            vMem: { ...vMem, inputBuffer: '' },
-            display: computeArcNavigateDisplay(newData, vMem, context),
+            vMem: newVMem,
+            display: computeArcNavigateDisplay(newData, newVMem, context),
           };
         }
         return null;
       }
 
-      // Digit keys (non-arrow) accumulate a jump target.
-      const digit = KEY_TO_DIGIT[eventName];
-      if (digit !== undefined) {
+      if (eventName === 'KEY_8_UP') {
+        const newData: ArcData = {
+          ...arcData,
+          navigationPhase:
+            navigationPhase === 'current-number' ? 'distance-to-go' : 'current-number',
+        };
         return {
           ...statePayload,
-          vMem: { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, digit) },
+          stateData: newData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeArcActiveDisplay(newData, vMem, context),
+        };
+      }
+
+      if (eventName === 'KEY_2_DOWN') {
+        const newData: ArcData = { ...arcData, navigationPhase: 'jump-entry' };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          ...statePayload,
+          stateData: newData,
+          vMem: newVMem,
+          display: computeArcJumpDisplay(newVMem),
+        };
+      }
+
+      if (eventName === 'KEY_6_RIGHT') {
+        const nextPoint = currentPoint >= pointCount ? 1 : currentPoint + 1;
+        const newData = { ...arcData, currentPoint: nextPoint };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'arc-contour-navigate',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeArcActiveDisplay(newData, newVMem, context),
+        };
+      }
+
+      if (eventName === 'KEY_4_LEFT') {
+        const prevPoint = currentPoint <= 1 ? pointCount : currentPoint - 1;
+        const newData = { ...arcData, currentPoint: prevPoint };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'arc-contour-navigate',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeArcActiveDisplay(newData, newVMem, context),
         };
       }
 

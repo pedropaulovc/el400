@@ -1,85 +1,40 @@
 # US-039: Setup Menu Navigation and Axis Selection
 
-**Manual Reference:** Section 6.1 Setup Mode; EL400 video manual §1.2–1.3, §1.19 ("Entering setup & selecting an axis", "Navigating the menu", "End — exit the menu")
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
-## User Story
-**As a** machine operator
-**I want** a consistent way to enter the setup menu, pick an axis, scroll through parameters, and exit
-**So that** I can reach and change any setup option (US-021 through US-044) using the same predictable controls
+## Source
 
-## Background
-Every per-axis setup parameter shares one navigation shell. The individual setup stories
-(US-021..US-028, US-031, US-040..US-044) describe *what* each parameter does; this story
-captures the *common* entry/navigation/exit behavior so it is implemented and tested once.
+- **Primary:** EL400 Operation Manual §§6.1–6.2, pp. 19–21: wrench → axis selection, Up/Down parameter navigation, Left/Right choice selection, `SAU CHG`, and `End`.
+- **Video:** EL400 overview §§1.2–1.3 and 1.19, `[01:25–01:46]`, `[11:39–12:00]`: `SELECt`, axis-first setup, wraparound navigation, and save-then-End exit.
+
+## User Story
+
+**As a** machine operator  
+**I want** one predictable setup navigation and transaction model  
+**So that** every applicable parameter can be configured without changing the wrong axis or saving by accident
 
 ## Acceptance Criteria
-- [ ] **AC 39.1:** Pressing the 🔧 wrench (setup) key enters setup mode and the display shows `SELECT`.
-- [ ] **AC 39.2:** Pressing an axis key (`X`, `Y`, or `Z`) selects that axis; the first parameter (`LinEAr`) appears.
-- [ ] **AC 39.3:** `▲` / `▼` (the `8` / `2` keys) scroll through menu items; scrolling past the last item **wraps around** to the first.
-- [ ] **AC 39.4:** `◄` / `►` (the `4` / `6` keys) cycle through the available choices for the current item; cycling past the last choice **wraps around**.
-- [ ] **AC 39.5:** Parameters marked "per individual axis" (e.g. `SC`, `dP`, `rAd`/`diA`, direction) are scoped to the axis selected in AC 39.2; global parameters (e.g. `EnF`, `LoC`, `SLEEP`) apply to all axes.
-- [ ] **AC 39.6:** Pressing the wrench key again returns to the `SELECT` prompt so another axis can be configured.
-- [ ] **AC 39.7:** Navigating to `End` and pressing `ent` exits setup and returns to the normal operating screen.
-- [ ] **AC 39.8:** Changes are only committed when the operator exits via `SAU CHG` (see US-027); exiting via `End` without `SAU CHG` discards uncommitted changes.
 
-## E2E Test Scenarios
-```typescript
-describe('US-039: Setup Menu Navigation', () => {
-  test('enter setup, select axis, see first parameter', async () => {
-    await dro.pressKey('SETUP');
-    await expect(dro.display.message).toHaveText('SELECT');
+- [ ] **AC39.1:** Wrench opens setup at `SELECt`; X, Y, or Z selects that axis and shows the first row, `LinEAr`.
+- [ ] **AC39.2:** Up/Down traverses the applicable §6.2 rows in manual order and wraps at both ends. Explicit project exclusions remain excluded.
+- [ ] **AC39.3:** Left/Right cycles a row's finite choices and wraps. Digits act as digits—not navigation—while a nested numeric editor is active.
+- [ ] **AC39.4:** Enter opens action rows and nested editors such as `CALib`, `ZEro AP`, and `SLEEP t`; `C` backs out one nested level without accepting incomplete input.
+- [ ] **AC39.5:** Axis-scoped settings include counting mode, SC, dP, radius/diameter, direction, calibration, and zero-approach values. Global settings include ENF, keypad lock, keypad beep, and sleep. Selecting another axis must neither copy nor leak per-axis drafts.
+- [ ] **AC39.6:** Wrench from an axis menu returns to `SELECt` so another axis can be configured within the same draft transaction.
+- [ ] **AC39.7:** Enter at `End` exits to normal operation.
+- [ ] **AC39.8:** Every setup edit belongs to the transaction in US-027: `SAU CHG` commits all drafts; `End` or `C` without it discards all drafts.
 
-    await dro.pressKey('X');
-    await expect(dro.display.message).toHaveText('LinEAr');
-  });
+## Human Verification
 
-  test('up/down scrolls and wraps around', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
+Enter setup, visit X/Y/Z, traverse the whole top-level list through both wrap points, cycle representative choices, and enter/cancel each nested editor. Draft distinct X and Y values plus one global value, switch axes twice, and confirm scope. Run separate unsaved and saved exits to prove whole-transaction rollback/commit.
 
-    const first = await dro.display.message.text();
-    // Scroll all the way to End and one past — wraps to the first item
-    await dro.pressKeyUntil('KEY_8_UP', 'End'); // ▲ to End
-    await dro.pressKey('KEY_8_UP');
-    await expect(dro.display.message).toHaveText(first);
-  });
+## Automated Coverage
 
-  test('left/right cycles choices for current item', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
-    await dro.navigateTo('LinEAr');
+- [`e2e/06-configuration/US-039-setup-navigation.spec.ts`](../../../e2e/06-configuration/US-039-setup-navigation.spec.ts)
+- [`e2e/06-configuration/US-039-aux-fn.spec.ts`](../../../e2e/06-configuration/US-039-aux-fn.spec.ts)
+- Transaction coverage: [`e2e/06-configuration/US-027-save-changes.spec.ts`](../../../e2e/06-configuration/US-027-save-changes.spec.ts)
 
-    await dro.pressKey('KEY_6_RIGHT');
-    await expect(dro.display.message).toHaveText('AnGULAr');
-    await dro.pressKey('KEY_4_LEFT');
-    await expect(dro.display.message).toHaveText('LinEAr');
-  });
+## Baseline Audit (before the current implementation work)
 
-  test('End exits to normal screen', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
-    await dro.navigateTo('End');
-    await dro.pressKey('ENT');
-    await expect(dro.state).toBe('idle');
-  });
-});
-```
-
-## Implementation Notes
-- Maps to the existing setup feature reducers under `src/stores/dro/features/`.
-- Menu item order follows the §6.2 parameter table; the wrap-around is on both axes
-  (item list and choice list).
-- The `SELECT` → axis → parameter flow is shared by all setup stories; consider a single
-  reusable `selectAxis()` / `navigateTo()` test helper in `src/tests/helpers/`.
-
-## Related Stories
-- US-021..US-028 (setup parameters), US-031, US-040, US-041, US-042, US-043, US-044
-- US-027: Save Changes (commit semantics)
-
-## Notes
-- New story from crosscheck against README spec references (video manual §1.2–1.3, §1.19;
-  OCR §6.1). Captures cross-cutting setup navigation that was implied but never written down.
-</content>
-</invoke>
+`SELECt`, axis selection, the 21-row baseline traversal, wrap, choice cycling, wrench return, and `End` passed. Observed per-axis/global scope largely matched the old schema. The shell flattened zero-warning child rows, lacked numeric phases, and committed many rows immediately, so nested navigation and AC39.8 were confirmed gaps. New rows and nesting require a fresh integrated traversal.

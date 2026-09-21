@@ -1,195 +1,46 @@
 # US-032: Touch Probe
 
-**Manual Reference:** Section 10.1 Touch Probe Functions
+**Manual Reference:** EL400 Operation Manual §6.2 and §10.1, pp. 20–21 and 72–77
 **Priority:** P4
 **Category:** Auxiliary
 
 ## User Story
-**As a** machine operator
-**I want** to use a touch probe to set datums
-**So that** I can accurately locate workpiece edges and centers
 
-## Acceptance Criteria
-- [ ] **AC 32.1:** Configure probe mode: `dro T` (Transmit) or `dro F` (Freeze).
-- [ ] **AC 32.2:** **Transmit mode (`dro T`)**: DRO continues counting, probe signal sets datum.
-- [ ] **AC 32.3:** **Freeze mode (`dro F`)**: DRO freezes display on probe contact.
-- [ ] **AC 32.4:** **Probe Edge function (`ProbE Ed`)**: Find workpiece edge.
-- [ ] **AC 32.5:** **Probe Midpoint function (`ProbE nd`)**: Find midpoint between two edges.
-- [ ] **AC 32.6:** **Inside/Outside functions**: `inSidE` (internal dimension), `oUtSidE` (external dimension).
-- [ ] **AC 32.7:** On trigger, system freezes display or sets datum based on configuration.
-- [ ] **AC 32.8:** Visual/audible indication when probe is triggered.
-- [ ] **AC 32.9:** Probe input detected via dedicated input pin.
-- [ ] **AC 32.10:** Press `C` to exit probe function.
+**As a** machine operator  
+**I want** the simulator's probe setup and probing workflows to match the EL400  
+**So that** I can practise datum and workpiece-measurement procedures without implying that browser simulation proves physical probe hardware
 
-## E2E Test Scenarios
-```typescript
-describe('US-032: Touch Probe', () => {
-  test('Configure probe in Freeze mode', async () => {
-    await dro.pressKey('Setup');
-    await dro.selectMenuOption('Probe');
-    await dro.pressKey('ENT');
+## Target Acceptance Criteria
 
-    // Select Freeze mode
-    await dro.selectMenuOption('dro F');
-    await dro.pressKey('ENT');
+- [ ] **AC 32.1 — Probe configuration:** Setup provides `dro t`/`dro F` and probe delay from 1 through 60 seconds; the `ProbE` configuration workflow accepts probe diameter followed by probe length, and final ENTER commits both fields before the special functions are used. Saved setup values persist through the normal `SAU ChG` transaction.
+- [ ] **AC 32.2 — Transmit mode:** In `dro t`, a trigger flashes the probe message while coordinates continue counting. Generic transmit mode does not itself establish a datum.
+- [ ] **AC 32.3 — Freeze mode:** In `dro F`, a trigger freezes displayed coordinates at the contact position until the operator clears the condition.
+- [ ] **AC 32.4 — Datum by edge:** `ProbE` → `Prob Ed` accepts the selected axis and edge 1/2 direction, waits for contact, then permits the operator to enter and confirm the desired datum coordinate as described in §10.1.2.
+- [ ] **AC 32.5 — Datum by midpoint:** `ProbE` → `Prob nd` captures two distinct trigger edges, computes their midpoint, and permits entry of the desired midpoint coordinate. At the second edge the distance from that edge to the new midpoint datum is expected; the display is not required to show the absolute midpoint coordinate as a result.
+- [ ] **AC 32.6 — Inside/outside measurement:** `inS dE` and `oUtS dE` use the configured probe diameter and length, capture two edges, and compensate width correctly. Results open on width (`LEnGth` in renderable glyphs); an arrow changes the selected-axis result to center (`CEntrE`).
+- [ ] **AC 32.7 — Trigger lifecycle:** A held signal is one contact; release followed by a new rising edge is required for a second contact. `C` exits an active or completed probe workflow.
+- [ ] **AC 32.8 — Simulator boundary:** `?source=debug` exposes a logical probe input and visible triggered state; `source=cncjs` consumes supported controller probe state. These are simulator/controller integration contracts, not claims that a browser owns or has verified a dedicated physical input pin.
 
-    await await expect(dro.display.xAxis).toHaveText('Freeze');
-  });
+The primary manual does not require an audible probe indication, so this story does not invent one. Normal keypad audio remains governed by US-025.
 
-  test('Probe Edge function', async () => {
-    // Configure probe in Transmit mode
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('ProbE');
-    await dro.pressKey('ENT');
+## Baseline Audit (before this correction/implementation pass)
 
-    // Select Edge function
-    await dro.selectMenuOption('Ed');
-    await dro.pressKey('ENT');
+The completed headed `?source=debug` audit confirmed persisted `dro t`/`dro F`, continued counting in transmit mode, freeze-at-contact, edge zeroing, midpoint capture, inside/outside compensated widths, visual PRB state, and `C` exit. It confirmed gaps in probe delay, probe length, transmit-message flashing, desired datum entry, and explicit center presentation. Midpoint contacts at 10 and 50 displayed 20 at the second edge, correctly representing 50 minus midpoint 30; the former story's expected immediate display of 30 was wrong. No physical probe was available or claimed.
 
-    // Select axis
-    await dro.pressKey('X');
+## Verification Procedure
 
-    // Simulate probe movement
-    await dro.simulateEncoderAbsoluteMove('X', 50.0);
+Use the actual front panel and visible debug controls through `DROPage.goto({ source: 'debug', skipBootMessage: true })`. Set exact physical coordinates with the `Set X position in millimetres`, `Set Y position in millimetres`, and `Set Z position in millimetres` spinbuttons; confirm them through `debug-position-x`, `debug-position-y`, and `debug-position-z`:
 
-    // Simulate probe contact
-    await dro.simulateProbeContact();
+1. Save and reload each setup value through the operator setup flow.
+2. For `dro t`, trigger at one coordinate and move while held; verify counting continues and the probe message is visible.
+3. For `dro F`, trigger and move while held; verify the displayed contact coordinate remains frozen, then clear.
+4. Exercise edge, midpoint, inside, and outside with debug machine positions and separate Trigger/Clear cycles; verify desired datum, center, and width results.
+5. Press `C` from each active/result phase and verify normal counting resumes.
 
-    // X axis should be set to zero (or current position stored)
-    await expect(dro.display.xAxis).toHaveValue(0.000);
-  });
+Permanent browser coverage belongs in [`e2e/07-auxiliary/US-032-touch-probe.spec.ts`](../../../e2e/07-auxiliary/US-032-touch-probe.spec.ts). Integrated verification of newly implemented criteria remains pending.
 
-  test('Probe Midpoint function', async () => {
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('ProbE');
-    await dro.pressKey('ENT');
+## References
 
-    // Select Midpoint function
-    await dro.selectMenuOption('nd');
-    await dro.pressKey('ENT');
-
-    // Select axis
-    await dro.pressKey('X');
-
-    // Touch first edge
-    await dro.simulateEncoderAbsoluteMove('X', 10.0);
-    await dro.simulateProbeContact();
-
-    // Touch second edge
-    await dro.simulateEncoderAbsoluteMove('X', 50.0);
-    await dro.simulateProbeContact();
-
-    // Midpoint = (10 + 50) / 2 = 30
-    // Display should show distance to midpoint
-    await expect(dro.display.xAxis).toHaveValue(30.000);
-  });
-
-  test('Inside diameter measurement', async () => {
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('ProbE');
-    await dro.pressKey('ENT');
-
-    // Select Inside function
-    await dro.selectMenuOption('inSidE');
-    await dro.pressKey('ENT');
-
-    // Enter probe tip diameter
-    await dro.enterNumber(6.0); // 6mm probe
-    await dro.pressKey('ENT');
-
-    // Touch first inside wall
-    await dro.simulateEncoderAbsoluteMove('X', 10.0);
-    await dro.simulateProbeContact();
-
-    // Touch opposite inside wall
-    await dro.simulateEncoderAbsoluteMove('X', 60.0);
-    await dro.simulateProbeContact();
-
-    // Inside diameter = (60 - 10) + 6 = 56mm
-    await await expect(dro.display.xAxis).toHaveText('56.000');
-  });
-
-  test('Outside diameter measurement', async () => {
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('ProbE');
-    await dro.pressKey('ENT');
-
-    // Select Outside function
-    await dro.selectMenuOption('oUtSidE');
-    await dro.pressKey('ENT');
-
-    // Enter probe tip diameter
-    await dro.enterNumber(6.0);
-    await dro.pressKey('ENT');
-
-    // Touch first outside surface
-    await dro.simulateEncoderAbsoluteMove('X', 0.0);
-    await dro.simulateProbeContact();
-
-    // Touch opposite outside surface
-    await dro.simulateEncoderAbsoluteMove('X', 50.0);
-    await dro.simulateProbeContact();
-
-    // Outside diameter = (50 - 0) - 6 = 44mm
-    await await expect(dro.display.xAxis).toHaveText('44.000');
-  });
-
-  test('Freeze mode halts display on contact', async () => {
-    // Configure Freeze mode
-    await dro.configureProbeMode('Freeze');
-
-    await dro.simulateEncoderAbsoluteMove('X', 25.0);
-    await dro.simulateProbeContact();
-
-    // Display should freeze at contact point
-    await expect(dro.display.xAxis).toHaveValue(25.000);
-
-    // Continue moving (display should not update)
-    await dro.simulateEncoderAbsoluteMove('X', 30.0);
-    await expect(dro.display.xAxis).toHaveValue(25.000);
-  });
-});
-```
-
-## Implementation Notes
-- **Probe input**: Typically connected to dedicated input pin
-- **Signal types**:
-  - Normally Open (NO) or Normally Closed (NC)
-  - Configurable in setup
-
-- **Probe tip diameter compensation**:
-  - For inside measurements: Add probe diameter
-  - For outside measurements: Subtract probe diameter
-
-- **Typical workflow**:
-  1. Select probe function
-  2. Select axis
-  3. Approach workpiece slowly
-  4. Probe makes contact
-  5. DRO sets datum or freezes display
-  6. Retract probe
-  7. Repeat for other edges if needed
-
-- **Safety considerations**:
-  - Slow approach speed to avoid damage
-  - Visual/audible feedback on contact
-  - Override to cancel operation
-
-- **Use cases**:
-  - Finding workpiece edges
-  - Centering on holes or bosses
-  - Measuring diameters
-  - Setting work coordinate systems
-
-## Related Stories
-- US-007: Center Finding (Manual Method)
-- US-015: Center of Circle (Macro)
-- US-005: Zeroing Individual Axes
-- US-006: Half Function
-
-## Notes
-- New story from G-027 (Gemini-only)
-- Assigned ID US-032 to continue Claude numbering sequence
-- Priority P4 (important auxiliary feature)
-- Requires hardware support (probe input)
-- Critical for precision work
+- EL400 Operation Manual §10.1, source at `/home/pedro/src/harmonic-analyzer/references/el400-operation-manual/ocr/markdown.md`, lines 1672–1810
+- US-007: Center Finding
+- US-025: Keypad Beep

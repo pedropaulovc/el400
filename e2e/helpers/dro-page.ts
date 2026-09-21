@@ -6,10 +6,14 @@ import * as crypto from 'crypto';
  * Page Object Model for the EL400 DRO Simulator
  * Provides a clean API for E2E tests to interact with the DRO
  */
+export type DROSource = 'cncjs' | 'debug';
+
 export class DROPage {
   readonly page: Page;
   private readonly mockServerPort: number;
   private readonly sessionId: string;
+  private source: DROSource = 'cncjs';
+
 
   // Simulator root — carries data-dro-state, the deterministic readiness signal
   readonly simulatorRoot: Locator;
@@ -121,15 +125,24 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator connected to the mock CNCjs server.
+   * Navigate to the DRO simulator.
+   * @param options.source - Data source to exercise (default: CNCjs mock server)
    * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime'; probeDroType?: 'transmit' | 'freeze' }) {
+  async goto(options?: {
+    source?: DROSource;
+    skipBootMessage?: boolean;
+    taperOn?: 'X' | 'Y' | 'Z';
+    probeDroType?: 'transmit' | 'freeze';
+  }) {
+    const source = options?.source ?? 'cncjs';
     const params = new URLSearchParams();
-    params.set('source', 'cncjs');
-    params.set('host', 'localhost');
-    params.set('port', this.mockServerPort.toString());
-    params.set('sessionId', this.sessionId);
+    params.set('source', source);
+    if (source === 'cncjs') {
+      params.set('host', 'localhost');
+      params.set('port', this.mockServerPort.toString());
+      params.set('sessionId', this.sessionId);
+    }
 
     const skipBoot = options?.skipBootMessage !== false;
     if (skipBoot) {
@@ -154,6 +167,7 @@ export class DROPage {
     // domcontentloaded fires before React mounts, so without this barrier a one-shot
     // read of the display races the first render and can sample an empty string.
     await this.waitForReady(skipBoot ? 'idle' : 'boot-show-message');
+    this.source = source;
   }
 
   /**
@@ -308,14 +322,31 @@ export class DROPage {
     return await this.isLEDOn(this.mmLED);
   }
 
+  private debugPosition(axis: 'X' | 'Y' | 'Z'): Locator {
+    return this.page.getByTestId(`debug-position-${axis.toLowerCase()}`);
+  }
+
+  private async setDebugPosition(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    const input = this.page.getByRole('spinbutton', {
+      name: `Set ${axis} position in millimetres`,
+    });
+    await input.fill(String(value));
+    await input.press('Enter');
+    await expect(this.debugPosition(axis)).toHaveText(value.toFixed(4));
+  }
+
   /**
    * Simulate encoder movement for an axis.
-   * Calls the mock CNCjs server HTTP API to update position.
    *
-   * @param axis - The axis to move ('X', 'Y', or 'Z')
-   * @param value - The new position value to simulate (in mm)
+   * Debug-source movement is entered through the visible physical-mm position
+   * control. CNCjs-source movement retains the mock server's controller API.
    */
   async simulateEncoderAbsoluteMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    if (this.source === 'debug') {
+      await this.setDebugPosition(axis, value);
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-move?sessionId=${this.sessionId}`,
       {
@@ -340,13 +371,19 @@ export class DROPage {
   /**
    * Simulate a touch-probe contact (US-032).
    *
-   * Hits the mock CNCjs server's probe-trigger endpoint, which sets the GRBL
-   * pin state to 'P' and broadcasts controller:state. The REAL CncjsMillAdapter
-   * parses that pin state into MillState.probe.triggered and dispatches
-   * MILL_STATE_CHANGED - the same path a physical probe input takes. No window
-   * hook, no forced state.
+   * Debug source uses the visible probe control. CNCjs source uses the mock
+   * controller endpoint, which follows the real adapter normalization path.
    */
   async simulateProbeContact(): Promise<void> {
+    if (this.source === 'debug') {
+      const toggle = this.page.getByTestId('probe-toggle');
+      if ((await toggle.textContent())?.trim() === 'Trigger') {
+        await toggle.click();
+      }
+      await expect(toggle).toHaveText('Clear');
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/probe-trigger?sessionId=${this.sessionId}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' } }
@@ -356,11 +393,17 @@ export class DROPage {
     }
   }
 
-  /**
-   * Release the touch probe (pin state back to open). Pair with
-   * simulateProbeContact to produce a fresh rising edge for the next capture.
-   */
+  /** Release the touch probe so the next contact is a fresh rising edge. */
   async simulateProbeClear(): Promise<void> {
+    if (this.source === 'debug') {
+      const toggle = this.page.getByTestId('probe-toggle');
+      if ((await toggle.textContent())?.trim() === 'Clear') {
+        await toggle.click();
+      }
+      await expect(toggle).toHaveText('Trigger');
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/probe-clear?sessionId=${this.sessionId}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' } }
@@ -373,8 +416,8 @@ export class DROPage {
   /** Open the probe sub-function menu: Fn -> ProbE -> ENT. */
   async openProbeMenu(): Promise<void> {
     await this.functionButton.click();
-    // Ring: center, circle, line, linear, polar, taper, probe => 6 right presses.
-    for (let i = 0; i < 6; i++) {
+    for (let step = 0; step < 12; step += 1) {
+      if ((await this.getAxisRawText('X')) === 'ProbE') break;
       await this.key6.click();
     }
     await this.waitForAxisPureTextValue('X', 'ProbE');
@@ -440,12 +483,20 @@ export class DROPage {
 
   /**
    * Simulate relative encoder movement for an axis.
-   * Calls the mock CNCjs server HTTP API to add delta to current position.
    *
-   * @param axis - The axis to move ('X', 'Y', or 'Z')
-   * @param delta - The delta value to add to current position (in mm)
+   * Debug source derives the target from the visible physical-mm position and
+   * submits it through the same accessible position editor as absolute moves.
    */
   async simulateEncoderRelativeMove(axis: 'X' | 'Y' | 'Z', delta: number): Promise<void> {
+    if (this.source === 'debug') {
+      const current = Number((await this.debugPosition(axis).textContent())?.trim());
+      if (!Number.isFinite(current)) {
+        throw new Error(`Unable to read debug ${axis} position`);
+      }
+      await this.setDebugPosition(axis, current + delta);
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-move-relative?sessionId=${this.sessionId}`,
       {
@@ -482,6 +533,16 @@ export class DROPage {
   }
 
   private async setEncoderSignal(axis: 'X' | 'Y' | 'Z', signal: 'ok' | 'lost'): Promise<void> {
+    if (this.source === 'debug') {
+      const toggle = this.page.getByTestId(`signal-toggle-${axis.toLowerCase()}`);
+      const expected = signal === 'lost' ? 'no SIG' : 'SIG';
+      if ((await toggle.textContent())?.trim() !== expected) {
+        await toggle.click();
+      }
+      await expect(toggle).toHaveText(expected);
+      return;
+    }
+
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-signal?sessionId=${this.sessionId}`,
       {
@@ -496,54 +557,31 @@ export class DROPage {
     }
   }
 
-  /**
-   * Simulate crossing the encoder reference mark for an axis (US-012).
-   *
-   * Moves the mock encoder to the reference-mark machine position, then invokes
-   * the in-app test hook that latches the mark. This mirrors the operator
-   * jogging the axis across the encoder's index pulse on real hardware.
-   *
-   * @param axis - The axis whose reference mark is crossed
-   * @param markMachinePositionMm - Machine position of the mark in mm (default 0)
-   */
-  async simulateEncoderRefMark(
-    axis: 'X' | 'Y' | 'Z',
-    markMachinePositionMm = 0
-  ): Promise<void> {
-    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
-    // Wait for the position update to propagate to the DRO store, then latch.
-    const hookKey = '__el400CrossReferenceMark';
-    await this.page.waitForFunction(
-      (key) => typeof (window as unknown as Record<string, unknown>)[key] === 'function',
-      hookKey
-    );
-    await this.page.evaluate(
-      ({ key, a }) => {
-        const fn = (window as unknown as Record<string, ((axis: string) => void) | undefined>)[key];
-        if (fn) fn(a);
-      },
-      { key: hookKey, a: axis }
-    );
+  /** Drive the real CNCjs adapter's serial-port close lifecycle. */
+  async simulateCncjsDisconnect(): Promise<void> {
+    await this.setCncjsConnection(false);
   }
 
-  /**
-   * Real-user jog path (US-012): move the mock encoder so the axis lands on the
-   * reference-mark machine position, WITHOUT invoking the in-app test hook.
-   *
-   * The mock CNCjs server emits a position update, the app dispatches
-   * MILL_STATE_CHANGED, and the reference reducer detects the jog crossing the
-   * mark and latches the datum — exactly as a human jogging a connected mill (or
-   * the debug panel) would trigger it. This proves the latch needs no test hook.
-   *
-   * @param axis - The axis to jog
-   * @param markMachinePositionMm - Machine position of the mark in mm
-   */
-  async jogAcrossEncoderRefMark(
-    axis: 'X' | 'Y' | 'Z',
-    markMachinePositionMm: number
-  ): Promise<void> {
-    await this.simulateEncoderAbsoluteMove(axis, markMachinePositionMm);
+  /** Drive the real CNCjs adapter's serial-port reopen lifecycle. */
+  async simulateCncjsReconnect(): Promise<void> {
+    await this.setCncjsConnection(true);
   }
+
+  private async setCncjsConnection(connected: boolean): Promise<void> {
+    if (this.source !== 'cncjs') {
+      throw new Error('CNCjs connection lifecycle controls require source=\"cncjs\"');
+    }
+
+    const action = connected ? 'reconnect' : 'disconnect';
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/${action}?sessionId=${this.sessionId}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to simulate CNCjs ${action}: ${response.statusText}`);
+    }
+  }
+
 
   /**
    * Move the workpiece table in the operator's stated direction (US-002).
@@ -576,6 +614,26 @@ export class DROPage {
     await this.simulateEncoderRelativeMove(axis, delta);
   }
 
+  private async saveSetupChangesAndExit(): Promise<void> {
+    let guard = 0;
+    while ((await this.getAxisRawText('X')).toLowerCase() !== 'sau chg') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 80) throw new Error('SAU ChG not found while saving setup');
+    }
+    await this.enterButton.click();
+    await this.waitForAxisPureTextValue('X', 'StorEd');
+
+    guard = 0;
+    while ((await this.getAxisRawText('X')) !== 'End') {
+      await this.key2.click();
+      guard += 1;
+      if (guard > 80) throw new Error('End not found after saving setup');
+    }
+    await this.enterButton.click();
+    await this.waitForReady('idle');
+  }
+
   /**
    * Set the per-axis counting Direction (US-002, manual section 6.2 `dir`) by
    * driving the REAL setup menu: open setup, pick the axis, scroll to the
@@ -605,7 +663,7 @@ export class DROPage {
     // whose labels are `dEP nEG` / `dEP PoS`.)
     const isDirectionLabel = (t: string) => t === 'LEFt' || t === 'riGht';
     let guard = 0;
-    while (!isDirectionLabel(await this.getAxisRawText(axis))) {
+    while (!isDirectionLabel(await this.getAxisRawText('X'))) {
       await this.key2.click();
       guard += 1;
       if (guard > 30) {
@@ -615,25 +673,14 @@ export class DROPage {
     // Cycle the choice (left/right keys) until the requested label is shown.
     const matchesTarget = (t: string) => t === targetLabel;
     guard = 0;
-    while (!matchesTarget(await this.getAxisRawText(axis))) {
+    while (!matchesTarget(await this.getAxisRawText('X'))) {
       await this.key6.click();
       guard += 1;
       if (guard > 4) {
         throw new Error(`Direction choice "${target}" not reachable by cycling`);
       }
     }
-    // Exit setup back to the idle readout via the terminal `End` item + ent,
-    // the canonical exit (US-039 AC 39.7). Walk to End rather than hard-coding a
-    // press count, since the registry grows as setup stories land.
-    guard = 0;
-    while ((await this.getAxisRawText(axis)) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 30) {
-        throw new Error('End item not found while exiting setup');
-      }
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
@@ -676,50 +723,30 @@ export class DROPage {
       if (guard > 4) throw new Error(`LoC choice "${targetLabel}" not reachable by cycling`);
     }
 
-    // Exit setup via the terminal End item + ent (US-039 AC 39.7).
-    guard = 0;
-    while ((await this.getAxisRawText('X')) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 30) throw new Error('End item not found while exiting setup');
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
-   * Enable the Near-Zero Warning (US-024) through the REAL setup menu: open
-   * setup, pick an axis (ZERO AP is global, so any axis works), scroll to the
-   * `ZERO AP` parameter, cycle its choice to `bU22 on`, then exit via End + ent.
-   *
-   * Mirrors `setAxisDirection`'s navigation discipline — only the buttons an
-   * operator presses, no window hooks. The 7-segment panel renders the BU22
-   * "buzz" toggle as `bU22 on` / `bU22 oF` (no 'Z' glyph).
+   * Enable the per-axis Near-Zero Warning through the real nested ZEro AP editor.
    */
-  async enableZeroApproachWarning(): Promise<void> {
+  async enableZeroApproachWarning(axis: 'X' | 'Y' | 'Z'): Promise<void> {
     await this.settingsButton.click();
     await this.waitForAxisPureTextValue('X', 'SELECt');
-    await this.selectAxis('X');
+    await this.selectAxis(axis);
 
-    const isZeroApLabel = (t: string) => t === 'bU22 on' || t === 'bU22 oF';
     let guard = 0;
-    while (!isZeroApLabel(await this.getAxisRawText('X'))) {
+    while ((await this.getAxisRawText('X')) !== 'ZEro AP') {
       await this.key2.click();
       guard += 1;
-      if (guard > 40) throw new Error('ZERO AP parameter not found in setup menu');
+      if (guard > 80) throw new Error('ZEro AP parameter not found in setup menu');
     }
-    guard = 0;
+    await this.enterButton.click();
     while ((await this.getAxisRawText('X')) !== 'bU22 on') {
       await this.key6.click();
       guard += 1;
-      if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
+      if (guard > 84) throw new Error('bU22 on choice not reachable by cycling');
     }
-    guard = 0;
-    while ((await this.getAxisRawText('X')) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 40) throw new Error('End item not found while exiting setup');
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
@@ -744,7 +771,7 @@ export class DROPage {
     // parameter is highlighted; recognise it by its `rAd` / `diA` labels.
     const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
     let guard = 0;
-    while (!isMeasurementLabel(await this.getAxisRawText(axis))) {
+    while (!isMeasurementLabel(await this.getAxisRawText('X'))) {
       await this.key2.click();
       guard += 1;
       if (guard > 30) {
@@ -753,23 +780,14 @@ export class DROPage {
     }
     // Cycle the choice (right key) until the requested label is shown.
     guard = 0;
-    while ((await this.getAxisRawText(axis)) !== target) {
+    while ((await this.getAxisRawText('X')) !== target) {
       await this.key6.click();
       guard += 1;
       if (guard > 4) {
         throw new Error(`measurement-mode choice "${target}" not reachable by cycling`);
       }
     }
-    // Exit setup back to the idle readout via the terminal `End` item + ent.
-    guard = 0;
-    while ((await this.getAxisRawText(axis)) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 30) {
-        throw new Error('End item not found while exiting setup');
-      }
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
@@ -808,16 +826,7 @@ export class DROPage {
         throw new Error(`counting-mode choice "${target}" not reachable by cycling`);
       }
     }
-    // Exit setup to the idle readout via the terminal `End` item + ent.
-    guard = 0;
-    while ((await this.getAxisRawText('X')) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 30) {
-        throw new Error('End item not found while exiting setup');
-      }
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
@@ -863,16 +872,7 @@ export class DROPage {
         throw new Error(`angular dP choice "${target}" not reachable by cycling`);
       }
     }
-    // Exit setup to the idle readout via the terminal `End` item + ent.
-    guard = 0;
-    while ((await this.getAxisRawText('X')) !== 'End') {
-      await this.key2.click();
-      guard += 1;
-      if (guard > 30) {
-        throw new Error('End item not found while exiting setup');
-      }
-    }
-    await this.enterButton.click();
+    await this.saveSetupChangesAndExit();
   }
 
   /**
@@ -902,7 +902,7 @@ export class DROPage {
    * URL param, then re-establish the connection. Call before entering the
    * Taper function (US-045).
    */
-  async setTaperOnAxis(axis: 'X' | 'Z' | 'Zprime'): Promise<void> {
+  async setTaperOnAxis(axis: 'X' | 'Y' | 'Z'): Promise<void> {
     await this.goto({ taperOn: axis });
   }
 
@@ -913,7 +913,7 @@ export class DROPage {
    */
   async enterTaperFunction(): Promise<void> {
     await this.functionButton.click();
-    // Ring: center, circle, line, linear, polar, taper => 5 right presses.
+    // Ring: center, linear, polar, probe, six-output, taper => 5 right presses.
     for (let i = 0; i < 5; i++) {
       await this.key6.click();
     }

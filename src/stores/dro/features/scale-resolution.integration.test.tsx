@@ -1,77 +1,87 @@
 /**
- * Integration tests for the SC scale-resolution setup parameter (US-021).
- *
- * Drives the full simulator via data-testid buttons exactly as an operator
- * would: open setup (wrench), pick an axis, scroll to SC, and change the value
- * with the left/right arrows. Asserts the X-axis screen-reader text.
+ * Integration coverage for the per-axis SC scale-resolution setup parameter.
+ * Every edit is staged until the operator confirms SAU ChG; C and End discard
+ * the current setup transaction.
  */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import type userEvent from '@testing-library/user-event';
+import type { UserEvent } from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
 } from '../../../tests/helpers/integration-test-utils';
+import { useSettingsStore } from '../../settingsStore';
 import { SETUP_PARAMETERS, SCALE_RESOLUTION_ID } from './setup-parameters';
 
-const SC_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === SCALE_RESOLUTION_ID);
+const SC_INDEX = SETUP_PARAMETERS.findIndex((parameter) => parameter.id === SCALE_RESOLUTION_ID);
 
-/** Open setup, pick X, and scroll up to the SC item. */
-async function gotoSC(user: ReturnType<typeof userEvent.setup>) {
+async function gotoSC(
+  user: UserEvent,
+  axis: 'x' | 'y' | 'z' = 'x'
+) {
   await user.click(screen.getByTestId('btn-settings'));
-  await user.click(screen.getByTestId('axis-select-x'));
-  // currentParamIndex starts at 0; press down (key-2) SC_INDEX times to reach SC.
-  for (let i = 0; i < SC_INDEX; i++) {
+  await user.click(screen.getByTestId(`axis-select-${axis}`));
+  for (let index = 0; index < SC_INDEX; index += 1) {
     await user.click(screen.getByTestId('key-2'));
   }
 }
 
+async function scrollTo(user: UserEvent, label: string) {
+  for (let guard = 0; getAxisDisplayPureTextValue('X') !== label; guard += 1) {
+    if (guard >= SETUP_PARAMETERS.length) throw new Error(`${label} not reachable in setup`);
+    await user.click(screen.getByTestId('key-2'));
+  }
+}
+
+async function saveAndExit(user: UserEvent) {
+  await scrollTo(user, 'SAU ChG');
+  await user.click(screen.getByTestId('key-enter'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('StorEd');
+  await user.click(screen.getByTestId('key-enter'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+  await scrollTo(user, 'End');
+  await user.click(screen.getByTestId('key-enter'));
+}
+
 describe('US-021 SC scale resolution (integration)', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { localStorage.clear(); });
 
-  beforeEach(() => {
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
-  });
-
-  it('default value shown at SC is 5 micron (AC21.4)', async () => {
+  it('shows the factory 5 micron resolution', async () => {
     const { user } = await renderSimulator();
     await gotoSC(user);
     expect(getAxisDisplayPureTextValue('X')).toBe('SC 5.0');
   });
 
-  it('left arrow lowers the resolution toward 1 micron (AC21.5)', async () => {
+  it('previews finer choices but C discards the whole transaction', async () => {
     const { user } = await renderSimulator();
     await gotoSC(user);
-    await user.click(screen.getByTestId('key-4')); // 5 -> 2
-    expect(getAxisDisplayPureTextValue('X')).toBe('SC 2.0');
-    await user.click(screen.getByTestId('key-4')); // 2 -> 1
-    expect(getAxisDisplayPureTextValue('X')).toBe('SC 1.0');
-  });
 
-  it('right arrow reaches coarse special values (AC21.6)', async () => {
-    const { user } = await renderSimulator();
-    await gotoSC(user);
-    await user.click(screen.getByTestId('key-6')); // 5 -> 10
-    expect(getAxisDisplayPureTextValue('X')).toBe('SC 10.0');
-  });
-
-  it('does not log a multi-reducer conflict while changing SC', async () => {
-    const { user } = await renderSimulator();
-    await gotoSC(user);
     await user.click(screen.getByTestId('key-4'));
+    await user.click(screen.getByTestId('key-4'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('SC 1.0');
+    expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
+
+    await user.click(screen.getByTestId('key-clear'));
+    await gotoSC(user);
+    expect(getAxisDisplayPureTextValue('X')).toBe('SC 5.0');
+  });
+
+  it('commits only the selected axis through SAU ChG', async () => {
+    const { user } = await renderSimulator();
+    await gotoSC(user, 'y');
+
     await user.click(screen.getByTestId('key-6'));
-    const conflict = errorSpy.mock.calls.some((c: unknown[]) =>
-      String(c[0]).includes('Multiple reducers handled the same event')
-    );
-    expect(conflict).toBe(false);
+    expect(getAxisDisplayPureTextValue('X')).toBe('SC 10.0');
+    expect(useSettingsStore.getState().nvMem.scaleResolution.Y).toBe('5');
+
+    await saveAndExit(user);
+    expect(useSettingsStore.getState().nvMem.scaleResolution).toEqual({
+      X: '5',
+      Y: '10',
+      Z: '5',
+    });
+
+    await gotoSC(user, 'y');
+    expect(getAxisDisplayPureTextValue('X')).toBe('SC 10.0');
   });
 });

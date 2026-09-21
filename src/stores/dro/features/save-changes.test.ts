@@ -98,16 +98,15 @@ describe('SAV CHG commit on ENT (AC27.2, AC27.3)', () => {
   });
 
   it('persists multiple draft params at once (per-axis SC + global taper-on)', () => {
-    // taper-on is a genuinely draft-only global param (US-045): it has a
-    // `persist` writer but no commit-on-change hook, so its edit is buffered
-    // until SAU CHG — unlike ENF, which is commit-on-change as of US-042.
+    // Per-axis and global choices share the same draft-until-SAU-CHG transaction.
     const taperIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'taper-on');
     // Draft: SC X -> 1, taper-on X -> Z.
     let s = paramState({ selectedAxis: 'X', currentParamIndex: scIdx });
     s = setupReducer(s, { eventName: 'KEY_4_LEFT' }, liveCtx())!; // 2.0
     s = setupReducer(s, { eventName: 'KEY_4_LEFT' }, liveCtx())!; // 1.0
     s = { ...s, stateData: { ...(s.stateData as SetupData), currentParamIndex: taperIdx } };
-    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // tAPEr X -> tAPEr Z
+    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // tAPEr X -> tAPEr Y
+    s = setupReducer(s, { eventName: 'KEY_6_RIGHT' }, liveCtx())!; // tAPEr Y -> tAPEr Z
     // Neither draft has hit nvMem yet.
     expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
     expect(useSettingsStore.getState().nvMem.taperOnAxis).toBe('X');

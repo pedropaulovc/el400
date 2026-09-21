@@ -12,7 +12,11 @@ import { test, expect } from '../helpers/fixtures';
  * @see project/user-stories/06-configuration/US-039-setup-navigation.md
  */
 test.describe('US-039: Setup Menu Navigation', () => {
-  test('enter setup, select axis, navigate, and exit via End (AC 39.1, 39.2, 39.7)', async ({ dro }) => {
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
+
+  test('enter setup, select an axis, and End discards an unsaved choice', async ({ dro }) => {
     // Press the wrench/setup key -> SELECT prompt.
     await dro.settingsButton.click();
     await dro.waitForAxisPureTextValue('X', 'SELECt');
@@ -21,11 +25,9 @@ test.describe('US-039: Setup Menu Navigation', () => {
     await dro.selectAxis('X');
     await dro.waitForAxisPureTextValue('X', 'LinEAr');
 
-    // Right cycles the choice to AnGULAr, left cycles back (AC 39.4).
+    // Preview a choice change. It remains a draft until SAU CHG.
     await dro.key6.click();
     await dro.waitForAxisPureTextValue('X', 'AnGULAr');
-    await dro.key4.click();
-    await dro.waitForAxisPureTextValue('X', 'LinEAr');
 
     // Scroll DOWN to the terminal End item and exit (AC 39.7). DOWN advances
     // toward End (manual §6.2 / video walkthrough): the second item is SC 5.0.
@@ -39,8 +41,11 @@ test.describe('US-039: Setup Menu Navigation', () => {
     await dro.waitForAxisPureTextValue('X', 'End');
     await dro.enterButton.click();
 
-    // Back to the normal operating screen: X shows numeric 0.
+    // End exits and discards the draft; the saved default is still LinEAr.
     await dro.waitForAxisValue('X', 0);
+    await dro.settingsButton.click();
+    await dro.selectAxis('X');
+    await dro.waitForAxisPureTextValue('X', 'LinEAr');
   });
 
   test('down scrolls and wraps around past the last item (AC 39.3)', async ({ dro }) => {
@@ -62,5 +67,19 @@ test.describe('US-039: Setup Menu Navigation', () => {
     // And UP from the first item wraps backward to the last (End).
     await dro.key8.click();
     await dro.waitForAxisPureTextValue('X', 'End');
+  });
+
+  test('C from a parameter row discards the full setup transaction', async ({ dro }) => {
+    await dro.settingsButton.click();
+    await dro.selectAxis('X');
+    await dro.waitForAxisPureTextValue('X', 'LinEAr');
+    await dro.key6.click();
+    await dro.waitForAxisPureTextValue('X', 'AnGULAr');
+
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+    await dro.settingsButton.click();
+    await dro.selectAxis('X');
+    await dro.waitForAxisPureTextValue('X', 'LinEAr');
   });
 });

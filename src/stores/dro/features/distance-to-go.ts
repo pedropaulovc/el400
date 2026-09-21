@@ -1,10 +1,10 @@
 /**
  * Distance-to-Go Feature Reducer (US-008)
  *
- * Allows the operator to set target positions and display distance remaining.
+ * Allows the operator to request relative travel and display distance remaining.
  * Workflow:
  * 1. Press Distance-to-Go (only available in ABS mode) → display shows SELECT
- * 2. Press axis key → enter target value for that axis
+ * 2. Press axis key → enter the requested travel for that axis
  * 3. Press Distance-to-Go again → execute, display shows distance remaining
  * 4. INC LED turns on during distance-to-go display with leading decimal indicator
  * 5. When exiting, returns to ABS mode
@@ -27,6 +27,9 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
+  computeMachinePositionMm,
+  directionSign,
+  measurementScale,
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
@@ -118,27 +121,22 @@ function computePresetInputDisplay(
 }
 
 /**
- * Get the absolute machine position for an axis (ignores mode setting).
- * Distance-to-go always uses absolute positions from the mill state.
+ * Read the signed ABS coordinate in display-mm without changing either datum.
  */
 function getAbsolutePositionMm(
   axis: Axis,
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): number {
-  const { workOffsets, manualAbsoluteValues } = vMem;
-  const { millState } = context;
-
-  if (millState.connected) {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    return millState.position[axisKey] - workOffsets[axis];
-  }
-  return manualAbsoluteValues[axis];
+  const raw = context.millState.connected
+    ? computeMachinePositionMm(axis, vMem, context) - vMem.workOffsets[axis]
+    : vMem.manualAbsoluteValues[axis];
+  return raw * directionSign(axis, context.nvMem) * measurementScale(axis, context.nvMem);
 }
 
 /**
  * Compute display for distance-to-go state.
- * Shows (preset - currentPosition) for each axis with a preset.
+ * Shows requested travel minus travel since execution for each preset axis.
  * Axes without presets show normal position.
  *
  * Note: Always uses absolute position from mill state, regardless of vMem.mode.
@@ -161,8 +159,8 @@ function computeDistanceToGoDisplay(
       return fromMmToAnyUnit(currentMm, nvMem.defaultUnit);
     }
 
-    // Compute distance-to-go: target - current position
-    const distanceMm = target - currentMm;
+    // Subtract travel, not the pre-existing absolute coordinate.
+    const distanceMm = target - (currentMm - presetData.entryPosition[axis]);
     return fromMmToAnyUnit(distanceMm, nvMem.defaultUnit);
   };
 
@@ -242,11 +240,19 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
         presetTargets.X !== null || presetTargets.Y !== null || presetTargets.Z !== null;
 
       if (hasAnyPreset) {
+        const executingData: PresetData = {
+          ...presetData,
+          entryPosition: {
+            X: getAbsolutePositionMm('X', vMem, context),
+            Y: getAbsolutePositionMm('Y', vMem, context),
+            Z: getAbsolutePositionMm('Z', vMem, context),
+          },
+        };
         return {
           stateName: 'distance-to-go',
-          stateData: presetData,
+          stateData: executingData,
           vMem: { ...vMem, inputBuffer: '', mode: 'inc' }, // INC LED turns on
-          display: computeDistanceToGoDisplay(vMem, presetData, context),
+          display: computeDistanceToGoDisplay(vMem, executingData, context),
         };
       }
       // No presets entered - stay in preset-select

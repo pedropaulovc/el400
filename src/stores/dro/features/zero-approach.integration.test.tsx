@@ -1,210 +1,244 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, act, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { renderSimulator } from '../../../tests/helpers/integration-test-utils';
-import { initializeDROMillConnection } from '../../droStore';
-import { initializeMillStore } from '../../millStore';
-import { MockMillAdapter } from '../../../adapters/MockMillAdapter';
+import type { UserEvent } from '@testing-library/user-event';
+import {
+  renderSimulator,
+  typeValue,
+  pressEnter,
+  emitPosition,
+  getAxisDisplayPureTextValue,
+} from '../../../tests/helpers/integration-test-utils';
+import { useSettingsStore } from '../../settingsStore';
+import { SETUP_PARAMETERS } from './setup-parameters';
+import { BOLT_HOLE_INTRO_DURATION_MS } from './bolt-hole';
 
-/**
- * Integration tests: US-024 Near-Zero (Zero-Approach) Warning, exercised through
- * the Distance-to-Go function (one of the modes where the warning is auto-enabled,
- * AC24.9). In distance-to-go the readout shows (target − current position), so as
- * the machine nears the target the reading nears zero and the warning fires.
- *
- * Real-input discipline:
- * - The warning is enabled via the ACTUAL setup menu (wrench → axis → scroll to
- *   ZERO AP → cycle to `bU22 on` → exit via End + ent). No nvMem mutation, no
- *   window hooks.
- * - A target is entered through the real preset/distance-to-go buttons, then the
- *   machine is driven toward it by a connected MockMillAdapter's setPosition() —
- *   the production adapter → millStore → droStore MILL_STATE_CHANGED path a real
- *   encoder uses. The warning indicator (`audio-indicator`) is read from the DOM.
- *
- * Work in mm so the 0.002" (≈0.0508 mm) approach band has clean magnitudes.
- *
- * @see project/user-stories/06-configuration/US-024-zero-approach-warning.md
- */
-describe('Near-Zero Warning — distance-to-go integration (US-024)', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-  let cleanup: (() => void) | null = null;
+const AXES = ['X', 'Y', 'Z'] as const;
+type Axis = (typeof AXES)[number];
 
-  beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.clear();
+function rawAxisText(axis: Axis): string {
+  return (screen.getByTestId(`axis-value-${axis.toLowerCase()}`).textContent || '').trim();
+}
+
+function axisIsBlinking(axis: Axis): boolean {
+  return screen
+    .getByTestId(`axis-display-${axis.toLowerCase()}`)
+    .querySelector('[data-blinking="true"]') !== null;
+}
+
+function expectWarningAxes(...activeAxes: Axis[]) {
+  expect(screen.queryByTestId('audio-indicator') !== null).toBe(activeAxes.length > 0);
+  for (const axis of AXES) expect(axisIsBlinking(axis)).toBe(activeAxes.includes(axis));
+}
+
+async function scrollSetupTo(user: UserEvent, predicate: (text: string) => boolean, name: string) {
+  for (let guard = 0; !predicate(rawAxisText('X')); guard += 1) {
+    if (guard >= SETUP_PARAMETERS.length) throw new Error(`${name} not reachable in setup`);
+    await user.click(screen.getByTestId('key-2'));
+  }
+}
+
+async function openZeroApproach(user: UserEvent, axis: Axis) {
+  await user.click(screen.getByTestId('btn-settings'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('SELECt');
+  await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
+  await scrollSetupTo(user, (text) => text === 'ZEro AP', 'ZEro AP');
+}
+
+async function saveAndExitSetup(user: UserEvent) {
+  await scrollSetupTo(user, (text) => text === 'SAU ChG', 'SAU ChG');
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('StorEd');
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+  await scrollSetupTo(user, (text) => text === 'End', 'End');
+  await pressEnter(user);
+}
+
+async function stageConfiguredWarning(
+  user: UserEvent,
+  axis: Axis,
+  distanceMm: string,
+  toleranceMm: string
+) {
+  await openZeroApproach(user, axis);
+
+  await pressEnter(user);
+  expect(rawAxisText('X')).toBe('bU22 oF');
+  await user.click(screen.getByTestId('key-6'));
+  expect(rawAxisText('X')).toBe('bU22 on');
+
+  await user.click(screen.getByTestId('key-2'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('BP diSt');
+  await pressEnter(user);
+  expect(rawAxisText('X')).toBe('0.0508');
+  await pressEnter(user);
+  expect(rawAxisText('X')).toBe('0');
+  await typeValue(user, distanceMm);
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('BP toLr');
+
+  await pressEnter(user);
+  expect(rawAxisText('X')).toBe('0.0000');
+  await pressEnter(user);
+  expect(rawAxisText('X')).toBe('0');
+  await typeValue(user, toleranceMm);
+  await pressEnter(user);
+}
+
+async function startDistanceToGoX(user: UserEvent, targetMm: string) {
+  await user.click(screen.getByTestId('btn-distance-to-go'));
+  await user.click(screen.getByTestId('axis-select-x'));
+  await typeValue(user, targetMm);
+  await pressEnter(user);
+  await user.click(screen.getByTestId('btn-distance-to-go'));
+}
+
+async function enterCirclePattern(user: UserEvent) {
+  await user.click(screen.getByTestId('btn-bolt-circle'));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(BOLT_HOLE_INTRO_DURATION_MS + 10);
   });
+  await pressEnter(user);
+  await typeValue(user, '0'); await pressEnter(user);
+  await typeValue(user, '0'); await pressEnter(user);
+  await typeValue(user, '10'); await pressEnter(user);
+  await typeValue(user, '0'); await pressEnter(user);
+  await typeValue(user, '4'); await pressEnter(user);
+}
+
+async function enterLinearPatternOnY(user: UserEvent) {
+  await user.click(screen.getByTestId('btn-function'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
+  await user.click(screen.getByTestId('key-6'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
+  await pressEnter(user);
+  await user.click(screen.getByTestId('axis-select-y'));
+  await typeValue(user, '10');
+  await pressEnter(user);
+}
+
+describe('Near-zero warning — manual-authoritative integration', () => {
+  beforeEach(() => { localStorage.clear(); });
 
   afterEach(() => {
-    if (cleanup) {
-      cleanup();
-      cleanup = null;
-    }
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
+    vi.useRealTimers();
   });
 
-  async function connectMockMill(): Promise<MockMillAdapter> {
-    initializeDROMillConnection();
-    const mock = new MockMillAdapter();
-    await act(async () => {
-      cleanup = await initializeMillStore(mock);
+  it('stages the nested per-axis BUZZ, BP distance, and tolerance editors, then warns in idle only after SAU ChG', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    emitPosition(0.2, 0, 0);
+
+    await stageConfiguredWarning(user, 'X', '0.0762', '0.0254');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled.X).toBe(false);
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance.X).toBe('0.002');
+    await saveAndExitSetup(user);
+
+    expectWarningAxes();
+    emitPosition(0.07, 0, 0);
+    await waitFor(() => { expectWarningAxes('X'); });
+
+    emitPosition(0.09, 0, 0);
+    await waitFor(() => { expectWarningAxes('X'); });
+
+    emitPosition(0.11, 0, 0);
+    await waitFor(() => { expectWarningAxes(); });
+  });
+
+  it('C first abandons a partial numeric editor, then discards the whole setup draft', async () => {
+    const { user } = await renderSimulator();
+    await openZeroApproach(user, 'Y');
+    await pressEnter(user);
+    await user.click(screen.getByTestId('key-6'));
+    await user.click(screen.getByTestId('key-2'));
+    await pressEnter(user);
+    await pressEnter(user);
+    await typeValue(user, '0.1');
+
+    await user.click(screen.getByTestId('key-clear'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('BP diSt');
+    await user.click(screen.getByTestId('key-clear'));
+
+    await openZeroApproach(user, 'Y');
+    await pressEnter(user);
+    expect(rawAxisText('X')).toBe('bU22 oF');
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled.Y).toBe(false);
+  });
+
+  it('keeps the mandatory 50 um target warning active with BUZZ off and arms only preset axes', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    emitPosition(12, 0, 0);
+
+    await startDistanceToGoX(user, '20');
+    emitPosition(31.94, 0, 0);
+    await waitFor(() => { expectWarningAxes(); });
+
+    // Exact 50 µm boundary after subtracting nonzero machine coordinates.
+    emitPosition(31.95, 0, 0);
+    await waitFor(() => { expectWarningAxes('X'); });
+    expect(useSettingsStore.getState().nvMem.zeroApproachEnabled).toEqual({
+      X: false,
+      Y: false,
+      Z: false,
     });
-    return mock;
-  }
-
-  async function emitPosition(mock: MockMillAdapter, x: number, y: number, z: number) {
-    await act(async () => {
-      mock.setPosition(x, y, z);
-    });
-  }
-
-  function rawAxisText(axis: 'X' | 'Y' | 'Z'): string {
-    const el = screen.getByTestId(`axis-value-${axis.toLowerCase()}`);
-    return (el.textContent || '').trim();
-  }
-
-  function indicator(): HTMLElement | null {
-    return screen.queryByTestId('audio-indicator');
-  }
-
-  async function waitForAxisText(axis: 'X' | 'Y' | 'Z', expected: string) {
-    await waitFor(() => { expect(rawAxisText(axis)).toBe(expected); });
-  }
-
-  /** ZERO AP renders `bU22 on` / `bU22 oF`; unique to this parameter. */
-  function isZeroApLabel(t: string): boolean {
-    return t === 'bU22 on' || t === 'bU22 oF';
-  }
-
-  /** Enable the Near-Zero Warning through the real setup menu (commit-on-change). */
-  async function enableZeroApproach(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByTestId('btn-settings'));
-    await waitForAxisText('X', 'SELECt');
-    await user.click(screen.getByTestId('axis-select-x'));
-
-    let guard = 0;
-    while (!isZeroApLabel(rawAxisText('X'))) {
-      await user.click(screen.getByTestId('key-2'));
-      guard += 1;
-      if (guard > 40) throw new Error('ZERO AP parameter not found in setup menu');
-    }
-    guard = 0;
-    while (rawAxisText('X') !== 'bU22 on') {
-      await user.click(screen.getByTestId('key-6'));
-      guard += 1;
-      if (guard > 4) throw new Error('bU22 on choice not reachable by cycling');
-    }
-    guard = 0;
-    while (rawAxisText('X') !== 'End') {
-      await user.click(screen.getByTestId('key-2'));
-      guard += 1;
-      if (guard > 40) throw new Error('End item not found while exiting setup');
-    }
-    await user.click(screen.getByTestId('key-enter'));
-    await waitForAxisText('X', '0.0000');
-  }
-
-  /**
-   * Enter Distance-to-Go with an X target (mm): open distance-to-go, select X,
-   * type the value, confirm, then press distance-to-go again to execute. The
-   * readout then shows (target − current X).
-   */
-  async function startDistanceToGoX(user: ReturnType<typeof userEvent.setup>, targetMm: string) {
-    await user.click(screen.getByTestId('btn-distance-to-go')); // -> preset-select
-    await user.click(screen.getByTestId('axis-select-x')); // -> preset-input-x
-    for (const ch of targetMm) {
-      if (ch === '.') await user.click(screen.getByTestId('key-decimal'));
-      else await user.click(screen.getByTestId(`key-${ch}`));
-    }
-    await user.click(screen.getByTestId('key-enter')); // store target -> preset-select
-    await user.click(screen.getByTestId('btn-distance-to-go')); // -> distance-to-go
-  }
-
-  it('does not warn outside BP DIST, fires once within it (AC24.6, AC24.10)', async () => {
-    const { user } = await renderSimulator({ millSource: 'noop' });
-    const mock = await connectMockMill();
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
-    await emitPosition(mock, 0, 0, 0);
-
-    await enableZeroApproach(user);
-    // Target X = 10 mm. Machine at 0 -> distance-to-go reads 10.
-    await startDistanceToGoX(user, '10');
-    await waitForAxisText('X', '10.0000');
-    expect(indicator()).toBeNull();
-
-    // Drive toward the target but stop 1 mm short — outside the band -> silent.
-    await emitPosition(mock, 9, 0, 0);
-    await waitForAxisText('X', '1.0000');
-    expect(indicator()).toBeNull();
-
-    // Close to within 0.03 mm of the target — inside the band -> warning fires.
-    await emitPosition(mock, 9.97, 0, 0);
-    await waitFor(() => { expect(indicator()).not.toBeNull(); });
   });
 
-  it('clears when the axis backs out of the approach band again', async () => {
-    const { user } = await renderSimulator({ millSource: 'noop' });
-    const mock = await connectMockMill();
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
-    await emitPosition(mock, 0, 0, 0);
+  it('arms PCD X/Y targets but not a zero-valued Z, and disarms current-number and jump displays', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    await enterCirclePattern(user);
 
-    await enableZeroApproach(user);
-    await startDistanceToGoX(user, '5');
+    emitPosition(9.97, 0, 0);
+    expectWarningAxes('X', 'Y');
 
-    // Reach within the band -> on.
-    await emitPosition(mock, 4.98, 0, 0);
-    await waitFor(() => { expect(indicator()).not.toBeNull(); });
+    await user.click(screen.getByTestId('key-8'));
+    expectWarningAxes();
 
-    // Back out 0.5 mm -> clears (BP TOLR default 0).
-    await emitPosition(mock, 4.5, 0, 0);
-    await waitFor(() => { expect(indicator()).toBeNull(); });
+    await user.click(screen.getByTestId('key-8'));
+    expectWarningAxes('X', 'Y');
+    await user.click(screen.getByTestId('key-2'));
+    expectWarningAxes();
   });
 
-  it('never warns while disabled, even on top of the target (AC24.2 OFF)', async () => {
-    const { user } = await renderSimulator({ millSource: 'noop' });
-    const mock = await connectMockMill();
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
-    await emitPosition(mock, 0, 0, 0);
-
-    // Do NOT enable the warning. Enter distance-to-go and sit exactly on target.
-    await startDistanceToGoX(user, '3');
-    await emitPosition(mock, 3, 0, 0);
-    await waitForAxisText('X', '0.0000');
-    expect(indicator()).toBeNull();
+  it('arms only the selected axis in a linear pattern', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    await enterLinearPatternOnY(user);
+    expectWarningAxes('Y');
   });
 
-  it('is off in plain idle even with an axis at zero (AC24.9 gating)', async () => {
-    const { user } = await renderSimulator({ millSource: 'noop' });
-    const mock = await connectMockMill();
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
-    await emitPosition(mock, 0, 0, 0);
+  it('does not invent a warning for a missing SDM run step', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-sdm'));
+    await user.click(screen.getByTestId('key-6'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('rUn');
+    await pressEnter(user);
+    await pressEnter(user);
 
-    // Enable the warning, but stay in idle (no target). Zero X — sits at 0.
-    await enableZeroApproach(user);
-    await user.click(screen.getByTestId('axis-zero-x'));
-    await waitForAxisText('X', '0.0000');
-    // No distance-to-go / function context -> no warning.
-    expect(indicator()).toBeNull();
+    expect(rawAxisText('X')).toBe('no dAtA');
+    expectWarningAxes();
   });
 
-  it('only the approaching axis flashes (per-axis)', async () => {
-    const { user } = await renderSimulator({ millSource: 'noop' });
-    const mock = await connectMockMill();
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm
-    await emitPosition(mock, 0, 0, 0);
+  it('arms only X/Y on a center result even when Z is zero', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    emitPosition(-1, -1, 0);
 
-    await enableZeroApproach(user);
-    await startDistanceToGoX(user, '6'); // X target 6; Y has no target
+    await user.click(screen.getByTestId('btn-function'));
+    await pressEnter(user);
+    expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
+    await user.click(screen.getByTestId('key-6'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('LinE');
+    await pressEnter(user);
+    await user.click(screen.getByTestId('key-6'));
 
-    // Approach X to within the band; Y stays unset (shows live position, far).
-    await emitPosition(mock, 5.98, 5, 0);
-    await waitFor(() => { expect(indicator()).not.toBeNull(); });
+    emitPosition(1, 1, 0);
+    await user.click(screen.getByTestId('key-6'));
+    emitPosition(0.03, -0.03, 0);
 
-    const xFlash = screen.getByTestId('axis-display-x').querySelector('[data-blinking="true"]');
-    const yFlash = screen.getByTestId('axis-display-y').querySelector('[data-blinking="true"]');
-    expect(xFlash).not.toBeNull();
-    expect(yFlash).toBeNull();
+    await waitFor(() => { expectWarningAxes('X', 'Y'); });
+    expect(rawAxisText('Z')).toBe('CEntrE');
   });
 });

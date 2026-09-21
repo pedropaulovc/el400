@@ -51,4 +51,71 @@ test.describe('US-013: Basic Calculator Functions', () => {
     expect(typeof yValue).toBe('number');
     expect(typeof zValue).toBe('number');
   });
+
+  test('debug: pending entry stays visible through a live tick and sessions start clean', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+
+    await dro.enterNumber('12.5');
+    await dro.waitForAxisPureTextValue('X', '12.5');
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.page.click('[data-testid="btn-calculator"]');
+
+    await dro.enterNumber('1');
+    await dro.waitForAxisPureTextValue('X', '1');
+    await dro.simulateEncoderAbsoluteMove('X', 25);
+    await dro.waitForAxisPureTextValue('X', '1');
+
+    await dro.yButton.click();
+    await expect(dro.yDisplay).toContainText('Add');
+    await dro.enterNumber('2.50');
+    await dro.waitForAxisPureTextValue('X', '2.50');
+    await dro.enterButton.click();
+    await dro.waitForAxisPureNumberValue('X', 3.5);
+  });
+
+  test('debug: repeated addition reuses the displayed result', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+
+    await dro.enterNumber('12');
+    await dro.yButton.click();
+    await dro.enterNumber('34');
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('46.0000');
+
+    await dro.yButton.click();
+    await dro.enterNumber('56');
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('102.0000');
+  });
+
+  test('debug: finite result beyond the four-decimal panel shows inF vAL', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+
+    await dro.enterNumber('99999999');
+    for (let i = 0; i < 3; i++) await dro.yButton.click();
+    await dro.enterNumber('99999999');
+    await dro.enterButton.click();
+
+    await expect(dro.xDisplay).toContainText('inF vAL');
+  });
+
+  test('debug: calculator has no axis-transfer side effect', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.toggleUnitButton.click();
+    await dro.simulateEncoderAbsoluteMove('X', 2);
+
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.simulateEncoderAbsoluteMove('X', 3);
+    await dro.enterNumber('2');
+    await dro.yButton.click();
+    await dro.enterNumber('3');
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('5.0000');
+
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.waitForAxisValue('X', 3);
+  });
 });

@@ -44,6 +44,19 @@ test.describe('US-048: Screen Reader Support', () => {
     await expect(xCell).toHaveAttribute('aria-atomic', 'true');
   });
 
+  test('AC 48.3: debug movement updates the live value through visible controls', async ({ dro }) => {
+    const { page } = dro;
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    const status = page.getByTestId('connection-status');
+    await expect(status).toHaveAttribute('role', 'status');
+    await expect(status).toHaveAttribute('aria-live', 'polite');
+    await expect(status).toContainText('Machine connection: Connected');
+
+    await dro.simulateEncoderAbsoluteMove('X', 25.4);
+    await dro.waitForAxisPureNumberValue('X', 1);
+    await expect(page.getByTestId('axis-value-x')).toHaveAttribute('aria-live', 'polite');
+  });
+
   test('AC 48.3: zeroing an axis updates its live-region value', async ({ dro }) => {
     const { page } = dro;
 

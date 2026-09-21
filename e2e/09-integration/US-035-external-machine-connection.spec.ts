@@ -25,6 +25,13 @@ test.describe('US-035: External Machine Connection', () => {
 
     // Wait for display to be ready (polling until X shows 0)
     await dro.waitForAxisValue('X', 0);
+    await expect(page.getByTestId('connection-status')).toHaveAttribute(
+      'data-connection-state',
+      'manual',
+    );
+    await expect(page.getByTestId('connection-status')).toContainText(
+      'Machine connection: Manual input',
+    );
 
     // In manual mode, values should be zeros and controllable via keypad
     await expectAxisValues(dro.xDisplay, dro.yDisplay, dro.zDisplay, {
@@ -53,6 +60,59 @@ test.describe('US-035: External Machine Connection', () => {
     // Verify page loaded and connected without errors
     const errorMessages = dro.page.getByRole('alert');
     await expect(errorMessages).toHaveCount(0);
+  });
+
+  test('streams real CNCjs positions and exposes disconnect/reconnect state', async ({ dro }) => {
+    const status = dro.page.getByTestId('connection-status');
+    await expect(status).toHaveAttribute('data-connection-state', 'connected');
+    await expect(status).toContainText('Machine connection: Connected');
+    await expect(dro.simulatorRoot.getByTestId('connection-status')).toHaveCount(0);
+
+    await dro.toggleInchMm();
+    await dro.simulateEncoderAbsoluteMove('X', 12.345);
+    await dro.simulateEncoderAbsoluteMove('Y', -6.5);
+    await dro.simulateEncoderAbsoluteMove('Z', 1.25);
+    await dro.waitForAxisPureNumberValue('X', 12.345, 3);
+    await dro.waitForAxisPureNumberValue('Y', -6.5, 3);
+    await dro.waitForAxisPureNumberValue('Z', 1.25, 3);
+
+    await dro.simulateCncjsDisconnect();
+    await expect(status).toHaveAttribute('data-connection-state', 'disconnected');
+    await expect(status).toContainText('Machine connection: Disconnected');
+
+    await dro.simulateCncjsReconnect();
+    await expect(status).toHaveAttribute('data-connection-state', 'connected');
+    await expect(status).toContainText('Machine connection: Connected');
+    await dro.waitForAxisPureNumberValue('X', 12.345, 3);
+  });
+
+  test('runs the real CNCjs widget inside a same-origin iframe', async ({ dro }) => {
+    const widgetUrl = new URL(dro.page.url());
+    const widgetPath = `${widgetUrl.pathname}${widgetUrl.search}`;
+
+    await dro.page.evaluate((src) => {
+      document.body.replaceChildren();
+      const frame = document.createElement('iframe');
+      frame.title = 'EL400 CNCjs widget';
+      frame.src = src;
+      document.body.appendChild(frame);
+    }, widgetPath);
+
+    const widget = dro.page.frameLocator('iframe[title="EL400 CNCjs widget"]');
+    await expect(widget.getByTestId('el400-simulator')).toHaveAttribute('data-dro-state', 'idle');
+    await expect(widget.getByTestId('connection-status')).toHaveAttribute(
+      'data-connection-state',
+      'connected',
+    );
+
+    await widget.getByRole('button', { name: 'Toggle units' }).click();
+    await expect(widget.getByTestId('led-mm').locator('input')).toBeChecked();
+
+    const persistedUnit = await dro.page.evaluate(() => {
+      const raw = localStorage.getItem('el400-dro-non-volatile-memory');
+      return raw ? JSON.parse(raw).state.nvMem.defaultUnit : null;
+    });
+    expect(persistedUnit).toBe('mm');
   });
 
   /**

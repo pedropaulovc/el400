@@ -157,4 +157,19 @@ test.describe('US-037: Keyboard Navigation', () => {
 
     expect(hasVisibleFocus, 'Focused button should have visible focus indicator').toBe(true);
   });
+
+  test('debug physical-mm position editor is keyboard operable', async ({ dro }) => {
+    const page = dro.page;
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    const input = page.getByRole('spinbutton', {
+      name: 'Set X position in millimetres',
+    });
+
+    await input.focus();
+    await page.keyboard.type('25.4');
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByTestId('debug-position-x')).toHaveText('25.4000');
+    await dro.waitForAxisPureNumberValue('X', 1);
+  });
 });

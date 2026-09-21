@@ -2,7 +2,7 @@
  * Integration tests for the Linear Bolt Hole feature (US-029).
  *
  * Drives the full simulator from the function menu through axis selection,
- * pitch and hole-count entry, and hole navigation, asserting display output.
+ * pitch entry, and unbounded hole navigation, asserting display output.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -33,9 +33,7 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
   async function openLinearMenu(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByTestId('btn-function'));
     expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
-    // CEntrE -> CirCLE -> LinE -> LinEAr
-    await user.click(screen.getByTestId('key-6'));
-    await user.click(screen.getByTestId('key-6'));
+    // Canonical top-level ring: CEntrE -> LinEAr.
     await user.click(screen.getByTestId('key-6'));
     expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
   }
@@ -67,14 +65,9 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
     expect(getAxisDisplayPureTextValue('Y')).toBe('PitCh');
     expect(getAxisDisplayPureNumberValue('X')).toBe(0);
 
-    // Enter pitch = 10mm
+    // Enter pitch = 10mm. ENT directly activates the documented first-hole
+    // distance-to-go view; there is no hole-count prompt.
     await typeValue(user, '10');
-    await pressEnter(user);
-    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-holes');
-    expect(getAxisDisplayPureTextValue('Y')).toBe('hoLES');
-
-    // Enter number of holes = 5
-    await typeValue(user, '5');
     await pressEnter(user);
     expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-navigate');
 
@@ -83,7 +76,6 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
     if (stateData.stateDataType === 'linear-bolt-hole') {
       expect(stateData.axis).toBe('X');
       expect(stateData.pitch).toBeCloseTo(10, 4);
-      expect(stateData.holeCount).toBe(5);
       expect(stateData.currentHole).toBe(1);
     }
 
@@ -117,7 +109,7 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
     expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-pitch');
   });
 
-  it('rejects a hole count below 2 and stays on the holes step', async () => {
+  it('keeps advancing without a configured upper count', async () => {
     const { user } = await renderSimulator();
     await user.click(screen.getByTestId('btn-toggle-unit'));
 
@@ -126,11 +118,16 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
     await user.click(screen.getByTestId('axis-select-x'));
     await typeValue(user, '10');
     await pressEnter(user);
-    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-holes');
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-navigate');
 
-    await typeValue(user, '1');
-    await pressEnter(user);
-    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-holes');
+    for (let i = 0; i < 6; i++) {
+      await user.click(screen.getByTestId('key-6'));
+    }
+    const data = useDROStore.getState().stateData;
+    if (data.stateDataType === 'linear-bolt-hole') {
+      expect(data.currentHole).toBe(7);
+    }
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(60, 4);
   });
 
   it('exits to idle in ABS mode with the clear key', async () => {

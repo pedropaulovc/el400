@@ -211,16 +211,16 @@ describe('Grid Drilling Integration (US-020)', () => {
 
       expect(useDROStore.getState().stateName).toBe('grid-navigate');
 
-      // Jump to the last hole (9) - in range only because total = 3 * 3 = 9.
-      // key-9 is a pure digit key (not an arrow).
-      await user.click(screen.getByTestId('key-9'));
-      await user.click(screen.getByTestId('key-enter'));
+      // Walk to the last hole; Grid intentionally has no direct-jump request.
+      for (let i = 1; i < 9; i++) {
+        await user.click(screen.getByTestId('key-6'));
+      }
       let stateData = useDROStore.getState().stateData;
       if (stateData.stateDataType === 'grid') {
         expect(stateData.currentHole).toBe(9);
       }
 
-      // Next from the last hole wraps to hole 1
+      // Next from the last hole wraps to hole 1.
       await user.click(screen.getByTestId('key-6'));
       stateData = useDROStore.getState().stateData;
       if (stateData.stateDataType === 'grid') {
@@ -228,7 +228,7 @@ describe('Grid Drilling Integration (US-020)', () => {
       }
     });
 
-    it('shows current hole number with key 8', async () => {
+    it('shows the current X/Y pair and ignores key 2', async () => {
       const { user } = await renderSimulator({ millSource: 'noop' });
 
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -242,11 +242,23 @@ describe('Grid Drilling Integration (US-020)', () => {
       await typeValue(user, '3'); await pressEnter(user);
       await typeValue(user, '3'); await pressEnter(user);
 
-      await user.click(screen.getByTestId('key-6')); // hole 2
+      await user.click(screen.getByTestId('key-6')); // X index 2, Y index 1
       await user.click(screen.getByTestId('key-8'));
-      expect(useDROStore.getState().vMem.inputBuffer).toBe('2');
+      expect(getAxisDisplayPureNumberValue('X', 0)).toBe(2);
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(1);
+
+      await user.click(screen.getByTestId('key-2'));
+      expect(getAxisDisplayPureNumberValue('X', 0)).toBe(2);
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(1);
+      const data = useDROStore.getState().stateData;
+      expect(data).toMatchObject({
+        stateDataType: 'grid',
+        currentHole: 2,
+        navigationPhase: 'current-number',
+      });
     });
   });
+
 
   describe('exiting grid mode', () => {
     it('exits to idle and restores ABS with clear from navigate', async () => {

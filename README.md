@@ -105,6 +105,26 @@ npm i
 npm run dev
 ```
 
+## Standalone Debug Mode
+
+Open `/?source=debug` to use the in-browser machine without CNCjs. The debug panel
+sets physical X/Y/Z positions in millimetres and supplies probe, encoder-signal,
+and jog controls. Crossing +10 mm on an axis produces its simulated reference mark.
+
+Debug encoders model an installed 5 µm scale, so changing `SC` changes decoded
+travel. CNCjs already supplies engineering millimetres and is not rescaled by `SC`.
+Setup edits are drafts until `SAU CHG`; leaving through `C` or `End` discards them.
+Incompatible settings from the older scalar-warning schema reset once to defaults.
+SDM points, machine-reference offsets, and output programs are stored separately
+from the OEM settings baseline.
+`rSt oEm` restores only the selected axis's configuration; it does not wipe global
+settings, other axes, or saved operator programs and datums.
+
+The auxiliary panel exposes six logical output levels and a virtual serial
+terminal. In a browser supporting Web Serial, its physical-port control requests
+permission and uses the manual's fixed 9600 baud, 8N1, no-flow-control format.
+Logical-output simulation does not drive electrical output pins.
+
 ## Using with CNCjs
 
 The DRO can display live position data from your CNC machine when used with
@@ -213,6 +233,12 @@ The simulator behavior is based on official manuals (originals plus searchable O
 It is also based on the DRO PROS video walkthrough, ["Electronica EL400 Magnetic Display for Milling Machine — Overview"](https://www.youtube.com/watch?v=7W47KPCu7jE). An illustrated, step-by-step manual transcribed from that video — covering the setup menu and every front-panel function — is available here:
 - [EL400 video manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-dro-overview-video/MANUAL.md)
 - [Video transcript](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-dro-overview-video/transcript.txt)
+
+When the references disagree, precedence is **EL400 Operation Manual → EL400 video
+→ MagXact manual**. The [48 user stories](project/user-stories/README.md) record
+manual citations, audit findings, and behavioral test coverage. Only their
+[Deliberately Out of Scope](project/user-stories/README.md#deliberately-out-of-scope)
+list is excluded; calibration, taper, six-output, and serial behavior remain in scope.
 
 ## License
 

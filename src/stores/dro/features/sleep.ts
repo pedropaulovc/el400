@@ -2,26 +2,23 @@
  * Display Sleep Timer Feature (US-026)
  *
  * After the SLEEP T idle period (nvMem.sleepTimeout minutes, 0 = disabled) with
- * no key press or axis movement, the display sleeps: it dims and the wrench LED
+ * no key press or axis movement, the display sleeps: it blanks and the wrench LED
  * flashes (manual §6.2 `SLEEP t`, note *4 "the display is switched off for the
  * time in sleep timer, with any key operation the display gets 'ON'"). Any key
  * press or a real axis jog wakes it.
  *
  * Two cooperating pieces:
  *
- *   - `sleepReducer` (registered FIRST in the chain): owns the `displayPower`
+ *   - `sleepReducer` (the root's global input gate): owns the `displayPower`
  *     transitions. It sleeps on the internal `SLEEP_TIMER_ELAPSED` event and,
  *     while asleep, wakes on any real key/button press or on a MILL_STATE_CHANGED
  *     whose machine position differs from the baseline captured at sleep time.
  *     The waking input is consumed (the device only wakes; it does not also act),
  *     matching the manual's "any key operation -> display ON" behaviour.
  *
- *   - `useSleepTimer`: an isolated hook that owns the idle countdown. It restarts
- *     a `setTimeout(sleepTimeout)` on every DRO-store update (a key press or a
- *     movement both dispatch through the store, so any of them counts as
- *     activity) and dispatches `SLEEP_TIMER_ELAPSED` when it fires. The timer is
- *     injectable via fake timers (Vitest) / Playwright clock, so tests never wait
- *     real minutes. With sleepTimeout = 0 the hook never arms a timer.
+ *   - `useSleepTimer` watches the store's genuine-activity counter: front-panel
+ *     input or changed physical position. Unchanged adapter broadcasts do not
+ *     restart the timer. With sleepTimeout = 0 the hook never arms a timer.
  *
  * Wake is therefore always driven by a REAL key event or a REAL adapter movement
  * flowing through the reducer -- never a window.* hook -- and sleep is driven by
@@ -65,8 +62,8 @@ function sleep(state: DROStatePayload, context: DROReducerContext): DROStatePayl
     displayPower: 'asleep',
     sleepBaselinePosition: positionSnapshot(context),
   };
-  // Display values are untouched: position tracking continues in the background
-  // (no data loss); the dimming is a presentation concern over displayPower.
+  // Keep the underlying coordinates and datum intact; the renderer blanks the
+  // sleeping display without deleting its position data.
   return { ...state, vMem };
 }
 
@@ -86,7 +83,7 @@ export const sleepReducer: FeatureReducer = (statePayload, eventPayload, context
 
   // Idle period elapsed: sleep if currently awake; ignore a duplicate while asleep.
   if (eventName === 'SLEEP_TIMER_ELAPSED') {
-    if (displayPower === 'asleep') return null;
+    if (displayPower === 'asleep') return statePayload;
     return sleep(statePayload, context);
   }
 
@@ -114,10 +111,9 @@ export const sleepReducer: FeatureReducer = (statePayload, eventPayload, context
 /**
  * Hook that drives the display sleep idle countdown (US-026).
  *
- * Restarts the timeout on every DRO-store update (key presses and movements both
- * dispatch through the store, so each is "activity") while the display is awake
- * and the timer is enabled. Dispatches `SLEEP_TIMER_ELAPSED` on expiry. A
- * `sleepTimeout` of 0 disables the timer entirely (AC26.8).
+ * Restarts only for front-panel input or actual physical movement. Unchanged
+ * encoder ticks and internal confirmation timers are not operator activity.
+ * A `sleepTimeout` of 0 disables the timer entirely.
  *
  * @param dispatch - DRO dispatch function
  * @param droState - Current DRO state name (unused for gating today; kept for
@@ -141,6 +137,7 @@ export function useSleepTimer(
 
     const arm = (): void => {
       clearTimeout(timer);
+      if (useDROStore.getState().vMem.displayPower === 'asleep') return;
       timer = setTimeout(() => {
         dispatch({ eventName: 'SLEEP_TIMER_ELAPSED' });
       }, durationMs);
@@ -148,10 +145,9 @@ export function useSleepTimer(
 
     arm();
 
-    // Any store update is user/machine activity: rearm the idle countdown. The
-    // store fires this on every dispatch (key press, jog), so a truly idle DRO
-    // never rearms and the timer runs to completion.
-    const unsubscribe = useDROStore.subscribe(arm);
+    const unsubscribe = useDROStore.subscribe((current, previous) => {
+      if (current.activityVersion !== previous.activityVersion) arm();
+    });
 
     return () => {
       clearTimeout(timer);

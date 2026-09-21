@@ -1,53 +1,29 @@
 # US-001: First Use and Power-Up Display
 
-**Manual Reference:** Section 5.4 Power Up
+**Authority:** EL400 Operation Manual §5.4 (Power Up), with the EL400 video walkthrough as secondary evidence.  
 **Priority:** Low
 
 ## User Story
-**As a** machine operator
-**I want** to see the model and version information when I power on the DRO
-**So that** I can verify the system is starting up correctly
+**As a** machine operator  
+**I want** a brief model/version indication followed by the counting display  
+**So that** I can tell that the simulator started normally
 
-## Acceptance Criteria
-- [ ] **AC 1.1:** When the DRO is powered ON, it displays the model number (e.g., `EL400`) momentarily on X axis.
-- [ ] **AC 1.2:** It displays the software version (e.g., `vEr 1.0.0`) on the Y axis.
-- [ ] **AC 1.3:** The power-up message can be bypassed by pressing the `C` key.
-- [ ] **AC 1.4:** After the startup sequence, the DRO enters the normal counting display.
+## Target Acceptance Criteria
+- [ ] **AC 1.1:** Power-on briefly shows the simulator identity on X and its firmware-version identity on Y.
+- [ ] **AC 1.2:** The simulator identity remains the EL400 / `vEr 1.0.0` variant. The primary manual and video show other EL400-family model/version glyphs, so those literals are not claimed to be a universal physical-firmware identity.
+- [ ] **AC 1.3:** Pressing `C` while the identity is shown bypasses the remaining delay.
+- [ ] **AC 1.4:** Timeout or bypass enters the normal X/Y/Z counting display at the configured resolution and restores persisted operator settings.
+- [ ] **NF 1.1:** E2E setup may bypass the boot delay by default, but dedicated boot coverage must exercise both timeout and the visible `C` key.
 
-## E2E Test Scenarios
-```typescript
-describe('US-001: First Use and Power-Up', () => {
-  test('Power up sequence displays model and version', async () => {
-    // Simulate Power ON
-    await dro.powerOn();
-    await expect(dro.display.xAxis).toHaveText('EL400');
-    await expect(dro.display.yAxis).toHaveText('vEr 1.0.0');
-    await dro.wait(1000);
-    // Should enter normal counting mode
-    await expect(dro.display.xAxis).toHaveNumber(0.0000)
-    await expect(dro.display.yAxis).toHaveNumber(0.0000)
-    await expect(dro.display.zAxis).toHaveNumber(0.0000)
-  });
+## Baseline Audit (headed debug source)
+- **Passed:** X showed `EL400`, Y showed `vEr 1.0.0`, and Z was blank on reload.
+- **Passed:** `C` dismissed the message immediately; waiting 1.2 seconds also reached the normal `0.0000` counting display.
+- This is completed baseline evidence, not verification of changes made after the audit.
 
-  test('Bypass power up message', async () => {
-    await dro.powerOn();
-    await dro.pressKey('C');
-    // Expect immediate transition to counting screen (e.g., 0.000)
-    await expect(dro.display.xAxis).toHaveNumber(0.0000)
-    await expect(dro.display.yAxis).toHaveNumber(0.0000)
-    await expect(dro.display.zAxis).toHaveNumber(0.0000)
-  });
-});
-```
+## Evidence
+- Runtime audit: `/tmp/el400-audit-ManualCore.json` (`US-001`)
+- Screenshot: `/tmp/el400-audit/core/boot.png`
+- E2E: [`e2e/01-foundation/US-001-first-use.spec.ts`](../../../e2e/01-foundation/US-001-first-use.spec.ts)
 
-## Non Functional Requirements
-- [ ] **NF 1.1** E2E tests bypass the power up sequency by default and can assume that the DRO is in counting mode immediately.
-
-## Related Stories
-- US-002: Sign Convention and Axis Direction
-- US-021 to US-028: Configuration settings that affect initial display
-
-## Notes
-- Merged from US-001 (Claude) and G-001 (Gemini)
-- Enhanced test coverage with numeric display pattern check from G-001
-- 4-axis (Z/U) consideration from G-001 is **not in scope**: the simulator is X/Y/Z only
+## Scope
+The simulator is X/Y/Z only; a fourth Z/U axis is deliberately out of scope.

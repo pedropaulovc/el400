@@ -8,6 +8,7 @@ import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillAdapter } from "../adapters/MockMillAdapter";
 import type { Axis } from "../types/volatileMemory";
+import { DEFAULT_NON_VOLATILE_MEMORY } from "../types/nonVolatileMemory";
 
 /**
  * Initialize stores for storybook - starts in idle state (skip boot).
@@ -17,26 +18,8 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
-      scaleResolution: { X: '5', Y: '5', Z: '5' },
-      displayResolution: { X: '5', Y: '5', Z: '5' },
-      angularResolution: { X: 'dd-mn', Y: 'dd-mn', Z: 'dd-mn' },
-      taperOnAxis: 'X',
-      axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
-      zDepthSense: 'depth-negative',
-      zeroApproachEnabled: false,
-      zeroApproachDistance: '0.002',
-      zeroApproachTolerance: '0',
-      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
-      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
-      probeDroType: 'transmit',
-      encoderFailWarning: false,
-      keypadLock: 'off',
-      sleepTimeout: 0,
-      oemDefaults: null,
     },
   });
 
@@ -55,6 +38,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
 
   // Reset DRO store to idle state
   useDROStore.setState({
+    activityVersion: 0,
     stateName: 'idle',
     stateData: INITIAL_DRO_CONTEXT,
     vMem: INITIAL_VOLATILE_MEMORY_STATE,

@@ -1,13 +1,14 @@
 import { test, expect } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
 
 /**
  * E2E Tests: US-022 Setup Menu - Display Resolution (dP)
  *
  * Critical happy path: enter setup, reach dP, see the 5-micron mill default,
- * then coarsen to 50 micron and confirm the LIVE readout drops a decimal place
- * (0.0002" -> 0.002", i.e. 4 -> 3 fractional digits). Proves the operator key
- * sequence end to end and that dP is a display-only transform that takes effect
- * on exit (commit-on-change), independent of scale resolution (AC22.3/22.5).
+ * then coarsen to 50 micron, save with SAU CHG, and confirm the LIVE readout
+ * drops a decimal place (0.0002" -> 0.002", i.e. 4 -> 3 fractional digits).
+ * Proves the operator key sequence end to end and that dP is a display-only
+ * transform independent of scale resolution (AC22.3/22.5).
  *
  * The 7-segment panel renders dP choices with the "dP" prefix and a one-decimal
  * micron value, e.g. "dP 5.0" (matching the device's section 6.2 display).
@@ -23,7 +24,7 @@ function decimalsOf(text: string): number {
 }
 
 /** Open setup, pick X, and scroll up to the dP parameter. */
-async function gotoDP(dro: import('../helpers/dro-page').DROPage) {
+async function gotoDP(dro: DROPage) {
   await dro.settingsButton.click();
   await dro.waitForAxisPureTextValue('X', 'SELECt');
   await dro.selectAxis('X');
@@ -33,8 +34,27 @@ async function gotoDP(dro: import('../helpers/dro-page').DROPage) {
     await dro.key8.click();
   }
 }
+/** Commit the setup draft, acknowledge StorEd, and exit back to the live DRO. */
+async function saveAndExitSetup(dro: DROPage) {
+  let guard = 0;
+  while ((await dro.getAxisRawText('X')) !== 'SAU ChG') {
+    await dro.key2.click();
+    if (++guard > 40) throw new Error('SAU ChG row not reachable');
+  }
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StorEd');
+  await dro.clearButton.click(); // acknowledge only
+  await dro.waitForAxisPureTextValue('X', 'SAU ChG');
+  await dro.clearButton.click(); // exit the now-empty transaction
+  await dro.waitForReady('idle');
+}
+
 
 test.describe('US-022: Setup Menu - Display Resolution', () => {
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
+
   test('reach dP and see the 5-micron default (AC22.1, AC22.2)', async ({ dro }) => {
     await gotoDP(dro);
     await dro.waitForAxisPureTextValue('X', 'dP 5.0');
@@ -54,10 +74,7 @@ test.describe('US-022: Setup Menu - Display Resolution', () => {
     await dro.key6.click();
     await dro.waitForAxisPureTextValue('X', 'dP 50.0');
 
-    // Exit setup: re-press the wrench to SELECT, then CLEAR to idle.
-    await dro.settingsButton.click();
-    await dro.waitForAxisPureTextValue('X', 'SELECt');
-    await dro.clearButton.click();
+    await saveAndExitSetup(dro);
 
     // Live readout now renders 3 fractional digits (display-only change).
     await expect

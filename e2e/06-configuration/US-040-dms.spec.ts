@@ -8,17 +8,16 @@ import { test, expect } from '../helpers/fixtures';
  * (`dd.mn`, `dd.mn.SS`, `dd.dEC`) instead of the linear micron values, and the
  * chosen format drives how the live angular readout renders the wrapped degrees.
  *
- * Real user actions only: the counting-mode and dP-format changes go through the
- * real setup menu (`setAxisCountingMode` / `setAxisAngularResolution`, no window
- * hooks / forced state), and rotation is emitted via the mock CNCjs server's
- * relative-move endpoint (`simulateTableMove`, the real MILL_STATE_CHANGED path).
+ * Real user actions only: counting mode and dP format go through the setup
+ * transaction, and rotation uses the connected debug position controls through
+ * the live MILL_STATE_CHANGED path.
  *
  * @see project/user-stories/06-configuration/US-040-counting-mode.md (AC 40.3/40.4)
  */
 test.describe('US-040: Angular display-resolution DMS formats', () => {
-  // Setup-menu changes commit to persisted nvMem; run serially so parallel
-  // workers do not race on shared localStorage.
-  test.describe.configure({ mode: 'serial' });
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
 
   test('AC 40.4: dP offers the angular DMS formats once the axis is AnGULAr', async ({ dro }) => {
     await dro.setAxisCountingMode('X', 'AnGULAr');
@@ -51,6 +50,7 @@ test.describe('US-040: Angular display-resolution DMS formats', () => {
 
     await dro.setAxisCountingMode('X', 'AnGULAr');
     await dro.setAxisAngularResolution('X', 'dd.mn.SS');
+    await dro.reload();
 
     // Datum the angular axis, then rotate 12.5° -> 12°30'00" -> "12.30.00".
     await dro.zeroAxis('X');

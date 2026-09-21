@@ -6,7 +6,7 @@
  * display position from context and stores it as a point.
  */
 
-import type { FeatureReducer, DROReducerContext } from '../types';
+import type { FeatureReducer, DROReducerContext, DROStatePayload } from '../types';
 import type {
   DROStateName,
   DROStateData,
@@ -39,33 +39,16 @@ function isCenterFindingState(state: DROStateName): boolean {
 }
 
 /**
- * Compute current position (in mm) from vMem and context.
- * This is the raw position that gets stored when collecting points.
+ * Capture the same compensated ABS/INC position shown by the normal readout.
  */
 function computeStoredPosition(
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): StoredPoint {
-  if (vMem.mode === 'abs') {
-    // ABS mode: machine position - work offset (or manual values if disconnected)
-    if (context.millState.connected) {
-      return {
-        X: context.millState.position.x - vMem.workOffsets.X,
-        Y: context.millState.position.y - vMem.workOffsets.Y,
-        Z: context.millState.position.z - vMem.workOffsets.Z,
-      };
-    }
-    return {
-      X: vMem.manualAbsoluteValues.X,
-      Y: vMem.manualAbsoluteValues.Y,
-      Z: vMem.manualAbsoluteValues.Z,
-    };
-  }
-  // INC mode: incremental values
   return {
-    X: vMem.incrementalValues.X,
-    Y: vMem.incrementalValues.Y,
-    Z: vMem.incrementalValues.Z,
+    X: computeAxisPositionMm('X', vMem, context),
+    Y: computeAxisPositionMm('Y', vMem, context),
+    Z: computeAxisPositionMm('Z', vMem, context),
   };
 }
 
@@ -79,12 +62,48 @@ function addPointToData(
   if (data.stateDataType === 'center-finding') {
     return {
       ...data,
+      captureStatus: 'ready',
       storedPoints: [...data.storedPoints, point],
     };
   }
   return {
     ...INITIAL_CENTER_FINDING_DATA,
+    captureStatus: 'ready',
     storedPoints: [point],
+  };
+}
+
+const CENTER_POINT_PROMPTS: Partial<Record<DROStateName, string>> = {
+  'function-menu-center-line-point-1': 'Point 1',
+  'function-menu-center-line-point-2': 'Point 2',
+  'function-menu-center-circle-point-1': 'Point 1',
+  'function-menu-center-circle-point-2': 'Point 2',
+  'function-menu-center-circle-point-3': 'Point 3',
+};
+
+const INVALID_ENTRY = 'inuAL d';
+const INVALID_CIRCLE_DISPLAY: DisplayState = createDisplay(INVALID_ENTRY, '', 'Point 1');
+
+/** Keep live X/Y coordinates visible while the Z window identifies the point. */
+function computePointCollectionDisplay(
+  state: DROStateName,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  const normal = computeNormalDisplay(vMem, context);
+  return createDisplay(normal.X, normal.Y, CENTER_POINT_PROMPTS[state] ?? '');
+}
+
+
+function restartInvalidCircle(vMem: VolatileMemoryState): DROStatePayload {
+  return {
+    stateName: 'function-menu-center-circle-point-1',
+    stateData: {
+      ...INITIAL_CENTER_FINDING_DATA,
+      captureStatus: 'invalid',
+    },
+    vMem,
+    display: INVALID_CIRCLE_DISPLAY,
   };
 }
 
@@ -130,8 +149,7 @@ function calculateCircleCenterResult(points: StoredPoint[]): AxisValues | null {
 }
 
 /**
- * Compute display showing distance-to-go to center result.
- * Shows (centerResult - currentPosition) in user's preferred unit.
+ * Show live X/Y distance-to-go while the Z window retains the CEntrE label.
  */
 function computeCenterResultDisplay(
   centerResult: AxisValues,
@@ -140,13 +158,12 @@ function computeCenterResultDisplay(
 ): DisplayState {
   const currentX = computeAxisPositionMm('X', vMem, context);
   const currentY = computeAxisPositionMm('Y', vMem, context);
-  const currentZ = computeAxisPositionMm('Z', vMem, context);
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
     fromMmToAnyUnit(centerResult.X - currentX, unit),
     fromMmToAnyUnit(centerResult.Y - currentY, unit),
-    fromMmToAnyUnit(centerResult.Z - currentZ, unit)
+    'CEntrE'
   );
 }
 
@@ -160,14 +177,17 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
   // Handle MILL_STATE_CHANGED - update display for position changes
   if (event.eventName === 'MILL_STATE_CHANGED') {
     if (isCollectingPoints(state)) {
-      // Collecting points shows normal position display
+      // A rejected capture remains legible while the operator repositions. The
+      // next KEY_6_RIGHT capture clears the status through addPointToData.
       return {
         ...current,
-        display: computeNormalDisplay(vMem, context),
+        display: centerData.captureStatus === 'invalid'
+          ? INVALID_CIRCLE_DISPLAY
+          : computePointCollectionDisplay(state, vMem, context),
       };
     }
     if (isResultState(state) && centerData.centerResult) {
-      // Result state shows distance-to-go display
+      // Result state shows live distance-to-go.
       return {
         ...current,
         display: computeCenterResultDisplay(centerData.centerResult, vMem, context),
@@ -194,13 +214,15 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
       // ─────────────────────────────────────────────────────────────
       // CENTER LINE POINT COLLECTION
       // ─────────────────────────────────────────────────────────────
-      case 'function-menu-center-line-point-1':
+      case 'function-menu-center-line-point-1': {
+        const nextState = 'function-menu-center-line-point-2';
         return {
-          stateName: 'function-menu-center-line-point-2',
+          stateName: nextState,
           stateData: addPointToData(data, point),
           vMem,
-          display: computeNormalDisplay(vMem, context),
+          display: computePointCollectionDisplay(nextState, vMem, context),
         };
+      }
 
       case 'function-menu-center-line-point-2': {
         const newData = addPointToData(data, point);
@@ -211,39 +233,52 @@ export const centerFindingReducer: FeatureReducer = (current, event, context) =>
           vMem,
           display: centerResult
             ? computeCenterResultDisplay(centerResult, vMem, context)
-            : computeNormalDisplay(vMem, context),
+            : computePointCollectionDisplay(state, vMem, context),
         };
       }
 
       // ─────────────────────────────────────────────────────────────
       // CENTER CIRCLE POINT COLLECTION
       // ─────────────────────────────────────────────────────────────
-      case 'function-menu-center-circle-point-1':
+      case 'function-menu-center-circle-point-1': {
+        const nextState = 'function-menu-center-circle-point-2';
         return {
-          stateName: 'function-menu-center-circle-point-2',
+          stateName: nextState,
           stateData: addPointToData(data, point),
           vMem,
-          display: computeNormalDisplay(vMem, context),
+          display: computePointCollectionDisplay(nextState, vMem, context),
         };
+      }
 
-      case 'function-menu-center-circle-point-2':
+      case 'function-menu-center-circle-point-2': {
+        if (centerData.storedPoints.some(
+          (stored) => stored.X === point.X && stored.Y === point.Y
+        )) {
+          return restartInvalidCircle(vMem);
+        }
+        const nextState = 'function-menu-center-circle-point-3';
         return {
-          stateName: 'function-menu-center-circle-point-3',
+          stateName: nextState,
           stateData: addPointToData(data, point),
           vMem,
-          display: computeNormalDisplay(vMem, context),
+          display: computePointCollectionDisplay(nextState, vMem, context),
         };
+      }
 
       case 'function-menu-center-circle-point-3': {
+        if (centerData.storedPoints.some(
+          (stored) => stored.X === point.X && stored.Y === point.Y
+        )) {
+          return restartInvalidCircle(vMem);
+        }
         const newData = addPointToData(data, point);
         const centerResult = calculateCircleCenterResult(newData.storedPoints);
+        if (!centerResult) return restartInvalidCircle(vMem);
         return {
           stateName: 'function-menu-center-circle-result',
           stateData: { ...newData, centerResult },
           vMem,
-          display: centerResult
-            ? computeCenterResultDisplay(centerResult, vMem, context)
-            : computeNormalDisplay(vMem, context),
+          display: computeCenterResultDisplay(centerResult, vMem, context),
         };
       }
 

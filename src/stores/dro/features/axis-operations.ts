@@ -12,25 +12,12 @@ import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
 import {
   computeNormalDisplay,
+  computeMachinePositionMm,
+  directionSign,
   axisDisplayDecimals,
   maxDisplayableMagnitude,
   measurementScale,
 } from '../utils/displayComputation';
-
-/**
- * Get the machine position for an axis.
- */
-function getMachinePosition(axis: Axis, context: DROReducerContext): number {
-  const { millState } = context;
-  switch (axis) {
-    case 'X':
-      return millState.position.x;
-    case 'Y':
-      return millState.position.y;
-    case 'Z':
-      return millState.position.z;
-  }
-}
 
 /**
  * Zero a single axis based on current mode.
@@ -45,7 +32,7 @@ function zeroAxis(
   if (vMem.mode === 'abs') {
     // In ABS mode: set work offset to current machine position
     if (millState.connected) {
-      const machinePos = getMachinePosition(axis, context);
+      const machinePos = computeMachinePositionMm(axis, vMem, context);
       return {
         ...vMem,
         workOffsets: { ...vMem.workOffsets, [axis]: machinePos },
@@ -58,6 +45,15 @@ function zeroAxis(
     };
   }
 
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: computeMachinePositionMm(axis, vMem, context),
+      },
+    };
+  }
   // In INC mode: zero the incremental counter
   return {
     ...vMem,
@@ -82,15 +78,12 @@ function setAxisValue(
   // displayed reading (AC 47.5). Angular axes wrap to [0,360) and never reach the
   // limit, so this is a harmless no-op for them.
   //
-  // The panel limit bounds the DISPLAYED magnitude. In diameter mode (US-041) the
-  // display shows 2× the stored slide value, so the stored value's limit is the
-  // panel limit divided by the measurement scale (AC 47.7) — keeping display ≤
-  // panel max and display==stored consistent. Radius mode (×1) is unchanged.
-  const limit =
-    maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem)) / measurementScale(axis, nvMem);
+  const limit = maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem));
   const clamped = Math.sign(value) * Math.min(Math.abs(value), limit);
-  // Convert from display unit to mm for internal storage
-  const valueMm = fromAnyUnitToMm(clamped, nvMem.defaultUnit);
+  const valueMm = (nvMem.countingMode[axis] === 'angular'
+    ? clamped
+    : fromAnyUnitToMm(clamped, nvMem.defaultUnit) / measurementScale(axis, nvMem)) *
+    directionSign(axis, nvMem);
   return setAxisValueMm(vMem, axis, valueMm, context);
 }
 
@@ -109,7 +102,7 @@ function setAxisValueMm(
   if (vMem.mode === 'abs') {
     if (millState.connected) {
       // In connected mode, setting a value adjusts the work offset
-      const machinePos = getMachinePosition(axis, context);
+      const machinePos = computeMachinePositionMm(axis, vMem, context);
       // offset = machinePos - desiredValue
       return {
         ...vMem,
@@ -121,6 +114,16 @@ function setAxisValueMm(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: valueMm },
+      inputBuffer: '',
+    };
+  }
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: computeMachinePositionMm(axis, vMem, context) - valueMm,
+      },
       inputBuffer: '',
     };
   }

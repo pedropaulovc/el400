@@ -1,196 +1,44 @@
 # US-019: Angle Hole (Linear Hole Pattern)
 
-**Priority:** P4
-**Category:** Pattern Generation
-**Manual Reference:** DRILLING HOLES IN A LINE — "ANGLE HOLE" (lines 364-377)
+**Priority:** P4  
+**Category:** Pattern Generation  
+**Manual reference:** EL400 Operation Manual §9.1.4, pp. 53–54
 
 ## User Story
 
-**As a** machine operator
-**I want** to drill evenly-spaced holes along a straight line at any angle
-**So that** I can create linear bolt patterns and slot mounting
+**As a** machine operator  
+**I want** distance-to-go guidance for equally spaced holes on an angled line  
+**So that** I can drill a straight pattern at any orientation
 
-## Acceptance Criteria
+## Target Acceptance Criteria
 
-- [x] AC19.1: Press Angle Hole key
-- [x] AC19.2: Enter X coordinate of first hole (ENTCNT 0)
-- [x] AC19.3: Enter Y coordinate of first hole (ENTCNT 1)
-- [x] AC19.4: Enter PITCH (hole spacing distance)
-- [x] AC19.5: Enter line ANGLE (0-359 degrees)
-- [x] AC19.6: Enter number of HOLES
-- [x] AC19.7: System calculates end point based on holes × pitch
-- [x] AC19.8: Holes positioned along line at specified angle
-- [x] AC19.9: 0° = horizontal right, 90° = vertical up
-- [x] AC19.10: Navigation works (6=next, 4=prev, 2=jump)
+- [ ] **AC19.1:** Angle Hole starts only from ABS mode and visibly requests first-hole X (`EntCnt0`), first-hole Y (`EntCnt1`), positive pitch, line angle, and hole count.
+- [ ] **AC19.2:** Angle is measured anticlockwise from +X: 0° advances +X, 90° advances +Y, 180° advances −X, and 270° advances −Y.
+- [ ] **AC19.3:** Hole $n$ is $start+(n-1)·pitch·[cos(angle),sin(angle)]$. Therefore the final hole is **(holes−1) pitches** from the first, not holes×pitch.
+- [ ] **AC19.4:** Final ENT enters live X/Y distance-to-go to hole 1. Only numeric distance-to-go axes use the pattern function marker.
+- [ ] **AC19.5:** 6/4 navigate and wrap; 8 toggles a visible current-hole view with X=`hoLES` and the 1-based hole number in Y.
+- [ ] **AC19.6:** 2 opens visible specific-hole entry with X=`hoLES` and the numeric buffer in Y. All digits, including 2/4/6/8, are data; ENT accepts only a safe in-range integer and returns to its distance-to-go.
+- [ ] **AC19.7:** C leaves the macro and restores the normal ABS coordinate display.
 
-## E2E Test Scenarios
+## Operator Procedure and Independent Oracles
 
-```typescript
-describe('US-019: Angle Hole (Linear Hole Pattern)', () => {
-  test('activate angle hole mode', async ({ page }) => {
-    await page.goto('/');
+For start `(10,5)`, pitch `20`, angle `30°`, six holes, expected targets are:
 
-    await page.click('[data-testid="angle-hole-button"]');
+`(10,5)`, `(27.3205,15)`, `(44.6410,25)`, `(61.9615,35)`, `(79.2820,45)`, `(96.6025,55)`.
 
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('ANGLE');
-  });
+The last target is five pitches from the first. Axis convention controls are start `(0,0)`, pitch `10`, five holes: at 0° expect `(0,0)` through `(40,0)`; at 90° expect `(0,0)` through `(0,40)`. Jump to hole 4 proves that the arrow-labelled key is treated as a digit during jump entry.
 
-  test('enter first hole coordinates', async ({ page }) => {
-    await page.goto('/');
+## Baseline Audit Status (headed debug audit)
 
-    // Activate angle hole
-    // ... setup ...
+The pre-implementation audit passed all visible setup prompts, the six 30° targets, the 0° and 90° controls, 4/6 navigation, and wrap. The old story incorrectly described the endpoint as holes×pitch. Direct jump worked only for non-arrow digits; the jump prompt was invisible and hole 4 could not be entered. These are baseline observations only.
 
-    // Enter X = 0.45
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('ENTCNT 0');
-    await page.evaluate(() => window.enterValue('0.45'));
-    await page.click('[data-testid="ent-button"]');
+Evidence: `/tmp/el400-audit-ManualPatterns.json` (`US-019`) and `/tmp/el400-audit/patterns/us019-vertical.png`.
 
-    // Enter Y = 0.65
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('ENTCNT 1');
-    await page.evaluate(() => window.enterValue('0.65'));
-    await page.click('[data-testid="ent-button"]');
-  });
+## Automated Coverage
 
-  test('enter pitch spacing 0.5', async ({ page }) => {
-    await page.goto('/');
-
-    // After first hole coordinates
-    // ... setup ...
-
-    // Enter pitch = 0.5
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('PITCH');
-    await page.evaluate(() => window.enterValue('0.5'));
-    await page.click('[data-testid="ent-button"]');
-  });
-
-  test('enter angle 30 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    // After pitch
-    // ... setup ...
-
-    // Enter angle = 30
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('ANGLE');
-    await page.evaluate(() => window.enterValue('30'));
-    await page.click('[data-testid="ent-button"]');
-  });
-
-  test('enter 6 holes', async ({ page }) => {
-    await page.goto('/');
-
-    // After angle
-    // ... setup ...
-
-    // Enter 6 holes
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('HOLES');
-    await page.evaluate(() => window.enterValue('6'));
-    await page.click('[data-testid="ent-button"]');
-
-    // System calculates positions
-  });
-
-  test('verify hole 1 at start point', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup: first hole at (0.45, 0.65)
-    // ... complete setup ...
-
-    // Navigate to hole 1
-    await page.evaluate(() => window.moveToTarget());
-
-    // Should be at start position
-    // (distance-to-go shows 0,0 when at hole position)
-  });
-
-  test('verify hole spacing equals pitch', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup: pitch = 0.5, angle = 30°, 6 holes
-    // Hole 1: (0.45, 0.65)
-    // Hole 2: (0.45 + 0.5×cos(30°), 0.65 + 0.5×sin(30°))
-    //       = (0.45 + 0.433, 0.65 + 0.25)
-    //       = (0.883, 0.90)
-
-    // ... setup macro ...
-
-    // Calculate expected positions
-    const pitch = 0.5;
-    const angle = 30 * Math.PI / 180;
-
-    for (let i = 0; i < 6; i++) {
-      const expectedX = 0.45 + i * pitch * Math.cos(angle);
-      const expectedY = 0.65 + i * pitch * Math.sin(angle);
-
-      // Verify hole i+1 is at expected position
-      // ... navigate to hole i+1 ...
-      // ... verify position ...
-    }
-  });
-
-  test('verify holes follow angle line', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup: angle = 30°
-    // All holes should lie on a line at 30° from horizontal
-
-    // ... setup macro ...
-
-    // Verify linearity: all holes on same slope
-    // Slope = tan(30°) = 0.577
-    // ΔY / ΔX should equal tan(30°) for all consecutive holes
-  });
-
-  test('horizontal line at 0 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup: angle = 0°, pitch = 1.0, 5 holes, start (0,0)
-    // Holes should be at:
-    // (0,0), (1,0), (2,0), (3,0), (4,0)
-
-    // ... setup macro with angle=0 ...
-
-    // Verify all Y coordinates are 0
-    // Verify X increases by pitch
-  });
-
-  test('vertical line at 90 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    // Setup: angle = 90°, pitch = 1.0, 5 holes, start (0,0)
-    // Holes should be at:
-    // (0,0), (0,1), (0,2), (0,3), (0,4)
-
-    // ... setup macro with angle=90 ...
-
-    // Verify all X coordinates are 0
-    // Verify Y increases by pitch
-  });
-});
-```
-
-## Implementation Notes
-
-- **Position calculation**:
-  - Hole[i].X = start_x + (i × pitch × cos(angle))
-  - Hole[i].Y = start_y + (i × pitch × sin(angle))
-  - where i = 0, 1, 2, ..., (holes-1)
-- **Angle convention**:
-  - 0° = horizontal right (+X direction)
-  - 90° = vertical up (+Y direction)
-  - 180° = horizontal left (-X direction)
-  - 270° = vertical down (-Y direction)
-- **Parameters**:
-  1. First hole X, Y coordinates
-  2. Pitch (spacing between holes)
-  3. Angle (line direction)
-  4. Number of holes
-- **End point**: Automatically calculated, not entered
-  - End = start + (holes-1) × pitch × [cos(angle), sin(angle)]
-- **Use cases**: Slotted mounting, linear fastener patterns, guide rails
+[`e2e/05-pattern-generation/US-019-angle-hole.spec.ts`](../../../e2e/05-pattern-generation/US-019-angle-hole.spec.ts) is the executable browser coverage. It should compare displayed DTG against the independent target list and exercise visible jump entry. New checks remain unverified until Main runs the integrated suite.
 
 ## Related Stories
 
-- US-014: Trigonometric Functions (angle calculations)
-- US-016: Bolt Circle Full (similar navigation)
-- US-020: Grid Drilling (2D extension of linear pattern)
+- US-020: two-dimensional Grid pattern
+- US-029: axis-aligned, unbounded Linear Bolt Hole function

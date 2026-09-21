@@ -1,4 +1,105 @@
 import { test, expect } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
+
+async function gotoSetupRow(
+  dro: DROPage,
+  matches: (text: string) => boolean,
+  description: string,
+  axis: 'X' | 'Y' | 'Z' = 'X',
+) {
+  await dro.settingsButton.click();
+  await dro.waitForAxisPureTextValue('X', 'SELECt');
+  await dro.selectAxis(axis);
+
+  for (let step = 0; step < 80; step += 1) {
+    if (matches(await dro.getAxisRawText('X'))) return;
+    await dro.key2.click();
+  }
+  throw new Error(`${description} setup row not found`);
+}
+
+async function saveChangesAndExit(dro: DROPage) {
+  for (let step = 0; step < 80; step += 1) {
+    if ((await dro.getAxisRawText('X')).toLowerCase() === 'sau chg') break;
+    await dro.key2.click();
+  }
+  expect((await dro.getAxisRawText('X')).toLowerCase()).toBe('sau chg');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StorEd');
+
+  for (let step = 0; step < 80; step += 1) {
+    if ((await dro.getAxisRawText('X')) === 'End') break;
+    await dro.key2.click();
+  }
+  await dro.waitForAxisPureTextValue('X', 'End');
+  await dro.enterButton.click();
+  await dro.waitForReady('idle');
+}
+
+async function setBeep(dro: DROPage, enabled: boolean) {
+  const target = enabled ? 'bEEP on' : 'bEEP oFF';
+  await gotoSetupRow(dro, (text) => text.startsWith('bEEP'), 'bEEP');
+  if ((await dro.getAxisRawText('X')) !== target) await dro.key6.click();
+  await dro.waitForAxisPureTextValue('X', target);
+  await saveChangesAndExit(dro);
+}
+
+async function setDisplayResolution(
+  dro: DROPage,
+  axis: 'X' | 'Y' | 'Z',
+  target: 'dP 10.0' | 'dP 20.0' | 'dP 50.0',
+) {
+  await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'dP', axis);
+  for (let step = 0; step < 10; step += 1) {
+    if ((await dro.getAxisRawText('X')) === target) break;
+    await dro.key6.click();
+  }
+  await dro.waitForAxisPureTextValue('X', target);
+  await saveChangesAndExit(dro);
+}
+
+async function captureOemBaseline(dro: DROPage) {
+  await gotoSetupRow(dro, (text) => text === 'oEm mod', 'oEm mod');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'PASS');
+  for (const key of [dro.key3, dro.key5, dro.key7, dro.key2, dro.key6]) {
+    await key.click();
+  }
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'oEm');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StorEd');
+
+  while ((await dro.getAxisRawText('X')) !== 'End') {
+    await dro.key2.click();
+  }
+  await dro.enterButton.click();
+  await dro.waitForReady('idle');
+}
+
+async function programSdmStepOneX(dro: DROPage, value: string) {
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.waitForAxisPureTextValue('X', 'ProGrAn');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StEPno');
+  await dro.enterButton.click();
+  await dro.enterNumber(value);
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StEPno');
+  await dro.clearButton.click();
+  await dro.waitForReady('idle');
+}
+
+async function expectSdmStepOneX(dro: DROPage, expected: number) {
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.waitForAxisPureTextValue('X', 'ProGrAn');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StEPno');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureNumberValue('X', expected);
+}
 
 /**
  * E2E Tests: US-036 Settings Persistence
@@ -125,22 +226,112 @@ test.describe('US-036: Settings Persistence', () => {
     await expect(await dro.isInchUnits()).toBe(true);
   });
 
-  /**
-   * AC35.6: The DRO works as a CNCjs widget embedded in an iframe.
-   * localStorage must work in same-origin context.
-   */
-  test('should work in same-origin context', async ({ dro }) => {
-    // Verify localStorage is available (page is already navigated by beforeEach/dro fixture)
-    const hasLocalStorage = await dro.page.evaluate(() => {
-      try {
-        localStorage.setItem('test', 'value');
-        localStorage.removeItem('test');
-        return true;
-      } catch {
-        return false;
-      }
-    });
+  test('persists saved bEEP and dP settings across a debug-source reload', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await setBeep(dro, false);
+    await setDisplayResolution(dro, 'X', 'dP 10.0');
 
-    expect(hasLocalStorage).toBe(true);
+    await dro.reload();
+    await gotoSetupRow(dro, (text) => text.startsWith('bEEP'), 'bEEP');
+    await dro.waitForAxisPureTextValue('X', 'bEEP oFF');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+
+    await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'dP');
+    await dro.waitForAxisPureTextValue('X', 'dP 10.0');
+  });
+
+  test('restores only the selected axis from a persisted OEM baseline', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await setDisplayResolution(dro, 'X', 'dP 10.0');
+    await captureOemBaseline(dro);
+
+    // Cross a power-cycle, then make the selected axis, another axis, and a
+    // global setting all distinctive. Reset OEM must restore only X.
+    await dro.reload();
+    await setDisplayResolution(dro, 'X', 'dP 50.0');
+    await setDisplayResolution(dro, 'Y', 'dP 20.0');
+    await setBeep(dro, false);
+    await gotoSetupRow(dro, (text) => text === 'rSt oEm', 'rSt oEm', 'X');
+    await dro.enterButton.click();
+    await dro.waitForAxisPureTextValue('X', 'In ProG');
+    await dro.waitForReady('idle');
+    await dro.reload();
+
+    await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'X dP', 'X');
+    await dro.waitForAxisPureTextValue('X', 'dP 10.0');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+
+    await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'Y dP', 'Y');
+    await dro.waitForAxisPureTextValue('X', 'dP 20.0');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+
+    await gotoSetupRow(dro, (text) => text.startsWith('bEEP'), 'bEEP');
+    await dro.waitForAxisPureTextValue('X', 'bEEP oFF');
+  });
+
+  test('factory restore without an OEM snapshot preserves other axes, globals, and job data', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await setDisplayResolution(dro, 'X', 'dP 50.0');
+    await setDisplayResolution(dro, 'Y', 'dP 20.0');
+    await setBeep(dro, false);
+    await programSdmStepOneX(dro, '4.2');
+
+    await gotoSetupRow(dro, (text) => text === 'rSt oEm', 'rSt oEm', 'X');
+    await dro.enterButton.click();
+    await dro.waitForAxisPureTextValue('X', 'In ProG');
+    await dro.waitForReady('idle');
+    await dro.reload();
+
+    await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'X dP', 'X');
+    await dro.waitForAxisPureTextValue('X', 'dP 5.0');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+
+    await gotoSetupRow(dro, (text) => text.startsWith('dP'), 'Y dP', 'Y');
+    await dro.waitForAxisPureTextValue('X', 'dP 20.0');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+
+    await gotoSetupRow(dro, (text) => text.startsWith('bEEP'), 'bEEP');
+    await dro.waitForAxisPureTextValue('X', 'bEEP oFF');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
+    await expectSdmStepOneX(dro, 4.2);
+  });
+
+  /**
+   * AC35.6: settings remain live and persistent in a real same-origin iframe.
+   */
+  test('persists settings through a same-origin iframe reload', async ({ dro }) => {
+    const current = new URL(dro.page.url());
+    const widgetPath = `${current.pathname}${current.search}`;
+
+    await dro.page.evaluate((src) => {
+      document.body.replaceChildren();
+      const frame = document.createElement('iframe');
+      frame.title = 'EL400 settings widget';
+      frame.src = src;
+      document.body.appendChild(frame);
+    }, widgetPath);
+
+    const widget = dro.page.frameLocator('iframe[title="EL400 settings widget"]');
+    await expect(widget.getByTestId('el400-simulator')).toHaveAttribute('data-dro-state', 'idle');
+    await widget.getByRole('button', { name: 'Toggle units' }).click();
+    await expect(widget.getByTestId('led-mm').locator('input')).toBeChecked();
+
+    await dro.page.evaluate((src) => {
+      const prior = document.querySelector('iframe');
+      prior?.remove();
+      const frame = document.createElement('iframe');
+      frame.title = 'EL400 settings widget';
+      frame.src = src;
+      document.body.appendChild(frame);
+    }, widgetPath);
+
+    await expect(widget.getByTestId('el400-simulator')).toHaveAttribute('data-dro-state', 'idle');
+    await expect(widget.getByTestId('led-mm').locator('input')).toBeChecked();
   });
 });

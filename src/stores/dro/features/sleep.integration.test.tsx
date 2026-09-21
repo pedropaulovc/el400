@@ -1,62 +1,59 @@
-/**
- * Integration tests for the display sleep timer (US-026).
- *
- * Drives the full simulator. The idle countdown is advanced with FAKE timers (no
- * real waits); sleep is reached via the real SLEEP_TIMER_ELAPSED path, and wake
- * is triggered by a REAL key press (clicking a keypad button) or a REAL jog
- * (a millStore position change + MILL_STATE_CHANGED, the same event a connected
- * adapter emits) -- never by forcing displayPower directly.
- */
-
+/** Integration coverage for the setup-driven display sleep timer. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen, act, fireEvent } from '@testing-library/react';
-import { renderSimulator } from '../../../tests/helpers/integration-test-utils';
-import { useSettingsStore } from '../../settingsStore';
-import { useMillStore } from '../../millStore';
-import { useDROStore } from '../../droStore';
-import { createDefaultMillState } from '../../../types/millState';
+import { screen, act } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
+import {
+  renderSimulator,
+  typeValue,
+  pressEnter,
+  emitMillTick,
+  emitPosition,
+  getAxisDisplayPureTextValue,
+  getAxisDisplayPureNumberValue,
+} from '../../../tests/helpers/integration-test-utils';
+import { SETUP_PARAMETERS } from './setup-parameters';
 import { MINUTES_TO_MS } from './sleep';
 
-function panel(): HTMLElement {
-  return screen.getByTestId('display-panel');
-}
-
 function isAsleep(): boolean {
-  return panel().getAttribute('data-display-power') === 'asleep';
+  return screen.getByTestId('display-panel').getAttribute('data-display-power') === 'asleep';
 }
 
-/** Advance fake timers inside act() so React effects flush. */
-function advance(ms: number): void {
+function advance(ms: number) {
   act(() => {
     vi.advanceTimersByTime(ms);
   });
 }
 
-/** Set the SLEEP T timeout inside act() so the hook's effect re-arms. */
-function setSleepTimeout(minutes: number): void {
-  act(() => {
-    useSettingsStore.getState().updateNvMem({ sleepTimeout: minutes });
-  });
+async function scrollSetupTo(user: UserEvent, label: string) {
+  for (let guard = 0; getAxisDisplayPureTextValue('X') !== label; guard += 1) {
+    if (guard >= SETUP_PARAMETERS.length) throw new Error(`${label} not reachable in setup`);
+    await user.click(screen.getByTestId('key-2'));
+  }
 }
 
-/** Simulate a real jog: update the mill position and dispatch MILL_STATE_CHANGED. */
-function jog(deltaX: number): void {
-  act(() => {
-    const prev = useMillStore.getState().millState;
-    useMillStore.setState({
-      millState: {
-        ...prev,
-        connected: true,
-        position: { ...prev.position, x: prev.position.x + deltaX },
-      },
-    });
-    useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
-  });
+async function configureSleep(user: UserEvent, minutes: string) {
+  await user.click(screen.getByTestId('btn-settings'));
+  await user.click(screen.getByTestId('axis-select-x'));
+  await scrollSetupTo(user, 'SLEEP t');
+
+  await pressEnter(user);
+  expect(screen.getByTestId('axis-value-x').textContent.trim()).toBe('000');
+  await pressEnter(user);
+  expect(screen.getByTestId('axis-value-x').textContent.trim()).toBe('0');
+  await typeValue(user, minutes);
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('StorEd');
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+  await user.click(screen.getByTestId('key-clear'));
 }
 
 describe('US-026 Display Sleep Timer (integration)', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     localStorage.clear();
   });
 
@@ -64,67 +61,64 @@ describe('US-026 Display Sleep Timer (integration)', () => {
     vi.useRealTimers();
   });
 
-  it('display sleeps after the configured idle period elapses (AC26.5, AC26.6)', async () => {
-    await renderSimulator({ millSource: 'noop' });
-    setSleepTimeout(5);
-    useMillStore.setState({ millState: createDefaultMillState('noop') });
-
+  it('sleeps after the configured idle interval while unchanged live encoder ticks do not reset it', async () => {
+    const { user } = await renderSimulator();
+    await configureSleep(user, '5');
     expect(isAsleep()).toBe(false);
 
-    advance(5 * MINUTES_TO_MS);
+    advance(4 * MINUTES_TO_MS);
+    for (let count = 0; count < 5; count += 1) emitMillTick();
+    advance(MINUTES_TO_MS);
 
     expect(isAsleep()).toBe(true);
-    // Wrench/sleep LED flashes while asleep (AC26.6).
-    expect(screen.getByTestId('sleep-led').className).toMatch(/flashing/);
+    for (const axis of ['x', 'y', 'z']) expect(screen.getByTestId(`axis-value-${axis}`)).toBeEmptyDOMElement();
+    emitMillTick();
+    expect(isAsleep()).toBe(true);
   });
 
-  it('a real key press wakes the sleeping display (AC26.7)', async () => {
-    await renderSimulator({ millSource: 'noop' });
-    setSleepTimeout(5);
+  it('a physical move resets the live activity deadline and later wakes the display', async () => {
+    const { user } = await renderSimulator();
+    await configureSleep(user, '5');
 
-    advance(5 * MINUTES_TO_MS);
-    expect(isAsleep()).toBe(true);
-
-    // A real keypad-button click dispatches KEY_5 through the store; the sleep
-    // reducer consumes it to wake (fireEvent, not userEvent, to stay compatible
-    // with fake timers).
-    act(() => {
-      fireEvent.click(screen.getByTestId('key-5'));
-    });
+    advance(4 * MINUTES_TO_MS);
+    emitPosition(1, 0, 0);
+    advance(MINUTES_TO_MS);
     expect(isAsleep()).toBe(false);
-  });
 
-  it('a real X axis button wakes the sleeping display (AC26.7)', async () => {
-    await renderSimulator({ millSource: 'noop' });
-    setSleepTimeout(5);
-
-    advance(5 * MINUTES_TO_MS);
+    advance(4 * MINUTES_TO_MS);
     expect(isAsleep()).toBe(true);
 
-    act(() => {
-      fireEvent.click(screen.getByTestId('axis-select-x'));
-    });
+    emitPosition(2, 0, 0);
     expect(isAsleep()).toBe(false);
   });
 
-  it('a real jog wakes the sleeping display (AC26.7)', async () => {
-    await renderSimulator({ millSource: 'noop' });
-    setSleepTimeout(5);
-    useMillStore.setState({ millState: createDefaultMillState('noop') });
+  it('front-panel activity resets the deadline and the waking press is consumed', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('axis-select-x'));
+    await typeValue(user, '20');
+    await pressEnter(user);
+    expect(getAxisDisplayPureNumberValue('X')).toBe(20);
+    await configureSleep(user, '5');
 
-    advance(5 * MINUTES_TO_MS);
-    expect(isAsleep()).toBe(true);
-
-    jog(1.0);
+    advance(4 * MINUTES_TO_MS);
+    await user.click(screen.getByTestId('key-5'));
+    advance(MINUTES_TO_MS);
     expect(isAsleep()).toBe(false);
+
+    advance(4 * MINUTES_TO_MS);
+    expect(isAsleep()).toBe(true);
+    await user.click(screen.getByTestId('axis-zero-x'));
+    expect(isAsleep()).toBe(false);
+    expect(getAxisDisplayPureNumberValue('X')).toBe(20);
+    // The first Zero X wakes only; the second press performs the zero.
+    await user.click(screen.getByTestId('axis-zero-x'));
+    expect(getAxisDisplayPureNumberValue('X')).toBe(0);
   });
 
-  it('never sleeps when sleepTimeout is 0 (disabled, AC26.8)', async () => {
-    await renderSimulator({ millSource: 'noop' });
-    setSleepTimeout(0);
-
+  it('never sleeps while SLEEP t remains at its saved zero default', async () => {
+    await renderSimulator();
     advance(120 * MINUTES_TO_MS);
-
+    emitMillTick();
     expect(isAsleep()).toBe(false);
   });
 });

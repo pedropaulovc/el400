@@ -49,8 +49,9 @@ describe('sleepReducer', () => {
   });
 
   it('ignores SLEEP_TIMER_ELAPSED while already asleep (idempotent)', () => {
-    const next = sleepReducer(asleepState(), { eventName: 'SLEEP_TIMER_ELAPSED' }, contextAt(0, 0, 0));
-    expect(next).toBeNull();
+    const current = asleepState();
+    const next = sleepReducer(current, { eventName: 'SLEEP_TIMER_ELAPSED' }, contextAt(0, 0, 0));
+    expect(next).toBe(current);
   });
 
   it('passes through (returns null) for any event while awake', () => {
@@ -129,13 +130,13 @@ describe('useSleepTimer (fake timers)', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('restarts the countdown on store activity (a dispatch resets the idle timer)', () => {
+  it('restarts the countdown on a real front-panel press', () => {
     const dispatch = vi.fn();
     renderHook(() => { useSleepTimer(dispatch, 'idle', 5); });
 
     // Almost elapsed, then a store update (user activity) resets the timer.
     vi.advanceTimersByTime(5 * MINUTES_TO_MS - 100);
-    useDROStore.setState({ display: { ...INITIAL_DISPLAY_STATE, X: 1 } });
+    useDROStore.getState().dispatch({ eventName: 'KEY_CLEAR' });
 
     // Original window passes: must NOT have fired because the timer restarted.
     vi.advanceTimersByTime(200);
@@ -145,6 +146,16 @@ describe('useSleepTimer (fake timers)', () => {
     vi.advanceTimersByTime(5 * MINUTES_TO_MS);
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith({ eventName: 'SLEEP_TIMER_ELAPSED' });
+  });
+
+  it('sleeps despite repeated unchanged encoder broadcasts', () => {
+    const dispatch = vi.fn();
+    renderHook(() => { useSleepTimer(dispatch, 'idle', 1); });
+    for (let tick = 0; tick < 600; tick++) {
+      useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+      vi.advanceTimersByTime(100);
+    }
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith({ eventName: 'SLEEP_TIMER_ELAPSED' });
   });
 
   it('clears its timer on unmount', () => {

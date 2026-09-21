@@ -76,7 +76,7 @@ function AppContent() {
   // /?source=cncjs&taperOn=Z. Mirrors how boot reads `bootMessageMode`.
   useEffect(() => {
     const param = new URLSearchParams(window.location.search).get('taperOn');
-    const valid: TaperOnAxis[] = ['X', 'Z', 'Zprime'];
+    const valid: TaperOnAxis[] = ['X', 'Y', 'Z'];
     if (param && (valid as string[]).includes(param)) {
       useSettingsStore.getState().updateNvMem({ taperOnAxis: param as TaperOnAxis });
     }

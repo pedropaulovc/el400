@@ -1,75 +1,62 @@
-/**
- * Unit tests for the AUX Fn (`AUH Fn`) hardware-absent dwell.
- *
- * ENT on the `AUH Fn` setup row flashes `no Conn` (the optional DB15 auxiliary
- * connector is absent) and then returns to the row. The dwell must survive the
- * ~100ms MILL_STATE_CHANGED encoder tick a connected DRO emits — the known
- * dwell-screen footgun — and dismiss only on its timeout or a front-panel key.
- */
-
-import { describe, it, expect, beforeEach } from 'vitest';
-import { setupReducer } from './setup';
-import { enterAuxFnNoConn, AUX_FN_NO_CONN_TEXT } from './aux-fn';
-import { SETUP_PARAMETERS, AUX_FN_ID } from './setup-parameters';
-import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
-import { INITIAL_SETUP_DATA, type SetupData } from '../droStateMachine';
-import type { DROStatePayload } from '../types';
-import { useSettingsStore } from '../../settingsStore';
+import { describe, expect, it } from 'vitest';
+import { auxiliaryReducer, crossedOutput, enterSixOutput, evaluateOutputs, formatSerialPayload } from './aux-fn';
+import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+import { DEFAULT_TEST_CONTEXT } from '../test-utils';
+import type { SixOutputData } from '../droStateMachine';
 
-const ctx = DEFAULT_TEST_CONTEXT;
-const AUX_FN_IDX = SETUP_PARAMETERS.findIndex((p) => p.id === AUX_FN_ID);
+const memory = { ...INITIAL_VOLATILE_MEMORY_STATE, outputCount: 2, outputProgram: [{ axis: 'X' as const, positionMm: 10 }, { axis: 'Y' as const, positionMm: -2 }, ...INITIAL_VOLATILE_MEMORY_STATE.outputProgram.slice(2)] };
+const initial = enterSixOutput(memory).stateData as SixOutputData;
+const settings = { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' as const };
 
-beforeEach(() => {
-  useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+describe('six-output threshold semantics', () => {
+  it('continuous is a comparator, not a latch; equality is low and axis mappings are independent', () => {
+    const first = evaluateOutputs(initial, memory, { X: 11, Y: -3, Z: 200 }, 'continuous', 0);
+    expect(first.outputs).toEqual(['high', 'low', 'low', 'low', 'low', 'low']);
+    const second = evaluateOutputs({ ...initial, ...first }, memory, { X: 9, Y: -1, Z: 200 }, 'continuous', 10);
+    expect(second.outputs.slice(0, 2)).toEqual(['low', 'high']);
+    expect(evaluateOutputs(initial, memory, { X: 10, Y: -2, Z: 200 }, 'continuous', 20).outputs.slice(0, 2)).toEqual(['low', 'low']);
+  });
+
+  it('pulses for skipped and exact crossings in both directions, but not initial position, held equality or departure', () => {
+    expect(crossedOutput(9, 11, 10)).toBe(true);
+    expect(crossedOutput(11, 9, 10)).toBe(true);
+    expect(crossedOutput(9, 10, 10)).toBe(true);
+    expect(crossedOutput(11, 10, 10)).toBe(true);
+    expect(crossedOutput(10, 10, 10)).toBe(false);
+    expect(crossedOutput(10, 11, 10)).toBe(false);
+    const first = evaluateOutputs(initial, memory, { X: 11, Y: 0, Z: 0 }, 'pulse', 0);
+    expect(first.outputs[0]).toBe('low');
+    const crossing = evaluateOutputs({ ...initial, ...first }, memory, { X: 9, Y: 0, Z: 0 }, 'pulse', 100);
+    expect(crossing.outputs[0]).toBe('high');
+    const held = { ...initial, ...crossing };
+    expect(evaluateOutputs(held, memory, { X: 9, Y: 0, Z: 0 }, 'pulse', 1099).outputs[0]).toBe('high');
+    expect(evaluateOutputs(held, memory, { X: 9, Y: 0, Z: 0 }, 'pulse', 1100).outputs[0]).toBe('low');
+    expect(evaluateOutputs(held, memory, { X: 11, Y: 0, Z: 0 }, 'pulse', 1200).outputs[0]).toBe('high');
+  });
+
+  it('stops all outputs on C while preserving the operator program', () => {
+    const state = { ...enterSixOutput(memory), stateName: 'six-output-run' as const, stateData: { ...initial, outputs: ['high' as const, 'low' as const] } };
+    const stopped = auxiliaryReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+    expect(stopped.stateName).toBe('idle');
+    expect(stopped.vMem.outputProgram).toEqual(memory.outputProgram);
+  });
 });
 
-/** Build a setup-parameter state highlighting the given param index. */
-function paramState(currentParamIndex: number): DROStatePayload {
-  const merged: SetupData = { ...INITIAL_SETUP_DATA, selectedAxis: 'X', currentParamIndex };
-  return { ...createTestState('setup-parameter'), stateData: merged };
-}
-
-/** Build the `setup-aux-fn` dwell state highlighting the AUH Fn row. */
-function dwellState(): DROStatePayload {
-  const data: SetupData = { ...INITIAL_SETUP_DATA, selectedAxis: 'X', currentParamIndex: AUX_FN_IDX };
-  return enterAuxFnNoConn(data, createTestState('setup-parameter').vMem);
-}
-
-describe('AUX Fn dwell - entry', () => {
-  it('ENT on the AUH Fn row enters setup-aux-fn showing no Conn', () => {
-    const result = setupReducer(paramState(AUX_FN_IDX), { eventName: 'KEY_ENTER' }, ctx);
-    expect(result?.stateName).toBe('setup-aux-fn');
-    expect(result?.display.X).toBe(AUX_FN_NO_CONN_TEXT);
-    expect(result?.display.Y).toBe('');
-    expect(result?.display.Z).toBe('');
-    // The row index is carried through so it stays highlighted on return.
-    expect((result?.stateData as SetupData).currentParamIndex).toBe(AUX_FN_IDX);
+describe('EL400 serial record', () => {
+  it('matches the literal manual sample', () => {
+    expect(formatSerialPayload({ X: 10.005, Y: 86.98, Z: 0 }, 'abs', settings)).toBe('0010.005 ARMX 0086.980 ARMY 0000.000 ARMZ');
   });
 
-  it('left/right do nothing on the choiceless AUH Fn row', () => {
-    expect(setupReducer(paramState(AUX_FN_IDX), { eventName: 'KEY_6_RIGHT' }, ctx)).toBeNull();
-    expect(setupReducer(paramState(AUX_FN_IDX), { eventName: 'KEY_4_LEFT' }, ctx)).toBeNull();
-  });
-});
-
-describe('AUX Fn dwell - dismissal', () => {
-  it('AUX_FN_TIMEOUT returns to the menu with AUH Fn highlighted', () => {
-    const result = setupReducer(dwellState(), { eventName: 'AUX_FN_TIMEOUT' }, ctx);
-    expect(result?.stateName).toBe('setup-parameter');
-    expect((result?.stateData as SetupData).currentParamIndex).toBe(AUX_FN_IDX);
-    expect(result?.display.X).toBe('AUX Fn');
+  it('preserves signs and each status letter without negative zero', () => {
+    const config = { ...settings, defaultUnit: 'inch' as const, measurementMode: { X: 'diameter' as const, Y: 'radius' as const, Z: 'diameter' as const } };
+    expect(formatSerialPayload({ X: -1.25, Y: -0.0001, Z: 1.9996 }, 'inc', config)).toBe('-0001.250 IDNX 0000.000 IRNY 0002.000 IDNZ');
   });
 
-  it('a front-panel key (KEY_CLEAR) dismisses the dwell early', () => {
-    const result = setupReducer(dwellState(), { eventName: 'KEY_CLEAR' }, ctx);
-    expect(result?.stateName).toBe('setup-parameter');
-    expect(result?.display.X).toBe('AUX Fn');
-  });
-
-  it('MILL_STATE_CHANGED encoder tick does NOT wipe the dwell', () => {
-    const result = setupReducer(dwellState(), { eventName: 'MILL_STATE_CHANGED' }, ctx);
-    // null = not handled; the screen holds on `no Conn` until a real dismissal.
-    expect(result).toBeNull();
+  it('rejects non-numeric warnings and overflow instead of sending plausible data', () => {
+    expect(() => formatSerialPayload({ X: 'no SIG', Y: 0, Z: 0 }, 'abs', settings)).toThrow();
+    expect(() => formatSerialPayload({ X: Infinity, Y: 0, Z: 0 }, 'abs', settings)).toThrow();
+    expect(() => formatSerialPayload({ X: 9999.9996, Y: 0, Z: 0 }, 'abs', settings)).toThrow();
+    expect(formatSerialPayload({ X: 9999.9994, Y: 0, Z: 0 }, 'abs', settings)).toContain('9999.999 ARMX');
   });
 });

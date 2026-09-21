@@ -259,6 +259,28 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  // Simulate the CNCjs controller port closing or reopening while the Socket.IO
+  // transport remains live. This drives the real adapter's serialport lifecycle
+  // handlers and preserves the session for reconnection assertions.
+  if (
+    (pathname === '/api/disconnect' || pathname === '/api/reconnect') &&
+    req.method === 'POST'
+  ) {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+
+    const connected = pathname === '/api/reconnect';
+    io.to(sessionId).emit(connected ? 'serialport:open' : 'serialport:close');
+    if (connected) emitStateToSession(sessionId);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, connected }));
+    return;
+  }
+
   // 404 for unknown routes
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));

@@ -1,59 +1,122 @@
 import { test, expect } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
 
 /**
  * E2E: US-024 Setup Menu — Zero-Approach (Near-Zero) Warning.
  *
- * Drives the warning end-to-end through real user actions:
- * - Enabled via the ACTUAL setup menu (`dro.enableZeroApproachWarning`), no hooks.
- * - A target is set through the real Distance-to-Go buttons, then the machine is
- *   jogged toward it via the mock CNCjs server's encoder endpoint
- *   (`dro.simulateEncoderAbsoluteMove`, the same MILL_STATE_CHANGED path a real
- *   encoder uses). The `audio-indicator` visibility is the observed warning.
- *
- * Work in mm so the 0.002" (≈0.0508 mm) approach band has clean magnitudes.
- *
- * Covers AC24.1/.2 (enable via setup), AC24.6/.10 (fires within BP DIST, not
- * outside), and the disabled path (AC24.2 OFF).
+ * Covers both distinct manual contracts through visible controls:
+ * - target-bearing functions always retain the mandatory 50 µm warning, even
+ *   while the per-axis BUZZ option is off;
+ * - ZEro AP opens the selected axis's nested BUZZ / BP DIST / BP TOLR editor,
+ *   whose numeric values remain drafts until SAU CHG.
  *
  * @see project/user-stories/06-configuration/US-024-zero-approach-warning.md
  */
+
+async function gotoZeroApproach(dro: DROPage, axis: 'X' | 'Y' | 'Z') {
+  await dro.settingsButton.click();
+  await dro.waitForAxisPureTextValue('X', 'SELECt');
+  await dro.selectAxis(axis);
+
+  let guard = 0;
+  while ((await dro.getAxisRawText(axis)) !== 'ZEro AP') {
+    await dro.key2.click();
+    if (++guard > 40) throw new Error('ZEro AP row not reachable');
+  }
+}
+
+async function saveAndExitSetup(dro: DROPage) {
+  let guard = 0;
+  while ((await dro.getAxisRawText('X')) !== 'SAU ChG') {
+    await dro.key2.click();
+    if (++guard > 40) throw new Error('SAU ChG row not reachable');
+  }
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StorEd');
+  await dro.clearButton.click();
+  await dro.waitForAxisPureTextValue('X', 'SAU ChG');
+  await dro.clearButton.click();
+  await dro.waitForReady('idle');
+}
+
+async function configureXWarning(dro: DROPage) {
+  await gotoZeroApproach(dro, 'X');
+
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'bU22 oF');
+  await dro.key6.click();
+  await dro.waitForAxisPureTextValue('X', 'bU22 on');
+
+  await dro.key2.click();
+  await dro.waitForAxisPureTextValue('X', 'BP diSt');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', '0.0508');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', '0');
+  await dro.enterNumber('0.254');
+  await dro.enterButton.click();
+
+  await dro.waitForAxisPureTextValue('X', 'BP toLr');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', '0.0000');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', '0');
+  await dro.enterNumber('0.127');
+  await dro.enterButton.click();
+
+  await saveAndExitSetup(dro);
+}
+
+const blinkingDigits = (dro: DROPage, axis: 'x' | 'y' | 'z') =>
+  dro.page.getByTestId(`axis-display-${axis}`).locator('[data-blinking="true"]');
+
+
 test.describe('US-024: Zero-Approach Warning', () => {
-  // Setup-menu changes commit to persisted nvMem; serialise so parallel workers
-  // do not race on shared localStorage.
-  test.describe.configure({ mode: 'serial' });
-
-  test('warns only once the axis nears the target within BP DIST (AC24.6, AC24.10)', async ({ dro }) => {
-    await dro.toggleInchMm(); // mm
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.toggleInchMm();
     expect(await dro.isMmUnits()).toBe(true);
-    await dro.simulateEncoderAbsoluteMove('X', 0);
-
-    await dro.enableZeroApproachWarning();
-
-    // Target X = 10 mm. Machine at 0 -> distance-to-go reads 10; no warning.
-    await dro.startDistanceToGo('X', '10');
-    await dro.waitForAxisValue('X', 10);
-    expect(await dro.isZeroApproachWarningVisible()).toBe(false);
-
-    // Jog to 9 mm: still 1 mm to go, outside the band -> silent.
-    await dro.simulateEncoderAbsoluteMove('X', 9);
-    await dro.waitForAxisValue('X', 1);
-    expect(await dro.isZeroApproachWarningVisible()).toBe(false);
-
-    // Jog to within 0.03 mm of the target -> warning appears.
-    await dro.simulateEncoderAbsoluteMove('X', 9.97);
-    await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
   });
 
-  test('disabled warning never fires, even sitting on the target (AC24.2 OFF)', async ({ dro }) => {
-    await dro.toggleInchMm(); // mm
-    expect(await dro.isMmUnits()).toBe(true);
-    await dro.simulateEncoderAbsoluteMove('X', 0);
+  test('target warning keeps the mandatory 50 µm protection with BUZZ off', async ({ dro }) => {
+    await dro.simulateEncoderAbsoluteMove('X', 12);
+    await dro.startDistanceToGo('X', '20');
+    await dro.waitForAxisValue('X', 20);
 
-    // Do NOT enable the warning. Set a target and land exactly on it.
-    await dro.startDistanceToGo('X', '4');
-    await dro.simulateEncoderAbsoluteMove('X', 4);
-    await dro.waitForAxisValue('X', 0);
-
+    await dro.simulateEncoderAbsoluteMove('X', 31.94);
+    await dro.waitForAxisValue('X', 0.06);
     await expect(dro.page.getByTestId('audio-indicator')).toHaveCount(0);
+
+    await dro.simulateEncoderAbsoluteMove('X', 31.95);
+    await dro.waitForAxisValue('X', 0.05);
+    await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
+    await expect(blinkingDigits(dro, 'x')).toBeVisible();
+    await expect(blinkingDigits(dro, 'y')).toHaveCount(0);
+  });
+
+  test('nested numeric BP DIST/TOLR are per-axis and provide release hysteresis', async ({ dro }) => {
+    await dro.simulateEncoderAbsoluteMove('X', 1);
+    await dro.simulateEncoderAbsoluteMove('Y', 0);
+    await configureXWarning(dro);
+
+    await dro.waitForAxisValue('X', 1);
+    await expect(dro.page.getByTestId('audio-indicator')).toHaveCount(0);
+
+    // BP DIST 0.010 in = 0.254 mm: X engages, while Y at zero remains off.
+    await dro.simulateEncoderAbsoluteMove('X', 0.2);
+    await dro.waitForAxisValue('X', 0.2);
+    await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
+    await expect(blinkingDigits(dro, 'x')).toBeVisible();
+    await expect(blinkingDigits(dro, 'y')).toHaveCount(0);
+
+    // BP TOLR 0.005 in keeps the warning on through 0.381 mm, then releases.
+    await dro.simulateEncoderAbsoluteMove('X', 0.3);
+    await dro.waitForAxisValue('X', 0.3);
+    await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
+
+    await dro.simulateEncoderAbsoluteMove('X', 0.4);
+    await dro.waitForAxisValue('X', 0.4);
+    await expect(dro.page.getByTestId('audio-indicator')).toHaveCount(0);
+    await expect(blinkingDigits(dro, 'x')).toHaveCount(0);
   });
 });

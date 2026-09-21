@@ -1,65 +1,41 @@
 # US-029: Linear Bolt Hole
 
-**Manual Reference:** Section 9.1.6 Linear Bolt Hole
-**Priority:** P4
-**Category:** Pattern Generation
+**Priority:** P4  
+**Category:** Pattern Generation  
+**Manual reference:** EL400 Operation Manual §9.1.6, pp. 57–58; EL400 overview video §2.13 (top-level Fn choices and axis-aligned line-hole description)
 
 ## User Story
-**As a** milling operator
-**I want** to create a simple linear hole pattern along an axis
-**So that** I can drill equally spaced holes on one axis
 
-## Acceptance Criteria
-- [x] **AC 29.1:** Press `Fn` -> navigate to `LinEAr`, press `ent↵`.
-- [x] **AC 29.2:** Select Axis (X, Y, or Z).
-- [x] **AC 29.3:** Enter `PitCh` (spacing between holes).
-- [x] **AC 29.4:** Enter number of holes.
-- [x] **AC 29.5:** Display shows simple incremental distance to next hole.
-- [x] **AC 29.6:** Press `6►` to advance to next hole position.
-- [x] **AC 29.7:** Press `C` to exit function.
+**As a** milling operator  
+**I want** repeated distance-to-go targets at a fixed pitch on X, Y, or Z  
+**So that** I can drill an equally spaced axis-aligned line
 
-## E2E Test Scenarios
-```typescript
-describe('US-029: Linear Bolt Hole', () => {
-  test('Create linear hole pattern on X axis', async () => {
-    await dro.pressKey('Fn');
-    // Navigate to LinEAr
-    await dro.selectMenuOption('LinEAr');
-    await dro.pressKey('ENT');
+## Target Acceptance Criteria
 
-    // Select X axis
-    await dro.pressKey('X');
+- [ ] **AC29.1:** Press Fn, navigate from the default `CEntrE` top-level item to `LinEAr`, and press ENT. `CirCLE`/`LinE` belong to the nested `CEntrE` submenu and are not extra top-level steps.
+- [ ] **AC29.2:** The visible `AXIS` phase accepts a genuine physical X, Y, or Z axis. The selected axis is reset as directed by the manual before pitch entry.
+- [ ] **AC29.3:** Enter a positive `PitCh` in the current linear unit and confirm it with ENT.
+- [ ] **AC29.4:** Confirming the documented axis-and-pitch flow enters counting mode and shows live distance-to-go to the first hole (zero on the reset selected axis); the other two axes remain ordinary live coordinates.
+- [ ] **AC29.5:** Each 6 advances the target by one pitch on the selected axis: hole $n$ is `(n−1)·pitch` from the reset origin. 4 steps backward but clamps at hole 1; there is no count-based wrap.
+- [ ] **AC29.6:** Only the active numeric distance-to-go axis uses the pattern function marker.
+- [ ] **AC29.7:** C exits and restores the normal ABS coordinate display.
+- [ ] **AC29.8:** There is **no hole-count prompt or terminal count**. Those behaviors are unsupported by the EL400 procedure and must not gate entry into navigation.
 
-    // Enter pitch (spacing)
-    await dro.enterNumber(10.0);
-    await dro.pressKey('ENT');
+## Operator Procedure and Independent Oracles
 
-    // Enter number of holes
-    await dro.enterNumber(5);
-    await dro.pressKey('ENT');
+Enter Linear Bolt Hole, choose each of X/Y/Z in turn, reset the chosen axis, and enter pitch `10 mm`. The first target is `0`; successive 6 presses produce target positions `10`, `20`, and `30 mm` on only the chosen axis. Move the selected physical axis to 10 mm and verify the second target reads zero while the sequence continues forward without a count prompt or wrap.
 
-    // First hole position (distance to go)
-    await expect(dro.display.xAxis).toHaveValue(0);
+## Baseline Audit Status (headed debug audit)
 
-    // Advance to next hole
-    await dro.pressKey('Right');
-    await expect(dro.display.xAxis).toHaveValue(10.0);
-  });
-});
-```
+The pre-implementation audit reached `LinEAr`, selected X/Y/Z, and observed correct pitch increments after supplying an extra count. It confirmed the authoritative workflow failure: after pitch the simulator showed `hoLES`; pressing the manual's documented 6 entered the digit 6 instead of advancing. The old story's count and wrap criteria described the implementation defect, not the manual. This is baseline evidence only.
 
-## Implementation Notes
-- Simple linear pattern along single axis
-- Useful for drilling equally-spaced holes in a line
-- Simpler than Angle Hole (US-019) which supports arbitrary angles
-- Related to but distinct from US-019 (Angle Hole) and US-020 (Grid)
+Evidence: `/tmp/el400-audit-ManualPatterns.json` (`US-029`) and `/tmp/el400-audit/patterns/us029-undocumented-holes.png`.
+
+## Automated Coverage
+
+[`e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts`](../../../e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts) is the executable browser coverage. It must exercise X, Y, and Z through the real front panel/debug position controls and negatively assert that no count gate appears. New checks remain unverified until Main runs the integrated suite.
 
 ## Related Stories
-- US-019: Angle Hole (Linear Hole Pattern at any angle)
-- US-020: Grid Drilling Pattern
-- US-016: Bolt Circle Drilling - Full Circle
 
-## Notes
-- New story from G-020 (Gemini-only)
-- Assigned ID US-029 to continue Claude numbering sequence
-- Priority P4 to match other pattern generation stories
+- US-019: finite angled hole pattern with an explicit hole count
+- US-020: finite two-dimensional Grid pattern

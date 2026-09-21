@@ -371,6 +371,52 @@ describe('Calculator Integration', () => {
     });
   });
 
+  describe('result chaining and fixed-width overflow', () => {
+    it('chains 12 + 34, then + 56 using the displayed result', async () => {
+      const { user } = await renderSimulator();
+      await user.click(screen.getByTestId('btn-calculator'));
+      await typeValue(user, '12');
+      await user.click(screen.getByTestId('axis-select-y'));
+      await typeValue(user, '34');
+      await pressEnter(user);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(46, 4);
+
+      await user.click(screen.getByTestId('axis-select-y'));
+      await typeValue(user, '56');
+      await pressEnter(user);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(102, 4);
+    });
+
+    it('chains cos(30) into multiplication by 7', async () => {
+      const { user } = await renderSimulator();
+      await user.click(screen.getByTestId('btn-calculator'));
+      await typeValue(user, '30');
+      for (let i = 0; i < 6; i++) {
+        await user.click(screen.getByTestId('axis-select-y'));
+      }
+      await pressEnter(user);
+
+      for (let i = 0; i < 3; i++) {
+        await user.click(screen.getByTestId('axis-select-y'));
+      }
+      await typeValue(user, '7');
+      await pressEnter(user);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(6.0622, 4);
+    });
+
+    it('shows inF vAL for a finite result that cannot fit at four decimals', async () => {
+      const { user } = await renderSimulator();
+      await user.click(screen.getByTestId('btn-calculator'));
+      await typeValue(user, '99999999');
+      for (let i = 0; i < 3; i++) {
+        await user.click(screen.getByTestId('axis-select-y'));
+      }
+      await typeValue(user, '99999999');
+      await pressEnter(user);
+      expect(getAxisDisplayPureTextValue('X')).toBe('inF vAL');
+    });
+  });
+
   describe('US-014: Trigonometric Functions', () => {
     async function calcTrig(
       user: ReturnType<typeof userEvent.setup>,

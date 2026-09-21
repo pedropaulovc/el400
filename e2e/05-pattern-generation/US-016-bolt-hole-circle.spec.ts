@@ -107,12 +107,12 @@ test.describe('US-016: Bolt Hole Circle', () => {
 
     // Should now be in holes entry
     await dro.waitForAxisPureTextValue('X', 'hoLES');
-    await dro.waitForAxisPureNumberValue('Y', 0);
+    await dro.waitForAxisPureNumberValue('Y', 0, 0, 500, 0);
     await dro.waitForAxisPureTextValue('Z', '');
 
     // Enter hole count = 8 (integer - no decimals)
     await dro.key8.click();
-    await dro.waitForAxisPureNumberValue('Y', 8);
+    await dro.waitForAxisPureNumberValue('Y', 8, 0, 500, 0);
     await dro.enterButton.click();
 
     // Should now be in INC mode (distance-to-go) showing distance to hole 1
@@ -162,6 +162,40 @@ test.describe('US-016: Bolt Hole Circle', () => {
     // Final position: (30.6605mm, 10.3405mm) = (1.2071", 0.4071")
     await dro.waitForAxisPureNumberValue('X', 1.2071);
     await dro.waitForAxisPureNumberValue('Y', 0.4071);
+  });
+
+  test('debug setup and arrow-digit jump reaches hole 4', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.toggleInchMm();
+    expect(await dro.isMmUnits()).toBe(true);
+
+    await dro.page.click('[data-testid="btn-bolt-circle"]');
+    await dro.waitForAxisPureTextValue('X', 'CirCLE', 3000);
+    await dro.enterButton.click();
+    await dro.enterNumber('0');
+    await dro.enterButton.click();
+    await dro.enterNumber('0');
+    await dro.enterButton.click();
+    await dro.enterNumber('10');
+    await dro.enterButton.click();
+    await dro.enterNumber('0');
+    await dro.enterButton.click();
+    await dro.enterNumber('8');
+    await dro.enterButton.click();
+
+    await dro.waitForAxisPureNumberValue('X', 10);
+    await dro.waitForAxisPureNumberValue('Y', 0);
+
+    // In the visible hole request, arrow-labelled 4 is data rather than Back.
+    await dro.key2.click();
+    await dro.waitForAxisPureTextValue('X', 'hoLES');
+    await dro.key4.click();
+    await dro.waitForAxisPureNumberValue('Y', 4, 0, 500, 0);
+    await dro.enterButton.click();
+
+    // Hole 4 of eight is at 135°.
+    await dro.waitForAxisPureNumberValue('X', -7.0711);
+    await dro.waitForAxisPureNumberValue('Y', 7.0711);
   });
 
   test('C key clears input buffer completely then exits to idle', async ({ dro }) => {

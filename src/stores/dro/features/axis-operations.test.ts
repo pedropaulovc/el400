@@ -474,3 +474,38 @@ describe('axisOperationsReducer', () => {
     });
   });
 });
+
+describe('live datum inverse transforms', () => {
+  it('presets a positive reversed diameter value, then zeroes independent INC', () => {
+    const context = connectedContext({ x: 30, y: 0, z: 0 });
+    context.nvMem = {
+      ...context.nvMem, defaultUnit: 'mm',
+      axisDirection: { ...context.nvMem.axisDirection, X: 'reversed' },
+      measurementMode: { ...context.nvMem.measurementMode, X: 'diameter' },
+    };
+    let state = idleStateWithVMem({ activeAxis: 'X', inputBuffer: '20' });
+    state = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+    expect(state.display.X).toBe(20);
+    state = { ...state, vMem: { ...state.vMem, mode: 'inc' } };
+    state = axisOperationsReducer(state, { eventName: 'BTN_ZERO_X' }, context)!;
+    context.millState = { ...context.millState, position: { x: 32, y: 0, z: 0 } };
+    state = { ...state, vMem: { ...state.vMem, activeAxis: 'X', inputBuffer: '6' } };
+    state = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+    expect(state.display.X).toBe(6);
+    expect(state.vMem.workOffsets.X).toBe(40);
+  });
+});
+
+it('presets angular degrees without applying inch or diameter conversion', () => {
+  const context = connectedContext({ x: 30, y: 0, z: 0 });
+  context.nvMem = {
+    ...context.nvMem,
+    countingMode: { ...context.nvMem.countingMode, X: 'angular' },
+    angularResolution: { ...context.nvMem.angularResolution, X: 'dd-dec' },
+    axisDirection: { ...context.nvMem.axisDirection, X: 'reversed' },
+    measurementMode: { ...context.nvMem.measurementMode, X: 'diameter' },
+  };
+  const state = idleStateWithVMem({ activeAxis: 'X', inputBuffer: '90' });
+  const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+  expect(result.display.X).toBe('90.000');
+});

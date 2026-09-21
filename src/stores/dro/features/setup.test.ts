@@ -10,22 +10,22 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setupReducer, SETUP_SELECT_TEXT } from './setup';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_SETUP_DATA, type SetupData } from '../droStateMachine';
-import type { DROReducerContext, DROStatePayload } from '../types';
+import type { DROStatePayload } from '../types';
 import {
   SETUP_PARAMETERS,
   SETUP_PARAMETER_COUNT,
   SETUP_END_ID,
   DIRECTION_ID,
-  Z_DEPTH_ID,
+  SLEEP_TIMEOUT_ID,
+  ZERO_APPROACH_DIST_ID,
+  ZERO_APPROACH_TOLR_ID,
+  SAVE_CHANGES_ID,
 } from './setup-parameters';
 import { useSettingsStore } from '../../settingsStore';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
 
 const ctx = DEFAULT_TEST_CONTEXT;
 
-// Several parameters now commit-on-change to the live settings store (Direction,
-// Z depth-sense, and counting-mode as of US-040). Reset it before every test so
-// a cycle in one test cannot leak nvMem state into the next.
 beforeEach(() => {
   useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
 });
@@ -224,88 +224,103 @@ describe('setupReducer - exit (AC 39.7, AC 39.8)', () => {
   });
 });
 
-describe('setupReducer - commit-on-change parameters (US-002)', () => {
-  // Commit parameters persist to the live settings store, so reset it per test.
-  beforeEach(() => {
-    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+describe('setupReducer draft transaction and numeric entry', () => {
+  const directionIdx = SETUP_PARAMETERS.findIndex(p => p.id === DIRECTION_ID);
+  const saveIdx = SETUP_PARAMETERS.findIndex(p => p.id === SAVE_CHANGES_ID);
+
+  it('discards direction edits on C and End; only SAU CHG changes the saved baseline', () => {
+    for (const exit of ['clear', 'end', 'save'] as const) {
+      useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
+      const changed = setupReducer(paramState({ currentParamIndex: directionIdx }), { eventName: 'KEY_6_RIGHT' }, ctx)!;
+      expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('normal');
+      expect(changed.display.X).toBe('riGht');
+      const target = exit === 'save' ? saveIdx : SETUP_PARAMETER_COUNT - 1;
+      const atExit = { ...changed, stateData: { ...(changed.stateData as SetupData), currentParamIndex: target } };
+      setupReducer(atExit, { eventName: exit === 'clear' ? 'KEY_CLEAR' : 'KEY_ENTER' }, ctx);
+      expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe(exit === 'save' ? 'reversed' : 'normal');
+    }
   });
 
-  /** Context whose nvMem mirrors the live settings store. */
-  function liveCtx(): DROReducerContext {
-    return { ...DEFAULT_TEST_CONTEXT, nvMem: useSettingsStore.getState().nvMem };
-  }
-
-  const directionIdx = SETUP_PARAMETERS.findIndex((p) => p.id === DIRECTION_ID);
-  const zDepthIdx = SETUP_PARAMETERS.findIndex((p) => p.id === Z_DEPTH_ID);
-
-  it('cycling the direction param commits to nvMem for the selected axis', () => {
-    const state = paramState({ selectedAxis: 'X', currentParamIndex: directionIdx });
-    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
-    // Label updates to the reversed choice using the freshly committed nvMem.
-    expect(xText(result)).toBe('riGht');
+  it('uses draft angular mode for dP without committing either row early', () => {
+    let state = setupReducer(paramState({ currentParamIndex: 0 }), { eventName: 'KEY_6_RIGHT' }, ctx)!;
+    state = setupReducer(state, { eventName: 'KEY_2_DOWN' }, ctx)!;
+    state = setupReducer(state, { eventName: 'KEY_2_DOWN' }, ctx)!;
+    expect(state.display.X).toBe('dd.mn');
+    state = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, ctx)!;
+    expect(state.display.X).toBe('dd.mn.SS');
+    expect(useSettingsStore.getState().nvMem.countingMode.X).toBe('linear');
+    const save = { ...state, stateData: { ...(state.stateData as SetupData), currentParamIndex: saveIdx } };
+    setupReducer(save, { eventName: 'KEY_ENTER' }, ctx);
+    expect(useSettingsStore.getState().nvMem.angularResolution.X).toBe('dd-mn-ss');
   });
 
-  it('cycling direction on Y does not change X (per-axis commit)', () => {
-    const state = paramState({ selectedAxis: 'Y', currentParamIndex: directionIdx });
-    setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    const dir = useSettingsStore.getState().nvMem.axisDirection;
-    expect(dir).toEqual({ X: 'normal', Y: 'reversed', Z: 'normal' });
+  it('accepts arbitrary sleep minutes through ENT/ENT and rejects 121 without losing the draft', () => {
+    let state = paramState({ currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === SLEEP_TIMEOUT_ID) });
+    state = setupReducer(state, { eventName: 'KEY_ENTER' }, ctx)!;
+    expect(state.display.X).toBe('000');
+    state = setupReducer(state, { eventName: 'KEY_ENTER' }, ctx)!;
+    expect(state.display.X).toBe('0');
+    for (const eventName of ['KEY_1', 'KEY_2_DOWN', 'KEY_1', 'KEY_ENTER'] as const) state = setupReducer(state, { eventName }, ctx)!;
+    expect(state.display.X).toBe('Error');
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(0);
+    state = setupReducer(state, { eventName: 'KEY_CLEAR' }, ctx)!;
+    for (const eventName of ['KEY_ENTER', 'KEY_ENTER', 'KEY_3', 'KEY_7', 'KEY_ENTER'] as const) state = setupReducer(state, { eventName }, ctx)!;
+    expect(state.display.X).toBe('SAU ChG');
+    setupReducer(state, { eventName: 'KEY_ENTER' }, ctx);
+    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(37);
+    const stored = setupReducer(paramState({ currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === SLEEP_TIMEOUT_ID) }),
+      { eventName: 'KEY_ENTER' }, { ...ctx, nvMem: useSettingsStore.getState().nvMem })!;
+    expect(stored.display.X).toBe('037');
   });
 
-  it('cycling left from normal commits reversed (wrap-around)', () => {
-    const state = paramState({ selectedAxis: 'X', currentParamIndex: directionIdx });
-    const result = setupReducer(state, { eventName: 'KEY_4_LEFT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
-    expect(xText(result)).toBe('riGht');
+  it('numeric BP edits are axis-scoped and C discards a partial entry', () => {
+    let state = paramState({ selectedAxis: 'Y', currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === ZERO_APPROACH_DIST_ID) });
+    for (const eventName of ['KEY_ENTER', 'KEY_ENTER', 'KEY_DECIMAL', 'KEY_0', 'KEY_0', 'KEY_3', 'KEY_7', 'KEY_ENTER'] as const) state = setupReducer(state, { eventName }, ctx)!;
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance.Y).toBe('0.002');
+    const save = { ...state, stateData: { ...(state.stateData as SetupData), currentParamIndex: saveIdx } };
+    setupReducer(save, { eventName: 'KEY_ENTER' }, ctx);
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance).toEqual({ X: '0.002', Y: '0.0037', Z: '0.002' });
+    state = paramState({ selectedAxis: 'Y', currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === ZERO_APPROACH_DIST_ID) });
+    for (const eventName of ['KEY_ENTER', 'KEY_ENTER', 'KEY_5', 'KEY_CLEAR', 'KEY_CLEAR'] as const) {
+      state = setupReducer(state, { eventName }, { ...ctx, nvMem: useSettingsStore.getState().nvMem })!;
+    }
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance.Y).toBe('0.0037');
   });
 
-  it('cycling the z-depth param commits the global zDepthSense', () => {
-    const state = paramState({ selectedAxis: 'X', currentParamIndex: zDepthIdx });
-    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem.zDepthSense).toBe('depth-positive');
-    expect(xText(result)).toBe('dEP PoS');
+  it('edits BP distance and tolerance in mm while preserving canonical inch storage across unit changes', () => {
+    const mmContext = { ...ctx, nvMem: { ...ctx.nvMem, defaultUnit: 'mm' as const } };
+    useSettingsStore.setState({ nvMem: mmContext.nvMem });
+    let state = paramState({ selectedAxis: 'Y', currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === ZERO_APPROACH_DIST_ID) });
+    state = setupReducer(state, { eventName: 'KEY_ENTER' }, mmContext)!;
+    expect(state.display.X).toBe('0.0508');
+    for (const eventName of ['KEY_ENTER', 'KEY_DECIMAL', 'KEY_2_DOWN', 'KEY_5', 'KEY_4_LEFT', 'KEY_ENTER',
+      'KEY_ENTER', 'KEY_ENTER', 'KEY_DECIMAL', 'KEY_0', 'KEY_5', 'KEY_0', 'KEY_8_UP', 'KEY_ENTER'] as const) {
+      state = setupReducer(state, { eventName }, mmContext)!;
+    }
+    expect(useSettingsStore.getState().nvMem.zeroApproachDistance.Y).toBe('0.002');
+    const save = { ...state, stateData: { ...(state.stateData as SetupData), currentParamIndex: saveIdx } };
+    setupReducer(save, { eventName: 'KEY_ENTER' }, mmContext);
+    const saved = useSettingsStore.getState().nvMem;
+    expect(saved.zeroApproachDistance).toEqual({ X: '0.002', Y: '0.01', Z: '0.002' });
+    expect(saved.zeroApproachTolerance).toEqual({ X: '0', Y: '0.002', Z: '0' });
+    const distance = paramState({ selectedAxis: 'Y', currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === ZERO_APPROACH_DIST_ID) });
+    const tolerance = paramState({ selectedAxis: 'Y', currentParamIndex: SETUP_PARAMETERS.findIndex(p => p.id === ZERO_APPROACH_TOLR_ID) });
+    expect(setupReducer(distance, { eventName: 'KEY_ENTER' }, { ...ctx, nvMem: saved })!.display.X).toBe('0.2540');
+    expect(setupReducer(tolerance, { eventName: 'KEY_ENTER' }, { ...ctx, nvMem: saved })!.display.X).toBe('0.0508');
+    const inchContext = { ...ctx, nvMem: { ...saved, defaultUnit: 'inch' as const } };
+    expect(setupReducer(distance, { eventName: 'KEY_ENTER' }, inchContext)!.display.X).toBe('0.0100');
+    expect(setupReducer(tolerance, { eventName: 'KEY_ENTER' }, inchContext)!.display.X).toBe('0.0020');
   });
 
-  it('cycling the counting-mode param commits to nvMem for the selected axis (US-040)', () => {
-    const state = paramState({ selectedAxis: 'X', currentParamIndex: 0 });
-    const result = setupReducer(state, { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem.countingMode.X).toBe('angular');
-    // Label updates to the angular choice using the freshly committed nvMem.
-    expect(xText(result)).toBe('AnGULAr');
-  });
-
-  it('cycling counting-mode on Y does not change X (per-axis commit, AC 40.5)', () => {
-    setupReducer(paramState({ selectedAxis: 'Y', currentParamIndex: 0 }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem.countingMode).toEqual({
-      X: 'linear',
-      Y: 'angular',
-      Z: 'linear',
-    });
-  });
-
-  it('cycling a non-commit param (taper-on) does NOT touch nvMem', () => {
-    const taperIdx = SETUP_PARAMETERS.findIndex((p) => p.id === 'taper-on');
-    const before = useSettingsStore.getState().nvMem;
-    setupReducer(paramState({ selectedAxis: 'X', currentParamIndex: taperIdx }), { eventName: 'KEY_6_RIGHT' }, liveCtx());
-    expect(useSettingsStore.getState().nvMem).toEqual(before);
-  });
-
-  it('a committed direction change survives End exit (not discarded)', () => {
-    // Cycle direction (commits to nvMem), then navigate to End and exit.
-    const changed = setupReducer(
-      paramState({ selectedAxis: 'X', currentParamIndex: directionIdx }),
-      { eventName: 'KEY_6_RIGHT' },
-      liveCtx()
-    )!;
-    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
-
-    const endIdx = SETUP_PARAMETERS.findIndex((p) => p.id === SETUP_END_ID);
-    const atEnd = { ...changed, stateData: { ...(changed.stateData as SetupData), currentParamIndex: endIdx } };
-    const exited = setupReducer(atEnd, { eventName: 'KEY_ENTER' }, liveCtx());
-
-    expect(exited?.stateName).toBe('idle');
-    // Unlike draft params, the committed direction persists past exit.
-    expect(useSettingsStore.getState().nvMem.axisDirection.X).toBe('reversed');
+  it('invalidates scale-dependent marks and preserves physical saved-reference displacement only for installed encoders', () => {
+    const base = paramState({ currentParamIndex: saveIdx, draftValues: { 'X:scale-resolution': '10' } });
+    const state = { ...base, vMem: { ...base.vMem, referenceMarks: { X: 10, Y: 10 }, machineReferenceOffsets: { X: 3, Y: 4 } } };
+    const installed = { ...ctx, millState: { ...ctx.millState, encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 } } };
+    const scaled = setupReducer(state, { eventName: 'KEY_ENTER' }, installed)!;
+    expect(scaled.vMem.referenceMarks).toEqual({ Y: 10 });
+    expect(scaled.vMem.machineReferenceOffsets).toEqual({ X: 6, Y: 4 });
+    const decoded = setupReducer(state, { eventName: 'KEY_ENTER' }, ctx)!;
+    expect(decoded.vMem.referenceMarks).toEqual({ X: 10, Y: 10 });
+    expect(decoded.vMem.machineReferenceOffsets).toEqual({ X: 3, Y: 4 });
   });
 });

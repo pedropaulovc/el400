@@ -1,141 +1,39 @@
 # US-031: Error Compensation
 
-**Manual Reference:** Section 6.3 Error Compensation
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
+## Source
+
+- **Primary:** EL400 Operation Manual §6.3, pp. 22–29: complete LEC, SLEC Auto/Edit, reference-mark activation, 360° rotation, and PPR procedures.
+- **Video:** EL400 overview §1.9, `[06:28–06:57]`: `CALib` is optional because scales are factory calibrated, but it remains an operator-reachable setup function.
+
 ## User Story
-**As a** machine installer or technician
-**I want** to compensate for mechanical inaccuracies (Linear or Non-Linear)
-**So that** the displayed position is accurate to the standard
+
+**As a** machine installer or calibration technician  
+**I want** per-axis linear, segmented, or angular error compensation  
+**So that** repeatable measuring-system and machine errors are corrected from a traceable reference
 
 ## Acceptance Criteria
-- [ ] **AC 31.1:** Navigate to `CALib` menu in setup.
-- [ ] **AC 31.2:** **Linear Error Compensation (LEC)**:
-    - Measure a known reference length (e.g., slip gauge)
-    - Input the reference length
-    - System calculates correction factor
-    - Factor applied uniformly across axis travel
-- [ ] **AC 31.3:** **Segmented Linear Error Compensation (SLEC)**:
-    - Divide axis travel into segments (up to 99 segments)
-    - Store individual correction for each segment
-    - More accurate for non-linear errors
-- [ ] **AC 31.4:** **Angular Error Compensation**:
-    - For rotary axes
-    - 360° rotation method or PPR (Pulses Per Revolution) method
-- [ ] **AC 31.5:** Compensation can be enabled/disabled per axis.
-- [ ] **AC 31.6:** Compensation values persist after power cycle.
-- [ ] **AC 31.7:** Press `C` to exit calibration mode.
 
-## E2E Test Scenarios
-```typescript
-describe('US-031: Error Compensation', () => {
-  test('Linear Error Compensation (LEC)', async () => {
-    // Enter setup/calibration menu
-    await dro.pressKey('Setup');
-    await dro.selectMenuOption('CALib');
-    await dro.pressKey('ENT');
+- [ ] **AC31.1:** On a linear axis, Enter at `CALib` opens `LEC`; Right cycles between the documented `LEC` and `SLEC` methods. `C` backs out without storing an incomplete calibration. Factory defaults remain uncompensated; the UI does not invent an undocumented `oFF` calibration method.
+- [ ] **AC31.2 — LEC:** Enter `LEC`, confirm `diSPuAL`, and zero the raw datum with the selected-axis key. Move from the datum to the slip gauge/reference; Enter captures the measured travel, then numeric entry plus Enter captures the reference's actual length in millimetres. The DRO shows `CAL FAC`; Enter displays the derived factor `reference ÷ measured` for review, and Enter again returns to `SAU CHG`. Once saved, the factor applies uniformly to that axis.
+- [ ] **AC31.3 — SLEC Auto:** Enter `SLEC`, choose `Auto`, and confirm near the encoder reference. The selected axis's last digit flashes while waiting. Cross the actual reference mark, press Enter at the first-segment start to establish machine reference, then move to each correction point and enter its cumulative standard-measured position from that start. Support 1–99 ordered segments and reject an invalid/over-capacity table without corrupting the saved one.
+- [ ] **AC31.4 — SLEC Edit:** In `SLEC`, choose `Edit`. Left/Right traverses the saved segments; X selects/edits the measured coordinate and Y selects/edits the corresponding reference coordinate. Down reaches save; only `SAU CHG` stores the revised table.
+- [ ] **AC31.5 — Reference activation:** A saved SLEC table remains inactive after startup until that axis crosses its actual encoder reference mark. Crossing activates the table from its recorded reference origin; unrelated axes remain unaffected.
+- [ ] **AC31.6 — Angular 360°:** On an angular axis, Enter at `CALib` opens `diSPuAL` directly. Confirm, zero at a marked stationary point, complete exactly one revolution, enter `1296000` arc-seconds, then save the derived correction.
+- [ ] **AC31.7 — Angular PPR:** On an angular axis, press Right twice from `diSPuAL` to `P.P.r.`, enter the installed encoder's pulses per revolution, and save. PPR converts installed raw counts only; it must not rescale an adapter value already decoded to engineering degrees.
+- [ ] **AC31.8:** Calibration method/data are per-axis drafts. Only complete calibration saved by `SAU CHG` becomes live and durable; `End`/`C` without saving leaves the prior compensation active.
+- [ ] **AC31.9:** Compensation is applied to machine coordinates before ABS/INC datum subtraction and before display-only resolution or radius/diameter formatting.
 
-    // Select axis
-    await dro.pressKey('X');
+## Human Verification
 
-    // Select LEC mode
-    await dro.selectMenuOption('LEC');
-    await dro.pressKey('ENT');
+Using the visible debug controls, run a known 100 mm LEC mismatch and confirm the saved reading follows the reference while another axis does not. Build a multi-point SLEC table, verify no correction before the reference crossing, then cross the mark and exercise both segment interiors and boundaries. Edit one point and repeat. On an angular axis run one 360° procedure and one PPR procedure with raw-count metadata, then confirm an already-decoded angular source is not double-scaled. For each method, use an unsaved negative-control edit before the saved run.
 
-    // Measure known distance (e.g., 100mm slip gauge)
-    // Display shows measured: 100.05mm
-    await dro.simulateEncoderAbsoluteMove('X', 100.05);
+## Automated Coverage
 
-    // Enter reference value
-    await dro.enterNumber(100.00);
-    await dro.pressKey('ENT');
+- [`e2e/06-configuration/US-031-calibration.spec.ts`](../../../e2e/06-configuration/US-031-calibration.spec.ts)
 
-    // System calculates and stores correction factor
-    // Factor = 100.00 / 100.05 = 0.9995
-    await await expect(dro.display.xAxis).toHaveText('Stored');
-  });
+## Baseline Audit (before the current implementation work)
 
-  test('Segmented Linear Error Compensation (SLEC)', async () => {
-    await dro.pressKey('Setup');
-    await dro.selectMenuOption('CALib');
-    await dro.pressKey('ENT');
-    await dro.pressKey('X');
-
-    // Select SLEC mode
-    await dro.selectMenuOption('SLEC');
-    await dro.pressKey('ENT');
-
-    // Enter number of segments (e.g., 10 segments across 1000mm)
-    await dro.enterNumber(10);
-    await dro.pressKey('ENT');
-
-    // For each segment, enter correction value
-    // Segment 1 at 0-100mm
-    await dro.enterNumber(0.01); // +0.01mm correction
-    await dro.pressKey('ENT');
-
-    // Continue for each segment...
-    // Segment 2 at 100-200mm
-    await dro.enterNumber(-0.02); // -0.02mm correction
-    await dro.pressKey('ENT');
-
-    // etc.
-  });
-
-  test('Enable/Disable compensation per axis', async () => {
-    await dro.pressKey('Setup');
-    await dro.selectMenuOption('CALib');
-    await dro.pressKey('ENT');
-
-    // Select axis
-    await dro.pressKey('X');
-
-    // Toggle compensation ON/OFF
-    await dro.selectMenuOption('Enable');
-    await dro.pressKey('ENT');
-
-    await await expect(dro.display.xAxis).toHaveText('ON');
-  });
-});
-```
-
-## Implementation Notes
-- **Linear Error Compensation (LEC)**: Single correction factor for entire axis
-  - Best for uniform errors (e.g., scale factor error)
-  - Simple to configure
-  - Formula: Corrected = Measured × Factor
-
-- **Segmented Linear Error Compensation (SLEC)**: Different correction per segment
-  - Best for non-linear errors (e.g., lead screw pitch errors)
-  - More complex to configure
-  - Requires calibration at multiple points
-
-- **Angular Error Compensation**: For rotary axes
-  - Compensates for encoder indexing errors
-  - Can use full 360° rotation or PPR method
-
-- **Implementation considerations**:
-  - Store compensation tables in non-volatile memory
-  - Apply compensation in real-time to encoder counts
-  - Provide calibration wizard UI
-  - Support import/export of compensation tables
-
-- **Typical use cases**:
-  - New machine calibration
-  - Periodic recalibration for wear compensation
-  - High-precision machining requirements
-  - Compliance with ISO/ANSI standards
-
-## Related Stories
-- US-021: Setup Menu - Scale Resolution
-- US-022: Setup Menu - Display Resolution
-- US-027: Setup Menu - Save Changes (persistence)
-- US-028: Setup Menu - Restore Factory Defaults
-
-## Notes
-- New story from G-026 (Gemini-only)
-- Assigned ID US-031 to continue Claude numbering sequence
-- Priority P5 (advanced configuration) matches other setup stories
-- Typically performed by technician, not end-user operator
-- Critical for high-precision applications
+Only the visible `CALib` row existed. Enter, Left, Right, and Enter again were no-ops: there was no LEC, SLEC, reference activation, angular method, live correction, or persisted data. The procedures above are target behavior and must not be treated as verified until the integrated debug-source scenario passes.

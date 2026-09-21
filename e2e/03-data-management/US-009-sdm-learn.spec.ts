@@ -21,17 +21,18 @@ test.describe('US-009: SDM Learn Mode', () => {
     await dro.toggleInchMm();
     expect(await dro.isMmUnits()).toBe(true);
 
-    // AC 9.1: enter SDM and land on the Learn menu (intro auto-advances).
+    // Manual menu order: Program → Run → Learn.
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'Sdm', 500);
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
+    await dro.waitForAxisPureTextValue('X', 'ProGrAn');
+    await dro.key4.click();
+    await dro.waitForAxisPureTextValue('X', 'LEArn');
 
     // SDM LED glows while in the function (manual §8.2).
     expect(await dro.isLEDOn(dro.page.getByTestId('led-sdm'))).toBe(true);
 
     // Confirm Learn -> step entry prompt.
     await dro.enterButton.click();
-    await dro.waitForAxisPureTextValue('X', 'StEP');
+    await dro.waitForAxisPureTextValue('X', 'StEPno');
 
     // AC 9.2: confirm default step 1.
     await dro.enterButton.click();
@@ -42,7 +43,7 @@ test.describe('US-009: SDM Learn Mode', () => {
 
     // AC 9.4: first X press shows the current step number on Y (=1).
     await dro.xButton.click();
-    await dro.waitForAxisPureNumberValue('Y', 1);
+    await dro.waitForAxisPureNumberValue('Y', 1, 0, undefined, 0);
 
     // AC 9.4: second X press stores the position and advances to step 2.
     await dro.xButton.click();
@@ -51,12 +52,12 @@ test.describe('US-009: SDM Learn Mode', () => {
     await dro.simulateEncoderAbsoluteMove('X', 20);
     await dro.waitForAxisValue('X', 20);
     await dro.xButton.click();
-    await dro.waitForAxisPureNumberValue('Y', 2);
+    await dro.waitForAxisPureNumberValue('Y', 2, 0, undefined, 0);
   });
 
   test('clear exits SDM back to normal operation', async ({ dro }) => {
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
+    await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     expect(await dro.isLEDOn(dro.page.getByTestId('led-sdm'))).toBe(true);
 
     // Clear from the menu exits to idle; SDM LED turns off.

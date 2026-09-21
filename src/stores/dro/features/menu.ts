@@ -1,7 +1,7 @@
 /**
  * Menu Feature Reducer
  *
- * Handles function menu navigation (center, circle, line, linear, polar).
+ * Handles the top-level function ring and nested CEntrE CirCLE/LinE submenu.
  */
 
 import type { DROStatePayload, FeatureReducer, DROReducerContext } from '../types';
@@ -19,9 +19,11 @@ import {
   createDisplay,
   computeNormalDisplay,
   computeAxisPositionMm,
+  type DisplayState,
 } from '../utils/displayComputation';
 import { computeLinearAxisSelectDisplay } from './linear-bolt-hole';
 import { computeTaperDisplay } from './taper';
+import { enterSixOutput } from './aux-fn';
 
 /** Menu text displayed for each function menu state */
 export const MENU_TEXT_MAP: Record<string, string> = {
@@ -32,40 +34,38 @@ export const MENU_TEXT_MAP: Record<string, string> = {
   'function-menu-polar': 'PoLAr',
   'function-menu-taper': 'tAPEr',
   'function-menu-probe': 'ProbE',
+  'function-menu-six-output': '6oP',
 };
 
 /** Compute menu display: X shows menu text, Y and Z are blank */
-function computeMenuDisplay(stateName: DROStateName): ReturnType<typeof createDisplay> {
+function computeMenuDisplay(stateName: DROStateName): DisplayState {
   return createDisplay(MENU_TEXT_MAP[stateName] ?? '', '', '');
 }
 
 /**
- * Menu navigation ring - bidirectional, wraps around.
+ * The primary Fn ring contains functions. CEntrE owns a nested CirCLE/LinE
+ * choice, so those two entries must never be flattened into the top-level ring.
  */
-const MENU_RING: DROStateName[] = [
+const TOP_LEVEL_MENU_RING: DROStateName[] = [
   'function-menu-center',
-  'function-menu-circle',
-  'function-menu-line',
   'function-menu-linear',
   'function-menu-polar',
-  'function-menu-taper',
   'function-menu-probe',
+  'function-menu-six-output',
+  'function-menu-taper',
 ];
 
-function getNextMenuState(current: DROStateName): DROStateName {
-  const idx = MENU_RING.indexOf(current);
-  if (idx === -1) return current;
-  const nextIdx = (idx + 1) % MENU_RING.length;
-  const nextState = MENU_RING[nextIdx];
-  return nextState ?? current;
-}
+const CENTER_MENU_RING: DROStateName[] = [
+  'function-menu-circle',
+  'function-menu-line',
+];
 
-function getPrevMenuState(current: DROStateName): DROStateName {
-  const idx = MENU_RING.indexOf(current);
-  if (idx === -1) return current;
-  const prevIdx = (idx - 1 + MENU_RING.length) % MENU_RING.length;
-  const prevState = MENU_RING[prevIdx];
-  return prevState ?? current;
+
+function getAdjacentMenuState(current: DROStateName, direction: 1 | -1): DROStateName {
+  const ring = CENTER_MENU_RING.includes(current) ? CENTER_MENU_RING : TOP_LEVEL_MENU_RING;
+  const index = ring.indexOf(current);
+  if (index === -1) return current;
+  return ring[(index + direction + ring.length) % ring.length] ?? current;
 }
 
 function handleMenuEnter(
@@ -75,22 +75,31 @@ function handleMenuEnter(
 ): DROStatePayload {
   switch (menuState) {
     case 'function-menu-center':
-    case 'function-menu-line':
-      // Center and Line both go to line center finding (2 points)
-      // Point collection shows normal position display
+      // CEntrE opens its own choice, defaulting to CirCLE (manual pp42-44).
+      return {
+        stateName: 'function-menu-circle',
+        stateData: INITIAL_CENTER_FINDING_DATA,
+        vMem,
+        display: computeMenuDisplay('function-menu-circle'),
+      };
+    case 'function-menu-line': {
+      const normal = computeNormalDisplay(vMem, context);
       return {
         stateName: 'function-menu-center-line-point-1',
         stateData: INITIAL_CENTER_FINDING_DATA,
         vMem,
-        display: computeNormalDisplay(vMem, context),
+        display: createDisplay(normal.X, normal.Y, 'Point 1'),
       };
-    case 'function-menu-circle':
+    }
+    case 'function-menu-circle': {
+      const normal = computeNormalDisplay(vMem, context);
       return {
         stateName: 'function-menu-center-circle-point-1',
         stateData: INITIAL_CENTER_FINDING_DATA,
         vMem,
-        display: computeNormalDisplay(vMem, context),
+        display: createDisplay(normal.X, normal.Y, 'Point 1'),
       };
+    }
     case 'function-menu-linear':
       // Enter linear bolt hole: first select the axis for the pattern (US-029)
       return {
@@ -116,6 +125,8 @@ function handleMenuEnter(
         vMem,
         display: createDisplay('Prob Ed', '', ''),
       };
+    case 'function-menu-six-output':
+      return enterSixOutput(vMem);
     case 'function-menu-taper': {
       // Capture the machine position at entry; the taper Radius and Angle are
       // derived from travel relative to this point (US-045, manual 9.2.2).
@@ -156,7 +167,7 @@ export const menuReducer: FeatureReducer = (current, event, context) => {
         display: computeNormalDisplay(vMem, context),
       };
     case 'KEY_6_RIGHT': {
-      const nextState = getNextMenuState(state);
+      const nextState = getAdjacentMenuState(state, 1);
       return {
         stateName: nextState,
         stateData: data,
@@ -165,7 +176,7 @@ export const menuReducer: FeatureReducer = (current, event, context) => {
       };
     }
     case 'KEY_4_LEFT': {
-      const prevState = getPrevMenuState(state);
+      const prevState = getAdjacentMenuState(state, -1);
       return {
         stateName: prevState,
         stateData: data,

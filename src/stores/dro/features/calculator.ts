@@ -21,7 +21,7 @@ import {
   isCalculatorActive,
 } from '../droStateMachine';
 import { appendDigit, appendDecimal, toggleSign, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
-import { createDisplay, computeNormalDisplay } from '../utils/displayComputation';
+import { createDisplay, computeNormalDisplay, type DisplayState } from '../utils/displayComputation';
 
 /** Calculator operation text displayed in Y window */
 const CALC_OPERATION_MAP: Record<string, string> = {
@@ -39,10 +39,14 @@ const CALC_OPERATION_MAP: Record<string, string> = {
   'calculator-atan': 'AtAn',
 };
 
-/** Compute calculator display: X=currentValue, Y=operation text, Z=blank */
-function computeCalculatorDisplay(stateName: DROStateName, calcData: CalculatorData): ReturnType<typeof createDisplay> {
+/** Compute calculator display: pending entry is literal; committed values are normalized. */
+function computeCalculatorDisplay(
+  stateName: DROStateName,
+  calcData: CalculatorData,
+  inputBuffer = ''
+): DisplayState {
   return createDisplay(
-    calcData.currentValue,
+    inputBuffer || normalizeCalculatorValue(calcData.currentValue),
     CALC_OPERATION_MAP[stateName] ?? '',
     ''
   );
@@ -50,6 +54,25 @@ function computeCalculatorDisplay(stateName: DROStateName, calcData: CalculatorD
 
 /** Error string shown for domain errors and infinite results (matches US-013) */
 const INFINITE_VALUE = 'inF vAL';
+
+/** Maximum magnitude that fits the seven calculator digits at four decimals. */
+const MAX_CALCULATOR_MAGNITUDE = 999.9999;
+const CALCULATOR_SCALE = 10_000;
+
+/**
+ * The calculator is a fixed four-decimal display. Reject a value when rounding
+ * it for that display would require an eighth numeric cell, rather than showing
+ * a truncated or IEEE-754-inaccurate result.
+ */
+function normalizeCalculatorValue(value: number | string): number | string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return typeof value === 'number' ? INFINITE_VALUE : value;
+  }
+
+  const roundedMagnitude =
+    Math.round(Math.abs(value) * CALCULATOR_SCALE) / CALCULATOR_SCALE;
+  return roundedMagnitude > MAX_CALCULATOR_MAGNITUDE ? INFINITE_VALUE : value;
+}
 
 /**
  * Calculator operations cycle (Y key), per manual function list:
@@ -135,12 +158,14 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
   const { stateName: state, stateData: data, vMem } = statePayload;
   const { eventName } = eventPayload;
 
-  // Handle entering calculator mode from idle
+  // Handle entering calculator mode from idle. A calculator session always
+  // starts with a clean entry, regardless of input abandoned in normal mode.
   if (state === 'idle' && eventName === 'BTN_CALCULATOR') {
+    const nextVMem = { ...vMem, inputBuffer: '' };
     return {
       stateName: 'calculator-idle',
       stateData: INITIAL_CALCULATOR_DATA,
-      vMem,
+      vMem: nextVMem,
       display: computeCalculatorDisplay('calculator-idle', INITIAL_CALCULATOR_DATA),
     };
   }
@@ -150,28 +175,33 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
 
   const calcData = data.stateDataType === 'calculator' ? data : INITIAL_CALCULATOR_DATA;
 
-  // Handle digit keys - calculatorReducer owns all digit input in calculator state
-  // Display doesn't change on digit input (inputBuffer not shown in calculator mode)
+  // Calculator entry is rendered literally so decimal points, signs, and
+  // significant zeroes remain visible until ENT commits the numeric value.
   const digit = KEY_TO_DIGIT[eventName];
   if (digit !== undefined) {
+    const inputBuffer = appendDigit(vMem.inputBuffer, digit);
     return {
       ...statePayload,
       vMem: {
         ...vMem,
-        inputBuffer: appendDigit(vMem.inputBuffer, digit),
+        inputBuffer,
       },
+      display: computeCalculatorDisplay(state, calcData, inputBuffer),
     };
   }
 
   switch (eventName) {
-    case 'BTN_CALCULATOR':
-      // Exit calculator mode
+    case 'BTN_CALCULATOR': {
+      // Exit calculator mode without leaking an unfinished calculator entry
+      // into normal axis input.
+      const nextVMem = { ...vMem, inputBuffer: '' };
       return {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
-        vMem,
-        display: computeNormalDisplay(vMem, context),
+        vMem: nextVMem,
+        display: computeNormalDisplay(nextVMem, context),
       };
+    }
 
     case 'BTN_SELECT_Y': {
       // Y button in calculator mode cycles through operations.
@@ -192,7 +222,7 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
         stateName: nextStateName,
         stateData: nextState,
         vMem: nextVMem,
-        display: computeCalculatorDisplay(nextStateName, nextState),
+        display: computeCalculatorDisplay(nextStateName, nextState, nextVMem.inputBuffer),
       };
     }
 
@@ -201,25 +231,29 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
       // X and Z buttons don't do anything in calculator mode
       return null;
 
-    case 'KEY_DECIMAL':
-      // Display doesn't change on decimal input
+    case 'KEY_DECIMAL': {
+      const inputBuffer = appendDecimal(vMem.inputBuffer);
       return {
         ...statePayload,
         vMem: {
           ...vMem,
-          inputBuffer: appendDecimal(vMem.inputBuffer),
+          inputBuffer,
         },
+        display: computeCalculatorDisplay(state, calcData, inputBuffer),
       };
+    }
 
-    case 'KEY_SIGN':
-      // Display doesn't change on sign input
+    case 'KEY_SIGN': {
+      const inputBuffer = toggleSign(vMem.inputBuffer);
       return {
         ...statePayload,
         vMem: {
           ...vMem,
-          inputBuffer: toggleSign(vMem.inputBuffer),
+          inputBuffer,
         },
+        display: computeCalculatorDisplay(state, calcData, inputBuffer),
       };
+    }
 
     case 'KEY_CLEAR': {
       // Clear calculator and input buffer but stay in calculator mode
@@ -240,10 +274,12 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
         if (operand === null) {
           return null; // Nothing to operate on
         }
-        const trigResult = performTrigCalculation(operand, calcData.operation);
+        const trigResult = normalizeCalculatorValue(
+          performTrigCalculation(operand, calcData.operation)
+        );
         const trigCalcData: CalculatorData = {
           ...calcData,
-          firstValue: null,
+          firstValue: typeof trigResult === 'number' ? trigResult : null,
           operation: null,
           currentValue: trigResult,
         };
@@ -293,10 +329,12 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
           };
         }
         // Second value - store and immediately calculate
-        const result = performBinaryCalculation(calcData.firstValue, newValue, calcData.operation);
+        const result = normalizeCalculatorValue(
+          performBinaryCalculation(calcData.firstValue, newValue, calcData.operation)
+        );
         const resultCalcData: CalculatorData = {
           ...calcData,
-          firstValue: null,
+          firstValue: typeof result === 'number' ? result : null,
           operation: null,
           currentValue: result,
         };

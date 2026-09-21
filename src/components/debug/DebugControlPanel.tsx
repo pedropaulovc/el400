@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type SyntheticEvent } from 'react';
 import { DebugMillAdapter } from '../../adapters/DebugMillAdapter';
 import { useMillStore } from '../../stores/millStore';
 import { DebugProbeControl } from './DebugProbeControl';
@@ -76,6 +76,20 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
     server.reset();
   };
 
+  const handleSetPosition = (
+    axis: 'x' | 'y' | 'z',
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const value = Number(new FormData(form).get('position'));
+    if (!Number.isFinite(value)) return;
+
+    server.setPosition(axis, value);
+    addLogEntry('success', `Set ${axis.toUpperCase()} to ${value.toFixed(4)} mm`);
+    form.reset();
+  };
+
   const handleProbeToggle = () => {
     const newState = !millState.probe.triggered;
     addLogEntry(newState ? 'success' : 'info', `Probe ${newState ? 'TRIGGERED' : 'cleared'}`);
@@ -142,7 +156,9 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
               <tr key={axis} className="border-t border-gray-200">
                 <td className="py-2 font-bold text-lg text-gray-700">{axis.toUpperCase()}</td>
                 <td className="py-2 text-right text-lg">
-                  {millState.position[axis].toFixed(3)}
+                  <span data-testid={`debug-position-${axis}`}>
+                    {millState.position[axis].toFixed(4)}
+                  </span>
                   <span className="text-xs text-gray-400 ml-1">mm</span>
                 </td>
                 <td className="py-2 text-right">
@@ -174,6 +190,47 @@ export function DebugControlPanel({ onClose }: DebugControlPanelProps) {
             ))}
           </tbody>
         </table>
+
+        {/* Precise absolute position entry in physical millimetres. */}
+        <fieldset className="border border-gray-300 rounded p-2">
+          <legend className="px-1 text-xs font-medium text-gray-600">
+            Set physical position (mm)
+          </legend>
+          <div className="grid grid-cols-3 gap-2">
+            {(['x', 'y', 'z'] as const).map((axis) => (
+              <form
+                key={axis}
+                className="space-y-1"
+                onSubmit={(event) => { handleSetPosition(axis, event); }}
+              >
+                <label
+                  className="block text-xs font-bold text-gray-600"
+                  htmlFor={`debug-position-input-${axis}`}
+                >
+                  {axis.toUpperCase()}
+                </label>
+                <input
+                  id={`debug-position-input-${axis}`}
+                  name="position"
+                  type="number"
+                  step="any"
+                  required
+                  aria-label={`Set ${axis.toUpperCase()} position in millimetres`}
+                  data-testid={`debug-position-input-${axis}`}
+                  className="w-full rounded border border-gray-300 px-1.5 py-1 text-right font-mono text-sm text-gray-800"
+                />
+                <button
+                  type="submit"
+                  aria-label={`Set ${axis.toUpperCase()} position`}
+                  data-testid={`debug-position-submit-${axis}`}
+                  className="w-full rounded border border-gray-300 bg-gray-100 px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                >
+                  Set
+                </button>
+              </form>
+            ))}
+          </div>
+        </fieldset>
 
         {/* Jog Controls Grid - CNCjs Style with Diagonals */}
         <div className="space-y-1.5">

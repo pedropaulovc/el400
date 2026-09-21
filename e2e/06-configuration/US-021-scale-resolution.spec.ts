@@ -1,4 +1,5 @@
 import { test } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
 
 /**
  * E2E Tests: US-021 Setup Menu - Scale Resolution (SC)
@@ -15,7 +16,7 @@ import { test } from '../helpers/fixtures';
  */
 
 /** Open setup, pick X, and scroll up to the SC parameter. */
-async function gotoSC(dro: import('../helpers/dro-page').DROPage) {
+async function gotoSC(dro: DROPage) {
   await dro.settingsButton.click();
   await dro.waitForAxisPureTextValue('X', 'SELECt');
   await dro.selectAxis('X');
@@ -27,6 +28,10 @@ async function gotoSC(dro: import('../helpers/dro-page').DROPage) {
 }
 
 test.describe('US-021: Setup Menu - Scale Resolution', () => {
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
+
   test('reach SC, see the 5-micron default, change toward 1 micron (AC21.3, AC21.4, AC21.5)', async ({ dro }) => {
     await gotoSC(dro);
     // Default is 5 micron for mills.
@@ -47,8 +52,10 @@ test.describe('US-021: Setup Menu - Scale Resolution', () => {
     await dro.key6.click();
     await dro.waitForAxisPureTextValue('X', 'SC 10.0');
 
-    // Exit via the setup key back to the SELECT prompt without committing.
+    // C from SELECT exits and discards the unsaved draft.
     await dro.settingsButton.click();
     await dro.waitForAxisPureTextValue('X', 'SELECt');
+    await dro.clearButton.click();
+    await dro.waitForReady('idle');
   });
 });

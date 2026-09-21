@@ -178,7 +178,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     ['o', 'arc-contour-intro'],
     ['g', 'angle-hole-intro'],
     ['d', 'grid-intro'],
-    ['s', 'sdm-intro'],
+    ['s', 'sdm-menu-program'],
   ])('AC 38.14-38.21 — "%s" enters %s', async (key, expectedState) => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
@@ -188,7 +188,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(useDROStore.getState().stateName).toBe(expectedState);
   });
 
-  it('AC 38.19 — H halves the selected axis value', async () => {
+  it('AC 38.19 — H opens HALF selection and the chosen axis is halved', async () => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
 
@@ -200,6 +200,8 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
     await user.keyboard('h');
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent('SELECt');
+    await user.keyboard('x');
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
   });

@@ -17,9 +17,6 @@ test.describe('US-011: SDM Run Mode', () => {
   /** Program step 1 (X=50) and step 2 (X=80) in mm via SDM Program mode. */
   async function programTwoSteps(dro: import('../helpers/dro-page').DROPage) {
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
-    await dro.page.click('[data-testid="key-6"]'); // -> rUn
-    await dro.page.click('[data-testid="key-6"]'); // -> ProGrAn
     await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     await dro.enterButton.click(); // -> step view
 
@@ -32,7 +29,7 @@ test.describe('US-011: SDM Run Mode', () => {
 
     // Advance to step 2 and program X = 80.
     await dro.page.click('[data-testid="key-6"]');
-    await dro.waitForAxisPureNumberValue('Y', 2);
+    await dro.waitForAxisPureNumberValue('Y', 2, 0, undefined, 0);
     await dro.enterButton.click(); // confirm step 2 -> X entry
     await dro.enterNumber('80');
     await dro.enterButton.click(); // X -> Y
@@ -53,13 +50,13 @@ test.describe('US-011: SDM Run Mode', () => {
 
     // AC 11.1: enter SDM, navigate to Run, confirm.
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
+    await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     await dro.page.click('[data-testid="key-6"]'); // -> rUn
     await dro.waitForAxisPureTextValue('X', 'rUn');
     await dro.enterButton.click();
 
     // AC 11.2: run step prompt shows step number 1.
-    await dro.waitForAxisPureNumberValue('Y', 1);
+    await dro.waitForAxisPureNumberValue('Y', 1, 0, undefined, 0);
 
     // AC 11.3: confirm step 1 -> distance-to-go. Machine at origin, step 1 X=50.
     await dro.enterButton.click();
@@ -87,7 +84,7 @@ test.describe('US-011: SDM Run Mode', () => {
     await programTwoSteps(dro);
 
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
+    await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     await dro.page.click('[data-testid="key-6"]'); // -> rUn
     await dro.waitForAxisPureTextValue('X', 'rUn');
     await dro.enterButton.click();
@@ -95,8 +92,9 @@ test.describe('US-011: SDM Run Mode', () => {
     // Press Y to start a fresh step entry, type 2, confirm.
     await dro.yButton.click();
     await dro.enterNumber('2');
-    await dro.waitForAxisPureNumberValue('Y', 2);
+    await dro.waitForAxisPureNumberValue('Y', 2, 0, undefined, 0);
     await dro.enterButton.click();
+    await dro.enterButton.click(); // execute the selected step
 
     // Step 2 X=80, machine at origin -> DTG = 80.
     await dro.waitForAxisPureNumberValue('X', 80);

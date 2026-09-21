@@ -286,11 +286,11 @@ describe('Bolt Hole Circle Integration', () => {
       await typeValue(user, '20'); await pressEnter(user);
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-holes');
       expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(0); // Empty buffer shows 0
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(0); // Literal count entry
 
       // Enter hole count = 6
       await user.click(screen.getByTestId('key-6'));
-      expect(getAxisDisplayPureNumberValue('Y')).toBe(6);
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(6);
       await user.click(screen.getByTestId('key-enter'));
       expect(useDROStore.getState().stateName).toBe('bolt-hole-circle-navigate');
 
@@ -478,52 +478,76 @@ describe('Bolt Hole Circle Integration', () => {
 
       // Start at hole 1, press key 4 to wrap to last hole
       await user.click(screen.getByTestId('key-4'));
-      const stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'bolt-hole') {
-        expect(stateData.currentHole).toBe(6);
-      }
+      expect(useDROStore.getState().stateData).toMatchObject({
+        stateDataType: 'bolt-hole',
+        currentHole: 6,
+      });
     });
 
-    it('jumps to specific hole with number entry and enter', async () => {
+    it('shows the jump request and accepts an arrow-labelled digit', async () => {
       const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
-      // Enter hole number 3 and press enter
-      // Note: key-4 is left arrow (navigation), so use key-3 which is a digit-only key
-      await user.click(screen.getByTestId('key-3'));
+      await user.click(screen.getByTestId('key-2'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(0);
+
+      await user.click(screen.getByTestId('key-4'));
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(4);
       await user.click(screen.getByTestId('key-enter'));
 
-      const stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'bolt-hole') {
-        expect(stateData.currentHole).toBe(3);
-      }
+      expect(useDROStore.getState().stateData).toMatchObject({
+        stateDataType: 'bolt-hole',
+        currentHole: 4,
+        navigationPhase: 'distance-to-go',
+      });
     });
 
-    it('shows current hole number with key 8', async () => {
+    it('backs out of an empty jump request without changing the current hole', async () => {
       const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
-      // Start at hole 1
-      let stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'bolt-hole') {
-        expect(stateData.currentHole).toBe(1);
-      }
+      await user.click(screen.getByTestId('key-2'));
+      await user.click(screen.getByTestId('key-4'));
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(4);
 
-      // Press key 8 to show hole number - should put "1" in inputBuffer
+      await user.click(screen.getByTestId('key-clear'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(0);
+      expect(useDROStore.getState().stateData).toMatchObject({
+        stateDataType: 'bolt-hole',
+        currentHole: 1,
+        navigationPhase: 'jump-entry',
+      });
+
+      await user.click(screen.getByTestId('key-clear'));
+      expect(useDROStore.getState().stateData).toMatchObject({
+        stateDataType: 'bolt-hole',
+        currentHole: 1,
+        navigationPhase: 'distance-to-go',
+      });
+      expect(typeof getAxisDisplayPureNumberValue('X')).toBe('number');
+    });
+
+    it('shows and toggles the visible current-hole number with key 8', async () => {
+      const { user } = await renderSimulator({ millSource: 'noop' });
+      await setupNavigateState(user);
+
       await user.click(screen.getByTestId('key-8'));
-      expect(useDROStore.getState().vMem.inputBuffer).toBe('1');
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(1);
 
-      // Navigate to hole 3 and check key 8 again
-      await user.click(screen.getByTestId('key-6')); // hole 2
-      await user.click(screen.getByTestId('key-6')); // hole 3
-
-      stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'bolt-hole') {
-        expect(stateData.currentHole).toBe(3);
-      }
+      // Arrow navigation remains active in current-number view.
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(2);
 
       await user.click(screen.getByTestId('key-8'));
-      expect(useDROStore.getState().vMem.inputBuffer).toBe('3');
+      expect(useDROStore.getState().stateData).toMatchObject({
+        stateDataType: 'bolt-hole',
+        currentHole: 2,
+        navigationPhase: 'distance-to-go',
+      });
+      expect(typeof getAxisDisplayPureNumberValue('X')).toBe('number');
     });
   });
 

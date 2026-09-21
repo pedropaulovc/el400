@@ -1,7 +1,8 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
-import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis, useZeroApproachX, useZeroApproachY, useZeroApproachZ } from "../stores/droStore";
-import { useAxisDisplayDecimals, useAxisIsAngular } from "../stores/settingsStore";
+import { useDROStore, useDisplayX, useDisplayY, useDisplayZ, useReferenceWaitingAxis, useZeroApproachX, useZeroApproachY, useZeroApproachZ, useIsAsleep } from "../stores/droStore";
+import { useAxisDisplayDecimals } from "../stores/settingsStore";
 import { formatAxisDigits } from "./axisDigits";
+import type { DROStatePayload } from "../stores/dro/types";
 
 export type AxisDisplayValue = number | string;
 
@@ -23,33 +24,63 @@ interface AxisProps {
   axis: 'X' | 'Y' | 'Z';
 }
 
+function functionMarker(
+  { stateName, stateData, vMem, display }: DROStatePayload,
+  axis: AxisProps['axis']
+): 'none' | 'leading' | 'terminal' {
+  if (typeof display[axis] !== 'number') return 'none';
+
+  switch (stateName) {
+    case 'distance-to-go':
+      return stateData.stateDataType === 'preset' && stateData.presetTargets[axis] !== null
+        ? 'leading' : 'none';
+    case 'sdm-run-active':
+      return stateData.stateDataType === 'sdm' && stateData.navigationPhase === 'browse'
+        ? 'leading' : 'none';
+    case 'bolt-hole-circle-navigate':
+    case 'bolt-hole-arc-navigate':
+    case 'arc-contour-navigate':
+    case 'angle-hole-navigate':
+    case 'grid-navigate':
+      return axis !== 'Z' && 'navigationPhase' in stateData
+        && stateData.navigationPhase === 'distance-to-go' ? 'leading' : 'none';
+    case 'linear-bolt-hole-navigate':
+      return stateData.stateDataType === 'linear-bolt-hole' && stateData.axis === axis
+        ? 'leading' : 'none';
+    case 'function-menu-center-line-result':
+    case 'function-menu-center-circle-result':
+      return axis === 'Z' ? 'none' : 'terminal';
+    case 'six-output-run':
+      for (let index = 0; index < vMem.outputCount; index++) {
+        if (vMem.outputProgram[index]?.axis === axis) return 'terminal';
+      }
+      return 'none';
+    default:
+      return 'none';
+  }
+}
+
 const Axis = ({ axis }: AxisProps) => {
   // Each axis subscribes to its own value only
   const useAxisValue = axisHooks[axis];
   const value = useAxisValue();
-  const stateName = useStateName();
-  // Reference waiting (§7.7.1): the selected axis's zero blinks until the mark is crossed.
+  const marker = useDROStore((state) => functionMarker(state, axis));
+  // Reference waiting (§7.7.1): only the selected axis's last digit flashes.
   const blinkAxis = useReferenceWaitingAxis();
   // Near-Zero Warning (US-024): this axis flashes while within BP DIST of zero.
   const useAxisZeroApproach = zeroApproachHooks[axis];
   const isNearZero = useAxisZeroApproach();
-  const isBlinking = blinkAxis === axis || isNearZero;
+  const isAsleep = useIsAsleep();
+  const isBlinking = !isAsleep && isNearZero;
   // dP display resolution (US-022): fractional digits to render for this axis.
   const decimals = useAxisDisplayDecimals(axis);
-  // Angular axes (US-040) render their pre-formatted DMS string verbatim.
-  const isAngular = useAxisIsAngular(axis);
+  const digits = formatAxisDigits(isAsleep ? '' : value, { decimals });
 
-  // Check if in function mode (distance-to-go displays leading decimal on 2nd digit)
-  const isFunctionMode = stateName === 'distance-to-go';
-
-  const digits = formatAxisDigits(value, { decimals, isAngular });
-
-  // Add leading decimal to 2nd digit when in function mode
-  if (isFunctionMode && digits.length >= 2) {
-    const secondDigit = digits[1];
-    if (secondDigit) {
-      digits[1] = { ...secondDigit, hasDecimal: true };
-    }
+  // The manual distinguishes leading DTG dots from terminal center/output dots.
+  const markerIndex = marker === 'leading' ? 1 : digits.length - 1;
+  if (!isAsleep && marker !== 'none') {
+    const digit = digits[markerIndex];
+    if (digit) digits[markerIndex] = { ...digit, hasDecimal: true };
   }
 
   return (
@@ -60,7 +91,7 @@ const Axis = ({ axis }: AxisProps) => {
     >
       <div className={`flex items-center -space-x-1${isBlinking ? ' animate-blink' : ''}`} data-blinking={isBlinking ? 'true' : undefined}>
         {digits.map((digit, index) => (
-          <div key={index} className="w-12 h-20">
+          <div key={index} className={`w-12 h-20${!isAsleep && blinkAxis === axis && index === digits.length - 1 ? ' animate-blink' : ''}`}>
             <SevenSegmentDigit value={digit.char} showDecimal={digit.hasDecimal} />
           </div>
         ))}

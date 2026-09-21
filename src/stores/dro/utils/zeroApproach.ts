@@ -21,7 +21,6 @@ import type {
   ZeroApproachTolerance,
 } from '../../../types/nonVolatileMemory';
 import type { DROStateName } from '../droStateMachine';
-import { isZeroApproachContext } from '../droStateMachine';
 import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 
 /** Per-axis active state of the zero-approach warning. */
@@ -72,6 +71,7 @@ export function approachToleranceMm(value: ZeroApproachTolerance): number {
  * "far" (no warning) by returning Infinity.
  */
 function distanceToZeroMm(value: AxisDisplayValue, unit: 'inch' | 'mm'): number {
+  if (typeof value === 'string' && value.trim() === '') return Infinity;
   const numeric = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(numeric)) return Infinity;
   return Math.abs(fromAnyUnitToMm(numeric, unit));
@@ -99,10 +99,11 @@ export function nextAxisWarning(
 ): boolean {
   if (!enabled) return false;
   if (!Number.isFinite(distMm)) return false;
-  // Already beeping: only clear once we leave the wider release band.
-  if (prevActive) return distMm <= distanceMm + toleranceMm;
-  // Not beeping: engage when inside the approach band.
-  return distMm <= distanceMm;
+  const thresholdMm = distanceMm + (prevActive ? toleranceMm : 0);
+  // Subtracted encoder coordinates can straddle an inclusive boundary by a few
+  // floating-point bits (32 - 31.95 > 0.05). This allowance is one millionth
+  // of the finest supported 0.1 µm encoder resolution, not display rounding.
+  return distMm <= thresholdMm + 1e-10;
 }
 
 /**
@@ -113,10 +114,8 @@ export function nextAxisWarning(
  * MILL_STATE_CHANGED), so the warning tracks actual motion toward the target,
  * not any forced/test-only signal.
  *
- * Gated to the function contexts where the warning is automatically enabled
- * (`isZeroApproachContext`: distance-to-go / SDM / milling functions, AC24.9):
- * outside them — e.g. plain idle, where a freshly-zeroed axis sits at 0 with no
- * target being approached — the warning is always off.
+ * Automatic 50 µm protection applies only to active target displays, never
+ * configuration prompts. The optional per-axis warning also works in idle.
  *
  * `armed` masks which axes are actually approaching a target. In distance-to-go
  * only the axes with a preset show distance-to-target; the others show raw
@@ -130,19 +129,25 @@ export function computeZeroApproach(
   stateName: DROStateName,
   armed: ZeroApproachArmed = ALL_ARMED
 ): ZeroApproachByAxis {
-  if (!isZeroApproachContext(stateName)) return ZERO_APPROACH_OFF;
-
-  const enabled = nvMem.zeroApproachEnabled;
-  const distanceMm = approachDistanceMm(nvMem.zeroApproachDistance);
-  const toleranceMm = approachToleranceMm(nvMem.zeroApproachTolerance);
+  const automatic = stateName === 'distance-to-go' || stateName === 'sdm-run-active'
+    || stateName === 'function-menu-center-line-result' || stateName === 'function-menu-center-circle-result'
+    || stateName === 'bolt-hole-circle-navigate' || stateName === 'bolt-hole-arc-navigate'
+    || stateName === 'angle-hole-navigate' || stateName === 'grid-navigate'
+    || stateName === 'linear-bolt-hole-navigate' || stateName === 'arc-contour-navigate';
+  if (!automatic && stateName !== 'idle') return ZERO_APPROACH_OFF;
   const unit = nvMem.defaultUnit;
 
   const forAxis = (axis: 'X' | 'Y' | 'Z'): boolean => {
-    if (!armed[axis]) return false;
+    if (!armed[axis] || nvMem.countingMode[axis] === 'angular') return false;
+    const configured = nvMem.zeroApproachEnabled[axis];
+    const distanceMm = Math.max(automatic ? 0.05 : 0,
+      configured ? approachDistanceMm(nvMem.zeroApproachDistance[axis]) : 0);
+    const toleranceMm = configured ? approachToleranceMm(nvMem.zeroApproachTolerance[axis]) : 0;
+    const displayScale = nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
     return nextAxisWarning(
-      distanceToZeroMm(display[axis], unit),
+      distanceToZeroMm(display[axis], unit) / displayScale,
       prev[axis],
-      enabled,
+      automatic || configured,
       distanceMm,
       toleranceMm
     );

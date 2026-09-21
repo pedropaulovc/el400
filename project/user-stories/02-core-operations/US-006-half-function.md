@@ -1,30 +1,26 @@
 # US-006: Half Function
 
-**Manual Reference:** Section 7.5 Half Function
+**Authority:** EL400 Operation Manual §7.5 and its SELECT illustration; MagXact “CENTER FIND.”  
 **Priority:** Medium
 
 ## User Story
-**As a** machine operator
-**I want** to find the center of a workpiece by halving the displayed value
-**So that** I can quickly set the datum to the center point
+**As a** machine operator  
+**I want** to select an axis and halve its displayed value  
+**So that** I can locate the midpoint between two measured edges
 
-## Acceptance Criteria
-- [ ] **AC 6.1:** Pressing the `½` key initiates the Half function.
-- [ ] **AC 6.2:** The display shows `SELECT`.
-- [ ] **AC 6.3:** Pressing an axis key (X, Y, or Z) halves the current value of that axis.
-- [ ] **AC 6.4:** Recommended use is in INC mode to avoid changing the ABS datum.
+## Target Acceptance Criteria
+- [ ] **AC 6.1:** From normal counting, pressing `½` enters a selection phase and displays `SELECt`.
+- [ ] **AC 6.2:** Pressing X, Y or Z halves that axis's current displayed coordinate exactly once and returns to normal counting; no previously selected axis is acted on before this choice.
+- [ ] **AC 6.3:** The other axes and their datums are unchanged. `C` cancels selection without halving.
+- [ ] **AC 6.4:** HALF works in ABS and INC, while INC is the recommended midpoint workflow because it preserves the ABS datum.
+- [ ] **AC 6.5:** Connected INC uses the live incremental coordinate, not a frozen stored reading.
 
-## E2E Test Scenarios
-```typescript
-describe('US-006: Half Function', () => {
-  test('Half function halves the display value', async () => {
-    await dro.setDisplay('X', 100.000);
-    
-    await dro.pressKey('HALF');
-    await expect(dro.display.message).toHaveText('SELECT');
-    
-    await dro.pressKey('X');
-    await expect(dro.display.xAxis).toHaveValue(50.000);
-  });
-});
-```
+## Baseline Audit (headed debug source)
+- **Passed only for arithmetic:** with X already selected, `100` became `50`.
+- **Confirmed gap:** `½` acted immediately on the previously selected axis; no `SELECt` phase appeared and the subsequent axis key did nothing.
+
+## Evidence
+- Runtime audit: `/tmp/el400-audit-ManualCore.json` (`US-006`)
+- Screenshot: `/tmp/el400-audit/core/half-no-select.png`
+- Target E2E: [`e2e/02-core-operations/US-006-half-function.spec.ts`](../../../e2e/02-core-operations/US-006-half-function.spec.ts) (pending Main verification)
+- Integrated target E2E: `e2e/02-core-operations/manual-fidelity.spec.ts` (pending Main verification)

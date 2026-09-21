@@ -1,68 +1,37 @@
-# US-043: Setup Menu - Keypad Lock (LoC)
+# US-043: Setup Menu - Keypad Lock
 
-**Manual Reference:** Section 6.2 Parameters Setting (`LoC off` / `LoC on`, note *3); EL400 video manual §1.12 "Lock function `LOC`"
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
+## Source
+
+- **Primary:** EL400 Operation Manual §6.2, pp. 20–21: `LoC off/on`; lock blocks every key operation except setup, protecting the datum from an accidental reset.
+- **Video:** EL400 overview §1.12, `[08:04–08:36]`: all front-panel buttons except wrench become inoperative.
+- **Simulator accessibility contract:** locked controls expose their unavailable state to assistive technology.
+
 ## User Story
-**As a** machine operator
-**I want** to lock the front panel while a job is running
-**So that** nobody accidentally zeroes an axis or changes a value and loses my datum
+
+**As a** machine operator  
+**I want** to lock command input while retaining a live readout and unlock path  
+**So that** accidental presses cannot alter a job datum
 
 ## Acceptance Criteria
-- [x] **AC 43.1:** The `LoC` parameter is available in setup with choices `LoC off` (default) and `LoC on`.
-- [x] **AC 43.2:** When `LoC on` is saved, **all** front-panel keys are disabled **except** the 🔧 wrench (setup) key.
-- [x] **AC 43.3:** Pressing any locked key has no effect (and, per beep settings, may give no/locked feedback).
-- [x] **AC 43.4:** The wrench key still enters setup so the operator can navigate to `LoC` and set `LoC off` to unlock.
-- [x] **AC 43.5:** Position display continues to update live while locked (lock affects input only, not the readout).
-- [x] **AC 43.6:** The lock state persists after power cycle when saved via `SAU CHG`.
-- [x] **AC 43.7:** While locked, the datum/ABS zero is protected from accidental reset (the purpose per note *3).
 
-## E2E Test Scenarios
-```typescript
-describe('US-043: Keypad Lock', () => {
-  test('locked keypad ignores axis zero', async () => {
-    await dro.setKeypadLock(true);
-    await dro.zeroAxis('X');                 // BTN_ZERO_X
-    await expect(dro.display.xAxis).not.toHaveValue(0.0000); // unchanged
-  });
+- [ ] **AC43.1:** Global `LoC` offers `off` (factory setting) and `on`.
+- [ ] **AC43.2:** When saved on, every front-panel/keyboard command except wrench/setup is ignored, including numeric entry, unit/mode changes, functions, and axis zero.
+- [ ] **AC43.3:** Wrench still opens setup and permits navigation to `LoC off`.
+- [ ] **AC43.4:** Machine/encoder updates continue while locked; lock gates operator input, not the live readout.
+- [ ] **AC43.5:** Locked interactive controls expose disabled semantics (`aria-disabled` or equivalent) without disabling the wrench/unlock path.
+- [ ] **AC43.6:** The draft lock state persists only after `SAU CHG`; after reload, a saved lock still protects the datum.
 
-  test('wrench still enters setup while locked', async () => {
-    await dro.setKeypadLock(true);
-    await dro.pressKey('SETUP');
-    await expect(dro.display.message).toHaveText('SELECT');
-  });
+## Human Verification
 
-  test('display keeps updating while locked', async () => {
-    await dro.setKeypadLock(true);
-    await dro.simulateMove('X', 5.000);
-    await expect(dro.display.xAxis).toHaveValue(5.000);
-  });
+Move X nonzero, save `LoC on`, and try every front-panel group plus keyboard shortcuts; none may alter state or zero X. Jog the machine and confirm the readout updates. Inspect the accessibility tree for disabled states, use wrench to save `LoC off`, and confirm normal input returns. Reload both saved states and include an unsaved toggle control.
 
-  test('unlock via setup restores key input', async () => {
-    await dro.setKeypadLock(true);
-    await dro.pressKey('SETUP');
-    await dro.navigateTo('LoC');
-    await dro.pressKey('KEY_4_LEFT');        // ◄ to LoC off
-    await dro.exitSetupSaving();
-    await dro.zeroAxis('X');
-    await expect(dro.display.xAxis).toHaveValue(0.0000);
-  });
-});
-```
+## Automated Coverage
 
-## Implementation Notes
-- Model as a top-level gate in the reducer: when `keypadLocked` is true, drop every event
-  except `BTN_FUNCTION`-class setup entry and the internal `MILL_STATE_CHANGED` (position) events.
-- Store as global `keypadLocked: boolean` in non-volatile memory.
-- Keyboard-accessibility (US-037/US-038): locked state must be announced to screen readers,
-  and locked controls marked `aria-disabled`.
+- [`e2e/06-configuration/US-043-keypad-lock.spec.ts`](../../../e2e/06-configuration/US-043-keypad-lock.spec.ts)
 
-## Related Stories
-- US-005: Zeroing Individual Axes (the operation being protected)
-- US-039: Setup Menu Navigation (unlock path)
-- US-037 / US-038: Keyboard Navigation & Shortcuts (accessible lock state)
+## Baseline Audit (before the current implementation work)
 
-## Notes
-- New story from crosscheck. `LoC` is in the §6.2 table and video §1.12 but had no story.
-</content>
+Functional locking, wrench escape, live motion, persistence, and datum protection passed. Controls remained DOM-enabled with no `aria-disabled`, so the accessibility criterion was a confirmed gap. Whole-transaction rollback also requires integrated revalidation.

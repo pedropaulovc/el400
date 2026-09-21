@@ -23,7 +23,7 @@ import type { TaperOnAxis } from '../../../types/nonVolatileMemory';
 /** Open the function menu and step right to the taper entry, then enter it. */
 async function enterTaperFromMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('btn-function')); // idle -> function-menu-center
-  // Ring: center, circle, line, linear, polar, taper => 5 right presses.
+  // Top-level ring: center, linear, polar, probe, six-output, taper.
   for (let i = 0; i < 5; i++) {
     await user.click(screen.getByTestId('key-6'));
   }
@@ -59,40 +59,35 @@ describe('Taper Calculation Integration (US-045)', () => {
     vi.restoreAllMocks();
   });
 
-  it('AC 45.2/45.3: taper on X shows angle on X and radius on Z (mm)', async () => {
+  it('shows DMS half-angle on X and radius on Z in mm mode', async () => {
     const { user } = await renderSimulator({ millSource: 'noop' });
-    await user.click(screen.getByTestId('btn-toggle-unit')); // mm so values map directly
+    await user.click(screen.getByTestId('btn-toggle-unit'));
     setTaperOnAxis('X');
-
-    // Mill starts at origin; entry captured at (0,0,0).
     await enterTaperFromMenu(user);
 
-    // FN LED on while in taper (AC: function active)
-    expect(useDROStore.getState().stateName).toBe('taper-active');
-
-    // Move to far end: dX = 5 (radius), dZ = 50 (length).
     await moveToolTo(5, 0, 50);
 
-    // angle = atan(5/50) = 5.7106 deg on X
-    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(5.7106, 3);
-    // radius = 5 mm on Z
+    expect(getAxisDisplayPureTextValue('X')).toBe('5.42.38');
     expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(5, 3);
-    // Y display is blank in taper mode
     expect(getAxisDisplayPureTextValue('Y')).toBe('');
   });
 
-  it('AC 45.3: taper on Z shows angle on Z and radius on X', async () => {
+  it('routes the DMS angle to each real Y/Z setup choice', async () => {
     const { user } = await renderSimulator({ millSource: 'noop' });
     await user.click(screen.getByTestId('btn-toggle-unit'));
-    setTaperOnAxis('Z');
 
+    setTaperOnAxis('Y');
     await enterTaperFromMenu(user);
     await moveToolTo(5, 0, 50);
-
-    // angle on Z = atan(dX/dZ) = atan(5/50)
-    expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(5.7106, 3);
-    // radius on X = dX = 5 mm
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(5, 3);
+    expect(getAxisDisplayPureTextValue('Y')).toBe('5.42.38');
+
+    await user.click(screen.getByTestId('key-clear'));
+    setTaperOnAxis('Z');
+    await enterTaperFromMenu(user);
+    await moveToolTo(10, 0, 100);
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(5, 3);
+    expect(getAxisDisplayPureTextValue('Z')).toBe('5.42.38');
   });
 
   it('AC 45.5: pressing C exits taper and returns to normal display', async () => {

@@ -1,62 +1,28 @@
 # US-007: Center Finding (Circle and Line)
 
-**Manual Reference:** Section 8.4 Center Of Circle, 8.5 Center Of Line
+**Authority:** EL400 Operation Manual §§8.4–8.5. It takes precedence over the flatter MagXact macro sequence.  
 **Priority:** Medium
 
 ## User Story
-**As a** machine operator
-**I want** to find the center of a circle or a line using probing points
-**So that** I can determine the center coordinates without manual calculation
+**As a** machine operator  
+**I want** the documented nested center menu and point-capture flow  
+**So that** I can move to the center of a line or circle by distance-to-go
 
-## Acceptance Criteria
-- [ ] **AC 7.1:** Press `f^n` key to access function menu, display shows `CEntrE`, press `ent↵`.
-- [ ] **AC 7.2:** For **Center of Circle**:
-    - Select `CirCLE`, press `ent↵`.
-    - Move to Point 1, press `6►` to store.
-    - Move to Point 2, press `6►` to store.
-    - Move to Point 3, press `6►` to store.
-    - Display shows "Distance-to-go" to the center.
-- [ ] **AC 7.3:** For **Center of Line**:
-    - Select `LinE` (navigate using `6►`), press `ent↵`.
-    - Move to Point 1, press `6►` to store.
-    - Move to Point 2, press `6►` to store.
-    - Display shows "Distance-to-go" to the center.
-- [ ] **AC 7.4:** The `Fn` LED glows while in this function.
+## Target Acceptance Criteria
+- [ ] **AC 7.1:** `fⁿ` shows `CEntrE`; `ent` opens a nested subtype menu whose default is `CirCLE`.
+- [ ] **AC 7.2:** `4◄`/`6►` toggle `CirCLE` and `LinE`; `ent` starts the selected capture routine.
+- [ ] **AC 7.3:** Circle capture labels Z as `Point 1`, `Point 2`, `Point 3`; visible machine motion sets each point and `6►` stores it. The third point yields live X/Y distance-to-go and Z=`CEntrE`.
+- [ ] **AC 7.4:** Line capture similarly stores two endpoints and yields live distance-to-go to their midpoint.
+- [ ] **AC 7.5:** Duplicate/collinear circle geometry displays `inuAL d` and visibly restarts capture instead of silently accepting no result.
+- [ ] **AC 7.6:** The Fn indicator remains lit throughout menu, capture and result; `C` exits and restores normal counting.
 
+## Baseline Audit (headed debug source)
+- **Passed through non-authoritative routes:** two-point line and three-point circle calculations produced correct `-5` distance-to-go results; Fn stayed lit.
+- **Confirmed gap:** `ent` on `CEntrE` immediately started line capture; the `CirCLE`/`LinE` submenu and point labels were absent. Circle was reachable only by navigating before Enter.
 
-## E2E Test Scenarios
-```typescript
-describe('US-007: Center Finding', () => {
-  test('Center of Line', async () => {
-    await dro.pressKey('Fn');
+## Evidence
+- Runtime audit: `/tmp/el400-audit-ManualCore.json` (`US-007`)
+- Screenshots: `/tmp/el400-audit/core/center-missing-submenu.png`, `/tmp/el400-audit/core/center-line-result.png`, `/tmp/el400-audit/core/center-circle-noncanonical.png`
+- E2E: [`e2e/02-core-operations/US-007-center-finding.spec.ts`](../../../e2e/02-core-operations/US-007-center-finding.spec.ts)
 
-    await expect(dro.display.xAxis).toHaveText("CEntrE")
-    await dro.pressKey('ENT'); // Select CENTRE
-
-    await expect(dro.display.xAxis).toHaveText("LinE")
-    await dro.pressKey('Right'); // Select LINE
-
-    await dro.pressKey('ENT');
-
-    // Point 1 at 0
-    await dro.simulateEncoderAbsoluteMove('X', 0);
-    await dro.pressKey('Right'); // Store P1
-
-    // Point 2 at 100
-    await dro.simulateEncoderAbsoluteMove('X', 100);
-    await dro.pressKey('Right'); // Store P2
-
-    // Center should be at 50. Distance to go from 100 is -50
-    await expect(dro.display.xAxis).toHaveValue(-50.000);
-  });
-});
-```
-
-## Related Stories
-- US-015: Center of Circle (Macro) - automated alternative approach
-- US-008: Distance-to-Go Function (used to display center)
-
-## Notes
-- Merged from US-007 (Claude) and G-008 (Gemini)
-- This is the manual center-finding method
-- For automated 3-point macro, see US-015
+The nested target and invalid-geometry behavior are pending Main's integrated verification.

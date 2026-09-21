@@ -1,146 +1,42 @@
 # US-021: Setup Menu - Scale Resolution
 
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
-**Manual Reference:** SETUP MENU > SC (Scale Resolution) (line 47)
+
+## Source
+
+- **Primary:** EL400 Operation Manual §6.2, pp. 20–21: `SC` has exactly nine measuring-system resolutions — `0.1`, `0.2`, `0.5`, `1`, `2`, `5`, `10`, `20`, and `50` microns — and note *6 makes it per-axis.
+- **Video:** EL400 overview §1.5, `[03:08–03:32]`: `SC` must match the installed scale; mill kits use `SC 5.0`; arrows cycle and wrap.
 
 ## User Story
 
-**As a** machine operator
-**I want** to configure scale resolution (1 or 5 microns)
-**So that** the display reports travel distance correctly
+**As a** machine installer  
+**I want** each axis configured for its installed encoder resolution  
+**So that** encoder pulses are converted to the correct engineering distance
 
 ## Acceptance Criteria
 
-- [ ] AC21.1: Press wrench key, displays "SELECT"
-- [ ] AC21.2: Press X, Y, or Z to select axis
-- [ ] AC21.3: Press 2 key to scroll to "SC" parameter
-- [ ] AC21.4: Default is 5 (5 microns for mills)
-- [ ] AC21.5: Press 4 key to change to 1.0 (1 micron scales)
-- [ ] AC21.6: Other values possible for special scales
-- [ ] AC21.7: Press 2 to advance to next parameter
-- [ ] AC21.8: Must save changes before exit (SAV CHG)
+- [ ] **AC21.1:** Wrench shows `SELECt`; selecting X, Y, or Z opens that axis at `LinEAr`; Down reaches `SC`.
+- [ ] **AC21.2:** Factory configuration is `SC 5.0` on each mill axis.
+- [ ] **AC21.3:** Left/Right cycles, in both directions with wrap, through exactly `0.1 / 0.2 / 0.5 / 1 / 2 / 5 / 10 / 20 / 50` microns.
+- [ ] **AC21.4:** `SC` is independently drafted and stored for X, Y, and Z.
+- [ ] **AC21.5:** On a source that identifies an installed encoder resolution, `SC` reinterprets encoder pulses: the physical/decoded input is scaled by `configured microns ÷ installed microns`. A mismatched setting therefore changes the reported travel by that ratio.
+- [ ] **AC21.6:** A source such as CNCjs that already supplies engineering millimetres and does not identify an encoder resolution is not multiplied by `SC` a second time.
+- [ ] **AC21.7:** `SAU CHG` commits the draft; leaving through `End` or `C` without saving discards it.
 
-## E2E Test Scenarios
+## Human Verification
 
-```typescript
-describe('US-021: Setup Menu - Scale Resolution', () => {
-  test('enter setup menu', async ({ page }) => {
-    await page.goto('/');
+1. Enter setup, select each axis, reach `SC`, and cycle all nine choices through both wrap points.
+2. Save different X and Y values, reload, and confirm each axis retained its own value.
+3. With the debug encoder source identified as 5 µm, apply the same nonzero move at `SC 5.0` and `SC 10.0`; the interpreted reading must change by 2×.
+4. Repeat on the already-decoded CNCjs source; changing `SC` must not rescale its engineering-mm position.
+5. Draft another value and exit without `SAU CHG`; re-enter and confirm the saved value remains.
 
-    await page.click('[data-testid="wrench-button"]');
+## Automated Coverage
 
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('SELECT');
-  });
+- [`e2e/06-configuration/US-021-scale-resolution.spec.ts`](../../../e2e/06-configuration/US-021-scale-resolution.spec.ts)
+- Transaction coverage: [`e2e/06-configuration/US-027-save-changes.spec.ts`](../../../e2e/06-configuration/US-027-save-changes.spec.ts)
 
-  test('select X axis for configuration', async ({ page }) => {
-    await page.goto('/');
+## Baseline Audit (before the current implementation work)
 
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
-
-    // Axis selected, ready for configuration
-  });
-
-  test('navigate to SC parameter', async ({ page }) => {
-    await page.goto('/');
-
-    // Enter setup, select axis
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
-
-    // Scroll down to SC (may need multiple presses of 2 key)
-    await page.click('[data-testid="2-key"]'); // Down arrow
-    await page.click('[data-testid="2-key"]');
-    await page.click('[data-testid="2-key"]');
-
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('SC');
-  });
-
-  test('change from 5 to 1 micron', async ({ page }) => {
-    await page.goto('/');
-
-    // Navigate to SC parameter
-    // ... setup ...
-
-    // Current value should be 5
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('5');
-
-    // Press 4 key (left arrow) to change
-    await page.click('[data-testid="4-key"]');
-
-    // Value changes to 1.0
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('1.0');
-  });
-
-  test('verify display multiplier changes', async ({ page }) => {
-    await page.goto('/');
-
-    // With 5 micron scale, 0.0002" increments
-    // Change to 1 micron scale, 0.00004" increments (5× more sensitive)
-
-    // ... change SC from 5 to 1 ...
-
-    // Save and exit
-    // ... save changes ...
-
-    // Verify display now shows 5× movement for same physical distance
-  });
-
-  test('save changes', async ({ page }) => {
-    await page.goto('/');
-
-    // After changing SC parameter
-    // ... setup ...
-
-    // Navigate to SAV CHG
-    await page.click('[data-testid="2-key"]'); // Keep pressing until SAV CHG
-    // ... scroll down ...
-
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('SAV CHG');
-
-    // Confirm save
-    await page.click('[data-testid="ent-button"]');
-
-    // Changes saved
-  });
-
-  test('setting persists after exit', async ({ page }) => {
-    await page.goto('/');
-
-    // Change SC, save, exit
-    // ... setup ...
-
-    // Exit setup
-    await page.click('[data-testid="c-button"]');
-    await page.click('[data-testid="c-button"]');
-
-    // Re-enter setup
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
-    // Navigate to SC
-    // ... scroll ...
-
-    // Verify setting persisted
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('1.0');
-  });
-});
-```
-
-## Implementation Notes
-
-- **Scale resolution**: Physical resolution of magnetic scales
-  - 5 microns = 0.005mm = 0.0002" (standard for mills)
-  - 1 micron = 0.001mm = 0.00004" (high-precision scales)
-- **Why configure**: If wrong scale resolution set, display shows incorrect distance
-  - Example: 1 micron scale with 5 micron setting → display shows 5× actual movement
-- **Per-axis setting**: Each axis can have different scale resolution
-- **Other values**: Some scales have 2, 10, or 20 micron resolution
-- **Effect on display**: Directly affects position calculations
-- **Common issue**: FAQ in manual addresses this (line 24-25)
-
-## Related Stories
-
-- US-001: First Use and Power-Up Display (default 5 micron resolution)
-- US-022: Display Resolution (related but independent setting)
-- US-027: Save Changes (required to persist settings)
+The headed audit passed setup entry, the 5 µm default, all nine choices, wrap, and SC-only save/discard. It also confirmed the old story's “one Left from 5 goes to 1” claim was false: the sequence is `5 → 2 → 1`. Raw scale interpretation was not then exposed: equal debug engineering-mm moves remained equal under different `SC` values, so AC21.5 was a confirmed implementation gap, not a verified behavior. AC21.6 is the required adapter boundary and was not exercised by that headed debug audit.

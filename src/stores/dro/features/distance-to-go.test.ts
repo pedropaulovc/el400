@@ -439,3 +439,21 @@ describe('distanceToGoReducer', () => {
     });
   });
 });
+
+describe('relative Preset', () => {
+  it('measures travel from execution at a nonzero origin without relocating ABS', () => {
+    const context = connectedContext({ x: 12, y: 0, z: 0 });
+    context.nvMem = { ...context.nvMem, defaultUnit: 'mm' };
+    const initial = createTestState('preset-select', {
+      ...INITIAL_PRESET_DATA, presetTargets: { X: 20, Y: null, Z: null },
+    });
+    initial.vMem = { ...initial.vMem, workOffsets: { X: 7, Y: 0, Z: 0 } };
+    let state = distanceToGoReducer(initial, { eventName: 'BTN_DISTANCE_TO_GO' }, context)!;
+    expect(state.display.X).toBe(20);
+    context.millState = { ...context.millState, position: { x: 32, y: 0, z: 0 } };
+    state = distanceToGoReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(state.display.X).toBe(0);
+    state = distanceToGoReducer(state, { eventName: 'KEY_CLEAR' }, context)!;
+    expect(state.display.X).toBe(25);
+  });
+});

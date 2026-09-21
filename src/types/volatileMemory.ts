@@ -46,6 +46,15 @@ export interface VolatileMemoryState {
   mode: DatumMode;
   activeAxis: Axis | null;
   workOffsets: AxisValues;
+  /** Independent datum for the connected incremental counter. */
+  incrementalOffsets: AxisValues;
+  /** Observed encoder marks in uncompensated scale-decoded machine mm. */
+  referenceMarks: Partial<AxisValues>;
+  /** Saved machine datum displacement from the encoder mark, in raw mm. */
+  machineReferenceOffsets: Partial<AxisValues>;
+  /** Operator six-output program; never part of OEM settings. */
+  outputProgram: readonly { axis: Axis; positionMm: number }[];
+  outputCount: number;
   incrementalValues: AxisValues;
   manualAbsoluteValues: AxisValues;
   inputBuffer: string;
@@ -76,6 +85,15 @@ export const INITIAL_VOLATILE_MEMORY_STATE: VolatileMemoryState = {
   mode: 'abs',
   activeAxis: null,
   workOffsets: ZERO_AXIS_VALUES,
+  incrementalOffsets: ZERO_AXIS_VALUES,
+  referenceMarks: {},
+  machineReferenceOffsets: {},
+  outputProgram: [
+    { axis: 'X', positionMm: 0 }, { axis: 'Y', positionMm: 0 },
+    { axis: 'Z', positionMm: 0 }, { axis: 'X', positionMm: 0 },
+    { axis: 'Y', positionMm: 0 }, { axis: 'Z', positionMm: 0 },
+  ],
+  outputCount: 1,
   incrementalValues: ZERO_AXIS_VALUES,
   manualAbsoluteValues: ZERO_AXIS_VALUES,
   inputBuffer: '',

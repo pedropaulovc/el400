@@ -57,4 +57,39 @@ test.describe('US-014: Trigonometric Calculator Functions', () => {
     await dro.enterButton.click();
     await expect(dro.xDisplay).toContainText('inF vAL');
   });
+
+  test('debug: cos(30) result chains into multiplication by 7', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.enterNumber('30');
+
+    for (let i = 0; i < 6; i++) await dro.yButton.click();
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('0.8660');
+
+    for (let i = 0; i < 3; i++) await dro.yButton.click();
+    await dro.enterNumber('7');
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('6.0622');
+  });
+
+  test('debug: tan(90) reports the singularity', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.enterNumber('90');
+
+    for (let i = 0; i < 7; i++) await dro.yButton.click();
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('inF vAL');
+  });
+
+  test('debug: acos(0.5) returns 60 degrees', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.page.click('[data-testid="btn-calculator"]');
+    await dro.enterNumber('0.5');
+
+    for (let i = 0; i < 9; i++) await dro.yButton.click();
+    await dro.enterButton.click();
+    await expect(dro.xDisplay).toContainText('60.0000');
+  });
 });

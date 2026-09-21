@@ -22,6 +22,7 @@ test.describe('US-018: Arc Contouring (Step Drilling)', () => {
   test('complete arc contouring workflow: parameters, cut type, navigation', async ({
     dro,
   }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     expect(await dro.isAbsMode()).toBe(true);
 
     // Work in mm so entered values store directly.

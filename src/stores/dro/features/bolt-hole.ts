@@ -27,6 +27,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -164,16 +165,12 @@ function computeBoltHoleNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   const holePos = calculateHolePosition(boltData, boltData.currentHole);
-
-  // Always use absolute position for distance-to-go calculation (not mode-dependent)
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
-
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
@@ -183,22 +180,43 @@ function computeBoltHoleNavigateDisplay(
   );
 }
 
-/**
- * Format buffer value for display.
- * - Empty buffer: shows 0
- * - Integers: show without decimals (e.g., "6")
- * - Decimals: show with 4 decimal precision (e.g., "1.7500")
- */
+/** Parse coordinate/angle input for numeric display formatting. */
 function formatBufferForDisplay(buffer: string): number {
   if (!buffer || buffer === '-' || buffer === '.' || buffer === '-.') {
     return 0;
   }
   const value = parseFloat(buffer);
-  if (isNaN(value)) {
+  if (!Number.isFinite(value)) {
     return 0;
   }
-  // Return the numeric value - display formatting handles precision
   return value;
+}
+
+/** Preserve integer-entry text without applying the axis coordinate precision. */
+function formatIntegerBufferForDisplay(buffer: string): string {
+  return buffer || '0';
+}
+
+function computeBoltHoleCurrentNumberDisplay(boltData: BoltHoleData): DisplayState {
+  return createDisplay('hoLES', String(boltData.currentHole), '');
+}
+
+function computeBoltHoleJumpDisplay(vMem: VolatileMemoryState): DisplayState {
+  return createDisplay('hoLES', formatIntegerBufferForDisplay(vMem.inputBuffer), '');
+}
+
+function computeBoltHoleActiveDisplay(
+  boltData: BoltHoleData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  if (boltData.navigationPhase === 'current-number') {
+    return computeBoltHoleCurrentNumberDisplay(boltData);
+  }
+  if (boltData.navigationPhase === 'jump-entry') {
+    return computeBoltHoleJumpDisplay(vMem);
+  }
+  return computeBoltHoleNavigateDisplay(boltData, vMem, context);
 }
 
 /**
@@ -212,7 +230,10 @@ function computeParameterEntryDisplay(
   vMem: VolatileMemoryState
 ): DisplayState {
   const promptText = BOLT_HOLE_DISPLAY_TEXT[state] ?? '';
-  const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
+  const bufferValue =
+    state === 'bolt-hole-circle-holes' || state === 'bolt-hole-arc-holes'
+      ? formatIntegerBufferForDisplay(vMem.inputBuffer)
+      : formatBufferForDisplay(vMem.inputBuffer);
 
   // For center-x, swap X and Y: X shows value, Y shows prompt
   if (isCenterXState(state)) {
@@ -242,12 +263,12 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
 
   const boltData = data.stateDataType === 'bolt-hole' ? data : INITIAL_BOLT_HOLE_DATA;
 
-  // Handle MILL_STATE_CHANGED - update display when position changes
+  // Keep the active display in sync when the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
     if (isNavigateState(state)) {
       return {
         ...statePayload,
-        display: computeBoltHoleNavigateDisplay(boltData, vMem, context),
+        display: computeBoltHoleActiveDisplay(boltData, vMem, context),
       };
     }
     if (isParameterEntryState(state)) {
@@ -259,17 +280,36 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     return statePayload;
   }
 
+  // C cancels an empty jump request back to distance-to-go. With entered
+  // digits it remains the normal single-character backspace below.
+  if (
+    eventName === 'KEY_CLEAR' &&
+    isNavigateState(state) &&
+    boltData.navigationPhase === 'jump-entry' &&
+    vMem.inputBuffer === ''
+  ) {
+    const newData: BoltHoleData = { ...boltData, navigationPhase: 'distance-to-go' };
+    return {
+      ...statePayload,
+      stateData: newData,
+      display: computeBoltHoleNavigateDisplay(newData, vMem, context),
+    };
+  }
+
   // KEY_CLEAR exits the macro at any point (unless buffer has content - then it erases)
   if (eventName === 'KEY_CLEAR') {
     // If buffer has content, erase last character (backspace)
     if (vMem.inputBuffer !== '') {
       const newBuffer = removeLastChar(vMem.inputBuffer);
+      const newVMem = { ...vMem, inputBuffer: newBuffer };
       return {
         ...statePayload,
-        vMem: { ...vMem, inputBuffer: newBuffer },
+        vMem: newVMem,
         display: isParameterEntryState(state)
-          ? computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer })
-          : statePayload.display,
+          ? computeParameterEntryDisplay(state, newVMem)
+          : isNavigateState(state) && boltData.navigationPhase === 'jump-entry'
+            ? computeBoltHoleJumpDisplay(newVMem)
+            : statePayload.display,
       };
     }
     // If buffer is empty, exit to idle and restore ABS mode
@@ -365,9 +405,10 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-circle-center-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Convert from display unit to mm for internal storage
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...boltData, centerX: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -383,9 +424,10 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-circle-center-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Convert from display unit to mm for internal storage
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...boltData, centerY: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -401,9 +443,10 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-circle-radius': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         // Convert from display unit to mm for internal storage
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         const newData = { ...boltData, radius: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -419,7 +462,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-circle-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Normalize angle to 0-359 range
         const normalizedAngle = ((value % 360) + 360) % 360;
         const newData = { ...boltData, startAngle: normalizedAngle };
@@ -437,12 +480,18 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-circle-holes': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 2 || value > 999) return null;
+        if (
+          value === null ||
+          !Number.isSafeInteger(value) ||
+          value < 2 ||
+          value > 999
+        ) return null;
 
         const newData: BoltHoleData = {
           ...boltData,
-          holeCount: Math.floor(value),
+          holeCount: value,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         };
         // Switch to INC mode for distance-to-go display
         const newVMem = {
@@ -463,7 +512,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
 
     case 'bolt-hole-circle-navigate':
     case 'bolt-hole-arc-navigate': {
-      const { holeCount, currentHole } = boltData;
+      const { holeCount, currentHole, navigationPhase } = boltData;
 
       if (holeCount === null) {
         return {
@@ -474,15 +523,84 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
         };
       }
 
+      // While requesting a hole, every keypad digit is data — including the
+      // four arrow-labelled keys 2/4/6/8.
+      if (navigationPhase === 'jump-entry') {
+        const digit = KEY_TO_DIGIT[eventName];
+        if (digit !== undefined) {
+          const newVMem = {
+            ...vMem,
+            inputBuffer: appendDigit(vMem.inputBuffer, digit),
+          };
+          return {
+            ...statePayload,
+            vMem: newVMem,
+            display: computeBoltHoleJumpDisplay(newVMem),
+          };
+        }
+
+        if (eventName === 'KEY_ENTER') {
+          const targetHole = getBufferValue(vMem.inputBuffer);
+          if (
+            targetHole === null ||
+            !Number.isSafeInteger(targetHole) ||
+            targetHole < 1 ||
+            targetHole > holeCount
+          ) return null;
+
+          const newData: BoltHoleData = {
+            ...boltData,
+            currentHole: targetHole,
+            navigationPhase: 'distance-to-go',
+          };
+          const newVMem = { ...vMem, inputBuffer: '' };
+          return {
+            stateName: state,
+            stateData: newData,
+            vMem: newVMem,
+            display: computeBoltHoleNavigateDisplay(newData, newVMem, context),
+          };
+        }
+        return null;
+      }
+
+      // Key 8 toggles the visible current-hole view.
+      if (eventName === 'KEY_8_UP') {
+        const newData: BoltHoleData = {
+          ...boltData,
+          navigationPhase:
+            navigationPhase === 'current-number' ? 'distance-to-go' : 'current-number',
+        };
+        return {
+          ...statePayload,
+          stateData: newData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeBoltHoleActiveDisplay(newData, vMem, context),
+        };
+      }
+
+      // Key 2 opens the visible specific-hole request.
+      if (eventName === 'KEY_2_DOWN') {
+        const newData: BoltHoleData = { ...boltData, navigationPhase: 'jump-entry' };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          ...statePayload,
+          stateData: newData,
+          vMem: newVMem,
+          display: computeBoltHoleJumpDisplay(newVMem),
+        };
+      }
+
       // Key 6: Advance to next hole
       if (eventName === 'KEY_6_RIGHT') {
         const nextHole = currentHole >= holeCount ? 1 : currentHole + 1;
         const newData = { ...boltData, currentHole: nextHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: state,
           stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeBoltHoleNavigateDisplay(newData, vMem, context),
+          vMem: newVMem,
+          display: computeBoltHoleActiveDisplay(newData, newVMem, context),
         };
       }
 
@@ -490,55 +608,12 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       if (eventName === 'KEY_4_LEFT') {
         const prevHole = currentHole <= 1 ? holeCount : currentHole - 1;
         const newData = { ...boltData, currentHole: prevHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: state,
           stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeBoltHoleNavigateDisplay(newData, vMem, context),
-        };
-      }
-
-      // Key 8: Show current hole number by putting it in inputBuffer
-      if (eventName === 'KEY_8_UP') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: String(currentHole) },
-        };
-      }
-
-      // Key 2: Jump to specific hole - clear buffer for input
-      if (eventName === 'KEY_2_DOWN') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: '' },
-        };
-      }
-
-      // If there's a number in the buffer and user presses ENTER, jump to that hole
-      if (eventName === 'KEY_ENTER' && vMem.inputBuffer !== '') {
-        const targetHole = getBufferValue(vMem.inputBuffer);
-        if (targetHole !== null && targetHole >= 1 && targetHole <= holeCount) {
-          const newData = { ...boltData, currentHole: Math.floor(targetHole) };
-          return {
-            stateName: state,
-            stateData: newData,
-            vMem: { ...vMem, inputBuffer: '' },
-            display: computeBoltHoleNavigateDisplay(newData, vMem, context),
-          };
-        }
-        return null;
-      }
-
-      // Handle digit input for hole number entry (after arrow keys processed)
-      // Only non-arrow digit keys: 0, 1, 3, 5, 7, 9
-      const digit = KEY_TO_DIGIT[eventName];
-      if (digit !== undefined) {
-        return {
-          ...statePayload,
-          vMem: {
-            ...vMem,
-            inputBuffer: appendDigit(vMem.inputBuffer, digit),
-          },
+          vMem: newVMem,
+          display: computeBoltHoleActiveDisplay(newData, newVMem, context),
         };
       }
 
@@ -548,8 +623,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-center-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...boltData, centerX: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -565,8 +641,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-center-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...boltData, centerY: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -582,8 +659,9 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-radius': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         const newData = { ...boltData, radius: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -599,7 +677,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-start-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Normalize angle to 0-359 range (CCW from +X)
         const normalizedAngle = ((value % 360) + 360) % 360;
         const newData = { ...boltData, startAngle: normalizedAngle };
@@ -617,7 +695,7 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-end-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Normalize angle to 0-359 range (CCW from +X)
         const normalizedAngle = ((value % 360) + 360) % 360;
         const newData = { ...boltData, endAngle: normalizedAngle };
@@ -636,12 +714,18 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
         // Arc allows a single hole (start == end edge case)
-        if (value === null || value < 1 || value > 999) return null;
+        if (
+          value === null ||
+          !Number.isSafeInteger(value) ||
+          value < 1 ||
+          value > 999
+        ) return null;
 
         const newData: BoltHoleData = {
           ...boltData,
-          holeCount: Math.floor(value),
+          holeCount: value,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         };
         // Switch to INC mode for distance-to-go display
         const newVMem = {

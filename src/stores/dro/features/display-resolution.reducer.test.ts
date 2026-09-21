@@ -1,11 +1,6 @@
 /**
- * Reducer-level tests for navigating to and changing the dP display-resolution
- * parameter via the shared setup shell (US-022 over US-039).
- *
- * dP controls how many decimals the readout shows (per axis). Unlike SC, dP
- * commits-on-change to nvMem (like Direction, US-002) so the live readout
- * precision updates immediately on exit -- the draft-only SAU CHG save engine
- * (US-027) is not yet wired.
+ * Reducer coverage for dP inside the shared setup draft transaction.
+ * Arrow keys preview; only ENT on SAU ChG commits. End discards.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -13,11 +8,13 @@ import { setupReducer } from './setup';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_SETUP_DATA, type SetupData } from '../droStateMachine';
 import type { DROStatePayload } from '../types';
-import { SETUP_PARAMETERS, DISPLAY_RESOLUTION_ID } from './setup-parameters';
+import { SETUP_PARAMETERS, DISPLAY_RESOLUTION_ID, SAVE_CHANGES_ID, SETUP_END_ID } from './setup-parameters';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
 
 const DP_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === DISPLAY_RESOLUTION_ID);
+const SAVE_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === SAVE_CHANGES_ID);
+const END_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === SETUP_END_ID);
 
 function paramState(data: Partial<SetupData>): DROStatePayload {
   const merged: SetupData = { ...INITIAL_SETUP_DATA, selectedAxis: 'X', ...data };
@@ -31,11 +28,7 @@ function xText(payload: DROStatePayload | null): string {
 
 describe('dP display resolution via setup shell (US-022)', () => {
   beforeEach(() => {
-    useSettingsStore.setState({ nvMem: DEFAULT_NON_VOLATILE_MEMORY });
-  });
-
-  it('is reachable in the registry (AC22.1)', () => {
-    expect(DP_INDEX).toBeGreaterThanOrEqual(0);
+    useSettingsStore.setState({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY } });
   });
 
   it('shows the committed default (dP 5.0) when highlighted (AC22.2)', () => {
@@ -64,22 +57,38 @@ describe('dP display resolution via setup shell (US-022)', () => {
     expect(xText(s)).toBe('dP 50.0');
   });
 
-  it('commits the chosen value to nvMem on change (immediate effect)', () => {
-    setupReducer(paramState({ currentParamIndex: DP_INDEX }), { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-    // 5 -> 10 micron committed to X.
+  it('keeps the choice as a draft until SAU ChG commits it', () => {
+    const drafted = setupReducer(
+      paramState({ currentParamIndex: DP_INDEX }),
+      { eventName: 'KEY_6_RIGHT' },
+      DEFAULT_TEST_CONTEXT
+    )!;
+    expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('5');
+
+    const atSave = {
+      ...drafted,
+      stateData: { ...(drafted.stateData as SetupData), currentParamIndex: SAVE_INDEX },
+    };
+    setupReducer(atSave, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
     expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('10');
   });
 
-  it('keeps dP per-axis: changing X does not move Y off its committed value (AC22.3)', () => {
-    setupReducer(
+  it('keeps dP per-axis when the transaction is saved (AC22.3)', () => {
+    const drafted = setupReducer(
       paramState({ selectedAxis: 'X', currentParamIndex: DP_INDEX }),
       { eventName: 'KEY_6_RIGHT' },
       DEFAULT_TEST_CONTEXT
-    );
-    const after = useSettingsStore.getState().nvMem.displayResolution;
-    expect(after.X).toBe('10');
-    expect(after.Y).toBe('5');
-    expect(after.Z).toBe('5');
+    )!;
+    const atSave = {
+      ...drafted,
+      stateData: { ...(drafted.stateData as SetupData), currentParamIndex: SAVE_INDEX },
+    };
+    setupReducer(atSave, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+    expect(useSettingsStore.getState().nvMem.displayResolution).toEqual({
+      X: '10',
+      Y: '5',
+      Z: '5',
+    });
   });
 
   it('seeds the highlighted value from a non-default committed nvMem value', () => {
@@ -99,8 +108,18 @@ describe('dP display resolution via setup shell (US-022)', () => {
     expect(xText(shown)).toBe('dP 50.0');
   });
 
-  it('is independent of scale resolution SC (AC22.3): dP commit leaves SC untouched', () => {
-    setupReducer(paramState({ currentParamIndex: DP_INDEX }), { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+  it('does not commit dP or disturb SC when End exits the draft', () => {
+    const drafted = setupReducer(
+      paramState({ currentParamIndex: DP_INDEX }),
+      { eventName: 'KEY_6_RIGHT' },
+      DEFAULT_TEST_CONTEXT
+    )!;
+    const atEnd = {
+      ...drafted,
+      stateData: { ...(drafted.stateData as SetupData), currentParamIndex: END_INDEX },
+    };
+    setupReducer(atEnd, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+    expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('5');
     expect(useSettingsStore.getState().nvMem.scaleResolution).toEqual(
       DEFAULT_NON_VOLATILE_MEMORY.scaleResolution
     );

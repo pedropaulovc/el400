@@ -7,6 +7,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage, type PersistStorage } from 'zustand/middleware';
 import type { DROStatePayload, DROReducerContext } from './dro/types';
 import type {
   DROStateName,
@@ -27,21 +28,36 @@ import {
 import { useMillStore, setDRODispatch } from './millStore';
 import { useSettingsStore } from './settingsStore';
 
-/**
- * Which axes are armed for the Near-Zero Warning (US-024). In distance-to-go /
- * Preset only axes with a SET target show distance-to-target — the others show
- * raw position and must not warn merely for reading 0. Every other near-zero
- * context (SDM, milling functions) treats the whole readout as distance-to-go,
- * so all axes are armed.
- */
-function armedAxesFor(stateData: DROStateData): ZeroApproachArmed {
-  if (stateData.stateDataType !== 'preset') return ALL_ARMED;
-  const { presetTargets } = stateData;
-  return {
-    X: presetTargets.X !== null,
-    Y: presetTargets.Y !== null,
-    Z: presetTargets.Z !== null,
-  };
+const XY_ARMED: ZeroApproachArmed = { X: true, Y: true, Z: false };
+const SINGLE_AXIS_ARMED: Record<'X' | 'Y' | 'Z', ZeroApproachArmed> = {
+  X: { X: true, Y: false, Z: false },
+  Y: { X: false, Y: true, Z: false },
+  Z: { X: false, Y: false, Z: true },
+};
+
+/** Prompt numbers and unused axes are not distances to a machining target. */
+function armedAxesFor({ stateName, stateData }: DROStatePayload): ZeroApproachArmed {
+  if (stateName === 'idle') return ALL_ARMED;
+  if (stateName === 'distance-to-go' && stateData.stateDataType === 'preset') {
+    return {
+      X: stateData.presetTargets.X !== null,
+      Y: stateData.presetTargets.Y !== null,
+      Z: stateData.presetTargets.Z !== null,
+    };
+  }
+  if (stateName === 'sdm-run-active' && stateData.stateDataType === 'sdm') {
+    return stateData.navigationPhase === 'browse' && stateData.points[stateData.currentStep]
+      ? ALL_ARMED : ZERO_APPROACH_OFF;
+  }
+  if (stateName === 'linear-bolt-hole-navigate' && stateData.stateDataType === 'linear-bolt-hole') {
+    return stateData.axis ? SINGLE_AXIS_ARMED[stateData.axis] : ZERO_APPROACH_OFF;
+  }
+  if (stateName === 'function-menu-center-line-result' || stateName === 'function-menu-center-circle-result') {
+    return XY_ARMED;
+  }
+  if (stateName.endsWith('-navigate') && 'navigationPhase' in stateData
+    && stateData.navigationPhase === 'distance-to-go') return XY_ARMED;
+  return ZERO_APPROACH_OFF;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -60,6 +76,8 @@ interface DROStore {
    * so it tracks real machine motion toward the target via MILL_STATE_CHANGED.
    */
   zeroApproach: ZeroApproachByAxis;
+  /** Genuine front-panel or physical-motion activity, not controller polling. */
+  activityVersion: number;
 
   // Actions
   dispatch: (event: DROEventPayload) => void;
@@ -72,13 +90,50 @@ interface DROStore {
 // STORE IMPLEMENTATION
 // ─────────────────────────────────────────────────────────────────
 
-export const useDROStore = create<DROStore>()((set, get) => ({
+let lastActivityPosition = useMillStore.getState().millState.position;
+
+interface PersistedUserData {
+  vMem: Pick<VolatileMemoryState,
+    'workOffsets' | 'manualAbsoluteValues' | 'sdmPoints' |
+    'machineReferenceOffsets' | 'outputProgram' | 'outputCount'>;
+}
+const jsonUserDataStorage = createJSONStorage<PersistedUserData>(() => localStorage);
+let lastSavedUserData: PersistedUserData['vMem'] | null = null;
+const userDataStorage: PersistStorage<PersistedUserData> = {
+  getItem: (name) => {
+    const stored = jsonUserDataStorage?.getItem(name) ?? null;
+    if (stored === null) lastSavedUserData = null;
+    return stored;
+  },
+  setItem: (name, value) => {
+    const next = value.state.vMem;
+    const previous = lastSavedUserData;
+    // Encoder polling must not serialize all 1000 SDMs at 10 Hz.
+    if (previous !== null &&
+      previous.workOffsets === next.workOffsets &&
+      previous.manualAbsoluteValues === next.manualAbsoluteValues &&
+      previous.sdmPoints === next.sdmPoints &&
+      previous.machineReferenceOffsets === next.machineReferenceOffsets &&
+      previous.outputProgram === next.outputProgram &&
+      previous.outputCount === next.outputCount) return;
+    const result = jsonUserDataStorage?.setItem(name, value);
+    lastSavedUserData = next;
+    return result;
+  },
+  removeItem: (name) => {
+    lastSavedUserData = null;
+    return jsonUserDataStorage?.removeItem(name);
+  },
+};
+
+export const useDROStore = create<DROStore>()(persist((set, get) => ({
   // Initial state from DRO state machine
   stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
   stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
   vMem: INITIAL_DRO_STATE_PAYLOAD.vMem,
   display: INITIAL_DRO_STATE_PAYLOAD.display,
   zeroApproach: ZERO_APPROACH_OFF,
+  activityVersion: 0,
 
   // Dispatch action - calls reducer with cross-store context
   dispatch: (event) => {
@@ -93,6 +148,12 @@ export const useDROStore = create<DROStore>()((set, get) => ({
     // Get context from other stores
     const millState = useMillStore.getState().millState;
     const nvMem = useSettingsStore.getState().nvMem;
+    const position = millState.position;
+    const moved = position.x !== lastActivityPosition.x ||
+      position.y !== lastActivityPosition.y || position.z !== lastActivityPosition.z;
+    const activity = event.eventName.startsWith('KEY_') ||
+      event.eventName.startsWith('BTN_') || moved;
+    lastActivityPosition = position;
     const context: DROReducerContext = { millState, nvMem };
 
     // Run through reducer
@@ -105,7 +166,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       nvMem,
       current.zeroApproach,
       newState.stateName,
-      armedAxesFor(newState.stateData)
+      armedAxesFor(newState)
     );
 
     // Update store with new state
@@ -115,6 +176,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
       vMem: newState.vMem,
       display: newState.display,
       zeroApproach,
+      activityVersion: current.activityVersion + (activity ? 1 : 0),
     });
   },
 
@@ -130,9 +192,29 @@ export const useDROStore = create<DROStore>()((set, get) => ({
         useSettingsStore.getState().nvMem,
         ZERO_APPROACH_OFF,
         payload.stateName,
-        armedAxesFor(payload.stateData)
+        armedAxesFor(payload)
       ),
     });
+  },
+}), {
+  name: 'el400-dro-user-data',
+  storage: userDataStorage,
+  partialize: (state) => ({
+    vMem: {
+      workOffsets: state.vMem.workOffsets,
+      manualAbsoluteValues: state.vMem.manualAbsoluteValues,
+      sdmPoints: state.vMem.sdmPoints,
+      machineReferenceOffsets: state.vMem.machineReferenceOffsets,
+      outputProgram: state.vMem.outputProgram,
+      outputCount: state.vMem.outputCount,
+    },
+  }),
+  // Restore operator data without resurrecting an in-progress function or a
+  // referenced-encoder latch from a previous power session.
+  merge: (persisted, current) => {
+    if (persisted === undefined) return current;
+    const saved = persisted as { vMem?: Partial<VolatileMemoryState> };
+    return { ...current, vMem: { ...current.vMem, ...saved.vMem } };
   },
 }));
 
@@ -162,11 +244,16 @@ export const useStateName = () => useDROStore((s) => s.stateName);
 export const useStateData = () => useDROStore((s) => s.stateData);
 
 /**
- * Reference waiting blink (manual §7.7.1): returns the axis whose zero should
- * blink while waiting for the encoder reference mark, or null when not waiting.
+ * Display row waiting for an encoder reference mark. Calibration uses the
+ * upper row even when measuring Y/Z; normal reference recovery uses its axis.
  */
 export const useReferenceWaitingAxis = (): 'X' | 'Y' | 'Z' | null =>
   useDROStore((s) => {
+    if (s.stateName === 'setup-parameter' && s.stateData.stateDataType === 'setup'
+      && s.stateData.calibrationEditor?.phase === 'slec-reference') {
+      const axis = s.stateData.selectedAxis;
+      return axis && s.vMem.referenceMarks[axis] === undefined ? 'X' : null;
+    }
     if (s.stateName !== 'reference-home-waiting' && s.stateName !== 'reference-machine-waiting') {
       return null;
     }

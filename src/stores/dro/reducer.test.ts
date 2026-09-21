@@ -1,7 +1,7 @@
 /**
  * Root Reducer Tests
  *
- * Tests for the reducer composition and delegation to feature reducers.
+ * Front-panel workflows spanning multiple features.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -29,8 +29,8 @@ function stateWithPosition(
 }
 
 describe('droReducer', () => {
-  describe('reducer composition', () => {
-    it('should delegate to boot reducer for boot states', () => {
+  describe('front-panel actions', () => {
+    it('finishes boot when the startup message is disabled', () => {
       const initial = createTestState('boot');
 
       const result = droReducer(initial, {
@@ -41,18 +41,18 @@ describe('droReducer', () => {
       expect(result.stateName).toBe('idle');
     });
 
-    it('should delegate to menu reducer for menu states', () => {
+    it('advances from Center to Linear in the top-level function menu', () => {
       const initial = createTestState('function-menu-center');
 
       const result = droReducer(initial, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
 
-      expect(result.stateName).toBe('function-menu-circle');
+      expect(result.stateName).toBe('function-menu-linear');
     });
 
-    it('should delegate to center-finding reducer for point collection states', () => {
+    it('captures the first center-finding point', () => {
       const initial = stateWithPosition(
         'function-menu-center-line-point-1',
-        { stateDataType: 'center-finding', storedPoints: [], centerResult: null },
+        { stateDataType: 'center-finding', storedPoints: [], centerResult: null, captureStatus: 'ready' },
         { X: 10, Y: 20, Z: 30 }
       );
 
@@ -62,16 +62,55 @@ describe('droReducer', () => {
     });
   });
 
+  describe('global sleep gate', () => {
+    it('consumes asleep encoder ticks and the waking key before feature reducers without collision diagnostics', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        let state = droReducer(createTestState('idle'), { eventName: 'SLEEP_TIMER_ELAPSED' }, DEFAULT_TEST_CONTEXT);
+        for (let tick = 0; tick < 20; tick++) state = droReducer(state, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
+        expect(state.vMem.displayPower).toBe('asleep');
+        state = droReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+        expect(state.vMem.displayPower).toBe('awake');
+        expect(state.stateName).toBe('idle');
+        expect(state.vMem.inputBuffer).toBe('');
+        state = droReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
+        expect(state.vMem.inputBuffer).toBe('5');
+        expect(error).not.toHaveBeenCalled();
+      } finally {
+        error.mockRestore();
+      }
+    });
+
+    it('records a sleeping reference crossing before gating feature input and retains it after a real jog wakes the display', () => {
+      const asleep = droReducer(createTestState('idle'), { eventName: 'SLEEP_TIMER_ELAPSED' }, DEFAULT_TEST_CONTEXT);
+      const crossed = droReducer(asleep, { eventName: 'ENCODER_REF_MARK_CROSSED', axis: 'X', markPositionMm: 12 }, DEFAULT_TEST_CONTEXT);
+      expect(crossed.vMem.displayPower).toBe('asleep');
+      expect(crossed.vMem.referenceMarks.X).toBe(12);
+      const movedContext = { ...DEFAULT_TEST_CONTEXT, millState: { ...DEFAULT_TEST_CONTEXT.millState,
+        position: { ...DEFAULT_TEST_CONTEXT.millState.position, x: 13 } } };
+      const awake = droReducer(crossed, { eventName: 'MILL_STATE_CHANGED' }, movedContext);
+      expect(awake.vMem.displayPower).toBe('awake');
+      expect(awake.vMem.referenceMarks.X).toBe(12);
+    });
+
+    it('allows a locked-panel key to wake the display without executing its action', () => {
+      const lockedContext = { ...DEFAULT_TEST_CONTEXT, nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, keypadLock: 'on' as const } };
+      const asleep = droReducer(createTestState('idle'), { eventName: 'SLEEP_TIMER_ELAPSED' }, lockedContext);
+      const awake = droReducer(asleep, { eventName: 'KEY_5' }, lockedContext);
+      expect(awake.vMem.displayPower).toBe('awake');
+      expect(awake.vMem.inputBuffer).toBe('');
+      expect(droReducer(awake, { eventName: 'KEY_5' }, lockedContext).vMem.inputBuffer).toBe('');
+    });
+  });
+
   describe('unhandled events', () => {
-    it('should return current state when no reducer handles the event', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const initial = createTestState('idle');
-
-      // BTN_HALF without active axis is handled by both halfReducer and idleReducer
-      const result = droReducer(initial, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).toBe(initial);
-      consoleErrorSpy.mockRestore();
+    it('opens HALF axis selection without requiring a preselected axis', () => {
+      const initial = stateWithPosition('idle', { stateDataType: 'none' }, { X: 10, Y: 20, Z: 0 });
+      const selecting = droReducer(initial, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
+      expect(selecting.stateName).toBe('half-select');
+      const result = droReducer(selecting, { eventName: 'BTN_SELECT_X' }, DEFAULT_TEST_CONTEXT);
+      expect(result.stateName).toBe('idle');
+      expect(result.vMem.manualAbsoluteValues).toEqual({ X: 5, Y: 20, Z: 0 });
     });
 
     it('should return current state for unrecognized events in boot state', () => {
@@ -81,28 +120,6 @@ describe('droReducer', () => {
       const result = droReducer(initial, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT);
 
       expect(result).toBe(initial);
-    });
-  });
-
-  describe('reducer priority', () => {
-    it('should process boot reducer before menu reducer', () => {
-      // Boot reducer has priority, so even if menu could handle a key,
-      // boot reducer should handle boot states first
-      const initial = createTestState('idle');
-
-      // From idle, BTN_FUNCTION opens menu (handled by idle reducer)
-      const result = droReducer(initial, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result.stateName).toBe('function-menu-center');
-    });
-
-    it('should allow later reducers to handle when earlier ones return null', () => {
-      const initial = createTestState('function-menu-center');
-
-      // Menu reducer handles function-menu states
-      const result = droReducer(initial, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result.stateName).toBe('idle');
     });
   });
 
@@ -118,7 +135,11 @@ describe('droReducer', () => {
       state = droReducer(state, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT);
       expect(state.stateName).toBe('function-menu-center');
 
-      // Enter center finding
+      // CEntrE contains CirCLE (default) and LinE, rather than starting measurement.
+      state = droReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(state.stateName).toBe('function-menu-circle');
+      state = droReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      expect(state.stateName).toBe('function-menu-line');
       state = droReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
       expect(state.stateName).toBe('function-menu-center-line-point-1');
 
@@ -143,6 +164,8 @@ describe('droReducer', () => {
       };
       state = droReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
       expect(state.stateName).toBe('function-menu-center-line-result');
+      expect(state.display.X).toBeCloseTo(-50 / 25.4, 4);
+      expect(state.display.Z).toBe('CEntrE');
 
       // Exit to idle
       state = droReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
@@ -150,66 +173,4 @@ describe('droReducer', () => {
     });
   });
 
-  describe('conflict detection', () => {
-    it('should not log error when only one reducer handles an event', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const initial = createTestState('boot');
-
-      droReducer(initial, { eventName: 'BOOT_STARTED', skipBootMessage: true }, DEFAULT_TEST_CONTEXT);
-
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should not log error when reducer returns current state as-is', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const initial = createTestState('function-menu-center');
-
-      // KEY_CLEAR is handled and exits to idle
-      droReducer(initial, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
-
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should still return first reducer result when multiple reducers handle same event', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const initial = createTestState('idle');
-
-      const result = droReducer(initial, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT);
-
-      // Should return the state that the first reducer would produce
-      expect(result.stateName).toBe('function-menu-center');
-
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should detect conflicts between feature reducers and catch-all handlers', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const initial = createTestState('idle');
-
-      // BTN_HALF is handled by both halfReducer and idleReducer's catch-all
-      // when activeAxis is null (halfReducer returns state, idleReducer also returns state)
-      droReducer(initial, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      // Should detect this as a conflict if both reducers return non-null
-      if (consoleErrorSpy.mock.calls.length > 0) {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Multiple reducers handled the same event'),
-          expect.objectContaining({
-            eventName: 'BTN_HALF',
-            currentState: expect.any(Object),
-            handlersInOrder: expect.any(Array),
-          })
-        );
-        // Verify that multiple handlers are in the array (first is winner, rest are conflicts)
-        const errorCallArgs = consoleErrorSpy.mock.calls[0];
-        const errorObject = errorCallArgs?.[1] as Record<string, unknown> | undefined;
-        const handlers = errorObject?.['handlersInOrder'] as unknown[] | undefined;
-        expect(handlers?.length).toBeGreaterThanOrEqual(2);
-      }
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
 });

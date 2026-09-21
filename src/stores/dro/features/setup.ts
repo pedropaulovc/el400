@@ -1,345 +1,171 @@
-/**
- * Setup Menu Feature Reducer (US-039)
- *
- * The shared navigation shell for every per-axis and global configuration
- * parameter. It does NOT know about any individual parameter's semantics --
- * those live in the registry (`setup-parameters.ts`) and in the per-parameter
- * stories. This reducer only handles:
- *
- *   - Entering setup via the wrench/setup key -> `setup-select` (shows SELECT).
- *   - Selecting an axis (X/Y/Z) -> `setup-parameter`, highlighting the first
- *     parameter.
- *   - Up/down (8/2) item navigation through the registry, wrapping around.
- *   - Left/right (4/6) cycling of the highlighted parameter's choices, wrapping.
- *   - Re-pressing the setup key to return to the SELECT prompt (pick another axis).
- *   - Navigating to `End` + `ent` to exit to idle, discarding the draft.
- *
- * Commit semantics (SAU CHG) are owned by US-027; this reducer keeps changes in
- * the in-memory `draftValues` map so exiting via `End` discards them (AC 39.8).
- */
-
 import type { DROReducerContext, DROStatePayload, FeatureReducer } from '../types';
 import type { DROEventPayload, SetupData } from '../droStateMachine';
 import type { VolatileMemoryState } from '../../../types/volatileMemory';
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import { INITIAL_DRO_STATE_DATA, INITIAL_SETUP_DATA, isSetupActive, isFrontPanelKey } from '../droStateMachine';
+import { computeNormalDisplay, createDisplay, formatDisplayNumber, type DisplayState } from '../utils/displayComputation';
 import {
-  INITIAL_DRO_STATE_DATA,
-  INITIAL_SETUP_DATA,
-  isSetupActive,
-  isFrontPanelKey,
-} from '../droStateMachine';
-import { computeNormalDisplay, createDisplay, type DisplayState } from '../utils/displayComputation';
-import { useSettingsStore } from '../../settingsStore';
-import {
-  getParameterAt,
-  wrapItemIndex,
-  choiceIndexOf,
-  wrapChoiceIndex,
-  labelForValue,
-  commitDrafts,
-  resolveChoices,
-  SETUP_END_ID,
-  SAVE_CHANGES_ID,
-  OEM_MODE_ID,
-  RESTORE_DEFAULTS_ID,
-  AUX_FN_ID,
+  getParameterAt, wrapItemIndex, choiceIndexOf, wrapChoiceIndex, labelForValue,
+  commitDrafts, applySetupDrafts, resolveChoices, SETUP_END_ID, SAVE_CHANGES_ID,
+  OEM_MODE_ID, RESTORE_DEFAULTS_ID, AUX_FN_ID, CALIBRATION_ID, ZERO_APPROACH_ID,
   type SetupParameter,
-  type SetupReadContext,
 } from './setup-parameters';
 import { SETUP_SAVED_TEXT } from './save-changes';
-import { enterAuxFnNoConn } from './aux-fn';
+import { enterAuxiliaryMenu } from './aux-fn';
 import { enterOemPassword } from './oem-mode';
 import { enterRestoreInProgress } from './restore-defaults';
+import { startCalibration, calibrationDisplay, reduceCalibration } from './calibration';
+import { KEY_TO_DIGIT, appendDecimal } from './buffer-utils';
+import { fromAnyUnitToMm, fromMmToAnyUnit } from '../../../utils/unitConversion';
 
-/** 7-segment text shown on the SELECT prompt. */
 export const SETUP_SELECT_TEXT = 'SELECt';
 
-type Axis = 'X' | 'Y' | 'Z';
-
-/** Build the draft key for a parameter given the currently selected axis. */
 function draftKey(param: SetupParameter, axis: SetupData['selectedAxis']): string {
-  const scopeKey = param.scope === 'per-axis' ? (axis ?? 'X') : 'GLOBAL';
-  return `${scopeKey}:${param.id}`;
+  return `${param.scope === 'per-axis' ? (axis ?? 'X') : 'GLOBAL'}:${param.id}`;
 }
 
-/** Build the read context for the parameter currently being viewed. */
-function readContextFor(data: SetupData, nvMem: NonVolatileMemory): SetupReadContext {
-  return { nvMem, axis: data.selectedAxis };
-}
-
-/**
- * Current draft value for a parameter: the stored draft if present, otherwise
- * the committed value seeded from nvMem via the parameter's readValue (which is
- * scoped to the selected axis for per-axis params like SC).
- */
-function currentValue(param: SetupParameter, data: SetupData, nvMem: NonVolatileMemory): string {
-  const key = draftKey(param, data.selectedAxis);
-  return data.draftValues[key] ?? param.readValue(readContextFor(data, nvMem));
-}
-
-/** Display for the SELECT prompt: X shows SELECT, Y/Z blank. */
-function computeSelectDisplay(): DisplayState {
-  return createDisplay(SETUP_SELECT_TEXT, '', '');
-}
-
-/**
- * Display while navigating parameters: X shows the chosen value's label for the
- * highlighted parameter, Y/Z blank.
- */
 function computeParameterDisplay(data: SetupData, nvMem: NonVolatileMemory): DisplayState {
   const param = getParameterAt(data.currentParamIndex);
-  const value = currentValue(param, data, nvMem);
-  // Pass the read context so a parameter with conditional choices (dP, US-040)
-  // draws its label from the active set (angular DMS labels on an angular axis).
-  return createDisplay(labelForValue(param, value, readContextFor(data, nvMem)), '', '');
+  const context = { nvMem: applySetupDrafts(nvMem, data.draftValues), axis: data.selectedAxis };
+  const value = param.readValue(context);
+  if (data.editor) {
+    if (param.id === ZERO_APPROACH_ID) return createDisplay(resolveChoices(param, context).find(choice => choice.value === value)?.label ?? param.label, '', '');
+    if (data.editor.phase === 'input') return createDisplay(data.editor.buffer || '0', '', '');
+    const spec = param.numeric;
+    if (spec === undefined) throw new Error('Numeric setup view requires numeric metadata');
+    const displayed = spec.storageUnit === 'inch' && nvMem.defaultUnit === 'mm'
+      ? fromAnyUnitToMm(Number(value), 'inch')
+      : Number(value);
+    return createDisplay(formatDisplayNumber(displayed, spec.precision).padStart(spec.integerWidth ?? 0, '0'), '', '');
+  }
+  return createDisplay(labelForValue(param, value, context), '', '');
 }
 
-/** Map an axis-select event to its axis, or null if not an axis event. */
-function axisFromEvent(eventName: DROEventPayload['eventName']): Axis | null {
-  if (eventName === 'BTN_SELECT_X') return 'X';
-  if (eventName === 'BTN_SELECT_Y') return 'Y';
-  if (eventName === 'BTN_SELECT_Z') return 'Z';
-  return null;
-}
-
-/** Leave setup, returning to idle with the normal position display. */
 function exitToIdle(vMem: VolatileMemoryState, context: DROReducerContext): DROStatePayload {
-  return {
-    stateName: 'idle',
-    stateData: INITIAL_DRO_STATE_DATA,
-    vMem,
-    display: computeNormalDisplay(vMem, context),
-  };
+  return { stateName: 'idle', stateData: INITIAL_DRO_STATE_DATA, vMem, display: computeNormalDisplay(vMem, context) };
 }
 
-/** Handle events while showing the SELECT prompt (no axis chosen yet). */
-function reduceSelect(
-  eventName: DROEventPayload['eventName'],
-  data: SetupData,
-  vMem: VolatileMemoryState,
-  nvMem: NonVolatileMemory,
-  context: DROReducerContext
-): DROStatePayload | null {
-  // Axis selection -> first parameter highlighted (AC 39.2).
-  const axis = axisFromEvent(eventName);
-  if (axis !== null) {
-    const newData: SetupData = { ...data, selectedAxis: axis, currentParamIndex: 0 };
-    return {
-      stateName: 'setup-parameter',
-      stateData: newData,
-      vMem,
-      display: computeParameterDisplay(newData, nvMem),
-    };
-  }
-
-  // KEY_CLEAR exits setup back to idle (discard draft).
+function reduceNumeric(
+  eventName: DROEventPayload['eventName'], data: SetupData, nvMem: NonVolatileMemory, vMem: VolatileMemoryState,
+): DROStatePayload {
+  const param = getParameterAt(data.currentParamIndex);
+  const editor = data.editor;
+  const spec = param.numeric;
+  if (editor === undefined || spec === undefined) throw new Error('Numeric setup requires an active numeric editor');
+  let next = data;
+  let invalid = false;
   if (eventName === 'KEY_CLEAR') {
-    return exitToIdle(vMem, context);
-  }
-
-  return null;
-}
-
-/** Handle events while navigating/changing a parameter for the selected axis. */
-function reduceParameter(
-  eventName: DROEventPayload['eventName'],
-  data: SetupData,
-  vMem: VolatileMemoryState,
-  nvMem: NonVolatileMemory,
-  context: DROReducerContext
-): DROStatePayload | null {
-  // Re-pressing the setup key returns to the SELECT prompt (AC 39.6).
-  if (eventName === 'BTN_SETUP') {
-    const newData: SetupData = { ...data, selectedAxis: null, currentParamIndex: 0 };
-    return {
-      stateName: 'setup-select',
-      stateData: newData,
-      vMem,
-      display: computeSelectDisplay(),
-    };
-  }
-
-  // Item navigation up/down with wrap-around (AC 39.3). The menu is a vertical
-  // list (LinEAr at the top, End at the bottom — manual section 6.2 / video
-  // walkthrough): DOWN advances toward End, UP goes back toward LinEAr.
-  if (eventName === 'KEY_8_UP' || eventName === 'KEY_2_DOWN') {
-    const delta = eventName === 'KEY_2_DOWN' ? 1 : -1;
-    const newData: SetupData = {
-      ...data,
-      currentParamIndex: wrapItemIndex(data.currentParamIndex, delta),
-    };
-    return {
-      stateName: 'setup-parameter',
-      stateData: newData,
-      vMem,
-      display: computeParameterDisplay(newData, nvMem),
-    };
-  }
-
-  // Choice cycling left/right with wrap-around (AC 39.4).
-  if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
-    const param = getParameterAt(data.currentParamIndex);
-    // Resolve the active choice set: parameters with conditional choices (dP,
-    // US-040) cycle the angular DMS formats on an angular axis instead of the
-    // linear micron values.
-    const ctx = readContextFor(data, nvMem);
-    const choices = resolveChoices(param, ctx);
-    // Terminal items (End) have no choices to cycle -- ignore.
-    if (choices.length === 0) return null;
-
-    const delta = eventName === 'KEY_6_RIGHT' ? 1 : -1;
-    const idx = choiceIndexOf(param, currentValue(param, data, nvMem), ctx);
-    const nextChoice = choices[wrapChoiceIndex(param, idx, delta, ctx)];
-    if (nextChoice === undefined) return null;
-    const key = draftKey(param, data.selectedAxis);
-    const newData: SetupData = {
-      ...data,
-      draftValues: { ...data.draftValues, [key]: nextChoice.value },
-    };
-    // Commit-on-change parameters (e.g. Direction, US-002) persist immediately
-    // to nvMem; we then read the fresh nvMem so the label still reflects the new
-    // choice. Parameters without `commit` keep draft-only (discard-on-exit)
-    // semantics -- nvMem is untouched here.
-    let displayNvMem = nvMem;
-    if (param.commit !== undefined) {
-      param.commit(readContextFor(data, nvMem), nextChoice.value);
-      displayNvMem = useSettingsStore.getState().nvMem;
+    const { editor: _editor, ...rest } = data;
+    next = rest;
+  } else if (editor.phase === 'view') {
+    if (eventName === 'KEY_ENTER') next = { ...data, editor: { phase: 'input', buffer: '' } };
+  } else {
+    const digit = KEY_TO_DIGIT[eventName];
+    if (digit !== undefined && editor.buffer.replace('.', '').length < 7) {
+      const fractional = editor.buffer.split('.')[1];
+      if (fractional === undefined || fractional.length < spec.precision) next = { ...data, editor: { ...editor, buffer: editor.buffer + digit } };
+    } else if (eventName === 'KEY_DECIMAL' && spec.precision > 0) next = { ...data, editor: { ...editor, buffer: appendDecimal(editor.buffer) } };
+    else if (eventName === 'KEY_ENTER') {
+      const value = Number(editor.buffer);
+      if (editor.buffer === '' || !Number.isFinite(value) || value < spec.min || value > spec.max || (spec.precision === 0 && !Number.isInteger(value))) invalid = true;
+      else {
+        const { editor: _editor, ...rest } = data;
+        const stored = spec.storageUnit === 'inch' && nvMem.defaultUnit === 'mm'
+          ? fromMmToAnyUnit(value, 'inch') : value;
+        next = { ...rest, draftValues: { ...data.draftValues, [draftKey(param, data.selectedAxis)]: String(stored) }, currentParamIndex: wrapItemIndex(data.currentParamIndex, 1) };
+      }
     }
-    return {
-      stateName: 'setup-parameter',
-      stateData: newData,
-      vMem,
-      display: computeParameterDisplay(newData, displayNvMem),
-    };
   }
-
-  if (eventName === 'KEY_ENTER') {
-    const param = getParameterAt(data.currentParamIndex);
-    // End + ent exits to the normal screen, discarding the draft (AC 39.7 / 39.8).
-    if (param.id === SETUP_END_ID) return exitToIdle(vMem, context);
-    // SAU CHG + ent commits the buffered draft to nvMem (AC27.2 / 27.3) and shows
-    // the confirmation message (AC27.4). The draft map is left intact so a
-    // re-commit is idempotent; exiting later still discards anything unsaved.
-    if (param.id === SAVE_CHANGES_ID) {
-      commitDrafts(data.draftValues);
-      return {
-        stateName: 'setup-saved',
-        stateData: data,
-        vMem,
-        display: createDisplay(SETUP_SAVED_TEXT, '', ''),
-      };
-    }
-    // oEm mod + ent opens the password gate (US-044, AC 44.1/44.2). The OEM
-    // reducer owns the rest; we hand it the row index so it can re-highlight
-    // `oEm mod` on return. Any unsaved drafts are intentionally left untouched.
-    if (param.id === OEM_MODE_ID) {
-      return enterOemPassword(vMem, data.currentParamIndex);
-    }
-    // AUH Fn + ent flashes the `no Conn` dwell: the optional DB15 auxiliary
-    // connector is absent (video manual §1.11), so there is no Auxiliary Function
-    // Menu to enter. The SetupData is carried through so the row stays highlighted
-    // on return; nothing is stored.
-    if (param.id === AUX_FN_ID) {
-      return enterAuxFnNoConn(data, vMem);
-    }
-    // rSt oEm + ent runs the restore (US-028, AC28.7/28.8): reset nvMem to the
-    // OEM baseline or factory, wipe user data, and show the `IN ProG` dwell. The
-    // reset is durable synchronously here; unsaved drafts are discarded with it.
-    if (param.id === RESTORE_DEFAULTS_ID) {
-      return enterRestoreInProgress(vMem);
-    }
-    return null;
-  }
-
-  // KEY_CLEAR also exits to idle (discard draft).
-  if (eventName === 'KEY_CLEAR') {
-    return exitToIdle(vMem, context);
-  }
-
-  return null;
-}
-
-/**
- * Handle the SAU CHG confirmation screen (US-027). The `StorEd` message is
- * dismissed by the auto-dismiss timeout (`SETUP_SAVED_TIMEOUT`) or an impatient
- * front-panel key press, returning to the setup menu with SAV CHG still
- * highlighted so the operator can continue (typically scroll to End to exit).
- *
- * Internal/system events — chiefly the MILL_STATE_CHANGED encoder tick a
- * connected DRO emits every ~100ms — must NOT dismiss it, or the confirmation
- * would be wiped before the operator ever sees it. Those return null (no-op,
- * screen holds). The draft is carried through unchanged; the save already
- * happened on ENT, so nothing here touches nvMem.
- */
-function reduceSaved(
-  eventName: DROEventPayload['eventName'],
-  data: SetupData,
-  vMem: VolatileMemoryState,
-  nvMem: NonVolatileMemory
-): DROStatePayload | null {
-  const isDismissal = eventName === 'SETUP_SAVED_TIMEOUT' || isFrontPanelKey(eventName);
-  if (!isDismissal) return null;
-  return {
-    stateName: 'setup-parameter',
-    stateData: data,
-    vMem,
-    display: computeParameterDisplay(data, nvMem),
-  };
-}
-
-/**
- * Handle the AUX Fn `no Conn` dwell (`AUH Fn`). Dismissed by the auto-dismiss
- * timeout (`AUX_FN_TIMEOUT`) or an impatient front-panel key press, returning to
- * the setup menu with `AUH Fn` still highlighted (the SetupData is carried
- * through unchanged). Mirrors `reduceSaved`: internal/system events — chiefly the
- * ~100ms MILL_STATE_CHANGED encoder tick — must NOT dismiss it, or the message
- * would be wiped before the operator sees it, so those return null (screen holds).
- */
-function reduceAuxFn(
-  eventName: DROEventPayload['eventName'],
-  data: SetupData,
-  vMem: VolatileMemoryState,
-  nvMem: NonVolatileMemory
-): DROStatePayload | null {
-  const isDismissal = eventName === 'AUX_FN_TIMEOUT' || isFrontPanelKey(eventName);
-  if (!isDismissal) return null;
-  return {
-    stateName: 'setup-parameter',
-    stateData: data,
-    vMem,
-    display: computeParameterDisplay(data, nvMem),
-  };
+  return { stateName: 'setup-parameter', stateData: next, vMem, display: invalid ? createDisplay('Error', '', '') : computeParameterDisplay(next, nvMem) };
 }
 
 export const setupReducer: FeatureReducer = (statePayload, eventPayload, context) => {
-  const { stateName: state, stateData: data, vMem } = statePayload;
+  const { stateName, stateData, vMem } = statePayload;
   const { eventName } = eventPayload;
-  // Entry from idle: the wrench/setup key opens the SELECT prompt (AC 39.1).
-  if (state === 'idle') {
+  if (stateName === 'idle') {
     if (eventName !== 'BTN_SETUP') return null;
-    return {
-      stateName: 'setup-select',
-      stateData: INITIAL_SETUP_DATA,
-      vMem,
-      display: computeSelectDisplay(),
-    };
+    return { stateName: 'setup-select', stateData: INITIAL_SETUP_DATA, vMem, display: createDisplay(SETUP_SELECT_TEXT, '', '') };
   }
-
-  if (!isSetupActive(state)) return null;
-
-  const setupData = data.stateDataType === 'setup' ? data : INITIAL_SETUP_DATA;
-
-  if (state === 'setup-select') {
-    return reduceSelect(eventName, setupData, vMem, context.nvMem, context);
+  if (!isSetupActive(stateName)) return null;
+  const data = stateData.stateDataType === 'setup' ? stateData : INITIAL_SETUP_DATA;
+  if (stateName === 'setup-saved') {
+    if (eventName !== 'SETUP_SAVED_TIMEOUT' && !isFrontPanelKey(eventName)) return null;
+    return { stateName: 'setup-parameter', stateData: data, vMem, display: computeParameterDisplay(data, context.nvMem) };
   }
-
-  if (state === 'setup-saved') {
-    return reduceSaved(eventName, setupData, vMem, context.nvMem);
+  if (eventName === 'BTN_SETUP') {
+    return { stateName: 'setup-select', stateData: { ...INITIAL_SETUP_DATA, draftValues: data.draftValues }, vMem, display: createDisplay(SETUP_SELECT_TEXT, '', '') };
   }
-
-  if (state === 'setup-aux-fn') {
-    return reduceAuxFn(eventName, setupData, vMem, context.nvMem);
+  if (stateName === 'setup-select') {
+    const axis = eventName === 'BTN_SELECT_X' ? 'X' : eventName === 'BTN_SELECT_Y' ? 'Y' : eventName === 'BTN_SELECT_Z' ? 'Z' : null;
+    if (axis !== null) {
+      const next: SetupData = { ...data, selectedAxis: axis, currentParamIndex: 0 };
+      return { stateName: 'setup-parameter', stateData: next, vMem, display: computeParameterDisplay(next, context.nvMem) };
+    }
+    return eventName === 'KEY_CLEAR' ? exitToIdle(vMem, context) : null;
   }
-
-  return reduceParameter(eventName, setupData, vMem, context.nvMem, context);
+  if (!isFrontPanelKey(eventName)) {
+    const phase = data.calibrationEditor?.phase;
+    if (phase !== 'measure' && phase !== 'slec-reference' && phase !== 'slec-measure') return null;
+  }
+  const preview = applySetupDrafts(context.nvMem, data.draftValues);
+  if (data.calibrationEditor) {
+    const axis = data.selectedAxis ?? 'X';
+    const referenceScaleRatio = context.millState.encoderResolutionMicrons?.[axis] === undefined
+      ? 1 : Number(preview.scaleResolution[axis]) / Number(context.nvMem.scaleResolution[axis]);
+    return reduceCalibration(data, eventPayload, vMem, { ...context, nvMem: preview }, referenceScaleRatio);
+  }
+  const param = getParameterAt(data.currentParamIndex);
+  if (data.editor && param.numeric) return reduceNumeric(eventName, data, context.nvMem, vMem);
+  if (eventName === 'KEY_CLEAR') {
+    if (data.editor) {
+      const { editor: _editor, ...rest } = data;
+      return { stateName: 'setup-parameter', stateData: rest, vMem, display: computeParameterDisplay(rest, context.nvMem) };
+    }
+    return exitToIdle(vMem, context);
+  }
+  if (eventName === 'KEY_8_UP' || eventName === 'KEY_2_DOWN') {
+    const { editor: _editor, ...rest } = data;
+    const next = { ...rest, currentParamIndex: wrapItemIndex(data.currentParamIndex, eventName === 'KEY_2_DOWN' ? 1 : -1) };
+    return { stateName: 'setup-parameter', stateData: next, vMem, display: computeParameterDisplay(next, context.nvMem) };
+  }
+  if (eventName === 'KEY_6_RIGHT' || eventName === 'KEY_4_LEFT') {
+    if (param.id === ZERO_APPROACH_ID && !data.editor) return null;
+    const ctx = { nvMem: preview, axis: data.selectedAxis };
+    const choices = resolveChoices(param, ctx);
+    if (choices.length === 0) return null;
+    const index = choiceIndexOf(param, param.readValue(ctx), ctx);
+    const choice = choices[wrapChoiceIndex(param, index, eventName === 'KEY_6_RIGHT' ? 1 : -1, ctx)];
+    if (choice === undefined) throw new Error('Setup choice index is out of range');
+    const next = { ...data, draftValues: { ...data.draftValues, [draftKey(param, data.selectedAxis)]: choice.value } };
+    return { stateName: 'setup-parameter', stateData: next, vMem, display: computeParameterDisplay(next, context.nvMem) };
+  }
+  if (eventName !== 'KEY_ENTER') return null;
+  if (param.numeric || param.id === ZERO_APPROACH_ID) {
+    const next: SetupData = { ...data, editor: { phase: 'view', buffer: '' } };
+    return { stateName: 'setup-parameter', stateData: next, vMem, display: computeParameterDisplay(next, context.nvMem) };
+  }
+  if (param.id === SETUP_END_ID) return exitToIdle(vMem, context);
+  if (param.id === SAVE_CHANGES_ID) {
+    let savedVMem = vMem;
+    for (const axis of ['X', 'Y', 'Z'] as const) {
+      if (preview.scaleResolution[axis] === context.nvMem.scaleResolution[axis]
+        || context.millState.encoderResolutionMicrons?.[axis] === undefined) continue;
+      const { [axis]: _mark, ...referenceMarks } = savedVMem.referenceMarks;
+      const ratio = Number(preview.scaleResolution[axis]) / Number(context.nvMem.scaleResolution[axis]);
+      const offset = savedVMem.machineReferenceOffsets[axis];
+      savedVMem = { ...savedVMem, referenceMarks,
+        machineReferenceOffsets: offset === undefined ? savedVMem.machineReferenceOffsets
+          : { ...savedVMem.machineReferenceOffsets, [axis]: offset * ratio } };
+    }
+    commitDrafts(data.draftValues);
+    return { stateName: 'setup-saved', stateData: { ...data, draftValues: {} }, vMem: savedVMem, display: createDisplay(SETUP_SAVED_TEXT, '', '') };
+  }
+  if (param.id === OEM_MODE_ID) return enterOemPassword(vMem, data.currentParamIndex);
+  if (param.id === RESTORE_DEFAULTS_ID) return enterRestoreInProgress(vMem, data.selectedAxis ?? 'X', context);
+  if (param.id === AUX_FN_ID) return enterAuxiliaryMenu(data, vMem);
+  if (param.id === CALIBRATION_ID) {
+    const next = startCalibration(data, { ...context, nvMem: preview });
+    return { stateName: 'setup-parameter', stateData: next, vMem, display: calibrationDisplay(next, vMem, context) };
+  }
+  return null;
 };

@@ -159,6 +159,29 @@ describe('arcContourReducer', () => {
       const result = arcContourReducer(state, { eventName: 'KEY_ENTER' }, MM_CTX);
       expect(result).toBeNull();
     });
+
+    it('rejects non-finite values at every numeric parameter boundary', () => {
+      const states = [
+        'arc-contour-center-x',
+        'arc-contour-center-y',
+        'arc-contour-radius',
+        'arc-contour-start-angle',
+        'arc-contour-end-angle',
+        'arc-contour-tool-diameter',
+        'arc-contour-max-cut',
+      ] satisfies DROStateName[];
+
+      for (const stateName of states) {
+        const state = arcState(
+          stateName,
+          {},
+          { inputBuffer: '9'.repeat(400) }
+        );
+        expect(
+          arcContourReducer(state, { eventName: 'KEY_ENTER' }, MM_CTX)
+        ).toBeNull();
+      }
+    });
   });
 
   describe('cut-type selection', () => {
@@ -196,6 +219,26 @@ describe('arcContourReducer', () => {
       expect(result?.stateName).toBe('arc-contour-max-cut');
       if (result?.stateData.stateDataType === 'arc') expect(result.stateData.cutType).toBe('EXT');
     });
+
+    it('rejects an inside cut whose tool reaches or crosses the center', () => {
+      const equalRadius = arcState('arc-contour-cut-type', {
+        ...base,
+        radius: 2.5,
+        toolDiameter: 5,
+        cutType: 'INT',
+      });
+      expect(
+        arcContourReducer(equalRadius, { eventName: 'KEY_ENTER' }, MM_CTX)
+      ).toBeNull();
+
+      const outside = arcState('arc-contour-cut-type', {
+        ...base,
+        radius: 2,
+        toolDiameter: 5,
+        cutType: 'INT',
+      });
+      expect(arcContourReducer(outside, { eventName: 'KEY_ENTER' }, MM_CTX)).toBeNull();
+    });
   });
 
   describe('max-cut entry and step calculation', () => {
@@ -213,6 +256,15 @@ describe('arcContourReducer', () => {
       const state = arcState('arc-contour-max-cut', base, { inputBuffer: '0' });
       const result = arcContourReducer(state, { eventName: 'KEY_ENTER' }, MM_CTX);
       expect(result).toBeNull();
+    });
+
+    it('rejects a non-finite max cut', () => {
+      const state = arcState(
+        'arc-contour-max-cut',
+        base,
+        { inputBuffer: '9'.repeat(400) }
+      );
+      expect(arcContourReducer(state, { eventName: 'KEY_ENTER' }, MM_CTX)).toBeNull();
     });
 
     it('computes step count and switches to navigate in INC mode', () => {
@@ -270,35 +322,73 @@ describe('arcContourReducer', () => {
       if (result?.stateData.stateDataType === 'arc') expect(result.stateData.currentPoint).toBe(9);
     });
 
-    it('shows current point number with key 8', () => {
-      const result = arcContourReducer(navState(3), { eventName: 'KEY_8_UP' }, MM_CTX);
-      expect(result?.vMem.inputBuffer).toBe('3');
+    it('toggles a visible current-point view with key 8', () => {
+      const shown = arcContourReducer(navState(3), { eventName: 'KEY_8_UP' }, MM_CTX);
+      expect(shown).toMatchObject({
+        stateData: {
+          stateDataType: 'arc',
+          navigationPhase: 'current-number',
+        },
+        display: { X: 'hoLES', Y: '3' },
+      });
+
+      const restored = arcContourReducer(shown!, { eventName: 'KEY_8_UP' }, MM_CTX);
+      expect(restored).toMatchObject({
+        stateData: {
+          stateDataType: 'arc',
+          navigationPhase: 'distance-to-go',
+        },
+      });
     });
 
-    it('jumps to a specific point with number entry + enter', () => {
-      const state = navState(1);
-      const withBuffer = { ...state, vMem: { ...state.vMem, inputBuffer: '5' } };
-      const result = arcContourReducer(withBuffer, { eventName: 'KEY_ENTER' }, MM_CTX);
-      if (result?.stateData.stateDataType === 'arc') expect(result.stateData.currentPoint).toBe(5);
+    it('shows jump entry and accepts arrow-labelled digits', () => {
+      const request = arcContourReducer(navState(1), { eventName: 'KEY_2_DOWN' }, MM_CTX)!;
+      expect(request.display).toMatchObject({ X: 'hoLES', Y: '0' });
+
+      const entered = arcContourReducer(request, { eventName: 'KEY_8_UP' }, MM_CTX)!;
+      expect(entered.vMem.inputBuffer).toBe('8');
+      expect(entered.display.Y).toBe('8');
+
+      const jumped = arcContourReducer(entered, { eventName: 'KEY_ENTER' }, MM_CTX);
+      expect(jumped).toMatchObject({
+        stateName: 'arc-contour-navigate',
+        stateData: {
+          stateDataType: 'arc',
+          currentPoint: 8,
+          navigationPhase: 'distance-to-go',
+        },
+      });
     });
 
-    it('rejects out-of-range jump target', () => {
-      const state = navState(1);
-      const withBuffer = { ...state, vMem: { ...state.vMem, inputBuffer: '99' } };
-      const result = arcContourReducer(withBuffer, { eventName: 'KEY_ENTER' }, MM_CTX);
-      expect(result).toBeNull();
+    it('rejects fractional and out-of-range jump targets', () => {
+      const jumpState = (inputBuffer: string) =>
+        arcState(
+          'arc-contour-navigate',
+          {
+            centerX: 0,
+            centerY: 0,
+            radius: 25,
+            startAngle: 0,
+            endAngle: 90,
+            toolDiameter: 5,
+            cutType: 'MID',
+            maxCut: 5,
+            pointCount: 9,
+            currentPoint: 1,
+            navigationPhase: 'jump-entry',
+          },
+          { mode: 'inc', inputBuffer }
+        );
+      expect(
+        arcContourReducer(jumpState('5.5'), { eventName: 'KEY_ENTER' }, MM_CTX)
+      ).toBeNull();
+      expect(
+        arcContourReducer(jumpState('99'), { eventName: 'KEY_ENTER' }, MM_CTX)
+      ).toBeNull();
     });
 
-    it('clears the buffer to start a jump with key 2', () => {
-      const state = navState(3);
-      const withBuffer = { ...state, vMem: { ...state.vMem, inputBuffer: '7' } };
-      const result = arcContourReducer(withBuffer, { eventName: 'KEY_2_DOWN' }, MM_CTX);
-      expect(result?.vMem.inputBuffer).toBe('');
-    });
-
-    it('accumulates digit keys into the jump buffer', () => {
-      const result = arcContourReducer(navState(1), { eventName: 'KEY_7' }, MM_CTX);
-      expect(result?.vMem.inputBuffer).toBe('7');
+    it('ignores digit input before jump entry is requested', () => {
+      expect(arcContourReducer(navState(1), { eventName: 'KEY_7' }, MM_CTX)).toBeNull();
     });
 
     it('updates the distance-to-go display on MILL_STATE_CHANGED', () => {
@@ -381,6 +471,7 @@ describe('calculateArcPointPosition', () => {
     maxCut: 5,
     pointCount: 9,
     currentPoint: 1,
+    navigationPhase: 'distance-to-go',
   };
 
   it('places point 1 at the start angle on the MID radius', () => {

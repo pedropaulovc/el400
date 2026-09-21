@@ -31,6 +31,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -107,16 +108,12 @@ function computeAngleHoleNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   const holePos = calculateHolePosition(angleData, angleData.currentHole);
-
-  // Always use absolute position for distance-to-go calculation (not mode-dependent)
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
-
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
@@ -136,10 +133,34 @@ function formatBufferForDisplay(buffer: string): number {
     return 0;
   }
   const value = parseFloat(buffer);
-  if (isNaN(value)) {
-    return 0;
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** Preserve integer-entry text without applying the axis coordinate precision. */
+function formatIntegerBufferForDisplay(buffer: string): string {
+  return buffer || '0';
+}
+
+function computeAngleHoleCurrentNumberDisplay(angleData: AngleHoleData): DisplayState {
+  return createDisplay('hoLES', String(angleData.currentHole), '');
+}
+
+function computeAngleHoleJumpDisplay(vMem: VolatileMemoryState): DisplayState {
+  return createDisplay('hoLES', formatIntegerBufferForDisplay(vMem.inputBuffer), '');
+}
+
+function computeAngleHoleActiveDisplay(
+  angleData: AngleHoleData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  if (angleData.navigationPhase === 'current-number') {
+    return computeAngleHoleCurrentNumberDisplay(angleData);
   }
-  return value;
+  if (angleData.navigationPhase === 'jump-entry') {
+    return computeAngleHoleJumpDisplay(vMem);
+  }
+  return computeAngleHoleNavigateDisplay(angleData, vMem, context);
 }
 
 /**
@@ -153,7 +174,10 @@ function computeParameterEntryDisplay(
   vMem: VolatileMemoryState
 ): DisplayState {
   const promptText = ANGLE_HOLE_DISPLAY_TEXT[state] ?? '';
-  const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
+  const bufferValue =
+    state === 'angle-hole-holes'
+      ? formatIntegerBufferForDisplay(vMem.inputBuffer)
+      : formatBufferForDisplay(vMem.inputBuffer);
 
   // For start-x, swap X and Y: X shows value, Y shows prompt
   if (state === 'angle-hole-start-x') {
@@ -173,12 +197,12 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
 
   const angleData = data.stateDataType === 'angle-hole' ? data : INITIAL_ANGLE_HOLE_DATA;
 
-  // Handle MILL_STATE_CHANGED - update display when position changes
+  // Keep the active display in sync when the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
     if (state === 'angle-hole-navigate') {
       return {
         ...statePayload,
-        display: computeAngleHoleNavigateDisplay(angleData, vMem, context),
+        display: computeAngleHoleActiveDisplay(angleData, vMem, context),
       };
     }
     if (isParameterEntryState(state)) {
@@ -190,17 +214,33 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     return statePayload;
   }
 
+  if (
+    eventName === 'KEY_CLEAR' &&
+    state === 'angle-hole-navigate' &&
+    angleData.navigationPhase === 'jump-entry' &&
+    vMem.inputBuffer === ''
+  ) {
+    const newData: AngleHoleData = { ...angleData, navigationPhase: 'distance-to-go' };
+    return {
+      ...statePayload,
+      stateData: newData,
+      display: computeAngleHoleNavigateDisplay(newData, vMem, context),
+    };
+  }
+
   // KEY_CLEAR exits the macro at any point (unless buffer has content - then it erases)
   if (eventName === 'KEY_CLEAR') {
-    // If buffer has content, erase last character (backspace)
     if (vMem.inputBuffer !== '') {
       const newBuffer = removeLastChar(vMem.inputBuffer);
+      const newVMem = { ...vMem, inputBuffer: newBuffer };
       return {
         ...statePayload,
-        vMem: { ...vMem, inputBuffer: newBuffer },
+        vMem: newVMem,
         display: isParameterEntryState(state)
-          ? computeParameterEntryDisplay(state, { ...vMem, inputBuffer: newBuffer })
-          : statePayload.display,
+          ? computeParameterEntryDisplay(state, newVMem)
+          : state === 'angle-hole-navigate' && angleData.navigationPhase === 'jump-entry'
+            ? computeAngleHoleJumpDisplay(newVMem)
+            : statePayload.display,
       };
     }
     // If buffer is empty, exit to idle and restore ABS mode
@@ -262,8 +302,9 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     case 'angle-hole-start-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...angleData, startX: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -279,8 +320,9 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     case 'angle-hole-start-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         const newData = { ...angleData, startY: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -297,8 +339,9 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
         // Pitch must be a positive spacing distance
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         const newData = { ...angleData, pitch: valueMm };
         const newVMem = { ...vMem, inputBuffer: '' };
         return {
@@ -314,7 +357,7 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     case 'angle-hole-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         // Normalize angle to 0-359 range (angle is unitless degrees, no conversion)
         const normalizedAngle = ((value % 360) + 360) % 360;
         const newData = { ...angleData, lineAngle: normalizedAngle };
@@ -332,12 +375,18 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     case 'angle-hole-holes': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 2 || value > 999) return null;
+        if (
+          value === null ||
+          !Number.isSafeInteger(value) ||
+          value < 2 ||
+          value > 999
+        ) return null;
 
         const newData: AngleHoleData = {
           ...angleData,
-          holeCount: Math.floor(value),
+          holeCount: value,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         };
         // Switch to INC mode for distance-to-go display
         const newVMem = {
@@ -357,7 +406,7 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
     }
 
     case 'angle-hole-navigate': {
-      const { holeCount, currentHole } = angleData;
+      const { holeCount, currentHole, navigationPhase } = angleData;
 
       if (holeCount === null) {
         return {
@@ -368,71 +417,91 @@ export const angleHoleReducer: FeatureReducer = (statePayload, eventPayload, con
         };
       }
 
-      // Key 6: Advance to next hole
-      if (eventName === 'KEY_6_RIGHT') {
-        const nextHole = currentHole >= holeCount ? 1 : currentHole + 1;
-        const newData = { ...angleData, currentHole: nextHole };
-        return {
-          stateName: 'angle-hole-navigate',
-          stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeAngleHoleNavigateDisplay(newData, vMem, context),
-        };
-      }
+      if (navigationPhase === 'jump-entry') {
+        const digit = KEY_TO_DIGIT[eventName];
+        if (digit !== undefined) {
+          const newVMem = {
+            ...vMem,
+            inputBuffer: appendDigit(vMem.inputBuffer, digit),
+          };
+          return {
+            ...statePayload,
+            vMem: newVMem,
+            display: computeAngleHoleJumpDisplay(newVMem),
+          };
+        }
 
-      // Key 4: Go to previous hole
-      if (eventName === 'KEY_4_LEFT') {
-        const prevHole = currentHole <= 1 ? holeCount : currentHole - 1;
-        const newData = { ...angleData, currentHole: prevHole };
-        return {
-          stateName: 'angle-hole-navigate',
-          stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeAngleHoleNavigateDisplay(newData, vMem, context),
-        };
-      }
+        if (eventName === 'KEY_ENTER') {
+          const targetHole = getBufferValue(vMem.inputBuffer);
+          if (
+            targetHole === null ||
+            !Number.isSafeInteger(targetHole) ||
+            targetHole < 1 ||
+            targetHole > holeCount
+          ) return null;
 
-      // Key 8: Show current hole number by putting it in inputBuffer
-      if (eventName === 'KEY_8_UP') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: String(currentHole) },
-        };
-      }
-
-      // Key 2: Jump to specific hole - clear buffer for input
-      if (eventName === 'KEY_2_DOWN') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: '' },
-        };
-      }
-
-      // If there's a number in the buffer and user presses ENTER, jump to that hole
-      if (eventName === 'KEY_ENTER' && vMem.inputBuffer !== '') {
-        const targetHole = getBufferValue(vMem.inputBuffer);
-        if (targetHole !== null && targetHole >= 1 && targetHole <= holeCount) {
-          const newData = { ...angleData, currentHole: Math.floor(targetHole) };
+          const newData: AngleHoleData = {
+            ...angleData,
+            currentHole: targetHole,
+            navigationPhase: 'distance-to-go',
+          };
+          const newVMem = { ...vMem, inputBuffer: '' };
           return {
             stateName: 'angle-hole-navigate',
             stateData: newData,
-            vMem: { ...vMem, inputBuffer: '' },
-            display: computeAngleHoleNavigateDisplay(newData, vMem, context),
+            vMem: newVMem,
+            display: computeAngleHoleNavigateDisplay(newData, newVMem, context),
           };
         }
         return null;
       }
 
-      // Handle digit input for hole number entry (after arrow keys processed)
-      // Only non-arrow digit keys: 0, 1, 3, 5, 7, 9
-      const digit = KEY_TO_DIGIT[eventName];
-      if (digit !== undefined) {
+      if (eventName === 'KEY_8_UP') {
+        const newData: AngleHoleData = {
+          ...angleData,
+          navigationPhase:
+            navigationPhase === 'current-number' ? 'distance-to-go' : 'current-number',
+        };
         return {
           ...statePayload,
-          vMem: {
-            ...vMem,
-            inputBuffer: appendDigit(vMem.inputBuffer, digit),
-          },
+          stateData: newData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeAngleHoleActiveDisplay(newData, vMem, context),
+        };
+      }
+
+      if (eventName === 'KEY_2_DOWN') {
+        const newData: AngleHoleData = { ...angleData, navigationPhase: 'jump-entry' };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          ...statePayload,
+          stateData: newData,
+          vMem: newVMem,
+          display: computeAngleHoleJumpDisplay(newVMem),
+        };
+      }
+
+      if (eventName === 'KEY_6_RIGHT') {
+        const nextHole = currentHole >= holeCount ? 1 : currentHole + 1;
+        const newData = { ...angleData, currentHole: nextHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'angle-hole-navigate',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeAngleHoleActiveDisplay(newData, newVMem, context),
+        };
+      }
+
+      if (eventName === 'KEY_4_LEFT') {
+        const prevHole = currentHole <= 1 ? holeCount : currentHole - 1;
+        const newData = { ...angleData, currentHole: prevHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
+        return {
+          stateName: 'angle-hole-navigate',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeAngleHoleActiveDisplay(newData, newVMem, context),
         };
       }
 
