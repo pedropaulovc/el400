@@ -2,8 +2,13 @@ import type { FeatureReducer, DROReducerContext, DROStatePayload } from '../type
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
 import type { DROEventPayload, DROStateName } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA, INITIAL_REFERENCE_DATA, isReferenceActive } from '../droStateMachine';
-import { computeNormalDisplay, computeUncompensatedMachinePositionMm, computeMachinePositionMm, createDisplay } from '../utils/displayComputation';
-import { applyAxisCalibration } from '../utils/calibration';
+import {
+  computeNormalDisplay,
+  computeUncompensatedMachinePositionMm,
+  computeMachinePositionMm,
+  convertRawToMachinePosition,
+  createDisplay,
+} from '../utils/displayComputation';
 
 export const REFERENCE_TEXT = { home: 'honE', machine: 'nC rEF', setMachine: 'SEt nC', select: 'SELECt' } as const;
 const MENUS = ['reference-menu-home', 'reference-menu-set-machine', 'reference-menu-machine'] as const;
@@ -72,7 +77,13 @@ export const referenceReducer: FeatureReducer = (current, event, context) => {
     if (mark === undefined) return current;
     const displacement = stateName === 'reference-home-waiting' ? 0 : vMem.machineReferenceOffsets[event.axis];
     if (displacement === undefined) return current;
-    const datum = applyAxisCalibration(event.axis, mark + displacement, vMem, context.nvMem);
+    const datum = convertRawToMachinePosition(
+      event.axis,
+      mark + displacement,
+      vMem,
+      context.nvMem,
+      context.millState.encoderResolutionMicrons?.[event.axis] !== undefined
+    );
     return exit({ ...vMem, workOffsets: { ...vMem.workOffsets, [event.axis]: datum }, inputBuffer: '', activeAxis: null }, context);
   }
   return current;

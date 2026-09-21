@@ -7,8 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import { calculatorReducer } from './calculator';
 import type { DROStatePayload } from '../types';
-import { INITIAL_DRO_STATE_DATA, INITIAL_CALCULATOR_DATA } from '../droStateMachine';
-import type { CalculatorData } from '../droStateMachine';
+import {
+  INITIAL_DRO_STATE_DATA,
+  INITIAL_CALCULATOR_DATA,
+  type CalculatorData,
+  type DROEventPayload,
+} from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
@@ -25,6 +29,17 @@ function stateWithBuffer(
     vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer },
     display: INITIAL_DISPLAY_STATE,
   };
+}
+
+/** Drive the exported reducer through keypad events, as the store does. */
+function runCalculatorEvents(events: DROEventPayload[]): DROStatePayload {
+  let state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+  for (const event of events) {
+    const nextState = calculatorReducer(state, event, DEFAULT_TEST_CONTEXT);
+    if (nextState === null) throw new Error(`Calculator ignored ${event.eventName}`);
+    state = nextState;
+  }
+  return state;
 }
 
 describe('calculatorReducer', () => {
@@ -287,6 +302,63 @@ describe('calculatorReducer', () => {
 
       expect((result?.stateData as CalculatorData).currentValue).toBe(102);
       expect((result?.stateData as CalculatorData).firstValue).toBe(102);
+    });
+
+    it('uses a fresh entry as the first operand after a completed calculation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_3' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'KEY_4_LEFT' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(5);
+    });
+
+    it('uses an entry after ENT as the first operand of a selected operation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_5' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'KEY_3' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(5);
+    });
+
+    it('chains the completed result when selecting an operation with no fresh entry', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_3' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(16);
+    });
+
+    it('retains the pending second operand while cycling the operation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_7' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_9' },
+        { eventName: 'KEY_9' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(-92);
     });
 
     it('shows inF vAL instead of an inaccurate unrepresentable finite result', () => {

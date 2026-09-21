@@ -1,16 +1,16 @@
 # EL400 DRO User Stories
 
-This directory contains the 48 current requirements for the EL400 milling-DRO simulator. Each
-story defines target operator behavior; a checked or passing observation in an audit describes
-the audited baseline only, not verification of later implementation work.
+This directory contains the 48 requirements for the EL400 milling-DRO simulator.
+Acceptance checkboxes mark implemented contracts. Each story's verification notes
+identify the exercised paths and limits; historical baseline outcomes are kept separate.
 
 ## Authority and Scope
 
 When sources disagree, use this precedence:
 
-1. [EL400 Operation Manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-operation-manual/ocr/markdown.md)
-2. [EL400 video walkthrough](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/el400-dro-overview-video/MANUAL.md) and transcript
-3. [MagXact MX-100M Manual](https://github.com/pedropaulovc/harmonic-analyzer-references/blob/main/magxact-mx100m-mill-dro-manual/ocr/markdown.md)
+1. [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf)
+2. [EL400 video walkthrough](https://www.youtube.com/watch?v=7W47KPCu7jE)
+3. [MagXact MX-100M Manual](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616)
 
 Browser, accessibility, integration and simulator-only contracts remain valid where the hardware
 manuals do not define them. Simulator-specific policies must be identified as such rather than
@@ -137,13 +137,46 @@ attributed to undocumented EL400 firmware behavior.
 | CNCjs/debug machine sources | [`CncjsMillAdapter.ts`](../../src/adapters/CncjsMillAdapter.ts), [`DebugMillAdapter.ts`](../../src/adapters/DebugMillAdapter.ts), [`millStore.ts`](../../src/stores/millStore.ts) | US-035 |
 | Persisted operator settings | [`settingsStore.ts`](../../src/stores/settingsStore.ts), [`droStore.ts`](../../src/stores/droStore.ts) | US-036 |
 
-## Completed Baseline Audit
+## Verification
 
-The files `/tmp/el400-audit-ManualCore.json`, `ManualData.json`,
-`ManualCalculations.json`, `ManualPatterns.json`, `ManualSetup.json` and
-`ManualAuxAccess.json` record headed exercises of the pre-change baseline through visible
-controls. They are evidence for what was observed then. Main's integrated verification of the
-current implementation is still pending.
+The integrated gate passed against the source captured in
+[`e9d68e4`](https://github.com/pedropaulovc/el400/commit/e9d68e4):
+
+| Check | Result |
+|---|---|
+| `CI=1 npm run test:all` | Lint and TypeScript passed |
+| Unit/integration | 110 files, **1,532 tests passed** |
+| Browser E2E | **196 passed**, no failures or flaky tests reported |
+| Storybook | 10 files, **44 tests passed** |
+| Coverage | 86.26% statements, 79.28% branches, 84.94% functions, 88.48% lines |
+| `npm run build` | Passed |
+
+Parallel headed-browser sessions exercised all 48 stories through visible
+`?source=debug` controls. A dedicated mock-CNCjs server, iframe host, and virtual
+serial receiver covered integration boundaries. Targeted rechecks followed repairs;
+the reports span several implementation checkpoints, not a separate repetition
+of every acceptance criterion on one commit.
+
+### Portable evidence
+
+| Run | Screenshots, DOM snapshots, and recordings |
+|---|---|
+| Pre-change baseline | [Baseline archive](https://github.com/user-attachments/files/32456049/el400-manual-audit-baseline.zip) |
+| First implementation: core, data, calculations | [Core archive](https://github.com/user-attachments/files/32456050/el400-audit-postfix-core.zip) |
+| First implementation: patterns, auxiliary, access, layout | [Macro/access archive](https://github.com/user-attachments/files/32456052/el400-audit-postfix-macros.zip) |
+| First implementation: setup, calibration, persistence | [Setup archive](https://github.com/user-attachments/files/32456053/el400-audit-postfix-setup.zip) |
+| Repaired core, calculator, center, lock, connection, layout | [Core rechecks](https://github.com/user-attachments/files/32456055/el400-audit-recheck-core.zip) |
+| Repaired warnings, sleep, calibration, selected-axis restore | [State rechecks](https://github.com/user-attachments/files/32456058/el400-audit-recheck-state.zip) |
+
+The first implementation checks exposed defects in warning boundaries, numeric
+formatting, compact-layout hit targets, sleep, lock semantics, calibration prompts,
+and invalid-center feedback. Rechecks also exposed calculator entry/lifetime defects.
+Those paths were repaired and rechecked through the actual interface.
+
+<details>
+<summary>Pre-change baseline findings</summary>
+
+These observations describe the original baseline, not the current implementation.
 
 | Domain | Baseline observations |
 |---|---|
@@ -155,16 +188,18 @@ current implementation is still pending.
 | Auxiliary | Probe behavior was partial. US-033 six-output/serial was absent and remains in scope. Self-diagnostics passed after the required `PrESS` → Enter → `EnCodEr` transition; visible X/Y/Z jog diagnostics passed. Audio-device errors were environmental, not a diagnostics defect. |
 | Accessibility and integration | Forced colors, keyboard navigation/shortcuts and accessibility-tree contracts passed their exercised browser criteria. Debug-source position updates and settings persistence were observed; a real CNCjs/widget environment and connection indicator were not available/complete. |
 
-## Verification Status
+</details>
 
-- Baseline pass/fail labels above must not be used as current completion checkboxes.
-- Story targets include corrections derived from the authority order, even when the baseline audit
-  exposed a gap.
-- The corrected US-028 target restores only the selected axis's OEM/factory configuration and preserves global settings, other axes, SDMs, machine references and other operator job data.
-- Newly implemented behavior remains unverified until Main completes the integrated E2E, unit,
-  type-check and headed-browser checks.
-- Hardware-only behavior (physical encoders, probe pins, relay outputs, RS-232 receiver and an
-  audio device) must be reported separately from simulator-boundary evidence.
+### Verification limits
+
+- Headed evidence uses simulated encoders/probes, logical outputs, a virtual serial
+  receiver, and a mock CNCjs service. Physical machine hardware, RS-232 transport,
+  output voltages/timing, and speaker audibility were not tested.
+- Accessibility checks cover browser semantics, focus, keyboard behavior, and
+  Chromium forced-colors emulation. Installed screen-reader speech and an actual
+  Windows High Contrast desktop were not tested.
+- Each story names narrower unexercised cases, such as exhaustive SDM slots or
+  independently repeating every axis. These are evidence limits, not new scope exclusions.
 
 ## Deliberately Out of Scope
 

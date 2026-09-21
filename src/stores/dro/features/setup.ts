@@ -160,7 +160,7 @@ export const setupReducer: FeatureReducer = (statePayload, eventPayload, context
     commitDrafts(data.draftValues);
     return { stateName: 'setup-saved', stateData: { ...data, draftValues: {} }, vMem: savedVMem, display: createDisplay(SETUP_SAVED_TEXT, '', '') };
   }
-  if (param.id === OEM_MODE_ID) return enterOemPassword(vMem, data.currentParamIndex);
+  if (param.id === OEM_MODE_ID) return enterOemPassword(vMem, data);
   if (param.id === RESTORE_DEFAULTS_ID) return enterRestoreInProgress(vMem, data.selectedAxis ?? 'X', context);
   if (param.id === AUX_FN_ID) return enterAuxiliaryMenu(data, vMem);
   if (param.id === CALIBRATION_ID) {

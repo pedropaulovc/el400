@@ -3,7 +3,7 @@ import { sdmReducer } from './sdm';
 import { idleReducer } from './idle';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_SDM_DATA, type DROEventPayload } from '../droStateMachine';
-import type { DROStatePayload } from '../types';
+import type { DROStatePayload, DROReducerContext } from '../types';
 
 const ctx = { ...DEFAULT_TEST_CONTEXT, nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const }, millState: { ...DEFAULT_TEST_CONTEXT.millState, connected: true, position: { x: 24.96, y: 1, z: -3 } } };
 function drive(state: DROStatePayload, ...events: DROEventPayload['eventName'][]): DROStatePayload {
@@ -66,5 +66,68 @@ describe('SDM operator workflows', () => {
     expect(state.display.Y).toBe('46');
     state = drive(state, 'KEY_6_RIGHT');
     expect(state.display.Y).toBe('47');
+  });
+});
+
+describe('SDM angular coordinates', () => {
+  function angularContext(x: number): DROReducerContext {
+    return {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: {
+        ...DEFAULT_TEST_CONTEXT.nvMem,
+        defaultUnit: 'inch',
+        countingMode: { ...DEFAULT_TEST_CONTEXT.nvMem.countingMode, X: 'angular' },
+        measurementMode: { ...DEFAULT_TEST_CONTEXT.nvMem.measurementMode, X: 'diameter' },
+      },
+      millState: {
+        ...DEFAULT_TEST_CONTEXT.millState,
+        connected: true,
+        position: { x, y: 0, z: 0 },
+      },
+    };
+  }
+
+  it('learns 90 degrees in inch mode and reports a 1-degree run residual at 89 degrees', () => {
+    const learnContext = angularContext(90);
+    let state = createTestState('sdm-learn-step', {
+      ...INITIAL_SDM_DATA,
+      sdmMode: 'LEARN',
+    });
+    for (const eventName of ['KEY_ENTER', 'BTN_SELECT_X', 'BTN_SELECT_X'] as const) {
+      state = sdmReducer(state, { eventName }, learnContext)!;
+    }
+
+    const learned = state.stateData.stateDataType === 'sdm' ? state.stateData : INITIAL_SDM_DATA;
+    expect(learned.points[1]?.X).toBe(90);
+
+    state = createTestState('sdm-run-step', {
+      ...learned,
+      sdmMode: 'RUN',
+      currentStep: 1,
+    });
+    state = sdmReducer(state, { eventName: 'KEY_ENTER' }, angularContext(89))!;
+    expect(state.display.X).toBe(1);
+  });
+
+  it('programs 90 degrees in inch mode and reports a 1-degree run residual at 89 degrees', () => {
+    const programContext = angularContext(90);
+    let state = createTestState('sdm-program-step', {
+      ...INITIAL_SDM_DATA,
+      sdmMode: 'PROGRAM',
+    });
+    for (const eventName of ['KEY_ENTER', 'KEY_9', 'KEY_0', 'KEY_ENTER'] as const) {
+      state = sdmReducer(state, { eventName }, programContext)!;
+    }
+
+    const programmed = state.stateData.stateDataType === 'sdm' ? state.stateData : INITIAL_SDM_DATA;
+    expect(programmed.points[1]?.X).toBe(90);
+
+    state = createTestState('sdm-run-step', {
+      ...programmed,
+      sdmMode: 'RUN',
+      currentStep: 1,
+    });
+    state = sdmReducer(state, { eventName: 'KEY_ENTER' }, angularContext(89))!;
+    expect(state.display.X).toBe(1);
   });
 });

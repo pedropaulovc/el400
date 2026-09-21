@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { auxiliaryReducer, crossedOutput, enterSixOutput, evaluateOutputs, formatSerialPayload } from './aux-fn';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
-import { DEFAULT_TEST_CONTEXT } from '../test-utils';
+import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import type { SixOutputData } from '../droStateMachine';
 
 const memory = { ...INITIAL_VOLATILE_MEMORY_STATE, outputCount: 2, outputProgram: [{ axis: 'X' as const, positionMm: 10 }, { axis: 'Y' as const, positionMm: -2 }, ...INITIAL_VOLATILE_MEMORY_STATE.outputProgram.slice(2)] };
@@ -41,6 +41,46 @@ describe('six-output threshold semantics', () => {
     expect(stopped.stateName).toBe('idle');
     expect(stopped.vMem.outputProgram).toEqual(memory.outputProgram);
   });
+
+  it('programs and compares angular thresholds in degrees under inch and diameter settings', () => {
+    const context = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: {
+        ...DEFAULT_TEST_CONTEXT.nvMem,
+        defaultUnit: 'inch' as const,
+        countingMode: { ...DEFAULT_TEST_CONTEXT.nvMem.countingMode, X: 'angular' as const },
+        measurementMode: { ...DEFAULT_TEST_CONTEXT.nvMem.measurementMode, X: 'diameter' as const },
+        outputMode: 'pulse' as const,
+      },
+    };
+    let state = enterSixOutput({ ...INITIAL_VOLATILE_MEMORY_STATE, outputCount: 1 });
+    for (const eventName of ['KEY_6_RIGHT', 'KEY_ENTER', 'KEY_ENTER', 'BTN_SELECT_X', 'KEY_9', 'KEY_0', 'KEY_ENTER'] as const) {
+      state = auxiliaryReducer(state, { eventName }, context)!;
+    }
+    expect(state.display.Y).toBe(90);
+
+    state = enterSixOutput(state.vMem);
+    state = auxiliaryReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+    state = {
+      ...state,
+      vMem: {
+        ...state.vMem,
+        manualAbsoluteValues: { ...state.vMem.manualAbsoluteValues, X: 45 },
+      },
+    };
+    state = auxiliaryReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect((state.stateData as SixOutputData).outputs[0]).toBe('low');
+
+    state = {
+      ...state,
+      vMem: {
+        ...state.vMem,
+        manualAbsoluteValues: { ...state.vMem.manualAbsoluteValues, X: 90 },
+      },
+    };
+    state = auxiliaryReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect((state.stateData as SixOutputData).outputs[0]).toBe('high');
+  });
 });
 
 describe('EL400 serial record', () => {
@@ -58,5 +98,32 @@ describe('EL400 serial record', () => {
     expect(() => formatSerialPayload({ X: Infinity, Y: 0, Z: 0 }, 'abs', settings)).toThrow();
     expect(() => formatSerialPayload({ X: 9999.9996, Y: 0, Z: 0 }, 'abs', settings)).toThrow();
     expect(formatSerialPayload({ X: 9999.9994, Y: 0, Z: 0 }, 'abs', settings)).toContain('9999.999 ARMX');
+  });
+
+  it('fails explicitly without emitting a packet for an angular readout', () => {
+    const vMem = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      manualAbsoluteValues: { X: 90, Y: 0, Z: 0 },
+    };
+    const context = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: {
+        ...DEFAULT_TEST_CONTEXT.nvMem,
+        defaultUnit: 'inch' as const,
+        countingMode: { ...DEFAULT_TEST_CONTEXT.nvMem.countingMode, X: 'angular' as const },
+        angularResolution: { ...DEFAULT_TEST_CONTEXT.nvMem.angularResolution, X: 'dd-dec' as const },
+        measurementMode: { ...DEFAULT_TEST_CONTEXT.nvMem.measurementMode, X: 'diameter' as const },
+      },
+    };
+    const serial = {
+      ...createTestState('serial-active', { stateDataType: 'serial', sequence: 0, payload: '' }),
+      vMem,
+    };
+    const serialReading = auxiliaryReducer(serial, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(serialReading.display.X).toBe('90.000');
+    const failed = auxiliaryReducer(serialReading, { eventName: 'KEY_ENTER' }, context)!;
+    expect(failed.stateName).toBe('serial-failed');
+    expect(failed.display.X).toBe('Pc fail');
+    expect(failed.stateData).toMatchObject({ sequence: 0, payload: '' });
   });
 });

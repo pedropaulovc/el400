@@ -8,9 +8,9 @@
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
 import type { Axis } from '../../../types/volatileMemory';
-import { fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { getBufferValue } from './buffer-utils';
 import {
+  displayUnitsToAxisUnits,
   computeNormalDisplay,
   computeMachinePositionMm,
   directionSign,
@@ -62,7 +62,8 @@ function zeroAxis(
 }
 
 /**
- * Set an axis to a specific value (value in display units, will be converted to mm).
+ * Set an axis to a display value, converting it to canonical axis units
+ * (millimetres for linear axes or degrees for angular axes).
  */
 function setAxisValue(
   vMem: DROStatePayload['vMem'],
@@ -71,25 +72,26 @@ function setAxisValue(
   context: DROReducerContext
 ): DROStatePayload['vMem'] {
   const { nvMem } = context;
-  // Clamp the entered magnitude to what the physical 7-digit panel can show at
-  // this axis's current display resolution (US-047), keeping sign. The value is
-  // in the displayed unit (what the user typed); clamping here — at the commit
-  // boundary, before mm conversion — keeps the stored value equal to the
-  // displayed reading (AC 47.5). Angular axes wrap to [0,360) and never reach the
-  // limit, so this is a harmless no-op for them.
-  //
-  const limit = maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem));
-  const clamped = Math.sign(value) * Math.min(Math.abs(value), limit);
-  const valueMm = (nvMem.countingMode[axis] === 'angular'
-    ? clamped
-    : fromAnyUnitToMm(clamped, nvMem.defaultUnit) / measurementScale(axis, nvMem)) *
+  // Linear entries are clamped to what the physical 7-digit panel can show at
+  // the current dP resolution (US-047), keeping sign. Angular entries use their
+  // separate configured format and wrap only for display, so their stored value
+  // must retain the unwrapped revolution count and ignore this linear limit.
+  const clamped = nvMem.countingMode[axis] === 'angular'
+    ? value
+    : Math.sign(value) * Math.min(
+      Math.abs(value),
+      maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem))
+    );
+  const valueMm = displayUnitsToAxisUnits(axis, clamped, nvMem) /
+    measurementScale(axis, nvMem) *
     directionSign(axis, nvMem);
   return setAxisValueMm(vMem, axis, valueMm, context);
 }
 
 /**
- * Set an axis to a specific value (value already in mm).
- * Keeps the axis selected for further operations (like half).
+ * Set an axis to a canonical coordinate (linear mm or angular degrees).
+ * Keeps the axis selected for further operations (like half). The legacy `Mm`
+ * suffix is retained because it is already internal vocabulary.
  */
 function setAxisValueMm(
   vMem: DROStatePayload['vMem'],

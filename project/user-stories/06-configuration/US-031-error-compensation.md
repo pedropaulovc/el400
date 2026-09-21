@@ -5,8 +5,8 @@
 
 ## Source
 
-- **Primary:** EL400 Operation Manual §6.3, pp. 22–29: complete LEC, SLEC Auto/Edit, reference-mark activation, 360° rotation, and PPR procedures.
-- **Video:** EL400 overview §1.9, `[06:28–06:57]`: `CALib` is optional because scales are factory calibrated, but it remains an operator-reachable setup function.
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.3, pp. 22–29: complete LEC, SLEC Auto/Edit, reference-mark activation, 360° rotation, and PPR procedures.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.9, `[06:28–06:57]`: `CALib` is optional because scales are factory calibrated, but it remains an operator-reachable setup function.
 
 ## User Story
 
@@ -16,15 +16,15 @@
 
 ## Acceptance Criteria
 
-- [ ] **AC31.1:** On a linear axis, Enter at `CALib` opens `LEC`; Right cycles between the documented `LEC` and `SLEC` methods. `C` backs out without storing an incomplete calibration. Factory defaults remain uncompensated; the UI does not invent an undocumented `oFF` calibration method.
-- [ ] **AC31.2 — LEC:** Enter `LEC`, confirm `diSPuAL`, and zero the raw datum with the selected-axis key. Move from the datum to the slip gauge/reference; Enter captures the measured travel, then numeric entry plus Enter captures the reference's actual length in millimetres. The DRO shows `CAL FAC`; Enter displays the derived factor `reference ÷ measured` for review, and Enter again returns to `SAU CHG`. Once saved, the factor applies uniformly to that axis.
-- [ ] **AC31.3 — SLEC Auto:** Enter `SLEC`, choose `Auto`, and confirm near the encoder reference. The selected axis's last digit flashes while waiting. Cross the actual reference mark, press Enter at the first-segment start to establish machine reference, then move to each correction point and enter its cumulative standard-measured position from that start. Support 1–99 ordered segments and reject an invalid/over-capacity table without corrupting the saved one.
-- [ ] **AC31.4 — SLEC Edit:** In `SLEC`, choose `Edit`. Left/Right traverses the saved segments; X selects/edits the measured coordinate and Y selects/edits the corresponding reference coordinate. Down reaches save; only `SAU CHG` stores the revised table.
-- [ ] **AC31.5 — Reference activation:** A saved SLEC table remains inactive after startup until that axis crosses its actual encoder reference mark. Crossing activates the table from its recorded reference origin; unrelated axes remain unaffected.
-- [ ] **AC31.6 — Angular 360°:** On an angular axis, Enter at `CALib` opens `diSPuAL` directly. Confirm, zero at a marked stationary point, complete exactly one revolution, enter `1296000` arc-seconds, then save the derived correction.
-- [ ] **AC31.7 — Angular PPR:** On an angular axis, press Right twice from `diSPuAL` to `P.P.r.`, enter the installed encoder's pulses per revolution, and save. PPR converts installed raw counts only; it must not rescale an adapter value already decoded to engineering degrees.
-- [ ] **AC31.8:** Calibration method/data are per-axis drafts. Only complete calibration saved by `SAU CHG` becomes live and durable; `End`/`C` without saving leaves the prior compensation active.
-- [ ] **AC31.9:** Compensation is applied to machine coordinates before ABS/INC datum subtraction and before display-only resolution or radius/diameter formatting.
+- [x] **AC31.1:** On a linear axis, Enter at `CALib` opens `LEC`; Right cycles between the documented `LEC` and `SLEC` methods. `C` backs out without storing an incomplete calibration. Factory defaults remain uncompensated; the UI does not invent an undocumented `oFF` calibration method.
+- [x] **AC31.2 — LEC:** Enter `LEC`, confirm `diSPuAL`, and zero the raw datum with the selected-axis key. Move from the datum to the slip gauge/reference; Enter captures the measured travel, then numeric entry plus Enter captures the reference's actual length in millimetres, even when normal counting is set to inches (§6.3 explicitly requires mm). The DRO shows `CAL FAC`; Enter displays the derived factor `reference ÷ measured` for review, and Enter again returns to `SAU CHG`. Once saved, the factor applies uniformly to that axis.
+- [x] **AC31.3 — SLEC Auto:** Enter `SLEC`, choose `Auto`, and confirm near the encoder reference. The selected axis's last digit flashes while waiting. Cross the actual reference mark, press Enter at the first-segment start to establish machine reference, then move to each correction point and enter its cumulative standard-measured position from that start. The simulator uses millimetres for both measured and reference coordinates, consistently with LEC; the manual does not explicitly specify SLEC entry units. Support 1–99 ordered segments and reject an invalid or over-capacity table without corrupting the saved one.
+- [x] **AC31.4 — SLEC Edit:** In `SLEC`, choose `Edit`. Left/Right traverses the saved segments; X selects/edits the measured coordinate and Y selects/edits the corresponding reference coordinate. Down reaches save; only `SAU CHG` stores the revised table.
+- [x] **AC31.5 — Reference activation:** A saved SLEC table remains inactive after startup until that axis crosses its actual encoder reference mark. Crossing activates the table from its recorded reference origin; unrelated axes remain unaffected.
+- [x] **AC31.6 — Angular 360°:** On an angular axis, Enter at `CALib` opens `diSPuAL` directly. Confirm, zero at a marked stationary point, complete exactly one revolution, enter `1296000` arc-seconds, then save the derived correction.
+- [x] **AC31.7 — Angular PPR:** On an angular axis, press Right twice from `diSPuAL` to `P.P.r.`, enter the installed encoder's pulses per revolution, and save. PPR converts installed raw counts only; it must not rescale an adapter value already decoded to engineering degrees.
+- [x] **AC31.8:** Calibration method/data are per-axis drafts. Only complete calibration saved by `SAU CHG` becomes live and durable; `End`/`C` without saving leaves the prior compensation active.
+- [x] **AC31.9:** Compensation is applied to machine coordinates before ABS/INC datum subtraction and before display-only resolution or radius/diameter formatting.
 
 ## Human Verification
 
@@ -34,6 +34,10 @@ Using the visible debug controls, run a known 100 mm LEC mismatch and confirm th
 
 - [`e2e/06-configuration/US-031-calibration.spec.ts`](../../../e2e/06-configuration/US-031-calibration.spec.ts)
 
-## Baseline Audit (before the current implementation work)
+## Verification
 
-Only the visible `CALib` row existed. Enter, Left, Right, and Enter again were no-ops: there was no LEC, SLEC, reference activation, angular method, live correction, or persisted data. The procedures above are target behavior and must not be treated as verified until the integrated debug-source scenario passes.
+[Portable evidence and full-suite results](../README.md#verification)
+
+Headed checks exercised LEC, nonlinear SLEC Auto and Edit, reference gating, invalid table edits, per-axis isolation, compensation ordering, angular full-rotation calibration, PPR, save/reload, and discard. The reference-wait animation now affects only the final display digit. A nonlinear 99-point table was entered through the panel, saved, reloaded, reactivated by an actual debug reference crossing, and checked at first, middle, and final segment values. Angular entry showed literal `1296000` in the fixed eight-cell row without appended decimals or clipping; independent 360° and PPR calculations matched the displayed readings.
+
+The headed surface used controlled debug travel, not a slip gauge, rotary table, or physical encoder, so it does not establish hardware accuracy. An already-decoded external angular adapter was not available to this headed lane; its no-double-scaling boundary has a dedicated unit check in the passing suite. No extrapolation outside the calibrated interval or screen-reader speech is claimed.

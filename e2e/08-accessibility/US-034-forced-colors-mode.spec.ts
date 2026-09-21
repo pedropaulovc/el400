@@ -192,12 +192,20 @@ test.describe('US-034: Forced Colors Mode', () => {
         backgroundColor: style.backgroundColor,
       };
     });
-    expect(focusStyle.outlineStyle, 'Focused control should retain a solid outline').toBe('solid');
-    expect(focusStyle.outlineWidth, 'Focused control should retain a 2px outline').toBe('2px');
+    expect(['none', 'hidden'], 'Focused control should have a visible outline').not.toContain(focusStyle.outlineStyle);
     expect(
-      focusStyle.outlineColor,
-      'Focused control outline should differ from its button face',
-    ).not.toBe(focusStyle.backgroundColor);
+      Number.parseFloat(focusStyle.outlineWidth),
+      'Focused control should retain an outline at least 2 CSS pixels wide',
+    ).toBeGreaterThanOrEqual(2);
+    const outlineColor = parseColor(focusStyle.outlineColor);
+    const buttonBackground = parseColor(focusStyle.backgroundColor);
+    if (!outlineColor || !buttonBackground) {
+      throw new Error(`Unable to parse focus outline pair: ${focusStyle.outlineColor} / ${focusStyle.backgroundColor}`);
+    }
+    expect(
+      getContrastRatio(outlineColor, buttonBackground),
+      'Focus outline should contrast at least 3:1 against its button face',
+    ).toBeGreaterThanOrEqual(3);
 
     await context.close();
   });

@@ -6,6 +6,7 @@ import { useDROStore } from '../stores/droStore';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../stores/dro/utils/displayComputation';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
+import { useSettingsStore } from '../stores/settingsStore';
 
 // Audio is irrelevant to dispatch logic; stub it so jsdom doesn't choke on AudioContext.
 vi.mock('../utils/audio', () => ({ playClickSound: vi.fn() }));
@@ -71,6 +72,7 @@ function press(
 describe('useKeyboardShortcuts', () => {
   beforeEach(() => {
     setIdle();
+    useSettingsStore.getState().updateNvMem({ keypadLock: 'off' });
     vi.clearAllMocks();
   });
 
@@ -225,6 +227,47 @@ describe('useKeyboardShortcuts', () => {
 
     it('does not play for an unhandled key', () => {
       press({ code: 'KeyQ', key: 'q' });
+      expect(playClickSound).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('locked keyboard shortcuts', () => {
+    it('silently consumes a blocked shortcut without dispatching it', () => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: 'on' });
+
+      const { calls, preventDefault } = press({ code: 'Digit5', key: '5' });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(calls).toHaveLength(0);
+      expect(playClickSound).not.toHaveBeenCalled();
+    });
+
+    it('keeps the Settings shortcut available as the unlock path', () => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: 'on' });
+
+      const { calls, preventDefault } = press({ code: 'KeyW', key: 'w' });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(calls.map((call) => call.eventName)).toEqual(['BTN_SETUP']);
+      expect(playClickSound).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets one silent blocked shortcut wake a sleeping locked display without acting', () => {
+      useSettingsStore.getState().updateNvMem({ keypadLock: 'on' });
+      useDROStore.setState({
+        vMem: {
+          ...useDROStore.getState().vMem,
+          displayPower: 'asleep',
+          sleepBaselinePosition: { X: 0, Y: 0, Z: 0 },
+        },
+      });
+
+      const { calls, preventDefault } = press({ code: 'Digit5', key: '5' });
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(calls.map((call) => call.eventName)).toEqual(['KEY_5']);
+      expect(useDROStore.getState().vMem.displayPower).toBe('awake');
+      expect(useDROStore.getState().vMem.inputBuffer).toBe('');
       expect(playClickSound).not.toHaveBeenCalled();
     });
   });

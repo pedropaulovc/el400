@@ -130,6 +130,59 @@ describe('polarReducer', () => {
       expect(result.display.Z).toBe('');
     });
 
+    it('uses both plane-axis direction settings for theta while radius stays physical', () => {
+      const base = connectedContext(3, 4, 0);
+      const reversedFirst: DROReducerContext = {
+        ...base,
+        nvMem: {
+          ...base.nvMem,
+          axisDirection: { ...base.nvMem.axisDirection, X: 'reversed' },
+        },
+      };
+      const reversedSecond: DROReducerContext = {
+        ...base,
+        nvMem: {
+          ...base.nvMem,
+          axisDirection: { ...base.nvMem.axisDirection, Y: 'reversed' },
+        },
+      };
+
+      const firstResult = polarReducer(
+        polarState('X-Y'),
+        { eventName: 'MILL_STATE_CHANGED' },
+        reversedFirst
+      )!;
+      expect(firstResult.display.X).toBeCloseTo(5, 4);
+      expect(firstResult.display.Y).toBeCloseTo(126.8699, 3);
+
+      const secondResult = polarReducer(
+        polarState('X-Y'),
+        { eventName: 'MILL_STATE_CHANGED' },
+        reversedSecond
+      )!;
+      expect(secondResult.display.X).toBeCloseTo(5, 4);
+      expect(secondResult.display.Y).toBeCloseTo(-53.1301, 3);
+    });
+
+    it('does not apply radius/diameter display scaling to polar geometry', () => {
+      const base = connectedContext(3, 4, 0);
+      const diameterContext: DROReducerContext = {
+        ...base,
+        nvMem: {
+          ...base.nvMem,
+          measurementMode: { X: 'diameter', Y: 'diameter', Z: 'radius' },
+        },
+      };
+      const result = polarReducer(
+        polarState('X-Y'),
+        { eventName: 'MILL_STATE_CHANGED' },
+        diameterContext
+      )!;
+
+      expect(result.display.X).toBeCloseTo(5, 4);
+      expect(result.display.Y).toBeCloseTo(53.1301, 3);
+    });
+
     it('X-Z plane: X=3,Z=4 -> R=5 on X, θ≈53.13° on Z, Y blank', () => {
       const result = polarReducer(
         polarState('X-Z'),

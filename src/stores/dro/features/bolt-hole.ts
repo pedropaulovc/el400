@@ -713,12 +713,16 @@ export const boltHoleReducer: FeatureReducer = (statePayload, eventPayload, cont
     case 'bolt-hole-arc-holes': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        // Arc allows a single hole (start == end edge case)
+        // A single hole sits at the start angle; multiple holes need a nonzero span.
         if (
           value === null ||
           !Number.isSafeInteger(value) ||
           value < 1 ||
-          value > 999
+          value > 999 ||
+          (value > 1 &&
+            boltData.startAngle !== null &&
+            boltData.endAngle !== null &&
+            boltData.startAngle === boltData.endAngle)
         ) return null;
 
         const newData: BoltHoleData = {

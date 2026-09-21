@@ -509,3 +509,35 @@ it('presets angular degrees without applying inch or diameter conversion', () =>
   const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
   expect(result.display.X).toBe('90.000');
 });
+
+it('preserves unwrapped angular entries across linear dP settings', () => {
+  for (const displayResolution of ['5', '50'] as const) {
+    const context: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: {
+        ...DEFAULT_TEST_CONTEXT.nvMem,
+        countingMode: {
+          ...DEFAULT_TEST_CONTEXT.nvMem.countingMode,
+          X: 'angular',
+        },
+        angularResolution: {
+          ...DEFAULT_TEST_CONTEXT.nvMem.angularResolution,
+          X: 'dd-dec',
+        },
+        displayResolution: {
+          ...DEFAULT_TEST_CONTEXT.nvMem.displayResolution,
+          X: displayResolution,
+        },
+      },
+    };
+    const state = idleStateWithVMem({
+      activeAxis: 'X',
+      inputBuffer: '1234',
+      manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+    });
+    const result = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+
+    expect(result.vMem.manualAbsoluteValues.X).toBe(1234);
+    expect(result.display.X).toBe('154.000');
+  }
+});

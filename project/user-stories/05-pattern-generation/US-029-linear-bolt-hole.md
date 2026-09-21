@@ -2,7 +2,7 @@
 
 **Priority:** P4  
 **Category:** Pattern Generation  
-**Manual reference:** EL400 Operation Manual §9.1.6, pp. 57–58; EL400 overview video §2.13 (top-level Fn choices and axis-aligned line-hole description)
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §9.1.6, pp. 57–58; [EL400 overview video](https://www.youtube.com/watch?v=7W47KPCu7jE) §2.13 (top-level Fn choices and axis-aligned line-hole description)
 
 ## User Story
 
@@ -12,28 +12,28 @@
 
 ## Target Acceptance Criteria
 
-- [ ] **AC29.1:** Press Fn, navigate from the default `CEntrE` top-level item to `LinEAr`, and press ENT. `CirCLE`/`LinE` belong to the nested `CEntrE` submenu and are not extra top-level steps.
-- [ ] **AC29.2:** The visible `AXIS` phase accepts a genuine physical X, Y, or Z axis. The selected axis is reset as directed by the manual before pitch entry.
-- [ ] **AC29.3:** Enter a positive `PitCh` in the current linear unit and confirm it with ENT.
-- [ ] **AC29.4:** Confirming the documented axis-and-pitch flow enters counting mode and shows live distance-to-go to the first hole (zero on the reset selected axis); the other two axes remain ordinary live coordinates.
-- [ ] **AC29.5:** Each 6 advances the target by one pitch on the selected axis: hole $n$ is `(n−1)·pitch` from the reset origin. 4 steps backward but clamps at hole 1; there is no count-based wrap.
-- [ ] **AC29.6:** Only the active numeric distance-to-go axis uses the pattern function marker.
-- [ ] **AC29.7:** C exits and restores the normal ABS coordinate display.
-- [ ] **AC29.8:** There is **no hole-count prompt or terminal count**. Those behaviors are unsupported by the EL400 procedure and must not gate entry into navigation.
+- [x] **AC29.1:** Press Fn, navigate from the default `CEntrE` top-level item to `LinEAr`, and press ENT. `CirCLE`/`LinE` belong to the nested `CEntrE` submenu and are not extra top-level steps.
+- [x] **AC29.2:** The visible `AXIS` phase accepts a genuine physical X, Y, or Z axis. The selected axis is reset as directed by the manual before pitch entry.
+- [x] **AC29.3:** Enter a positive `PitCh` in the current linear unit and confirm it with ENT.
+- [x] **AC29.4:** Confirming the documented axis-and-pitch flow enters counting mode and shows live distance-to-go to the first hole (zero on the reset selected axis); the other two axes remain ordinary live coordinates.
+- [x] **AC29.5:** Each 6 advances the target by one pitch on the selected axis: hole $n$ is `(n−1)·pitch` from the reset origin. 4 steps backward but clamps at hole 1; there is no count-based wrap.
+- [x] **AC29.6:** Only the active numeric distance-to-go axis uses the pattern function marker.
+- [x] **AC29.7:** C exits and restores the normal ABS coordinate display.
+- [x] **AC29.8:** There is **no hole-count prompt or terminal count**. Those behaviors are unsupported by the EL400 procedure and must not gate entry into navigation.
 
 ## Operator Procedure and Independent Oracles
 
 Enter Linear Bolt Hole, choose each of X/Y/Z in turn, reset the chosen axis, and enter pitch `10 mm`. The first target is `0`; successive 6 presses produce target positions `10`, `20`, and `30 mm` on only the chosen axis. Move the selected physical axis to 10 mm and verify the second target reads zero while the sequence continues forward without a count prompt or wrap.
 
-## Baseline Audit Status (headed debug audit)
+## Verification
 
-The pre-implementation audit reached `LinEAr`, selected X/Y/Z, and observed correct pitch increments after supplying an extra count. It confirmed the authoritative workflow failure: after pitch the simulator showed `hoLES`; pressing the manual's documented 6 entered the digit 6 instead of advancing. The old story's count and wrap criteria described the implementation defect, not the manual. This is baseline evidence only.
+The headed pattern pass supersedes the baseline undocumented count gate. It verified the corrected top-level route, the visible axis choice for X/Y/Z, pitch-only entry with no hole-count prompt, first-target clamp, unbounded forward progression, selected-axis-only distance-to-go and marker, live movement to zero, and exit. The run extended well beyond the old finite behavior but did not seek a numeric overflow limit because the source procedure has no terminal count. No physical encoder or drilling operation was exercised.
 
-Evidence: `/tmp/el400-audit-ManualPatterns.json` (`US-029`) and `/tmp/el400-audit/patterns/us029-undocumented-holes.png`.
+See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
 
-## Automated Coverage
+## Automated coverage
 
-[`e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts`](../../../e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts) is the executable browser coverage. It must exercise X, Y, and Z through the real front panel/debug position controls and negatively assert that no count gate appears. New checks remain unverified until Main runs the integrated suite.
+[`e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts`](../../../e2e/05-pattern-generation/US-029-linear-bolt-hole.spec.ts) exercises X, Y, and Z through the front panel and visible debug position controls and checks that no count gate appears.
 
 ## Related Stories
 

@@ -33,6 +33,7 @@ import {
   type AxisDirectionByAxis,
   type ZDepthSense,
   type MeasurementModeByAxis,
+  type CountingModeByAxis,
 } from '../../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../../types/millState';
 
@@ -44,12 +45,17 @@ function makeNvMem(
     zDepthSense?: ZDepthSense;
     defaultUnit?: 'inch' | 'mm';
     measurementMode?: Partial<MeasurementModeByAxis>;
+    countingMode?: Partial<CountingModeByAxis>;
   } = {}
 ): NonVolatileMemory {
   return {
     ...DEFAULT_NON_VOLATILE_MEMORY,
     defaultUnit: overrides.defaultUnit ?? 'mm',
     zDepthSense: overrides.zDepthSense ?? 'depth-negative',
+    countingMode: {
+      ...DEFAULT_NON_VOLATILE_MEMORY.countingMode,
+      ...overrides.countingMode,
+    },
     axisDirection: {
       ...DEFAULT_NON_VOLATILE_MEMORY.axisDirection,
       ...overrides.axisDirection,
@@ -287,6 +293,14 @@ describe('measurementScale — radius/diameter factor (US-041)', () => {
     expect(measurementScale('X', nvMem)).toBe(2);
     expect(measurementScale('Y', nvMem)).toBe(1);
     expect(measurementScale('Z', nvMem)).toBe(2);
+  });
+
+  it('ignores a stored diameter setting for angular axes', () => {
+    const nvMem = makeNvMem({
+      countingMode: { X: 'angular' },
+      measurementMode: { X: 'diameter' },
+    });
+    expect(measurementScale('X', nvMem)).toBe(1);
   });
 });
 

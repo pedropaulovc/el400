@@ -88,6 +88,30 @@ describe('manual probe contact contract', () => {
     expect(state.display.X).toBe(0);
   });
 
+  it('keeps an angular midpoint datum in degrees under inch and diameter settings', () => {
+    context = {
+      ...context,
+      nvMem: {
+        ...context.nvMem,
+        defaultUnit: 'inch',
+        countingMode: { ...context.nvMem.countingMode, X: 'angular' },
+        angularResolution: { ...context.nvMem.angularResolution, X: 'dd-dec' },
+        measurementMode: { ...context.nvMem.measurementMode, X: 'diameter' },
+      },
+    };
+    arm('midpoint');
+    contact(10, true);
+    contact(10, false);
+    vi.advanceTimersByTime(1000);
+    contact(50, true);
+    expect(state.stateName).toBe('probe-coordinate');
+    send('KEY_9');
+    send('KEY_0');
+    send('KEY_ENTER');
+    contact(30, false);
+    expect(state.display.X).toBe('90.000');
+  });
+
   it.each([['inside', 56], ['outside', 44]] as const)('shows %s width and center in the current datum', (probeFunction, width) => {
     arm(probeFunction);
     state = { ...state, vMem: { ...state.vMem, workOffsets: { X: 5, Y: 0, Z: 0 } } };
@@ -152,6 +176,28 @@ describe('manual probe contact contract', () => {
     send('KEY_SIGN');
     send('KEY_ENTER');
     expect(update).toHaveBeenCalledWith({ probeDiameterMm: 6, probeLengthMm: 2 });
+    update.mockRestore();
+  });
+
+  it('continues converting physical probe dimensions from inches to millimeters', () => {
+    const update = vi.spyOn(useSettingsStore.getState(), 'updateNvMem');
+    context = {
+      ...context,
+      nvMem: {
+        ...context.nvMem,
+        defaultUnit: 'inch',
+        countingMode: { ...context.nvMem.countingMode, Y: 'angular' },
+        measurementMode: { ...context.nvMem.measurementMode, Y: 'diameter' },
+      },
+    };
+    state = { ...createTestState('probe-diameter'), stateData: { ...INITIAL_PROBE_DATA, probeFunction: 'config' } };
+    send('KEY_2_DOWN');
+    send('KEY_ENTER');
+    send('KEY_3');
+    send('KEY_ENTER');
+    const saved = update.mock.calls[update.mock.calls.length - 1]?.[0];
+    expect(saved?.probeDiameterMm).toBeCloseTo(50.8);
+    expect(saved?.probeLengthMm).toBeCloseTo(76.2);
     update.mockRestore();
   });
 });

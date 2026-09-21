@@ -83,14 +83,9 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     }
   }, [dispatch, mode]);
 
-  const selectAxis = useCallback((axis: Axis | null) => {
-    if (axis === null) {
-      // Clear selection - dispatch KEY_CLEAR when buffer is empty
-      dispatch({ eventName: 'KEY_CLEAR' });
-    } else {
-      const eventName = `BTN_SELECT_${axis}` as const;
-      dispatch({ eventName });
-    }
+  const selectAxis = useCallback((axis: Axis) => {
+    const eventName = `BTN_SELECT_${axis}` as const;
+    dispatch({ eventName });
   }, [dispatch]);
 
   const zeroAxis = useCallback((axis: Axis) => {

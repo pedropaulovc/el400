@@ -3,7 +3,7 @@ import type { FeatureReducer, DROReducerContext, DROStatePayload } from '../type
 import type { ProbeData, ProbeFunction } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA, INITIAL_PROBE_DATA, isProbeActive } from '../droStateMachine';
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
-import { computeNormalDisplay, computeMachinePositionMm, computeAxisPositionMm, directionSign, measurementScale, createDisplay, type DisplayState } from '../utils/displayComputation';
+import { axisUnitsToDisplayUnits, computeNormalDisplay, computeMachinePositionMm, computeAxisPositionMm, directionSign, displayUnitsToAxisUnits, measurementScale, createDisplay, type DisplayState } from '../utils/displayComputation';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 import { appendDigit, appendDecimal, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
 import { useSettingsStore } from '../../settingsStore';
@@ -28,18 +28,22 @@ function measurementDisplay(data: ProbeData, context: DROReducerContext): Displa
   const axis = data.probeAxis ?? 'X';
   const value = data.resultView === 'width' ? data.resultMm : data.centerMm;
   const labelAxis = axis === 'Z' ? 'X' : 'Z';
-  return { ...createDisplay('', '', ''), [axis]: value === null ? 'Error' : fromMmToAnyUnit(value, context.nvMem.defaultUnit), [labelAxis]: data.resultView === 'width' ? 'LEnGth' : 'CEntrE' };
+  const displayed = value === null ? 'Error' : data.resultView === 'width'
+    ? fromMmToAnyUnit(value, context.nvMem.defaultUnit)
+    : axisUnitsToDisplayUnits(axis, value, context.nvMem);
+  return { ...createDisplay('', '', ''), [axis]: displayed, [labelAxis]: data.resultView === 'width' ? 'LEnGth' : 'CEntrE' };
 }
 
 /** Datum point is a captured machine coordinate, not the possibly moved live probe. */
-function setDatum(vMem: VolatileMemoryState, axis: Axis, pointMm: number, coordinateMm: number, context: DROReducerContext): VolatileMemoryState {
-  const rawTarget = coordinateMm / (directionSign(axis, context.nvMem) * measurementScale(axis, context.nvMem));
+function setDatum(vMem: VolatileMemoryState, axis: Axis, pointAxisUnits: number, coordinateDisplayUnits: number, context: DROReducerContext): VolatileMemoryState {
+  const coordinateAxisUnits = displayUnitsToAxisUnits(axis, coordinateDisplayUnits, context.nvMem);
+  const rawTarget = coordinateAxisUnits / (directionSign(axis, context.nvMem) * measurementScale(axis, context.nvMem));
   if (context.millState.connected) {
     const key = vMem.mode === 'abs' ? 'workOffsets' : 'incrementalOffsets';
-    return { ...vMem, [key]: { ...vMem[key], [axis]: pointMm - rawTarget } };
+    return { ...vMem, [key]: { ...vMem[key], [axis]: pointAxisUnits - rawTarget } };
   }
   const key = vMem.mode === 'abs' ? 'manualAbsoluteValues' : 'incrementalValues';
-  return { ...vMem, [key]: { ...vMem[key], [axis]: vMem[key][axis] - pointMm + rawTarget } };
+  return { ...vMem, [key]: { ...vMem[key], [axis]: vMem[key][axis] - pointAxisUnits + rawTarget } };
 }
 
 function armProbe(data: ProbeData, state: DROStatePayload, context: DROReducerContext): DROStatePayload {
@@ -97,16 +101,16 @@ export const probeReducer: FeatureReducer = (state, event, context) => {
     const entered = getBufferValue(vMem.inputBuffer);
     if (entered === null && vMem.inputBuffer !== '') return state;
     const previous = stateName === 'probe-diameter' ? data.probeDiameterMm : stateName === 'probe-length' ? data.probeLengthMm : 0;
-    const mm = entered === null ? previous : context.nvMem.defaultUnit === 'mm' ? entered : entered * 25.4;
-    if (!Number.isFinite(mm) || (stateName !== 'probe-coordinate' && mm < 0)) return state;
-    if (stateName === 'probe-diameter') return { ...state, stateName: 'probe-length', stateData: { ...data, probeDiameterMm: mm }, vMem: { ...vMem, activeAxis: 'Y', inputBuffer: '' }, display: createDisplay('Prb LEn', fromMmToAnyUnit(data.probeLengthMm, context.nvMem.defaultUnit), '') };
+    const value = entered === null ? previous : stateName === 'probe-coordinate' || context.nvMem.defaultUnit === 'mm' ? entered : entered * 25.4;
+    if (!Number.isFinite(value) || (stateName !== 'probe-coordinate' && value < 0)) return state;
+    if (stateName === 'probe-diameter') return { ...state, stateName: 'probe-length', stateData: { ...data, probeDiameterMm: value }, vMem: { ...vMem, activeAxis: 'Y', inputBuffer: '' }, display: createDisplay('Prb LEn', fromMmToAnyUnit(data.probeLengthMm, context.nvMem.defaultUnit), '') };
     if (stateName === 'probe-length') {
       // Probe configuration is its own Fn transaction, committed together here.
-      useSettingsStore.getState().updateNvMem({ probeDiameterMm: data.probeDiameterMm, probeLengthMm: mm });
-      return { ...state, stateName: 'probe-menu-function', stateData: { ...data, probeLengthMm: mm }, vMem: { ...vMem, activeAxis: null, inputBuffer: '' }, display: createDisplay('ConFiG', '', '') };
+      useSettingsStore.getState().updateNvMem({ probeDiameterMm: data.probeDiameterMm, probeLengthMm: value });
+      return { ...state, stateName: 'probe-menu-function', stateData: { ...data, probeLengthMm: value }, vMem: { ...vMem, activeAxis: null, inputBuffer: '' }, display: createDisplay('ConFiG', '', '') };
     }
     if (data.probeAxis === null || data.centerMm === null) return state;
-    const nextVMem = { ...setDatum(vMem, data.probeAxis, data.centerMm, mm, context), activeAxis: null, inputBuffer: '' };
+    const nextVMem = { ...setDatum(vMem, data.probeAxis, data.centerMm, value, context), activeAxis: null, inputBuffer: '' };
     return { ...state, stateName: 'probe-result', vMem: nextVMem, display: computeNormalDisplay(nextVMem, context) };
   }
 

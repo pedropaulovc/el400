@@ -74,6 +74,11 @@ describe('formatAngularValue — dd.dEC (degrees-decimal)', () => {
   it('renders 0° as 0.000', () => {
     expect(formatAngularValue(0, 'dd-dec')).toBe('0.000');
   });
+
+  it('wraps a rounded full revolution back to zero', () => {
+    expect(formatAngularValue(359.9999, 'dd-dec')).toBe('0.000');
+    expect(formatAngularValue(-0.0001, 'dd-dec')).toBe('0.000');
+  });
 });
 
 describe('formatAngularValue — dd.mn (degrees-minutes)', () => {

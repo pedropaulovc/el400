@@ -26,13 +26,16 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  axisUnitsToDisplayUnits,
   computeNormalDisplay,
   computeMachinePositionMm,
   directionSign,
+  displayUnitsToAxisUnits,
+  formatAngularValue,
   measurementScale,
+  type AxisDisplayValue,
   type DisplayState,
 } from '../utils/displayComputation';
-import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
 import { useSettingsStore } from '../../settingsStore';
 
 /** Display text for preset-select state */
@@ -96,9 +99,15 @@ function computePresetSelectDisplay(
   const { nvMem } = context;
 
   return {
-    X: presetTargets.X !== null ? fromMmToAnyUnit(presetTargets.X, nvMem.defaultUnit) : SELECT_TEXT,
-    Y: presetTargets.Y !== null ? fromMmToAnyUnit(presetTargets.Y, nvMem.defaultUnit) : SELECT_TEXT,
-    Z: presetTargets.Z !== null ? fromMmToAnyUnit(presetTargets.Z, nvMem.defaultUnit) : SELECT_TEXT,
+    X: presetTargets.X !== null
+      ? axisUnitsToDisplayUnits('X', presetTargets.X, nvMem)
+      : SELECT_TEXT,
+    Y: presetTargets.Y !== null
+      ? axisUnitsToDisplayUnits('Y', presetTargets.Y, nvMem)
+      : SELECT_TEXT,
+    Z: presetTargets.Z !== null
+      ? axisUnitsToDisplayUnits('Z', presetTargets.Z, nvMem)
+      : SELECT_TEXT,
   };
 }
 
@@ -121,9 +130,10 @@ function computePresetInputDisplay(
 }
 
 /**
- * Read the signed ABS coordinate in display-mm without changing either datum.
+ * Compute the signed ABS coordinate in the axis's canonical unit.
+ * Linear coordinates remain display-scaled mm; angular coordinates are degrees.
  */
-function getAbsolutePositionMm(
+function getAbsolutePosition(
   axis: Axis,
   vMem: VolatileMemoryState,
   context: DROReducerContext
@@ -149,19 +159,24 @@ function computeDistanceToGoDisplay(
   const { presetTargets } = presetData;
   const { nvMem } = context;
 
-  const computeAxisDisplay = (axis: Axis): number => {
+  const computeAxisDisplay = (axis: Axis): AxisDisplayValue => {
     const target = presetTargets[axis];
     // Always use absolute position for distance-to-go (ignores mode setting)
-    const currentMm = getAbsolutePositionMm(axis, vMem, context);
+    const current = getAbsolutePosition(axis, vMem, context);
 
     if (target === null) {
-      // No preset for this axis - show normal absolute position
-      return fromMmToAnyUnit(currentMm, nvMem.defaultUnit);
+      // Untargeted axes retain normal-position presentation while using the
+      // absolute datum even though Preset temporarily sets vMem.mode to INC.
+      return nvMem.countingMode[axis] === 'angular'
+        ? formatAngularValue(current, nvMem.angularResolution[axis])
+        : axisUnitsToDisplayUnits(axis, current, nvMem);
     }
 
-    // Subtract travel, not the pre-existing absolute coordinate.
-    const distanceMm = target - (currentMm - presetData.entryPosition[axis]);
-    return fromMmToAnyUnit(distanceMm, nvMem.defaultUnit);
+    // Subtract travel, not the pre-existing absolute coordinate. Angular DTG
+    // deliberately remains a signed decimal-degree residual rather than wrapping
+    // or adopting the normal position readout's configured DMS format.
+    const distance = target - (current - presetData.entryPosition[axis]);
+    return axisUnitsToDisplayUnits(axis, distance, nvMem);
   };
 
   return {
@@ -243,9 +258,9 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
         const executingData: PresetData = {
           ...presetData,
           entryPosition: {
-            X: getAbsolutePositionMm('X', vMem, context),
-            Y: getAbsolutePositionMm('Y', vMem, context),
-            Z: getAbsolutePositionMm('Z', vMem, context),
+            X: getAbsolutePosition('X', vMem, context),
+            Y: getAbsolutePosition('Y', vMem, context),
+            Z: getAbsolutePosition('Z', vMem, context),
           },
         };
         return {
@@ -326,14 +341,14 @@ export const distanceToGoReducer: FeatureReducer = (state, event, context) => {
         return null;
       }
 
-      // Convert from user unit to mm for storage
-      const valueInMm = bufferValue !== null
-        ? fromAnyUnitToMm(bufferValue, context.nvMem.defaultUnit)
+      // Store linear targets in scaled mm and angular targets in degrees.
+      const valueInAxisUnits = bufferValue !== null
+        ? displayUnitsToAxisUnits(inputAxis, bufferValue, context.nvMem)
         : 0;
 
       const newPresetTargets = {
         ...presetData.presetTargets,
-        [inputAxis]: valueInMm,
+        [inputAxis]: valueInAxisUnits,
       };
 
       const newPresetData: PresetData = {

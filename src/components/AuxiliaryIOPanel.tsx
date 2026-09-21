@@ -1,5 +1,6 @@
 import { useDROStore } from '../stores/droStore';
 import { useAuxiliaryTransport } from '../stores/auxiliaryTransport';
+import { useSettingsStore } from '../stores/settingsStore';
 
 /** Explicit simulator I/O boundary: no physical output-pin emulation is claimed. */
 export function AuxiliaryIOPanel() {
@@ -7,6 +8,7 @@ export function AuxiliaryIOPanel() {
   const stateName = useDROStore((state) => state.stateName);
   const program = useDROStore((state) => state.vMem.outputProgram);
   const count = useDROStore((state) => state.vMem.outputCount);
+  const countingMode = useSettingsStore((state) => state.nvMem.countingMode);
   const transport = useAuxiliaryTransport();
   return (
     <section aria-label="Auxiliary I/O" className="rounded border border-gray-500 bg-gray-900 p-3 text-sm text-white">
@@ -16,7 +18,7 @@ export function AuxiliaryIOPanel() {
         {program.map((entry, index) => (
           <li key={index} data-testid={`output-${String(index + 1)}`}>
             Output {index + 1}: <output>{stateName === 'six-output-run' && data.stateDataType === 'six-output' ? data.outputs[index] : 'low'}</output>
-            {' — '}{entry.axis} {entry.positionMm} mm{index >= count ? ' (outside program count)' : ''}
+            {' — '}{entry.axis} {entry.positionMm} {countingMode[entry.axis] === 'angular' ? '°' : 'mm'}{index >= count ? ' (outside program count)' : ''}
           </li>
         ))}
       </ol>

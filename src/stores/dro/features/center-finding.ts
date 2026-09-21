@@ -24,12 +24,14 @@ import {
 import type { AxisValues, VolatileMemoryState } from '../../../types/volatileMemory';
 import { findLineCenter, findCircleCenter } from '../../../utils/centerFinding';
 import {
+  axisUnitsToDisplayUnits,
   computeNormalDisplay,
   computeAxisPositionMm,
   createDisplay,
+  directionSign,
+  measurementScale,
   type DisplayState,
 } from '../utils/displayComputation';
-import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 
 /**
  * Check if state is handled by this feature.
@@ -158,11 +160,22 @@ function computeCenterResultDisplay(
 ): DisplayState {
   const currentX = computeAxisPositionMm('X', vMem, context);
   const currentY = computeAxisPositionMm('Y', vMem, context);
-  const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
-    fromMmToAnyUnit(centerResult.X - currentX, unit),
-    fromMmToAnyUnit(centerResult.Y - currentY, unit),
+    axisUnitsToDisplayUnits(
+      'X',
+      (centerResult.X - currentX) *
+        directionSign('X', context.nvMem) *
+        measurementScale('X', context.nvMem),
+      context.nvMem
+    ),
+    axisUnitsToDisplayUnits(
+      'Y',
+      (centerResult.Y - currentY) *
+        directionSign('Y', context.nvMem) *
+        measurementScale('Y', context.nvMem),
+      context.nvMem
+    ),
     'CEntrE'
   );
 }

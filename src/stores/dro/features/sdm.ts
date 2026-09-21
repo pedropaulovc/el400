@@ -3,8 +3,16 @@ import type { DROStateName, SdmData, StoredPoint } from '../droStateMachine';
 import { INITIAL_DRO_STATE_DATA, INITIAL_SDM_DATA, MAX_SDM_STEPS, isSdmActive } from '../droStateMachine';
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
 import { getBufferValue, appendDigit, appendDecimal, toggleSign, removeLastChar, KEY_TO_DIGIT } from './buffer-utils';
-import { computeMachinePositionMm, computeNormalDisplay, createDisplay, directionSign, measurementScale, type DisplayState } from '../utils/displayComputation';
-import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
+import {
+  axisUnitsToDisplayUnits,
+  computeMachinePositionMm,
+  computeNormalDisplay,
+  createDisplay,
+  directionSign,
+  displayUnitsToAxisUnits,
+  measurementScale,
+  type DisplayState,
+} from '../utils/displayComputation';
 
 const MENU = ['sdm-menu-program', 'sdm-menu-run', 'sdm-menu-learn'] as const;
 const LABELS = ['ProGrAn', 'rUn', 'LEArn'] as const;
@@ -17,7 +25,7 @@ const INPUT_STATE: Record<Axis, DROStateName> = {
   X: 'sdm-program-input-x', Y: 'sdm-program-input-y', Z: 'sdm-program-input-z',
 };
 
-/** SDM coordinates use the operator's ABS datum and counting direction, in mm. */
+/** SDM coordinates use the operator's ABS datum and counting direction, in canonical axis units. */
 function absolutePosition(axis: Axis, vm: VolatileMemoryState, ctx: DROReducerContext): number {
   const raw = ctx.millState.connected
     ? computeMachinePositionMm(axis, vm, ctx) - vm.workOffsets[axis]
@@ -41,8 +49,9 @@ function displayFor(state: DROStateName, data: SdmData, vm: VolatileMemoryState,
     if (state === 'sdm-run-active' && stored === undefined) return createDisplay('no dAtA', String(data.currentStep), '');
     const value = (a: Axis) => {
       if (a === axis && vm.inputBuffer !== '') return getBufferValue(vm.inputBuffer) ?? 0;
-      const mm = (stored?.[a] ?? 0) - (state === 'sdm-run-active' ? absolutePosition(a, vm, ctx) : 0);
-      return fromMmToAnyUnit(mm, ctx.nvMem.defaultUnit);
+      const coordinate = (stored?.[a] ?? 0) -
+        (state === 'sdm-run-active' ? absolutePosition(a, vm, ctx) : 0);
+      return axisUnitsToDisplayUnits(a, coordinate, ctx.nvMem);
     };
     return createDisplay(value('X'), value('Y'), value('Z'));
   }
@@ -104,7 +113,9 @@ export const sdmReducer: FeatureReducer = (current, event, ctx) => {
     if (key === 'KEY_ENTER') {
       const entered = getBufferValue(vm.inputBuffer);
       const existing = data.points[data.currentStep] ?? { X: 0, Y: 0, Z: 0 };
-      const value = entered === null ? existing[inputAxis] : fromAnyUnitToMm(entered, ctx.nvMem.defaultUnit);
+      const value = entered === null
+        ? existing[inputAxis]
+        : displayUnitsToAxisUnits(inputAxis, entered, ctx.nvMem);
       const points = { ...data.points, [data.currentStep]: { ...existing, [inputAxis]: value } };
       const nextAxis = AXES[AXES.indexOf(inputAxis) + 1];
       return refresh(nextAxis === undefined ? 'sdm-program-step' : INPUT_STATE[nextAxis], { ...data, points, navigationPhase: 'browse' }, { ...vm, inputBuffer: '', sdmPoints: points });

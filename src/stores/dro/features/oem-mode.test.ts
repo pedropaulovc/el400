@@ -22,12 +22,21 @@ import {
 import { setupReducer } from './setup';
 import {
   INITIAL_OEM_DATA,
+  INITIAL_SETUP_DATA,
   type DROEventPayload,
   type OemData,
+  type SetupData,
 } from '../droStateMachine';
+import type { DROStatePayload } from '../types';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { useSettingsStore } from '../../settingsStore';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+import {
+  DIRECTION_ID,
+  OEM_MODE_ID,
+  SAVE_CHANGES_ID,
+  SETUP_PARAMETERS,
+} from './setup-parameters';
 
 /** The 5-digit OEM password as individual digit-key events (real keypresses). */
 const PASSWORD_KEYS: DROEventPayload[] = [
@@ -38,14 +47,38 @@ const PASSWORD_KEYS: DROEventPayload[] = [
   { eventName: 'KEY_6_RIGHT' }, // the '6' key (doubles as nav-right outside OEM)
 ];
 
-function oemState(data: Partial<OemData> = {}, stateName: 'oem-password' | 'oem-mode' | 'oem-rejected' = 'oem-password') {
+function oemState(data: Partial<OemData> = {}, stateName: 'oem-password' | 'oem-mode' | 'oem-rejected' = 'oem-password'): DROStatePayload {
   return createTestState(stateName, { ...INITIAL_OEM_DATA, ...data });
 }
 
-function dispatch(state: ReturnType<typeof oemState>, event: DROEventPayload) {
+function dispatch(state: DROStatePayload, event: DROEventPayload): DROStatePayload {
   const result = oemModeReducer(state, event, DEFAULT_TEST_CONTEXT);
   if (result === null) throw new Error(`oemModeReducer did not handle ${event.eventName}`);
   return result;
+}
+
+function setupDispatch(state: DROStatePayload, event: DROEventPayload): DROStatePayload {
+  const result = setupReducer(state, event, DEFAULT_TEST_CONTEXT);
+  if (result === null) throw new Error(`setupReducer did not handle ${event.eventName}`);
+  return result;
+}
+
+function moveSetupTo(state: DROStatePayload, parameterId: string): DROStatePayload {
+  const target = SETUP_PARAMETERS.findIndex((parameter) => parameter.id === parameterId);
+  if (target < 0) throw new Error(`Unknown setup parameter ${parameterId}`);
+  let current = state;
+  let guard = 0;
+  while ((current.stateData as SetupData).currentParamIndex !== target) {
+    current = setupDispatch(current, { eventName: 'KEY_2_DOWN' });
+    guard += 1;
+    if (guard > SETUP_PARAMETERS.length) throw new Error(`Setup parameter ${parameterId} not reachable`);
+  }
+  return current;
+}
+
+function enterSetupForY(): DROStatePayload {
+  const setupSelect = setupDispatch(createTestState('idle'), { eventName: 'BTN_SETUP' });
+  return setupDispatch(setupSelect, { eventName: 'BTN_SELECT_Y' });
 }
 
 describe('US-044 OEM Mode — password gate (AC 44.2 / 44.7)', () => {
@@ -86,7 +119,7 @@ describe('US-044 OEM Mode — password gate (AC 44.2 / 44.7)', () => {
 
     // Dismissing the rejection returns to the setup menu (OEM row), not OEM Mode.
     const dismissed = dispatch(
-      oemState({ returnParamIndex: 3 }, 'oem-rejected'),
+      oemState({ setup: { ...INITIAL_SETUP_DATA, currentParamIndex: 3 } }, 'oem-rejected'),
       { eventName: 'OEM_REJECTED_TIMEOUT' }
     );
     expect(dismissed.stateName).toBe('setup-parameter');
@@ -169,5 +202,59 @@ describe('US-044 OEM Mode — setup hand-off (AC 44.1)', () => {
     const entered = setupReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)!;
     expect(entered.stateName).toBe('oem-password');
     expect(entered.display.X).toBe(OEM_PASSWORD_PROMPT);
+  });
+});
+
+describe('US-044 OEM Mode — setup transaction fidelity', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY } });
+  });
+
+  it('preserves the selected Y axis and its direction draft after a rejected password', () => {
+    let state = moveSetupTo(enterSetupForY(), DIRECTION_ID);
+    state = setupDispatch(state, { eventName: 'KEY_6_RIGHT' });
+
+    state = moveSetupTo(state, OEM_MODE_ID);
+    state = setupDispatch(state, { eventName: 'KEY_ENTER' });
+    state = dispatch(state, { eventName: 'KEY_1' });
+    state = dispatch(state, { eventName: 'KEY_ENTER' });
+    state = dispatch(state, { eventName: 'OEM_REJECTED_TIMEOUT' });
+
+    expect(state.display.X).toBe(OEM_MODE_SETUP_LABEL);
+
+    state = moveSetupTo(state, SAVE_CHANGES_ID);
+    setupDispatch(state, { eventName: 'KEY_ENTER' });
+    expect(useSettingsStore.getState().nvMem.axisDirection).toEqual({
+      X: 'normal',
+      Y: 'reversed',
+      Z: 'normal',
+    });
+  });
+
+  it('preserves the Y setup transaction after OEM save without capturing its drafts in the OEM baseline', () => {
+    let state = enterSetupForY();
+    state = setupDispatch(state, { eventName: 'KEY_6_RIGHT' });
+
+    state = moveSetupTo(state, OEM_MODE_ID);
+    state = setupDispatch(state, { eventName: 'KEY_ENTER' });
+    for (const key of PASSWORD_KEYS) state = dispatch(state, key);
+    state = dispatch(state, { eventName: 'KEY_ENTER' });
+    state = dispatch(state, { eventName: 'KEY_ENTER' });
+
+    expect(state.stateName).toBe('setup-saved');
+    expect(useSettingsStore.getState().nvMem.oemDefaults?.countingMode.Y).toBe('linear');
+    state = setupDispatch(state, { eventName: 'SETUP_SAVED_TIMEOUT' });
+    expect(state.display.X).toBe(OEM_MODE_SETUP_LABEL);
+
+    state = moveSetupTo(state, DIRECTION_ID);
+    state = setupDispatch(state, { eventName: 'KEY_6_RIGHT' });
+    state = moveSetupTo(state, SAVE_CHANGES_ID);
+    setupDispatch(state, { eventName: 'KEY_ENTER' });
+
+    const live = useSettingsStore.getState().nvMem;
+    expect(live.countingMode).toEqual({ X: 'linear', Y: 'angular', Z: 'linear' });
+    expect(live.axisDirection).toEqual({ X: 'normal', Y: 'reversed', Z: 'normal' });
+    expect(live.oemDefaults?.countingMode.Y).toBe('linear');
+    expect(live.oemDefaults?.axisDirection.Y).toBe('normal');
   });
 });

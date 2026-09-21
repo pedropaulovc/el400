@@ -1,6 +1,6 @@
 # US-046: Self-Diagnostics Mode
 
-**Manual Reference:** EL400 Operation Manual §11.1, p. 83
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf), §11.1, p. 83
 **Priority:** P5
 **Category:** Auxiliary
 
@@ -22,15 +22,19 @@
 
 These criteria verify simulator stages and logical adapter inputs. They do not diagnose physical RAM, displays, keypad wiring, scales, or encoder electronics.
 
-## Baseline Audit
+## Verification notes
 
-All stages passed in the completed headed `?source=debug` audit. The exact successful route was reload → `8` → `rAmPASS` → key → `88888888` → key → `PrESS` → ENTER → `EnCodEr`, followed by visible debug X/Y/Z jogs producing X/Y/Z. The earlier report that encoder diagnostics were unreachable omitted the required ENTER transition and was corrected by the integration audit. Double-`C` exit also passed.
+The headed `?source=debug` session followed reload → `8` → `rAmPASS` → key → `88888888` → key → `PrESS` → key echo → ENTER → `EnCodEr`. Normal 100 ms adapter polling did not advance operator-driven stages or break the double-`C` exit. Visible X, Y, and Z debug jogs identified all three logical encoder inputs. This verifies the simulator stages and debug adapter only, not physical RAM, display segments, keypad wiring, scales, encoder electronics, or cables.
 
 ## Verification Procedure
 
-Run the real boot/front-panel/debug sequence above. Hold each diagnostic screen through multiple 100 ms adapter ticks, echo at least one keyboard key, jog every axis during `EnCodEr`, then verify the two-step `C` exit. Permanent coverage is in [`e2e/07-auxiliary/US-046-self-diagnostics.spec.ts`](../../../e2e/07-auxiliary/US-046-self-diagnostics.spec.ts); the integrated run should retain explicit all-axis encoder coverage.
+Run the real boot/front-panel/debug sequence above. Hold each diagnostic screen through multiple 100 ms adapter ticks, echo at least one keyboard key, jog every axis during `EnCodEr`, then verify the two-step `C` exit. Permanent coverage is in [`e2e/07-auxiliary/US-046-self-diagnostics.spec.ts`](../../../e2e/07-auxiliary/US-046-self-diagnostics.spec.ts). See the [verification evidence and full-suite results](../README.md#verification).
 
 ## Related Stories
 
 - US-001: First Use and Power-Up Display
 - US-042: Encoder Fail Warning
+
+## References
+
+- [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf), §11.1, p. 83

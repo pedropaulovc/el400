@@ -3,11 +3,10 @@ import type { Axis, AxisValues, VolatileMemoryState } from '../../../types/volat
 import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
 import type { AuxiliaryData, SetupData, SixOutputData } from '../droStateMachine';
 import type { DROStatePayload, FeatureReducer } from '../types';
-import { computeAxisPositionMm, directionSign, measurementScale, computeNormalDisplay, createDisplay, type DisplayState } from '../utils/displayComputation';
+import { axisUnitsToDisplayUnits, computeAxisPositionMm, directionSign, measurementScale, computeNormalDisplay, createDisplay, displayUnitsToAxisUnits, type DisplayState } from '../utils/displayComputation';
 import { appendDecimal, appendDigit, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
 import { useDROStore } from '../../droStore';
 import { transmitSerial } from '../../auxiliaryTransport';
-import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 import { applySetupDrafts, PROBE_DRO_TYPE_ID, SETUP_PARAMETERS } from './setup-parameters';
 
 // Simulator visualization/sample timings, not programmable EL400 hardware parameters.
@@ -71,7 +70,7 @@ export function formatSerialPayload(display: DisplayState, mode: VolatileMemoryS
 function programDisplay(data: SixOutputData, vMem: VolatileMemoryState, nvMem: NonVolatileMemory): DisplayState {
   if (data.phase === 'count') return createDisplay(slotLabel(vMem.outputCount - 1), '', '');
   const entry = vMem.outputProgram[data.slot];
-  return createDisplay(slotLabel(data.slot), entry ? fromMmToAnyUnit(entry.positionMm, nvMem.defaultUnit) : 0, entry?.axis ?? 'X');
+  return createDisplay(slotLabel(data.slot), entry ? axisUnitsToDisplayUnits(entry.axis, entry.positionMm, nvMem) : 0, entry?.axis ?? 'X');
 }
 
 export const auxiliaryReducer: FeatureReducer = (state, event, context) => {
@@ -150,7 +149,7 @@ export const auxiliaryReducer: FeatureReducer = (state, event, context) => {
     return state;
   }
   const axis = eventName === 'BTN_SELECT_X' ? 'X' : eventName === 'BTN_SELECT_Y' ? 'Y' : eventName === 'BTN_SELECT_Z' ? 'Z' : null;
-  if (axis) return { ...state, stateData: { ...data, phase: 'entry', axis }, vMem: { ...vMem, activeAxis: axis, inputBuffer: '' }, display: { ...createDisplay('', '', ''), [axis]: fromMmToAnyUnit(vMem.outputProgram[data.slot]?.positionMm ?? 0, context.nvMem.defaultUnit) } };
+  if (axis) return { ...state, stateData: { ...data, phase: 'entry', axis }, vMem: { ...vMem, activeAxis: axis, inputBuffer: '' }, display: { ...createDisplay('', '', ''), [axis]: axisUnitsToDisplayUnits(axis, vMem.outputProgram[data.slot]?.positionMm ?? 0, context.nvMem) } };
   if (data.phase === 'select' && (eventName === 'KEY_4_LEFT' || eventName === 'KEY_6_RIGHT')) {
     const next = { ...data, slot: (data.slot + (eventName === 'KEY_6_RIGHT' ? 1 : vMem.outputCount - 1)) % vMem.outputCount };
     return { ...state, stateData: next, display: programDisplay(next, vMem, context.nvMem) };
@@ -165,7 +164,7 @@ export const auxiliaryReducer: FeatureReducer = (state, event, context) => {
     const value = getBufferValue(vMem.inputBuffer);
     if (value === null || !Number.isFinite(value)) return state;
     const outputProgram = vMem.outputProgram.slice();
-    outputProgram[data.slot] = { axis: data.axis, positionMm: context.nvMem.defaultUnit === 'mm' ? value : value * 25.4 };
+    outputProgram[data.slot] = { axis: data.axis, positionMm: displayUnitsToAxisUnits(data.axis, value, context.nvMem) };
     const nextVMem = { ...vMem, outputProgram, activeAxis: null, inputBuffer: '' };
     const next = { ...data, phase: 'select' as const };
     return { ...state, vMem: nextVMem, stateData: next, display: programDisplay(next, nextVMem, context.nvMem) };

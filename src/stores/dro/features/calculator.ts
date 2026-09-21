@@ -205,11 +205,14 @@ export const calculatorReducer: FeatureReducer = (statePayload, eventPayload, co
 
     case 'BTN_SELECT_Y': {
       // Y button in calculator mode cycles through operations.
-      // US-013 (manual §7.6.1): if the operator follows a typed-but-not-ENTERed
-      // value (e.g. `12 Y 8 ENT`), commit that pending buffer as the first
-      // operand and clear the buffer, so the next ENT computes the result.
+      // US-013 (manual §7.6.1): selecting an operation commits a pending
+      // first operand when no operation is active. This includes a fresh
+      // numeric entry after ENT or a completed calculation; an empty buffer
+      // deliberately keeps the prior result available for chaining. Once an
+      // operation is active, the buffer is the second operand and must survive
+      // Y cycling to another operation.
       const pendingValue = getBufferValue(vMem.inputBuffer);
-      const shouldCommitBuffer = pendingValue !== null && calcData.firstValue === null;
+      const shouldCommitBuffer = pendingValue !== null && calcData.operation === null;
       const nextOp = getNextOperation(calcData.operation);
       const nextState: CalculatorData = {
         ...calcData,

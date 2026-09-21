@@ -19,13 +19,13 @@
 - [x] **AC 37.5:** Directional keypad buttons have accessible names `8 (Up)`, `2 (Down)`, `4 (Left)`, and `6 (Right)`; ordinary digit names remain bare.
 - [x] **AC 37.6:** The debug panel's controls remain outside the simulator shortcut scope and do not corrupt the simulator's internal focus order.
 
-## Baseline Audit
+## Verification notes
 
-The completed headed audit found 33 enabled `.dro-button` controls with `tabIndex=0`. The exact 14-control keypad Tab order passed. Enter entered X=123; Space selected Z and entered 7; ABS/INC, units, axis selection, and zeroing worked from focus. A focused keypad button had a visible 3 px solid outline. The four directional accessible names matched exactly.
+The headed session tabbed through the exact 14-control keypad order and activated axis selection, numeric entry, Enter, Space, ABS/INC, units, and axis zero operations from the keyboard. Directional accessible names matched the criteria. A visible physical-mm spinbutton accepted keyboard-only input, and typing `A` there stayed native input instead of toggling ABS/INC. Focus outlines remained visible in normal and forced-colors rendering.
 
 ## Verification Procedure
 
-Run [`e2e/08-accessibility/US-037-keyboard-navigation.spec.ts`](../../../e2e/08-accessibility/US-037-keyboard-navigation.spec.ts) against the real simulator. Start from `key-1`, press Tab through all 14 keypad controls, exercise Enter and Space on representative axis/function/keypad buttons, and inspect computed focus styling. Use actual IDs such as `axis-select-x`, `axis-zero-x`, `btn-abs-inc`, and `axis-value-x`; do not add `tabindex` manipulation or fictional selectors.
+Run [`e2e/08-accessibility/US-037-keyboard-navigation.spec.ts`](../../../e2e/08-accessibility/US-037-keyboard-navigation.spec.ts) against the real simulator. Start from `key-1`, press Tab through all 14 keypad controls, exercise Enter and Space on representative axis/function/keypad buttons, and inspect computed focus styling. Use actual IDs such as `axis-select-x`, `axis-zero-x`, `btn-abs-inc`, and `axis-value-x`; do not add `tabindex` manipulation or fictional selectors. See the [verification evidence and full-suite results](../README.md#verification).
 
 ## References
 

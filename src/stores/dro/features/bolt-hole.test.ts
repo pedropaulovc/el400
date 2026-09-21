@@ -1387,6 +1387,50 @@ describe('boltHoleReducer - ARC mode (US-017)', () => {
       }
     });
 
+    it('rejects multiple holes when normalized arc span is zero', () => {
+      const endAngleState: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 0 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '360' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const holeCountState = boltHoleReducer(
+        endAngleState,
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+
+      expect(holeCountState.stateName).toBe('bolt-hole-arc-holes');
+      if (holeCountState.stateData.stateDataType === 'bolt-hole') {
+        expect(holeCountState.stateData.endAngle).toBe(0);
+      }
+
+      const rejected = boltHoleReducer(
+        {
+          ...holeCountState,
+          vMem: { ...holeCountState.vMem, inputBuffer: '6' },
+        },
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(rejected).toBeNull();
+    });
+
+    it('accepts a wrapped nonzero arc', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 350 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '10' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result?.stateName).toBe('bolt-hole-arc-holes');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.endAngle).toBe(10);
+      }
+    });
+
     it('accepts hole count and switches to arc-navigate + INC mode', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-arc-holes',

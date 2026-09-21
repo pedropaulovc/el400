@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { centerFindingReducer } from './center-finding';
-import type { DROStatePayload } from '../types';
+import type { DROReducerContext, DROStatePayload } from '../types';
 import type { DROStateName, CenterFindingData, DROStateData } from '../droStateMachine';
 import { INITIAL_CENTER_FINDING_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
@@ -279,6 +279,47 @@ describe('centerFindingReducer', () => {
       const data = result?.stateData as CenterFindingData;
       expect(data.centerResult?.X).toBe(0);
       expect(data.centerResult?.Y).toBe(0);
+    });
+
+    it('keeps the physical center at 10 mm while DTG follows direction and radius/diameter mode', () => {
+      const cases: {
+        direction: 'normal' | 'reversed';
+        measurement: 'radius' | 'diameter';
+        expectedDtg: number;
+      }[] = [
+        { direction: 'normal', measurement: 'radius', expectedDtg: -10 },
+        { direction: 'reversed', measurement: 'radius', expectedDtg: 10 },
+        { direction: 'reversed', measurement: 'diameter', expectedDtg: 20 },
+      ];
+
+      for (const { direction, measurement, expectedDtg } of cases) {
+        const context: DROReducerContext = {
+          ...DEFAULT_TEST_CONTEXT,
+          nvMem: {
+            ...DEFAULT_TEST_CONTEXT.nvMem,
+            defaultUnit: 'mm',
+            axisDirection: {
+              ...DEFAULT_TEST_CONTEXT.nvMem.axisDirection,
+              X: direction,
+            },
+            measurementMode: {
+              ...DEFAULT_TEST_CONTEXT.nvMem.measurementMode,
+              X: measurement,
+            },
+          },
+        };
+        let state = stateWithPosition(
+          'function-menu-center-line-point-1',
+          INITIAL_CENTER_FINDING_DATA,
+          { X: 0, Y: 0, Z: 0 }
+        );
+        state = centerFindingReducer(state, { eventName: 'KEY_6_RIGHT' }, context)!;
+        state = withPosition(state, { X: 20, Y: 0, Z: 0 });
+        state = centerFindingReducer(state, { eventName: 'KEY_6_RIGHT' }, context)!;
+
+        expect((state.stateData as CenterFindingData).centerResult?.X).toBe(10);
+        expect(state.display.X).toBe(expectedDtg);
+      }
     });
   });
 
@@ -653,6 +694,58 @@ describe('centerFindingReducer', () => {
       expect(result?.stateName).toBe('function-menu-center-line-result');
       // Display should show distance to center (50 - 0 = 50 in mm, converted to inches)
       expect(result?.display.X).toBeCloseTo(50 / 25.4, 2);
+    });
+
+    it('keeps angular center residuals as signed degrees across unit and diameter settings', () => {
+      const current: DROStatePayload = {
+        stateName: 'function-menu-center-line-result',
+        stateData: {
+          stateDataType: 'center-finding',
+          captureStatus: 'ready',
+          storedPoints: [{ X: 0, Y: 0, Z: 0 }, { X: 20, Y: 0, Z: 0 }],
+          centerResult: { X: 10, Y: 0, Z: 0 },
+        },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+        },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const cases = [
+        { unit: 'inch', measurement: 'diameter', direction: 'normal', expected: 10 },
+        { unit: 'mm', measurement: 'diameter', direction: 'normal', expected: 10 },
+        { unit: 'inch', measurement: 'radius', direction: 'normal', expected: 10 },
+        { unit: 'inch', measurement: 'diameter', direction: 'reversed', expected: -10 },
+      ] as const;
+
+      for (const { unit, measurement, direction, expected } of cases) {
+        const context: DROReducerContext = {
+          ...DEFAULT_TEST_CONTEXT,
+          nvMem: {
+            ...DEFAULT_TEST_CONTEXT.nvMem,
+            defaultUnit: unit,
+            countingMode: {
+              ...DEFAULT_TEST_CONTEXT.nvMem.countingMode,
+              X: 'angular',
+            },
+            measurementMode: {
+              ...DEFAULT_TEST_CONTEXT.nvMem.measurementMode,
+              X: measurement,
+            },
+            axisDirection: {
+              ...DEFAULT_TEST_CONTEXT.nvMem.axisDirection,
+              X: direction,
+            },
+          },
+        };
+        const result = centerFindingReducer(
+          current,
+          { eventName: 'MILL_STATE_CHANGED' },
+          context
+        );
+
+        expect(result?.display.X).toBe(expected);
+      }
     });
 
     it('should recompute distance-to-go display for circle result state', () => {

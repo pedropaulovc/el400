@@ -20,14 +20,17 @@
 - [x] **AC 48.6:** Axis-select buttons expose the current selection with `aria-pressed`; momentary function buttons are not falsely described as persistent toggles.
 - [x] **AC 48.7:** Level-two headings identify `Axis display`, `Axis selection`, `Numeric keypad`, `Primary functions`, and `Secondary functions`.
 - [x] **AC 48.8:** The duplicated visual seven-segment layer and purely decorative chrome are hidden from the accessibility tree, while the `Electronica Logo` image remains named and exposed.
+- [x] **AC 48.9:** The external machine-connection message has `role="status"` and follows visible Connected/Disconnected transitions from the production CNCjs adapter path.
 
-## Baseline Audit
+## Verification notes
 
-The completed headed Chromium accessibility-tree audit passed all criteria. A visible debug X jog changed the live X cell from 0.0000 to 0.0394; checked radio and `aria-pressed` states followed real UI actions; all named groups/headings and hidden/exposed elements were inspected. This verifies the DOM and browser accessibility-tree contract. No NVDA, Narrator, JAWS, VoiceOver, or actual speech output was run, so this story does not claim particular spoken phrases or end-to-end AT speech behavior.
+Headed Chromium inspection covered browser-computed names, roles, grouping, headings, checked/pressed state, and hidden decorative layers. A keyboard change to the visible physical-X input moved the production value cell to 25.0000 while `aria-live="polite"` and `aria-atomic="true"` remained present. A dedicated mock CNCjs service drove the production adapter through Connected, Disconnected, and Connected transitions; the same visible machine-connection text was exposed by `role="status"`.
+
+This proves browser DOM and accessibility semantics plus live-region mutation. No NVDA, Narrator, JAWS, VoiceOver, or actual screen-reader speech was run, so it does not establish spoken wording or end-to-end speech behavior.
 
 ## Verification Procedure
 
-Use role/accessibility snapshots plus real actions in [`e2e/08-accessibility/US-048-screen-reader-support.spec.ts`](../../../e2e/08-accessibility/US-048-screen-reader-support.spec.ts). Check names, roles, states, grouping, headings, live-cell attributes/value changes, and hidden duplicate visuals. Role queries validate the browser's accessible-name computation; they are not a substitute for claiming an unperformed screen-reader session.
+Use role/accessibility snapshots plus real actions in [`e2e/08-accessibility/US-048-screen-reader-support.spec.ts`](../../../e2e/08-accessibility/US-048-screen-reader-support.spec.ts). Check names, roles, states, grouping, headings, live-cell attributes/value changes, hidden duplicate visuals, and machine-connection status transitions. Role queries validate the browser's accessible-name computation; they do not substitute for a screen-reader session. See the [verification evidence and full-suite results](../README.md#verification).
 
 ## References
 

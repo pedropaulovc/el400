@@ -339,7 +339,7 @@ export type SdmLearnPhase = 'awaiting-first-press' | 'step-shown';
  *
  * `points` is a sparse map keyed by 1-indexed step number; a step is only
  * present once a position has been stored for it. Each entry holds X/Y/Z
- * coordinates in millimetres (internal storage unit).
+ * display-frame coordinates: linear millimetres or angular degrees.
  */
 export interface SdmData extends BaseDROStateData {
   readonly stateDataType: 'sdm';
@@ -390,12 +390,12 @@ export interface CalculatorData extends BaseDROStateData {
 export interface PresetData extends BaseDROStateData {
   readonly stateDataType: 'preset';
   presetTargets: {
-    X: number | null;  // Target in mm (null = not set)
+    X: number | null;  // Relative target in linear mm or angular degrees (null = not set)
     Y: number | null;
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
-  /** Signed display-mm coordinates at execution; Preset requests relative travel. */
+  /** Signed display-frame coordinates in linear mm or angular degrees at execution. */
   entryPosition: AxisValues;
 }
 
@@ -427,17 +427,18 @@ export interface SetupData extends BaseDROStateData {
  * OEM Mode context (US-044, manual §6.2 `oEm mod`).
  *
  * `passwordBuffer` accumulates the digit keys typed at the password prompt;
- * it is matched against the module-private OEM code on ENT. `returnParamIndex`
- * remembers which setup item (the `oEm mod` row) to re-highlight when the flow
- * returns to the menu, so entry/exit is transparent. The password is NEVER
- * stored here in cleartext beyond the live keystrokes the operator is typing.
+ * it is matched against the module-private OEM code on ENT. `setup` preserves
+ * the complete setup transaction while the password flow is active, so the
+ * selected axis, highlighted row, and uncommitted drafts survive the round
+ * trip. The password is NEVER stored here in cleartext beyond the live
+ * keystrokes the operator is typing.
  */
 export interface OemData extends BaseDROStateData {
   readonly stateDataType: 'oem';
   /** Digits typed so far at the password prompt (cleared on entry/exit). */
   passwordBuffer: string;
-  /** Setup param index of the `oEm mod` row, to restore on return to the menu. */
-  returnParamIndex: number;
+  /** Setup transaction to restore after accepting or rejecting the password. */
+  setup: SetupData;
 }
 
 export interface TaperData extends BaseDROStateData {
@@ -497,9 +498,10 @@ export interface ProbeData extends BaseDROStateData {
   probeLengthMm: number;
   edge: 'positive' | 'negative';
   contactTimeMs: number;
+  /** Center coordinate in linear mm or angular degrees. */
   centerMm: number | null;
   resultView: 'width' | 'center';
-  /** Captured contact positions (mm) for the selected axis, in order. */
+  /** Captured axis coordinates (linear mm or angular degrees), in order. */
   captures: number[];
   /** Computed measurement result in mm (inside/outside); null otherwise. */
   resultMm: number | null;
@@ -891,7 +893,7 @@ export const INITIAL_SETUP_DATA: SetupData = {
 export const INITIAL_OEM_DATA: OemData = {
   stateDataType: 'oem',
   passwordBuffer: '',
-  returnParamIndex: 0,
+  setup: { ...INITIAL_SETUP_DATA, draftValues: {} },
 };
 
 export const INITIAL_TAPER_DATA: TaperData = {

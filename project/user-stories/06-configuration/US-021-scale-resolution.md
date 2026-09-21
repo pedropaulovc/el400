@@ -5,8 +5,8 @@
 
 ## Source
 
-- **Primary:** EL400 Operation Manual §6.2, pp. 20–21: `SC` has exactly nine measuring-system resolutions — `0.1`, `0.2`, `0.5`, `1`, `2`, `5`, `10`, `20`, and `50` microns — and note *6 makes it per-axis.
-- **Video:** EL400 overview §1.5, `[03:08–03:32]`: `SC` must match the installed scale; mill kits use `SC 5.0`; arrows cycle and wrap.
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 20–21: `SC` has exactly nine measuring-system resolutions: `0.1`, `0.2`, `0.5`, `1`, `2`, `5`, `10`, `20`, and `50` microns. Note \*6 makes it per-axis.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.5, `[03:08–03:32]`: `SC` must match the installed scale; mill kits use `SC 5.0`; arrows cycle and wrap.
 
 ## User Story
 
@@ -16,13 +16,13 @@
 
 ## Acceptance Criteria
 
-- [ ] **AC21.1:** Wrench shows `SELECt`; selecting X, Y, or Z opens that axis at `LinEAr`; Down reaches `SC`.
-- [ ] **AC21.2:** Factory configuration is `SC 5.0` on each mill axis.
-- [ ] **AC21.3:** Left/Right cycles, in both directions with wrap, through exactly `0.1 / 0.2 / 0.5 / 1 / 2 / 5 / 10 / 20 / 50` microns.
-- [ ] **AC21.4:** `SC` is independently drafted and stored for X, Y, and Z.
-- [ ] **AC21.5:** On a source that identifies an installed encoder resolution, `SC` reinterprets encoder pulses: the physical/decoded input is scaled by `configured microns ÷ installed microns`. A mismatched setting therefore changes the reported travel by that ratio.
-- [ ] **AC21.6:** A source such as CNCjs that already supplies engineering millimetres and does not identify an encoder resolution is not multiplied by `SC` a second time.
-- [ ] **AC21.7:** `SAU CHG` commits the draft; leaving through `End` or `C` without saving discards it.
+- [x] **AC21.1:** Wrench shows `SELECt`; selecting X, Y, or Z opens that axis at `LinEAr`; Down reaches `SC`.
+- [x] **AC21.2:** Factory configuration is `SC 5.0` on each mill axis.
+- [x] **AC21.3:** Left/Right cycles, in both directions with wrap, through exactly `0.1 / 0.2 / 0.5 / 1 / 2 / 5 / 10 / 20 / 50` microns.
+- [x] **AC21.4:** `SC` is independently drafted and stored for X, Y, and Z.
+- [x] **AC21.5:** On a source that identifies an installed encoder resolution, `SC` reinterprets encoder pulses: the physical/decoded input is scaled by `configured microns ÷ installed microns`. A mismatched setting therefore changes the reported travel by that ratio.
+- [x] **AC21.6:** A source such as CNCjs that already supplies engineering millimetres and does not identify an encoder resolution is not multiplied by `SC` a second time.
+- [x] **AC21.7:** `SAU CHG` commits the draft; leaving through `End` or `C` without saving discards it.
 
 ## Human Verification
 
@@ -37,6 +37,10 @@
 - [`e2e/06-configuration/US-021-scale-resolution.spec.ts`](../../../e2e/06-configuration/US-021-scale-resolution.spec.ts)
 - Transaction coverage: [`e2e/06-configuration/US-027-save-changes.spec.ts`](../../../e2e/06-configuration/US-027-save-changes.spec.ts)
 
-## Baseline Audit (before the current implementation work)
+## Verification
 
-The headed audit passed setup entry, the 5 µm default, all nine choices, wrap, and SC-only save/discard. It also confirmed the old story's “one Left from 5 goes to 1” claim was false: the sequence is `5 → 2 → 1`. Raw scale interpretation was not then exposed: equal debug engineering-mm moves remained equal under different `SC` values, so AC21.5 was a confirmed implementation gap, not a verified behavior. AC21.6 is the required adapter boundary and was not exercised by that headed debug audit.
+[Portable evidence and full-suite results](../README.md#verification)
+
+Headed checks cycled all nine values in both directions, saved distinct X/Y settings, and discarded a multi-axis draft. With the debug source's installed 5 µm encoder metadata, 10 mm at `SC 10.0` displayed twice the travel shown at `SC 5.0`. A separate real mock-CNCjs connection held 10.0000 mm unchanged at both `SC 1.0` and `SC 5.0`, then preserved 12.5000 mm through disconnect/reconnect.
+
+These checks used simulator debug input and a mock CNCjs service. They did not use a physical encoder or CNC controller.

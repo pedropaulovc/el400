@@ -88,7 +88,7 @@ test.describe('US-005: Axis Reset and Set', () => {
   });
 
   /**
-   * AC 5.4: The C key can cancel an incorrect numeric entry before ent is pressed.
+   * AC 5.5: C removes pending digits one by one; empty-buffer C cancels selection.
    */
   test('should cancel numeric entry with C key', async ({ dro }) => {
     // Set X to a known value first
@@ -100,12 +100,13 @@ test.describe('US-005: Axis Reset and Set', () => {
     let value = await dro.getAxisDisplayPureNumberValue('X');
     expect(value).toBeCloseTo(10, 0);
 
-    // Now try to enter 999 but cancel it
+    // Remove all three digits, then cancel the empty Axis Set entry.
     await dro.selectAxis('X');
     await dro.enterNumber('999');
-    await dro.clearButton.click();  // Cancel the entry
+    for (let press = 0; press < 4; press++) await dro.clearButton.click();
 
-    // Press enter on empty buffer (should do nothing)
+    // A digit after cancellation must not set an axis without selecting it again.
+    await dro.enterNumber('1');
     await dro.enterButton.click();
 
     // Value should remain 10, not change to 999

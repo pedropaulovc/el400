@@ -2,7 +2,7 @@
 
 **Priority:** P4  
 **Category:** Calculations  
-**Manual reference:** EL400 Operation Manual §6.2, pp. 19–20 (`tAPEr on` setup choices X/Y/Z); §9.2.2, pp. 65–66 (touch/zero/move procedure, radius and angle display); README “Deliberately Out of Scope” exclusions
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 19–20 (`tAPEr on` setup choices X/Y/Z); §9.2.2, pp. 65–66 (touch/zero/move procedure, radius and angle display); [“Deliberately Out of Scope”](../README.md#deliberately-out-of-scope) exclusions
 
 ## User Story
 
@@ -16,13 +16,13 @@ The source manual presents Taper among lathe functions and illustrates X/Z/Z′ 
 
 ## Target Acceptance Criteria
 
-- [ ] **AC45.1:** Setup `tAPEr on` cycles only X, Y, and Z and persists the selected display choice through the normal setup save flow.
-- [ ] **AC45.2:** Touch one end of the taper, zero X and Z, press Fn, navigate to `tAPEr`, and press ENT. Entry snapshots the current X/Z position without changing the current ABS/INC or inch/mm selection.
-- [ ] **AC45.3:** Moving to the other end recomputes continuously from magnitudes: radius change $R=|ΔX|$ and acute half-angle $θ=atan(|ΔX|/|ΔZ|)$. Reversing either traverse direction does not produce a negative or obtuse angle.
-- [ ] **AC45.4:** Display mapping is: taper-on X → angle on X, radius on Z; taper-on Z → radius on X, angle on Z; taper-on Y → radius on X, angle on Y. This is the explicit three-axis mill adaptation.
-- [ ] **AC45.5:** Radius uses the current linear unit and display resolution. Angle uses the manual's degrees-minutes-seconds presentation (`dd.mn.SS`), not a decimal-degree value whose decimal point is mistaken for DMS punctuation.
-- [ ] **AC45.6:** A zero length change (`|ΔZ|=0`, including 0/0) is not a measurable taper and visibly reports `inuAL d`; it must not display 90° or a fabricated zero-angle result.
-- [ ] **AC45.7:** C exits, clears the function indication, and restores the live Cartesian display with the prior mode and unit.
+- [x] **AC45.1:** Setup `tAPEr on` cycles only X, Y, and Z and persists the selected display choice through the normal setup save flow.
+- [x] **AC45.2:** Touch one end of the taper, zero X and Z, press Fn, navigate to `tAPEr`, and press ENT. Entry snapshots the current X/Z position without changing the current ABS/INC or inch/mm selection.
+- [x] **AC45.3:** Moving to the other end recomputes continuously from magnitudes: radius change $R=|ΔX|$ and acute half-angle $θ=atan(|ΔX|/|ΔZ|)$. Reversing either traverse direction does not produce a negative or obtuse angle.
+- [x] **AC45.4:** Display mapping is: taper-on X → angle on X, radius on Z; taper-on Z → radius on X, angle on Z; taper-on Y → radius on X, angle on Y. This is the explicit three-axis mill adaptation.
+- [x] **AC45.5:** Radius uses the current linear unit and display resolution. Angle uses the manual's degrees-minutes-seconds presentation (`dd.mn.SS`), not a decimal-degree value whose decimal point is mistaken for DMS punctuation.
+- [x] **AC45.6:** A zero length change (`|ΔZ|=0`, including 0/0) is not a measurable taper and visibly reports `inuAL d`; it must not display 90° or a fabricated zero-angle result.
+- [x] **AC45.7:** C exits, clears the function indication, and restores the live Cartesian display with the prior mode and unit.
 
 ## Operator Procedure and Independent Oracles
 
@@ -32,15 +32,17 @@ The source manual presents Taper among lathe functions and illustrates X/Z/Z′ 
 4. Repeat with X=`-5`, Z=`+50` and X=`+5`, Z=`-50`; the radius magnitude and acute half-angle remain the same.
 5. Move X while leaving ΔZ zero and confirm the invalid indication.
 
-## Baseline Audit Status (headed debug audit)
+## Verification
 
-The pre-implementation audit passed live positive X/Z arithmetic, X and Z output mappings, C exit, and linear-unit conversion. It found setup choices X/Z/Z′ instead of X/Y/Z, decimal-degree rather than DMS presentation, signed/quadrant `atan2` results (−5.7106° or 174.2894°), and no invalid indication for zero length. INC movement could not be independently exercised because the baseline debug adapter did not move coordinates in that mode. These are baseline observations, not verification of the target implementation.
+The headed calculation pass verified the X/Y/Z setup cycle and save flow, every display mapping, acute magnitude behavior under reversed travel, DMS output, inch conversion, invalid zero axial length, live recovery, and exit restoration. For 5 mm radius travel over 50 mm axial travel, all mappings showed the expected `5.0000` radius and `5.42.38` angle. The pass used the simulator's documented three-axis mill adaptation and did not claim a Z′ axis.
 
-Evidence: `/tmp/el400-audit-ManualCalculations.json` (`US-045`) and `/tmp/el400-audit/calculations/us045-*.png`.
+See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
 
-## Automated Coverage
+Travel came from visible debug physical-millimetre controls. No physical tapered workpiece, encoders, machine tool, or installed screen-reader speech was exercised.
 
-[`e2e/04-calculations/US-045-taper-calculation.spec.ts`](../../../e2e/04-calculations/US-045-taper-calculation.spec.ts) is the executable browser coverage. It must use the real setup/Fn/debug controls for all three display mappings, magnitude controls, DMS rendering, unit conversion, invalid length, and exit. New checks remain unverified until Main runs the integrated suite.
+## Automated coverage
+
+[`e2e/04-calculations/US-045-taper-calculation.spec.ts`](../../../e2e/04-calculations/US-045-taper-calculation.spec.ts) covers the setup choices, mappings, magnitude controls, DMS rendering, unit conversion, invalid length, and exit.
 
 ## Related Stories
 

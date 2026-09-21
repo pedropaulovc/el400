@@ -2,7 +2,7 @@
 
 **Priority:** P4  
 **Category:** Pattern Generation  
-**Manual reference:** EL400 Operation Manual §9.1.5, pp. 55–56; MagXact Grid procedure (secondary clarification that current position is an X/Y index pair and specific-hole request is unavailable)
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §9.1.5, pp. 55–56; [MagXact manual](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616) Grid procedure (secondary clarification that current position is an X/Y index pair and specific-hole request is unavailable)
 
 ## User Story
 
@@ -12,15 +12,15 @@
 
 ## Target Acceptance Criteria
 
-- [ ] **AC20.1:** Grid starts only from ABS mode and visibly requests first-hole X/Y, positive Pitch X/Y, grid angle, Holes X, and Holes Y.
-- [ ] **AC20.2:** The X-grid direction is `[cos(a), sin(a)]`; the Y-grid direction is perpendicular, `[-sin(a), cos(a)]`.
-- [ ] **AC20.3:** For zero-based column $j$ and row $i$, target position is `start + j·pitchX·Xdir + i·pitchY·Ydir`.
-- [ ] **AC20.4:** There are exactly `holesX × holesY` targets in row-major order: X index advances within a row, then Y index advances.
-- [ ] **AC20.5:** Final ENT enters live X/Y distance-to-go to index pair `(1,1)`. Only numeric distance-to-go axes use the pattern function marker.
-- [ ] **AC20.6:** 6/4 move through the row-major targets and wrap at the two ends.
-- [ ] **AC20.7:** 8 opens a visible current-number phase with the 1-based **column in X**, 1-based **row in Y**, and Z blank; pressing 8 again returns to that target's distance-to-go.
-- [ ] **AC20.8:** Grid has **no key-2 direct jump**. Pressing 2 in normal grid navigation must not enter a jump phase or change the selected target; this is the documented difference from the other point-pattern macros.
-- [ ] **AC20.9:** C exits and restores the normal ABS coordinate display.
+- [x] **AC20.1:** Grid starts only from ABS mode and visibly requests first-hole X/Y, positive Pitch X/Y, grid angle, Holes X, and Holes Y.
+- [x] **AC20.2:** The X-grid direction is `[cos(a), sin(a)]`; the Y-grid direction is perpendicular, `[-sin(a), cos(a)]`.
+- [x] **AC20.3:** For zero-based column $j$ and row $i$, target position is `start + j·pitchX·Xdir + i·pitchY·Ydir`.
+- [x] **AC20.4:** There are exactly `holesX × holesY` targets in row-major order: X index advances within a row, then Y index advances.
+- [x] **AC20.5:** Final ENT enters live X/Y distance-to-go to index pair `(1,1)`. Only numeric distance-to-go axes use the pattern function marker.
+- [x] **AC20.6:** 6/4 move through the row-major targets and wrap at the two ends.
+- [x] **AC20.7:** 8 opens a visible current-number phase with the 1-based **column in X**, 1-based **row in Y**, and Z blank; pressing 8 again returns to that target's distance-to-go.
+- [x] **AC20.8:** Grid has **no key-2 direct jump**. Pressing 2 in normal grid navigation must not enter a jump phase or change the selected target; this is the documented difference from the other point-pattern macros.
+- [x] **AC20.9:** C exits and restores the normal ABS coordinate display.
 
 ## Operator Procedure and Independent Oracles
 
@@ -28,15 +28,15 @@ For start `(0,0)`, Pitch X `10`, Pitch Y `8`, angle `0°`, 3×3, the row-major t
 
 For start `(0,0)`, pitches `1,1`, angle `45°`, 2×2, expected targets are `(0,0)`, `(0.7071,0.7071)`, `(-0.7071,0.7071)`, `(0,1.4142)`.
 
-## Baseline Audit Status (headed debug audit)
+## Verification
 
-The pre-implementation audit passed all setup prompts, all nine axis-aligned targets, the 45° geometry, row-major order, 4/6 navigation, and wrap. Key 8 showed no visible X/Y index pair. The simulator incorrectly accepted a key-2 direct jump, with the same invisible prompt and arrow-digit collision as other patterns, even though Grid explicitly excludes that request. These are baseline facts only.
+The headed pattern pass supersedes the baseline index-view and unsupported-jump defects. It verified the ABS guard, setup prompts, the complete 3×3 row-major target list, the independent rotated 2×2 geometry, wrapping, the visible column/row pair, key 2 as a no-op, live movement to zero, numeric-only function markers, and Cartesian restoration. No physical encoder or drilling operation was exercised.
 
-Evidence: `/tmp/el400-audit-ManualPatterns.json` (`US-020`) and `/tmp/el400-audit/patterns/us020-rotated.png`.
+See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
 
-## Automated Coverage
+## Automated coverage
 
-[`e2e/05-pattern-generation/US-020-grid-drilling.spec.ts`](../../../e2e/05-pattern-generation/US-020-grid-drilling.spec.ts) is the executable browser coverage. It must enumerate the independent target lists, observe the visible X/Y index pair, and include the negative key-2 control. New checks remain unverified until Main runs the integrated suite.
+[`e2e/05-pattern-generation/US-020-grid-drilling.spec.ts`](../../../e2e/05-pattern-generation/US-020-grid-drilling.spec.ts) enumerates the independent target lists, visible index pair, and negative key-2 control.
 
 ## Related Stories
 

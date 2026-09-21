@@ -17,15 +17,15 @@
 - [x] **AC 34.3:** Every simulator button has a visible border and remains distinguishable from the seven-segment display.
 - [x] **AC 34.4:** Button foreground/background contrast is at least 17:1 in the accepted palettes.
 - [x] **AC 34.5:** Active ABS/INC, inch/mm, and status indicators remain visible; inactive indicators blend into the background without obscuring their labelled groups.
-- [x] **AC 34.6:** Focused controls retain a visible focus indicator, and all controls remain identifiable and operable.
+- [x] **AC 34.6:** Focused enabled controls retain a visible focus indicator. Locked controls remain identifiable and natively disabled, while Settings stays enabled and focusable so the operator can unlock the panel.
 
-## Baseline Audit
+## Verification notes
 
-The completed headed Chromium audit enabled forced-colors emulation and confirmed the browser media query was active. Actual `.seg-on` shapes rendered black, `.seg-off` shapes transparent on the white forced canvas, buttons used black-on-white with 2 px solid borders, and active/inactive indicators remained distinguishable. Prior dark/light captures measured lit segments at 21:1, buttons at 21:1, and off segments/inactive indicators at 1:1. This is browser forced-colors evidence, not a claim of a Windows desktop or assistive-technology speech session.
+Headed Chromium forced-colors emulation was active in light and dark schemes. Lit segments and enabled buttons rendered black on white or white on black, a measured 21:1 in both palettes; unlit segments were transparent. Buttons retained 1.66667 px solid borders. Focused controls had a visible solid outline, including a cyan outline in the dark palette. With keypad lock enabled, 32 front-panel buttons were natively disabled and rendered at opacity 0.5; Settings remained full-opacity, enabled, and visibly focused. The 21:1 locked-control figure describes the CSS foreground/background pair before opacity compositing. This was Chromium emulation, not an installed Windows High Contrast desktop session.
 
 ## Verification Procedure
 
-Use [`e2e/08-accessibility/US-034-forced-colors-mode.spec.ts`](../../../e2e/08-accessibility/US-034-forced-colors-mode.spec.ts) with Playwright forced-colors emulation. Inspect the actual `.seg-on`/`.seg-off` elements, representative buttons, active/inactive indicators, and focused controls. Do not use the obsolete `.segment-on`/`.segment-off` selectors or conditional assertions that silently skip missing UI.
+Use [`e2e/08-accessibility/US-034-forced-colors-mode.spec.ts`](../../../e2e/08-accessibility/US-034-forced-colors-mode.spec.ts) with Playwright forced-colors emulation. Inspect the actual `.seg-on`/`.seg-off` elements, representative buttons, active/inactive indicators, and focused controls. Do not use the obsolete `.segment-on`/`.segment-off` selectors or conditional assertions that silently skip missing UI. See the [verification evidence and full-suite results](../README.md#verification).
 
 ## References
 
