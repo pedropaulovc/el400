@@ -357,29 +357,26 @@ export function computeMachinePositionMm(
 }
 
 /**
- * Compute the raw position (in mm) for a single axis.
- * Handles abs vs inc mode and connected vs manual positioning.
+ * Compute the datum-relative canonical coordinate for a single axis.
+ * Handles abs vs inc mode and connected vs manual positioning. The legacy `Mm`
+ * suffix is exact for linear axes; installed angular encoders have already been
+ * decoded from their raw encoder-mm frame into degrees.
  *
  * @param axis - The axis to compute position for
  * @param vMem - Volatile memory state
  * @param context - Reducer context (millState, nvMem)
- * @returns Position in millimeters
+ * @returns Millimetres for a linear axis; degrees for an angular axis
  */
 export function computeAxisPositionMm(
   axis: Axis,
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): number {
-  const { mode, workOffsets, incrementalValues, manualAbsoluteValues } = vMem;
-  const { millState } = context;
-
-  if (mode === 'abs') {
-    if (millState.connected) {
-      return computeMachinePositionMm(axis, vMem, context) - workOffsets[axis];
-    }
-    return manualAbsoluteValues[axis];
+  if (context.millState.connected) {
+    const offsets = vMem.mode === 'abs' ? vMem.workOffsets : vMem.incrementalOffsets;
+    return computeMachinePositionMm(axis, vMem, context) - offsets[axis];
   }
-  return incrementalValues[axis];
+  return vMem.mode === 'abs' ? vMem.manualAbsoluteValues[axis] : vMem.incrementalValues[axis];
 }
 
 /**

@@ -403,8 +403,8 @@ export class DROPage {
   /** Open the probe sub-function menu: Fn -> ProbE -> ENT. */
   async openProbeMenu(): Promise<void> {
     await this.functionButton.click();
-    // Ring: center, circle, line, linear, polar, taper, probe => 6 right presses.
-    for (let i = 0; i < 6; i++) {
+    // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr -> ProbE.
+    for (let i = 0; i < 3; i++) {
       await this.key6.click();
     }
     await this.waitForAxisPureTextValue('X', 'ProbE');
@@ -951,8 +951,8 @@ export class DROPage {
    */
   async enterTaperFunction(): Promise<void> {
     await this.functionButton.click();
-    // Ring: center, circle, line, linear, polar, taper => 5 right presses.
-    for (let i = 0; i < 5; i++) {
+    // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr -> ProbE -> tAPEr.
+    for (let i = 0; i < 4; i++) {
       await this.key6.click();
     }
     await this.waitForAxisPureTextValue('X', 'tAPEr');

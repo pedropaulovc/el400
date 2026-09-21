@@ -93,6 +93,7 @@ describe('Unit Conversion Integration', () => {
 
       // Half it to 1 inch
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1, 4);
 
       // Toggle to mm - should show 25.4 mm
@@ -101,6 +102,7 @@ describe('Unit Conversion Integration', () => {
 
       // Half in mm mode - should show 12.7 mm
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(12.7, 3);
 
       // Toggle back to inch - should show 0.5 inches

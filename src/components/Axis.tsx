@@ -27,9 +27,17 @@ interface AxisProps {
 /** Shared marker routing; feature layers extend this switch with their result states. */
 function functionMarker(
   { stateName }: DROStatePayload,
-  _axis: AxisProps['axis']
+  axis: AxisProps['axis']
 ): 'none' | 'leading' | 'terminal' {
-  return stateName === 'distance-to-go' ? 'leading' : 'none';
+  switch (stateName) {
+    case 'distance-to-go':
+      return 'leading';
+    case 'function-menu-center-line-result':
+    case 'function-menu-center-circle-result':
+      return axis === 'Z' ? 'none' : 'terminal';
+    default:
+      return 'none';
+  }
 }
 
 const Axis = ({ axis }: AxisProps) => {

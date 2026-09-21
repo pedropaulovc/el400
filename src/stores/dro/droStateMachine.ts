@@ -58,6 +58,7 @@ export type DROStateName =
   | 'boot-show-message'
   // Normal operation
   | 'idle'
+  | 'half-select'
   // Transitional toggle states
   | 'abs-inc-mode'
   // Function menu selection states
@@ -245,6 +246,7 @@ export interface EmptyData extends BaseDROStateData {
 
 export interface CenterFindingData extends BaseDROStateData {
   readonly stateDataType: 'center-finding';
+  captureStatus: 'ready' | 'invalid';
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
 }
@@ -737,6 +739,7 @@ export const INITIAL_DRO_STATE_DATA: DROStateData = { stateDataType: 'none' };
 
 export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
   stateDataType: 'center-finding',
+  captureStatus: 'ready',
   storedPoints: [],
   centerResult: null,
 };

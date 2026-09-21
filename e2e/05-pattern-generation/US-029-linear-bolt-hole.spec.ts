@@ -27,8 +27,6 @@ test.describe('US-029: Linear Bolt Hole', () => {
     // AC 29.1: open the function menu and navigate to LinEAr.
     await dro.functionButton.click();
     await dro.waitForAxisPureTextValue('X', 'CEntrE');
-    await dro.key6.click(); // CirCLE
-    await dro.key6.click(); // LinE
     await dro.key6.click(); // LinEAr
     await dro.waitForAxisPureTextValue('X', 'LinEAr');
     await dro.enterButton.click();
@@ -75,8 +73,6 @@ test.describe('US-029: Linear Bolt Hole', () => {
     expect(await dro.isAbsMode()).toBe(true);
 
     await dro.functionButton.click();
-    await dro.key6.click();
-    await dro.key6.click();
     await dro.key6.click();
     await dro.waitForAxisPureTextValue('X', 'LinEAr');
     await dro.enterButton.click();

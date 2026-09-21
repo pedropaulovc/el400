@@ -169,6 +169,7 @@ describe('useDROContext', () => {
 
     act(() => {
       result.current.dispatch({ eventName: 'KEY_ENTER' });
+      result.current.dispatch({ eventName: 'KEY_ENTER' });
     });
 
     expect(result.current.data.stateDataType).toBe('center-finding');
@@ -223,8 +224,10 @@ describe('Store integration', () => {
     });
     expect(result.current.state).toBe('function-menu-center');
 
-    // Enter center finding
+    // Open the Center submenu, then choose LinE instead of the default CirCLE.
     act(() => {
+      result.current.dispatch({ eventName: 'KEY_ENTER' });
+      result.current.dispatch({ eventName: 'KEY_6_RIGHT' });
       result.current.dispatch({ eventName: 'KEY_ENTER' });
     });
     expect(result.current.state).toBe('function-menu-center-line-point-1');

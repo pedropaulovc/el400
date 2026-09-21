@@ -1,50 +1,23 @@
 # US-003: Absolute and Incremental Mode
 
-**Manual Reference:** Section 7.1 Absolute / Incremental Mode (ABS / INC)
+**Authority:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §7.1; [MagXact](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616) “CHOICE OF abs OR inc MODES.”  
 **Priority:** High
 
 ## User Story
-**As a** machine operator
-**I want** to switch between Absolute (ABS) and Incremental (INC) modes
-**So that** I can work from a fixed datum or relative to the last position without losing my machine zero
+**As a** machine operator  
+**I want** an independent temporary incremental datum  
+**So that** point-to-point work cannot disturb my fixed absolute datum
 
-## Acceptance Criteria
-- [ ] **AC 3.1:** Pressing the `ABS/INC` key toggles the mode between Absolute and Incremental.
-- [ ] **AC 3.2:** The `abs` LED indicator glows when in Absolute mode.
-- [ ] **AC 3.3:** The `Inc` LED indicator glows when in Incremental mode.
-- [ ] **AC 3.4:** Changing to INC mode allows setting a temporary datum (point-to-point use) without affecting the ABS datum.
-- [ ] **AC 3.5:** Switching back to ABS mode restores the display to the position relative to the fixed ABS datum.
+## Target Acceptance Criteria
+- [x] **AC 3.1:** `ABS/INC` toggles modes and exactly the active `abs` or `Inc` indicator glows.
+- [x] **AC 3.2:** Zeroing or presetting an axis in INC establishes that axis's temporary datum without changing its ABS datum.
+- [x] **AC 3.3:** Connected INC is live: after zeroing, machine motion changes the display by current compensated machine coordinate minus the stored incremental datum.
+- [x] **AC 3.4:** Returning to ABS restores the current position relative to the fixed ABS datum, including physical motion made while INC was active.
+- [x] **AC 3.5:** Unit, scale, calibration and Direction transforms are shared with ABS; only the selected datum differs.
 
-## E2E Test Scenarios
-```typescript
-describe('US-003: ABS/INC Mode', () => {
-  test('Toggle between ABS and INC', async () => {
-    // Default starts in ABS
-    await expect(dro.led.abs).toBeOn();
-    
-    await dro.pressKey('ABS/INC');
-    await expect(dro.led.inc).toBeOn();
-    await expect(dro.led.abs).toBeOff();
+## Verification
+The headed core run zeroed all three axes independently in ABS and INC, then changed the visible physical inputs. INC tracked the live deltas `2.5000`, `-2.2500` and `2.5000`; returning to ABS restored the same accumulated movement against its separate datum. A connected INC preset also changed from `10.0000` to `11.5000` after 1.5 mm of physical movement, while ABS returned to its own `4.0000` reading. Raw-count source scaling was checked separately under US-002.
 
-    await dro.pressKey('ABS/INC');
-    await expect(dro.led.abs).toBeOn();
-  });
-
-  test('INC mode allows independent zeroing', async () => {
-    // In ABS mode, move to 10
-    await dro.simulateEncoderAbsoluteMove('X', 10);
-    await expect(dro.display.xAxis).toHaveValue(10);
-
-    // Switch to INC
-    await dro.pressKey('ABS/INC');
-    
-    // Zero X in INC
-    await dro.pressKey('X0'); 
-    await expect(dro.display.xAxis).toHaveValue(0);
-
-    // Switch back to ABS
-    await dro.pressKey('ABS/INC');
-    await expect(dro.display.xAxis).toHaveValue(10); // ABS value preserved
-  });
-});
-```
+## Evidence
+- [Verification index and headed-session reports](../README.md#verification)
+- [`e2e/02-core-operations/US-003-abs-inc-mode.spec.ts`](../../../e2e/02-core-operations/US-003-abs-inc-mode.spec.ts)

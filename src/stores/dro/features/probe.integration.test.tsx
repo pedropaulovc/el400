@@ -46,8 +46,8 @@ function probeContactAt(x: number): void {
 /** Fn -> ProbE -> ENT to reach the probe sub-function menu. */
 async function openProbeMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('btn-function'));
-  // Ring: center, circle, line, linear, polar, taper, probe => 6 right presses.
-  for (let i = 0; i < 6; i++) {
+  // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr -> ProbE.
+  for (let i = 0; i < 3; i++) {
     await user.click(screen.getByTestId('key-6'));
   }
   expect(getAxisDisplayPureTextValue('X')).toBe('ProbE');

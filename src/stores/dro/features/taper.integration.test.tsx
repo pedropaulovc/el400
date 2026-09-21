@@ -23,8 +23,8 @@ import type { TaperOnAxis } from '../../../types/nonVolatileMemory';
 /** Open the function menu and step right to the taper entry, then enter it. */
 async function enterTaperFromMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('btn-function')); // idle -> function-menu-center
-  // Ring: center, circle, line, linear, polar, taper => 5 right presses.
-  for (let i = 0; i < 5; i++) {
+  // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr -> ProbE -> tAPEr.
+  for (let i = 0; i < 4; i++) {
     await user.click(screen.getByTestId('key-6'));
   }
   expect(useDROStore.getState().stateName).toBe('function-menu-taper');

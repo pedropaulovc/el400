@@ -25,10 +25,10 @@ test.describe('US-030: Polar Coordinates', () => {
     await dro.waitForAxisValue('X', 3.0);
     await dro.waitForAxisValue('Y', 4.0);
 
-    // Fn -> navigate to PoLAr (center -> circle -> line -> linear -> polar)
+    // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr.
     await dro.functionButton.click();
     await expect(dro.xDisplay).toContainText('CEntrE');
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       await dro.key6.click();
     }
     await expect(dro.xDisplay).toContainText('PoLAr');
@@ -60,7 +60,7 @@ test.describe('US-030: Polar Coordinates', () => {
 
     // Fn -> PoLAr -> ENT
     await dro.functionButton.click();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       await dro.key6.click();
     }
     await expect(dro.xDisplay).toContainText('PoLAr');

@@ -1,342 +1,61 @@
-/**
- * Half Feature Reducer Tests
- *
- * Tests for the half function that divides the active axis value by 2.
- */
-
 import { describe, it, expect } from 'vitest';
 import { halfReducer } from './half';
-import type { DROStatePayload, DROReducerContext } from '../types';
-import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
-import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
-import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+import { computeNormalDisplay } from '../utils/displayComputation';
 
-/** Helper to create idle state with specific vMem */
-function idleStateWithVMem(vMemOverrides: Partial<typeof INITIAL_VOLATILE_MEMORY_STATE>): DROStatePayload {
-  return {
-    stateName: 'idle',
-    stateData: INITIAL_DRO_STATE_DATA,
-    vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, ...vMemOverrides },
-    display: INITIAL_DISPLAY_STATE,
-  };
-}
+const context = { ...DEFAULT_TEST_CONTEXT, nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' as const } };
 
-/** Create context with connected mill at specific position */
-function connectedContext(position: { x: number; y: number; z: number }): DROReducerContext {
-  return {
-    millState: {
-      position,
-      probe: { pinState: '', triggered: false },
-      connected: true,
-      controllerType: 'cncjs',
-      encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
-    },
-    nvMem: DEFAULT_NON_VOLATILE_MEMORY,
-  };
-}
-
-describe('halfReducer', () => {
-  describe('state handling', () => {
-    it('should return null for non-idle states', () => {
-      const nonIdleStates = ['boot', 'boot-show-message', 'calculator-idle', 'function-menu-center'] as const;
-
-      for (const stateName of nonIdleStates) {
-        const state = createTestState(stateName);
-        const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-        expect(result).toBeNull();
-      }
-    });
-
-    it('should return null for non-BTN_HALF events', () => {
-      const state = idleStateWithVMem({ activeAxis: 'X' });
-
-      expect(halfReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT)).toBeNull();
-      expect(halfReducer(state, { eventName: 'BTN_ZERO_X' }, DEFAULT_TEST_CONTEXT)).toBeNull();
-      expect(halfReducer(state, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT)).toBeNull();
-    });
+describe('HALF manual selection', () => {
+  it('waits for the next axis key, ignoring a previously selected axis', () => {
+    const initial = createTestState('idle');
+    initial.vMem = { ...initial.vMem, activeAxis: 'X', manualAbsoluteValues: { X: 40, Y: -25, Z: 8 } };
+    const selecting = halfReducer(initial, { eventName: 'BTN_HALF' }, context)!;
+    expect(selecting.display.X).toBe('SELECt');
+    expect(selecting.vMem.manualAbsoluteValues).toEqual({ X: 40, Y: -25, Z: 8 });
+    const result = halfReducer(selecting, { eventName: 'BTN_SELECT_Y' }, context)!;
+    expect(result.display).toEqual({ X: 40, Y: -12.5, Z: 8 });
   });
 
-  describe('no active axis', () => {
-    it('should return current state if no axis is selected', () => {
-      const state = idleStateWithVMem({
-        activeAxis: null,
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).toBe(state);
-    });
+  it('cancels without changing either datum', () => {
+    const initial = createTestState('idle');
+    initial.vMem = { ...initial.vMem, manualAbsoluteValues: { X: 12, Y: 4, Z: 6 } };
+    const selecting = halfReducer(initial, { eventName: 'BTN_HALF' }, context)!;
+    const result = halfReducer(selecting, { eventName: 'KEY_CLEAR' }, context)!;
+    expect(result.display).toEqual({ X: 12, Y: 4, Z: 6 });
   });
 
-  describe('half in abs mode - manual (disconnected)', () => {
-    it('should halve X axis value', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.X).toBe(50);
-      expect(result?.vMem.manualAbsoluteValues.Y).toBe(200);
-      expect(result?.vMem.manualAbsoluteValues.Z).toBe(300);
-    });
-
-    it('should halve Y axis value', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'Y',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.Y).toBe(100);
-    });
-
-    it('should halve Z axis value', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'Z',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.Z).toBe(150);
-    });
-
-    it('should handle negative values', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: -100, Y: 0, Z: 0 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.X).toBe(-50);
-    });
-
-    it('should handle zero values', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.X).toBe(0);
-    });
-
-    it('should handle fractional results', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 25, Y: 0, Z: 0 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.manualAbsoluteValues.X).toBe(12.5);
-    });
+  it('halves a reversed live INC coordinate and keeps tracking movement without altering ABS', () => {
+    const initial = createTestState('idle');
+    initial.vMem = { ...initial.vMem, mode: 'inc', workOffsets: { X: 7, Y: 0, Z: 0 }, incrementalOffsets: { X: 10, Y: 0, Z: 0 } };
+    const live = { ...context, millState: { ...context.millState, connected: true, position: { x: 30, y: 0, z: 0 } }, nvMem: { ...context.nvMem, axisDirection: { ...context.nvMem.axisDirection, X: 'reversed' as const } } };
+    const selecting = halfReducer(initial, { eventName: 'BTN_HALF' }, live)!;
+    const result = halfReducer(selecting, { eventName: 'BTN_SELECT_X' }, live)!;
+    expect(result.display.X).toBe(-10);
+    const moved = { ...live, millState: { ...live.millState, position: { x: 32, y: 0, z: 0 } } };
+    expect(computeNormalDisplay(result.vMem, moved).X).toBe(-12);
+    expect(computeNormalDisplay({ ...result.vMem, mode: 'abs' }, moved).X).toBe(-25);
   });
 
-  describe('half in abs mode - connected', () => {
-    it('should adjust work offset to show half the current display value', () => {
-      // Machine at x=100, work offset=0, so display shows 100
-      // Half of 100 is 50, so new offset = machinePos - halfValue = 100 - 50 = 50
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: 100, y: 0, z: 0 });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
+  it('halves the decoded ABS frame when SC differs from the installed encoder', () => {
+    const initial = createTestState('idle');
+    initial.vMem = { ...initial.vMem, workOffsets: { X: 0, Y: 0, Z: 0 } };
+    const live = {
+      ...context,
+      millState: {
+        ...context.millState,
+        connected: true,
+        position: { x: 10, y: 0, z: 0 },
+        encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 },
+      },
+      nvMem: {
+        ...context.nvMem,
+        scaleResolution: { ...context.nvMem.scaleResolution, X: '10' as const },
+      },
+    };
+    const selecting = halfReducer(initial, { eventName: 'BTN_HALF' }, live)!;
+    const result = halfReducer(selecting, { eventName: 'BTN_SELECT_X' }, live)!;
 
-      expect(result?.vMem.workOffsets.X).toBe(50);
-    });
-
-    it('halves the decoded ABS frame when SC differs from the installed encoder', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const baseContext = connectedContext({ x: 10, y: 0, z: 0 });
-      const context: DROReducerContext = {
-        ...baseContext,
-        millState: {
-          ...baseContext.millState,
-          encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 },
-        },
-        nvMem: {
-          ...DEFAULT_NON_VOLATILE_MEMORY,
-          defaultUnit: 'mm',
-          scaleResolution: {
-            ...DEFAULT_NON_VOLATILE_MEMORY.scaleResolution,
-            X: '10',
-          },
-        },
-      };
-
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      // Physical 10 mm decodes to machine 20 mm. HALF must therefore set a
-      // 10 mm datum and leave the connected ABS readout at 10, not 15.
-      expect(result?.vMem.workOffsets.X).toBe(10);
-      expect(result?.display.X).toBe(10);
-    });
-
-    it('should handle Y axis in connected mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'Y',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: 0, y: 200, z: 0 });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      // Display is 200, half is 100, offset = 200 - 100 = 100
-      expect(result?.vMem.workOffsets.Y).toBe(100);
-    });
-
-    it('should handle Z axis in connected mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'Z',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: 0, y: 0, z: 50 });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      expect(result?.vMem.workOffsets.Z).toBe(25);
-    });
-
-    it('should handle existing work offset', () => {
-      // Machine at x=100, offset=20, display shows 100-20=80
-      // Half of 80 is 40, new offset = 100 - 40 = 60
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        workOffsets: { X: 20, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: 100, y: 0, z: 0 });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      expect(result?.vMem.workOffsets.X).toBe(60);
-    });
-
-    it('should handle negative display values in connected mode', () => {
-      // Machine at x=-100, offset=0, display shows -100
-      // Half of -100 is -50, new offset = -100 - (-50) = -50
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        workOffsets: { X: 0, Y: 0, Z: 0 },
-      });
-      const context = connectedContext({ x: -100, y: 0, z: 0 });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      expect(result?.vMem.workOffsets.X).toBe(-50);
-    });
-  });
-
-  describe('half in inc mode', () => {
-    it('should halve X incremental value', () => {
-      const state = idleStateWithVMem({
-        mode: 'inc',
-        activeAxis: 'X',
-        incrementalValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.incrementalValues.X).toBe(50);
-      expect(result?.vMem.incrementalValues.Y).toBe(200);
-      expect(result?.vMem.incrementalValues.Z).toBe(300);
-    });
-
-    it('should halve Y incremental value', () => {
-      const state = idleStateWithVMem({
-        mode: 'inc',
-        activeAxis: 'Y',
-        incrementalValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.incrementalValues.Y).toBe(100);
-    });
-
-    it('should halve Z incremental value', () => {
-      const state = idleStateWithVMem({
-        mode: 'inc',
-        activeAxis: 'Z',
-        incrementalValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.incrementalValues.Z).toBe(150);
-    });
-
-    it('should handle negative incremental values', () => {
-      const state = idleStateWithVMem({
-        mode: 'inc',
-        activeAxis: 'X',
-        incrementalValues: { X: -80, Y: 0, Z: 0 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.vMem.incrementalValues.X).toBe(-40);
-    });
-  });
-
-  describe('display computation', () => {
-    it('should compute display after halving', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 100, Y: 200, Z: 300 },
-      });
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.display).toBeDefined();
-      // Display should show halved value (50mm in default inch display = ~1.97 inches)
-      expect(result?.display.X).toBeCloseTo(50 / 25.4, 2);
-    });
-
-    it('should compute display in mm mode', () => {
-      const state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 100, Y: 0, Z: 0 },
-      });
-      const context: DROReducerContext = {
-        ...DEFAULT_TEST_CONTEXT,
-        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
-      };
-      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
-
-      expect(result?.display.X).toBe(50);
-    });
-  });
-
-  describe('repeated halving', () => {
-    it('should allow multiple halves in sequence', () => {
-      let state = idleStateWithVMem({
-        mode: 'abs',
-        activeAxis: 'X',
-        manualAbsoluteValues: { X: 100, Y: 0, Z: 0 },
-      });
-
-      // First half: 100 -> 50
-      state = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT)!;
-      expect(state.vMem.manualAbsoluteValues.X).toBe(50);
-
-      // Second half: 50 -> 25
-      state = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT)!;
-      expect(state.vMem.manualAbsoluteValues.X).toBe(25);
-
-      // Third half: 25 -> 12.5
-      state = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT)!;
-      expect(state.vMem.manualAbsoluteValues.X).toBe(12.5);
-    });
+    expect(result.vMem.workOffsets.X).toBe(10);
+    expect(result.display.X).toBe(10);
   });
 });

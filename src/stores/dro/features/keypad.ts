@@ -8,7 +8,7 @@
 
 import type { FeatureReducer, DROStatePayload } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
-import { appendDigit, appendDecimal, toggleSign, KEY_TO_DIGIT } from './buffer-utils';
+import { appendDigit, appendDecimal, toggleSign, removeLastChar, KEY_TO_DIGIT } from './buffer-utils';
 
 /**
  * Keypad reducer - handles input buffer operations in idle state only.
@@ -68,13 +68,14 @@ export const keypadReducer: FeatureReducer = (
       };
 
     case 'KEY_CLEAR':
-      // Clear input buffer only (not axis selection)
+      // During Axis Set, C is a one-character correction key. Once the entry
+      // is empty, the next C cancels the active axis selection.
       if (vMem.inputBuffer !== '') {
         return {
           ...state,
           vMem: {
             ...vMem,
-            inputBuffer: '',
+            inputBuffer: removeLastChar(vMem.inputBuffer),
           },
         };
       }

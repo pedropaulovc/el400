@@ -41,24 +41,33 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
  */
 export function useVolatileMemory(): VolatileMemoryContextValue {
   const vMem = useVMem();
-  const { mode, activeAxis, workOffsets, incrementalValues, manualAbsoluteValues } = vMem;
+  const { mode, activeAxis, workOffsets } = vMem;
   const nvMem = useNvMem();
   const dispatch = useDispatch();
   const millState = useMillState();
 
-  // Calculate absolute values (machine position - work offset)
-  const absoluteValues = useMemo<AxisValues>(() => {
-    if (millState.connected) {
-      const context = { millState, nvMem };
-      return {
-        X: computeMachinePositionMm('X', vMem, context) - workOffsets.X,
-        Y: computeMachinePositionMm('Y', vMem, context) - workOffsets.Y,
-        Z: computeMachinePositionMm('Z', vMem, context) - workOffsets.Z,
-      };
-    }
-    // Manual mode: use manual values directly
-    return manualAbsoluteValues;
-  }, [millState, nvMem, vMem, workOffsets, manualAbsoluteValues]);
+  const { absoluteValues, incrementalValues } = useMemo(() => {
+    if (!millState.connected) return {
+      absoluteValues: vMem.manualAbsoluteValues,
+      incrementalValues: vMem.incrementalValues,
+    };
+    const context = { millState, nvMem };
+    const x = computeMachinePositionMm('X', vMem, context);
+    const y = computeMachinePositionMm('Y', vMem, context);
+    const z = computeMachinePositionMm('Z', vMem, context);
+    return {
+      absoluteValues: {
+        X: x - vMem.workOffsets.X,
+        Y: y - vMem.workOffsets.Y,
+        Z: z - vMem.workOffsets.Z,
+      },
+      incrementalValues: {
+        X: x - vMem.incrementalOffsets.X,
+        Y: y - vMem.incrementalOffsets.Y,
+        Z: z - vMem.incrementalOffsets.Z,
+      },
+    };
+  }, [millState, nvMem, vMem]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {
@@ -77,14 +86,9 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     }
   }, [dispatch, mode]);
 
-  const selectAxis = useCallback((axis: Axis | null) => {
-    if (axis === null) {
-      // Clear selection - dispatch KEY_CLEAR when buffer is empty
-      dispatch({ eventName: 'KEY_CLEAR' });
-    } else {
-      const eventName = `BTN_SELECT_${axis}` as const;
-      dispatch({ eventName });
-    }
+  const selectAxis = useCallback((axis: Axis) => {
+    const eventName = `BTN_SELECT_${axis}` as const;
+    dispatch({ eventName });
   }, [dispatch]);
 
   const zeroAxis = useCallback((axis: Axis) => {
@@ -103,13 +107,9 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   }, [dispatch]);
 
   const halfAxis = useCallback((axis: Axis) => {
-    // First select the axis, then apply half
-    if (activeAxis !== axis) {
-      const selectEvent = `BTN_SELECT_${axis}` as const;
-      dispatch({ eventName: selectEvent });
-    }
     dispatch({ eventName: 'BTN_HALF' });
-  }, [dispatch, activeAxis]);
+    dispatch({ eventName: `BTN_SELECT_${axis}` });
+  }, [dispatch]);
 
   // Return memoized object for stable reference
   return useMemo(() => ({
