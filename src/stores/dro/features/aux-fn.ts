@@ -1,80 +1,199 @@
-/**
- * AUX Fn — `AUH Fn` hardware-absent dwell (manual §6.2 "Auxiliary function")
- *
- * The §6.2 setup table lists `AUH Fn` ("AUX Fn") as a terminal-entry row whose
- * setting column reads "Press for Auxiliary Function Menu" (Section 10). On the
- * simulated device that menu has no hardware behind it: the video manual §1.11
- * notes `AUH Fn` "works in conjunction with an optional DB15 connector on the
- * back of the display (not present on current displays)", and the auxiliary
- * feature set proper (six-output / serial, US-033) is unimplemented.
- *
- * So pressing ENT on the row flashes a brief `no Conn` ("no connector") dwell and
- * returns to the row, rather than entering a sub-menu. This module owns the
- * user-facing dwell, mirroring the SAV CHG confirmation (`save-changes.ts`):
- *
- *   - `AUX_FN_NO_CONN_TEXT`: the seven-segment message.
- *   - `enterAuxFnNoConn`: build the `setup-aux-fn` payload (called from `setup.ts`
- *     on ENT over the `AUH Fn` row), carrying the SetupData through so the row
- *     stays highlighted on return.
- *   - `useAuxFnNoConn`: a timeout hook that auto-dismisses the dwell.
- *
- * The dismissal reducer lives in `setup.ts` (`reduceAuxFn`), alongside the sibling
- * `reduceSaved`, since the dwell returns into the shared setup navigation.
- */
+import { useEffect, useRef } from 'react';
+import type { Axis, AxisValues, VolatileMemoryState } from '../../../types/volatileMemory';
+import type { NonVolatileMemory } from '../../../types/nonVolatileMemory';
+import type { AuxiliaryData, SetupData, SixOutputData } from '../droStateMachine';
+import type { DROStatePayload, FeatureReducer } from '../types';
+import { axisUnitsToDisplayUnits, computeAxisPositionMm, directionSign, measurementScale, computeNormalDisplay, createDisplay, displayUnitsToAxisUnits, type DisplayState } from '../utils/displayComputation';
+import { appendDecimal, appendDigit, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
+import { useDROStore } from '../../droStore';
+import { transmitSerial } from '../../auxiliaryTransport';
+import { applySetupDrafts, PROBE_DRO_TYPE_ID, SETUP_PARAMETERS } from './setup-parameters';
 
-import { useEffect, type Dispatch } from 'react';
-import type { DROStatePayload } from '../types';
-import type { DROEventPayload, DROStateName, SetupData } from '../droStateMachine';
-import type { VolatileMemoryState } from '../../../types/volatileMemory';
-import { createDisplay } from '../utils/displayComputation';
+// Simulator visualization/sample timings, not programmable EL400 hardware parameters.
+export const OUTPUT_PULSE_VISUALIZATION_MS = 1000;
+export const SERIAL_SAMPLE_INTERVAL_MS = 250;
+const AXES: readonly Axis[] = ['X', 'Y', 'Z'];
+const AUX_LABELS = { probe: 'ProbE', outputs: '6oP', serial: 'SErIAL' } as const;
+const AUX_NEIGHBORS: Record<AuxiliaryData['selection'], readonly [AuxiliaryData['selection'], AuxiliaryData['selection']]> = {
+  probe: ['serial', 'outputs'],
+  outputs: ['probe', 'serial'],
+  serial: ['outputs', 'probe'],
+};
+const slotLabel = (slot: number) => `oP-${String(slot + 1).padStart(2, '0')}`;
 
-/**
- * Message shown when ENT is pressed on the `AUH Fn` row. The optional DB15
- * auxiliary connector is absent, so the device has nothing to enter. `no Conn`
- * uses only renderable seven-segment glyphs (n, o, C) and reads as "no
- * connector / no connection".
- */
-export const AUX_FN_NO_CONN_TEXT = 'no Conn';
+export function enterAuxiliaryMenu(setup: SetupData, vMem: VolatileMemoryState): DROStatePayload {
+  return { stateName: 'auxiliary-menu', stateData: { stateDataType: 'auxiliary', selection: 'probe', setup }, vMem, display: createDisplay('ProbE', '', '') };
+}
 
-/** How long the `no Conn` dwell stays on screen before returning to the menu. */
-export const AUX_FN_DURATION_MS = 1500;
-
-/**
- * Build the `no Conn` payload entered when ENT is pressed on the `AUH Fn` row.
- * Carries the current `SetupData` through unchanged so the dwell returns to the
- * menu with `AUH Fn` still highlighted (mirrors the SAV CHG confirmation). The
- * draft is untouched — this row stores nothing.
- */
-export function enterAuxFnNoConn(
-  data: SetupData,
-  vMem: VolatileMemoryState
-): DROStatePayload {
+export function enterSixOutput(vMem: VolatileMemoryState): DROStatePayload {
   return {
-    stateName: 'setup-aux-fn',
-    stateData: data,
-    vMem,
-    display: createDisplay(AUX_FN_NO_CONN_TEXT, '', ''),
+    stateName: 'six-output-menu', vMem: { ...vMem, inputBuffer: '', activeAxis: null },
+    stateData: { stateDataType: 'six-output', mode: 'run', phase: 'select', slot: 0, axis: 'X', previous: null, highUntil: [0, 0, 0, 0, 0, 0], outputs: ['low', 'low', 'low', 'low', 'low', 'low'] },
+    display: createDisplay('rUn', '', ''),
   };
 }
 
-/**
- * Auto-dismiss the `no Conn` dwell: after `AUX_FN_DURATION_MS` in the
- * `setup-aux-fn` state, dispatch `AUX_FN_TIMEOUT` to return to the setup menu
- * (with `AUH Fn` still highlighted). Mirrors `useSetupSavedConfirmation`. The
- * reducer also accepts any front-panel key as an early dismissal, so this hook is
- * a convenience, not a correctness requirement.
- */
-export function useAuxFnNoConn(
-  dispatch: Dispatch<DROEventPayload>,
-  droState: DROStateName
-) {
-  useEffect(() => {
-    if (droState === 'setup-aux-fn') {
-      const timer = setTimeout(() => {
-        dispatch({ eventName: 'AUX_FN_TIMEOUT' });
-      }, AUX_FN_DURATION_MS);
-      return () => { clearTimeout(timer); };
+/** Equality is low in comparator mode; reaching a threshold counts once, departing it does not. */
+export function crossedOutput(previous: number, current: number, target: number): boolean {
+  return (previous < target && current >= target) || (previous > target && current <= target);
+}
+
+export function evaluateOutputs(
+  data: SixOutputData, vMem: VolatileMemoryState, current: AxisValues,
+  mode: NonVolatileMemory['outputMode'], nowMs: number,
+): Pick<SixOutputData, 'previous' | 'outputs' | 'highUntil'> {
+  const highUntil = data.highUntil.slice();
+  const outputs = vMem.outputProgram.map((entry, index): 'low' | 'high' => {
+    if (index >= vMem.outputCount) return 'low';
+    const position = current[entry.axis];
+    if (!Number.isFinite(position)) return 'low';
+    if (mode === 'continuous') return position > entry.positionMm ? 'high' : 'low';
+    if (data.previous && crossedOutput(data.previous[entry.axis], position, entry.positionMm)) highUntil[index] = nowMs + OUTPUT_PULSE_VISUALIZATION_MS;
+    return nowMs < (highUntil[index] ?? 0) ? 'high' : 'low';
+  });
+  return { previous: current, outputs, highUntil };
+}
+
+/** Manual §10.3: four integer digits, three fractions, then A/I R/D M/N axis. */
+export function formatSerialPayload(display: DisplayState, mode: VolatileMemoryState['mode'], nvMem: NonVolatileMemory): string {
+  return AXES.map((axis) => {
+    const value = display[axis];
+    if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`Cannot transmit non-numeric ${axis} reading.`);
+    const rounded = Math.round(Math.abs(value) * 1000) / 1000;
+    if (rounded > 9999.999) throw new Error(`Serial ${axis} reading is out of range.`);
+    const magnitude = rounded.toFixed(3).padStart(8, '0');
+    const sign = value < 0 && rounded !== 0 ? '-' : '';
+    return `${sign}${magnitude} ${mode === 'abs' ? 'A' : 'I'}${nvMem.measurementMode[axis] === 'radius' ? 'R' : 'D'}${nvMem.defaultUnit === 'mm' ? 'M' : 'N'}${axis}`;
+  }).join(' ');
+}
+
+function programDisplay(data: SixOutputData, vMem: VolatileMemoryState, nvMem: NonVolatileMemory): DisplayState {
+  if (data.phase === 'count') return createDisplay(slotLabel(vMem.outputCount - 1), '', '');
+  const entry = vMem.outputProgram[data.slot];
+  return createDisplay(slotLabel(data.slot), entry ? axisUnitsToDisplayUnits(entry.axis, entry.positionMm, nvMem) : 0, entry?.axis ?? 'X');
+}
+
+export const auxiliaryReducer: FeatureReducer = (state, event, context) => {
+  const { stateName, stateData: data, vMem } = state;
+  const { eventName } = event;
+  if (data.stateDataType === 'auxiliary' && stateName === 'auxiliary-menu') {
+    if (eventName === 'KEY_CLEAR') return { ...state, stateName: 'setup-parameter', stateData: data.setup, display: createDisplay('AUX Fn', '', '') };
+    if (eventName === 'KEY_4_LEFT' || eventName === 'KEY_6_RIGHT') {
+      const selection = AUX_NEIGHBORS[data.selection][eventName === 'KEY_6_RIGHT' ? 1 : 0];
+      return { ...state, stateData: { ...data, selection }, display: createDisplay(AUX_LABELS[selection], '', '') };
     }
-    return undefined;
-  }, [droState, dispatch]);
+    if (eventName === 'KEY_ENTER') {
+      if (data.selection === 'outputs') return enterSixOutput(vMem);
+      if (data.selection === 'probe') {
+        const settings = applySetupDrafts(context.nvMem, data.setup.draftValues);
+        const axis = data.setup.selectedAxis ?? 'X';
+        return { ...state, stateName: 'setup-parameter', stateData: { ...data.setup, currentParamIndex: SETUP_PARAMETERS.findIndex(param => param.id === PROBE_DRO_TYPE_ID) }, display: { ...createDisplay('', '', ''), [axis]: settings.probeDroType === 'freeze' ? 'dro F' : 'dro t' } };
+      }
+      return { ...state, stateName: 'serial-active', stateData: { stateDataType: 'serial', sequence: 0, payload: '' }, display: computeNormalDisplay(vMem, context) };
+    }
+    return state;
+  }
+  if (data.stateDataType === 'serial' && (stateName === 'serial-active' || stateName === 'serial-failed')) {
+    if (eventName === 'KEY_CLEAR') return { ...state, stateName: 'idle', stateData: { stateDataType: 'none' }, display: computeNormalDisplay(vMem, context) };
+    if (eventName === 'SERIAL_FAILURE') return { ...state, stateName: 'serial-failed', display: createDisplay('Pc fail', '', '') };
+    if (stateName === 'serial-failed') return state;
+    const display = computeNormalDisplay(vMem, context);
+    if (eventName === 'KEY_ENTER' || (eventName === 'AUXILIARY_TICK' && context.nvMem.serialMode === 'continuous')) {
+      try {
+        return { ...state, display, stateData: { ...data, sequence: data.sequence + 1, payload: formatSerialPayload(display, vMem.mode, context.nvMem) } };
+      } catch {
+        return { ...state, stateName: 'serial-failed', display: createDisplay('Pc fail', '', '') };
+      }
+    }
+    return eventName === 'MILL_STATE_CHANGED' ? { ...state, display } : state;
+  }
+  if (data.stateDataType !== 'six-output') return null;
+  if (eventName === 'KEY_CLEAR') return { ...state, stateName: 'idle', stateData: { stateDataType: 'none' }, vMem: { ...vMem, inputBuffer: '', activeAxis: null }, display: computeNormalDisplay(vMem, context) };
+  if (stateName === 'six-output-menu') {
+    if (eventName === 'KEY_4_LEFT' || eventName === 'KEY_6_RIGHT') {
+      const mode = data.mode === 'program' ? 'run' : 'program';
+      return { ...state, stateData: { ...data, mode }, display: createDisplay(mode === 'program' ? 'ProGrAn' : 'rUn', '', '') };
+    }
+    if (eventName === 'KEY_ENTER') {
+      if (data.mode === 'run') {
+        const current = {
+          X: computeAxisPositionMm('X', vMem, context) * directionSign('X', context.nvMem) * measurementScale('X', context.nvMem),
+          Y: computeAxisPositionMm('Y', vMem, context) * directionSign('Y', context.nvMem) * measurementScale('Y', context.nvMem),
+          Z: computeAxisPositionMm('Z', vMem, context) * directionSign('Z', context.nvMem) * measurementScale('Z', context.nvMem),
+        };
+        return { ...state, stateName: 'six-output-run', stateData: { ...data, ...evaluateOutputs(data, vMem, current, context.nvMem.outputMode, Date.now()) }, display: computeNormalDisplay(vMem, context) };
+      }
+      return { ...state, stateName: 'six-output-program', stateData: { ...data, phase: 'count' }, display: createDisplay(slotLabel(vMem.outputCount - 1), '', '') };
+    }
+    return state;
+  }
+  if (stateName === 'six-output-run') {
+    if (eventName !== 'MILL_STATE_CHANGED' && eventName !== 'AUXILIARY_TICK') return state;
+    const current = {
+      X: computeAxisPositionMm('X', vMem, context) * directionSign('X', context.nvMem) * measurementScale('X', context.nvMem),
+      Y: computeAxisPositionMm('Y', vMem, context) * directionSign('Y', context.nvMem) * measurementScale('Y', context.nvMem),
+      Z: computeAxisPositionMm('Z', vMem, context) * directionSign('Z', context.nvMem) * measurementScale('Z', context.nvMem),
+    };
+    return { ...state, stateData: { ...data, ...evaluateOutputs(data, vMem, current, context.nvMem.outputMode, eventName === 'AUXILIARY_TICK' ? event.nowMs : Date.now()) }, display: computeNormalDisplay(vMem, context) };
+  }
+  if (stateName !== 'six-output-program') return state;
+  if (data.phase === 'count') {
+    if (eventName === 'KEY_4_LEFT' || eventName === 'KEY_6_RIGHT') {
+      const outputCount = ((vMem.outputCount - 1 + (eventName === 'KEY_6_RIGHT' ? 1 : 5)) % 6) + 1;
+      return { ...state, vMem: { ...vMem, outputCount }, display: createDisplay(slotLabel(outputCount - 1), '', '') };
+    }
+    if (eventName === 'KEY_ENTER') {
+      const next = { ...data, phase: 'select' as const };
+      return { ...state, stateData: next, display: programDisplay(next, vMem, context.nvMem) };
+    }
+    return state;
+  }
+  const axis = eventName === 'BTN_SELECT_X' ? 'X' : eventName === 'BTN_SELECT_Y' ? 'Y' : eventName === 'BTN_SELECT_Z' ? 'Z' : null;
+  if (axis) return { ...state, stateData: { ...data, phase: 'entry', axis }, vMem: { ...vMem, activeAxis: axis, inputBuffer: '' }, display: { ...createDisplay('', '', ''), [axis]: axisUnitsToDisplayUnits(axis, vMem.outputProgram[data.slot]?.positionMm ?? 0, context.nvMem) } };
+  if (data.phase === 'select' && (eventName === 'KEY_4_LEFT' || eventName === 'KEY_6_RIGHT')) {
+    const next = { ...data, slot: (data.slot + (eventName === 'KEY_6_RIGHT' ? 1 : vMem.outputCount - 1)) % vMem.outputCount };
+    return { ...state, stateData: next, display: programDisplay(next, vMem, context.nvMem) };
+  }
+  if (data.phase !== 'entry') return state;
+  const digit = KEY_TO_DIGIT[eventName];
+  if (digit !== undefined || eventName === 'KEY_DECIMAL' || eventName === 'KEY_SIGN') {
+    const inputBuffer = digit !== undefined ? appendDigit(vMem.inputBuffer, digit) : eventName === 'KEY_DECIMAL' ? appendDecimal(vMem.inputBuffer) : vMem.inputBuffer.startsWith('-') ? vMem.inputBuffer.slice(1) : `-${vMem.inputBuffer}`;
+    return { ...state, vMem: { ...vMem, inputBuffer }, display: { ...state.display, [data.axis]: inputBuffer || '0' } };
+  }
+  if (eventName === 'KEY_ENTER') {
+    const value = getBufferValue(vMem.inputBuffer);
+    if (value === null || !Number.isFinite(value)) return state;
+    const outputProgram = vMem.outputProgram.slice();
+    outputProgram[data.slot] = { axis: data.axis, positionMm: displayUnitsToAxisUnits(data.axis, value, context.nvMem) };
+    const nextVMem = { ...vMem, outputProgram, activeAxis: null, inputBuffer: '' };
+    const next = { ...data, phase: 'select' as const };
+    return { ...state, vMem: nextVMem, stateData: next, display: programDisplay(next, nextVMem, context.nvMem) };
+  }
+  return state;
+};
+
+/** Mount once with the main display, including on non-debug/physical serial pages. */
+export function useAuxiliaryRuntime(): void {
+  const stateName = useDROStore((state) => state.stateName);
+  const data = useDROStore((state) => state.stateData);
+  const dispatch = useDROStore((state) => state.dispatch);
+  const serialSession = useRef(0);
+  useEffect(() => {
+    serialSession.current++;
+  }, [stateName]);
+  const sequence = data.stateDataType === 'serial' ? data.sequence : 0;
+  const payload = data.stateDataType === 'serial' ? data.payload : '';
+  const probeMessageActive = stateName === 'idle' && data.stateDataType === 'probe' && data.probeTriggered;
+  useEffect(() => {
+    if (stateName !== 'six-output-run' && stateName !== 'serial-active' && !probeMessageActive) return;
+    const timer = setInterval(() => { dispatch({ eventName: 'AUXILIARY_TICK', nowMs: Date.now() }); }, SERIAL_SAMPLE_INTERVAL_MS);
+    return () => { clearInterval(timer); };
+  }, [stateName, probeMessageActive, dispatch]);
+  useEffect(() => {
+    if (stateName !== 'serial-active' || sequence === 0) return;
+    const session = serialSession.current;
+    void transmitSerial(payload).catch(() => {
+      if (serialSession.current === session) dispatch({ eventName: 'SERIAL_FAILURE' });
+    });
+  }, [stateName, sequence, payload, dispatch]);
 }

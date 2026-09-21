@@ -111,15 +111,26 @@ describe('keypadReducer', () => {
   });
 
   describe('clear', () => {
-    it('should clear input buffer when not empty', () => {
-      const state: DROStatePayload = {
+    it('removes one character per C, then cancels Axis Set once the buffer is empty', () => {
+      let state: DROStatePayload = {
         stateName: 'idle',
         stateData: INITIAL_DRO_STATE_DATA,
-        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '123' },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '123', activeAxis: 'X' },
         display: INITIAL_DISPLAY_STATE,
       };
-      const result = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.vMem.inputBuffer).toBe('');
+
+      state = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.vMem.inputBuffer).toBe('12');
+      expect(state.vMem.activeAxis).toBe('X');
+
+      state = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.vMem.inputBuffer).toBe('1');
+      state = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.vMem.inputBuffer).toBe('');
+      expect(state.vMem.activeAxis).toBe('X');
+
+      state = keypadReducer(state, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.vMem.activeAxis).toBeNull();
     });
 
     it('should clear active axis when buffer is empty', () => {

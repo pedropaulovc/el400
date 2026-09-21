@@ -1,19 +1,16 @@
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
+import { test, expect } from '../helpers/fixtures';
 
 /**
- * Regression: the debug control panel (?source=debug) is a 320px fixed
- * right-side overlay. Before the fix, nothing reserved that width in the main
- * layout, so at common laptop widths the panel sat on top of the simulator's
- * keypad and right-hand controls, making them unclickable.
- *
- * The fix reserves the panel width (pr-80) on <main> only in debug mode, so
- * front-panel controls are never covered at any viewport width.
+ * Debug controls reserve 320px. At compact widths the simulator must not be
+ * magnified: squeezing the axis grid made Zero X intercept Select X even when
+ * the debug panel itself did not cover either control.
  */
 
 const VIEWPORTS = [
   { name: '1366x768 (common laptop)', width: 1366, height: 768 },
-  { name: '1280x800', width: 1280, height: 800 },
-  { name: '1920x1080', width: 1920, height: 1080 },
+  { name: '1280x720', width: 1280, height: 720 },
+  { name: '1600x1100 (magnified desktop)', width: 1600, height: 1100 },
 ];
 
 /**
@@ -40,28 +37,31 @@ async function centerIsClickable(page: Page, target: Locator): Promise<boolean> 
 
 test.describe('debug panel layout (?source=debug)', () => {
   for (const vp of VIEWPORTS) {
-    test(`keypad + right controls stay clickable at ${vp.name}`, async ({ page }) => {
+    test(`axis selection + keypad stay usable at ${vp.name}`, async ({ page, dro }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/?source=debug');
+      await dro.goto({ source: 'debug' });
 
       // Control case: the debug panel is actually present.
       const panel = page.getByTestId('debug-control-panel');
       await expect(panel).toBeVisible();
 
-      // Right-edge front-panel controls that the panel used to cover.
+      const selectX = page.getByTestId('axis-select-x');
+      const zeroX = page.getByTestId('axis-zero-x');
       const key9 = page.getByTestId('key-9');
       const fnButton = page.getByTestId('btn-function');
+      for (const control of [selectX, zeroX, key9, fnButton]) {
+        await expect(control).toBeVisible();
+        await expect.poll(() => centerIsClickable(page, control)).toBe(true);
+      }
 
-      await expect(key9).toBeVisible();
-      await expect(fnButton).toBeVisible();
-
-      // Not covered by the panel -> a real click lands on them.
-      expect(await centerIsClickable(page, key9)).toBe(true);
-      expect(await centerIsClickable(page, fnButton)).toBe(true);
-
-      // And they actually respond to a click (no interception error).
-      await key9.click({ timeout: 2000 });
-      await fnButton.click({ timeout: 2000 });
+      await selectX.click();
+      await key9.click();
+      await dro.enterButton.click();
+      await dro.waitForAxisValue('X', 9);
+      await zeroX.click();
+      await dro.waitForAxisValue('X', 0);
+      await fnButton.click();
+      await dro.waitForAxisPureTextValue('X', 'CEntrE');
     });
   }
 
@@ -69,8 +69,6 @@ test.describe('debug panel layout (?source=debug)', () => {
     await page.goto('/?source=manual');
     const main = page.getByTestId('app-main');
     await expect(main).toBeVisible();
-    // The reservation class is debug-only.
-    await expect(main).not.toHaveClass(/pr-80/);
     await expect(page.getByTestId('debug-control-panel')).toHaveCount(0);
   });
 });

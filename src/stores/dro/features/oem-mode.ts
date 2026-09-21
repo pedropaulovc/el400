@@ -120,29 +120,19 @@ export function captureOemDefaults(): void {
 
 /**
  * Build the password-prompt payload for the `oEm mod` setup row (AC 44.1/44.2).
- * The setup reducer calls this on ENT over the OEM row, passing the row index so
- * the menu re-highlights `oEm mod` when the flow returns.
+ * The setup reducer passes the complete setup transaction so returning from the
+ * password flow preserves its selected axis, highlighted row, and drafts.
  */
 export function enterOemPassword(
   vMem: VolatileMemoryState,
-  returnParamIndex: number
+  setup: SetupData
 ): DROStatePayload {
-  const data: OemData = { ...INITIAL_OEM_DATA, passwordBuffer: '', returnParamIndex };
+  const data: OemData = { ...INITIAL_OEM_DATA, passwordBuffer: '', setup };
   return {
     stateName: 'oem-password',
     stateData: data,
     vMem,
     display: createDisplay(OEM_PASSWORD_PROMPT, '', ''),
-  };
-}
-
-/** Setup data that re-highlights the `oEm mod` row on return from OEM Mode. */
-function setupReturnData(returnParamIndex: number): SetupData {
-  return {
-    stateDataType: 'setup',
-    selectedAxis: 'X',
-    currentParamIndex: returnParamIndex,
-    draftValues: {},
   };
 }
 
@@ -222,7 +212,7 @@ function reduceMode(
     captureOemDefaults();
     return {
       stateName: 'setup-saved',
-      stateData: setupReturnData(data.returnParamIndex),
+      stateData: data.setup,
       vMem,
       display: createDisplay(SETUP_SAVED_TEXT, '', ''),
     };
@@ -261,7 +251,7 @@ export const oemModeReducer: FeatureReducer = (statePayload, eventPayload, conte
   if (!isDismissal) return null;
   return {
     stateName: 'setup-parameter',
-    stateData: setupReturnData(oemData.returnParamIndex),
+    stateData: oemData.setup,
     vMem,
     display: createDisplay(OEM_MODE_SETUP_LABEL, '', ''),
   };

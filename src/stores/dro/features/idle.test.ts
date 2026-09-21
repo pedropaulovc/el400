@@ -8,12 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { idleReducer } from './idle';
 import type { DROEventPayload } from '../droStateMachine';
-import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
-import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
-import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
-import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
-import type { DROReducerContext, DROStatePayload } from '../types';
 
 describe('idleReducer', () => {
   describe('state handling', () => {
@@ -23,18 +18,6 @@ describe('idleReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should process events only when in idle state', () => {
-      const idleState = createTestState('idle');
-      const nonIdleState = createTestState('boot');
-
-      // Specific events are handled in idle state
-      expect(idleReducer(idleState, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT)).not.toBeNull();
-      expect(idleReducer(idleState, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT)).not.toBeNull();
-
-      // But not in other states
-      expect(idleReducer(nonIdleState, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT)).toBeNull();
-      expect(idleReducer(nonIdleState, { eventName: 'BTN_FUNCTION' }, DEFAULT_TEST_CONTEXT)).toBeNull();
-    });
   });
 
   describe('idle state', () => {
@@ -92,81 +75,6 @@ describe('idleReducer', () => {
       }
     });
 
-    it('should handle MILL_STATE_CHANGED by recomputing display', () => {
-      const state = createTestState('idle');
-      const result = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, DEFAULT_TEST_CONTEXT);
-      expect(result).not.toBeNull();
-      expect(result?.stateName).toBe('idle');
-      expect(result?.display).toBeDefined();
-    });
-
-    it('should compute display from non-zero mill position', () => {
-      // Create state with manual absolute values (disconnected mode)
-      const state: DROStatePayload = {
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-        vMem: {
-          ...INITIAL_VOLATILE_MEMORY_STATE,
-          mode: 'abs',
-          manualAbsoluteValues: { X: 25.4, Y: 50.8, Z: 76.2 },
-        },
-        display: INITIAL_DISPLAY_STATE,
-      };
-
-      // Context with mm as default unit
-      const context: DROReducerContext = {
-        millState: {
-          position: { x: 0, y: 0, z: 0 },
-          probe: { pinState: '', triggered: false },
-          connected: false,
-          controllerType: 'noop',
-          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
-        },
-        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
-      };
-
-      const result = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context);
-
-      expect(result?.stateName).toBe('idle');
-      // Display should show the manual absolute values in mm
-      expect(result?.display.X).toBe(25.4);
-      expect(result?.display.Y).toBe(50.8);
-      expect(result?.display.Z).toBe(76.2);
-    });
-
-    it('should compute display with unit conversion (mm to inch)', () => {
-      // Create state with manual absolute values in mm
-      const state: DROStatePayload = {
-        stateName: 'idle',
-        stateData: INITIAL_DRO_STATE_DATA,
-        vMem: {
-          ...INITIAL_VOLATILE_MEMORY_STATE,
-          mode: 'abs',
-          manualAbsoluteValues: { X: 25.4, Y: 50.8, Z: 76.2 }, // 1", 2", 3" in mm
-        },
-        display: INITIAL_DISPLAY_STATE,
-      };
-
-      // Context with inch as default unit
-      const context: DROReducerContext = {
-        millState: {
-          position: { x: 0, y: 0, z: 0 },
-          probe: { pinState: '', triggered: false },
-          connected: false,
-          controllerType: 'noop',
-          encoderSignal: { X: 'ok', Y: 'ok', Z: 'ok' },
-        },
-        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'inch' },
-      };
-
-      const result = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context);
-
-      expect(result?.stateName).toBe('idle');
-      // Display should convert mm to inches (25.4mm = 1", 50.8mm = 2", 76.2mm = 3")
-      expect(result?.display.X).toBeCloseTo(1, 5);
-      expect(result?.display.Y).toBeCloseTo(2, 5);
-      expect(result?.display.Z).toBeCloseTo(3, 5);
-    });
   });
 
   describe('data preservation', () => {

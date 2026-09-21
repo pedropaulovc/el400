@@ -1,124 +1,39 @@
 # US-048: Screen Reader Support
 
-**Manual Reference:** Accessibility Standards (WCAG 2.1)
+**Reference:** WCAG 2.1 Name, Role, Value; Info and Relationships; ARIA live regions
 **Priority:** High (P1)
+**Category:** Accessibility
 
 ## User Story
-**As a** user who relies on a screen reader
-**I want** the DRO's controls, readout, and indicators announced with meaningful names and live updates
-**So that** I can operate the simulator and follow position changes without seeing the screen
 
-## Acceptance Criteria
-- [x] **AC 48.1:** Every interactive control (axis select/zero buttons, keypad keys, primary/secondary function buttons) has a descriptive accessible name provided via `sr-only` text rather than relying on the visual icon.
-- [x] **AC 48.2:** Directional keypad keys announce their arrow direction: "8 (Up)", "2 (Down)", "4 (Left)", "6 (Right)"; non-directional digit keys announce the bare digit.
-- [x] **AC 48.3:** Axis positions are exposed through an `sr-only` table labelled "Axis positions"; each axis value cell is an `aria-live="polite"` `aria-atomic="true"` region that re-announces when the position changes.
-- [x] **AC 48.4:** Mode, units, and status indicators are grouped in native `<fieldset>` elements with `<legend>` names "Positioning mode", "Measurement units", and "Status".
-- [x] **AC 48.5:** Each LED indicator is a disabled `<input type="radio">` whose `checked` state reflects the current mode/units/status, so assistive tech reports the active option within each group.
-- [x] **AC 48.6:** Axis selection buttons expose their selected state via `aria-pressed`; the selected axis is `aria-pressed="true"` and the others `aria-pressed="false"`.
-- [x] **AC 48.7:** Every major UI section carries an `sr-only` `<h2>` heading ("Axis display", "Axis selection", "Numeric keypad", "Primary functions", "Secondary functions") for landmark/heading navigation.
-- [x] **AC 48.8:** Purely decorative chrome is marked `aria-hidden="true"` so it is not announced: the PowerLED, the HousingEdge bezels, and the seven-segment visual display (which duplicates the live-region value). The BrandLogo image inside the housing edge keeps its `alt` text and remains announced.
+**As a** user of browser accessibility features  
+**I want** meaningful names, states, structure, and live position updates  
+**So that** assistive technology has a usable representation of the simulator
 
-## E2E Test Scenarios
-```typescript
-import { test, expect } from '../helpers/fixtures';
+## Target Acceptance Criteria
 
-test.describe('US-048: Screen Reader Support', () => {
-  test('AC 48.1: interactive controls expose sr-only accessible names', async ({ dro }) => {
-    const { page } = dro;
-    await expect(page.getByRole('button', { name: 'Select X axis' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Zero X axis' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Abs/Inc' })).toBeVisible();
-  });
+- [x] **AC 48.1:** Every simulator button has a descriptive accessible name from its existing `sr-only` text, including axis select/zero, keypad, primary functions, and secondary functions.
+- [x] **AC 48.2:** Direction keys are named `8 (Up)`, `2 (Down)`, `4 (Left)`, and `6 (Right)`; other digit keys use the bare digit.
+- [x] **AC 48.3:** A table named `Axis positions` exposes X/Y/Z values. Each value cell (`axis-value-x`, `axis-value-y`, `axis-value-z`) is `aria-live="polite"` and `aria-atomic="true"` and follows the rendered position.
+- [x] **AC 48.4:** Native fieldsets are named `Positioning mode`, `Measurement units`, and `Status` by their legends.
+- [x] **AC 48.5:** Indicators are disabled status radios whose checked state follows ABS/INC, inch/mm, and status state; they are not operable controls.
+- [x] **AC 48.6:** Axis-select buttons expose the current selection with `aria-pressed`; momentary function buttons are not falsely described as persistent toggles.
+- [x] **AC 48.7:** Level-two headings identify `Axis display`, `Axis selection`, `Numeric keypad`, `Primary functions`, and `Secondary functions`.
+- [x] **AC 48.8:** The duplicated visual seven-segment layer and purely decorative chrome are hidden from the accessibility tree, while the `Electronica Logo` image remains named and exposed.
+- [x] **AC 48.9:** The external machine-connection message has `role="status"` and follows visible Connected/Disconnected transitions from the production CNCjs adapter path.
 
-  test('AC 48.3: zeroing an axis updates its live-region value', async ({ dro }) => {
-    const { page } = dro;
-    await page.getByRole('button', { name: 'Zero X axis' }).click();
-    const xCell = page.getByTestId('axis-value-x');
-    await expect(xCell).toHaveAttribute('aria-live', 'polite');
-    await expect(xCell).toHaveText(/^-?0(\.0+)?$/);
-  });
+## Verification notes
 
-  test('AC 48.5: LED indicators are disabled radios reflecting current state', async ({ dro }) => {
-    const { page } = dro;
-    const absRadio = page.getByTestId('led-abs').locator('input[type="radio"]');
-    await expect(absRadio).toBeDisabled();
-    await expect(absRadio).toBeChecked();
-    await page.getByRole('button', { name: 'Abs/Inc' }).click();
-    await expect(absRadio).not.toBeChecked();
-  });
+Headed Chromium inspection covered browser-computed names, roles, grouping, headings, checked/pressed state, and hidden decorative layers. A keyboard change to the visible physical-X input moved the production value cell to 25.0000 while `aria-live="polite"` and `aria-atomic="true"` remained present. A dedicated mock CNCjs service drove the production adapter through Connected, Disconnected, and Connected transitions; the same visible machine-connection text was exposed by `role="status"`.
 
-  test('AC 48.6: axis selection reflects pressed state via aria-pressed', async ({ dro }) => {
-    const { page } = dro;
-    const yButton = page.getByRole('button', { name: 'Select Y axis' });
-    await expect(yButton).toHaveAttribute('aria-pressed', 'false');
-    await yButton.click();
-    await expect(yButton).toHaveAttribute('aria-pressed', 'true');
-  });
+This proves browser DOM and accessibility semantics plus live-region mutation. No NVDA, Narrator, JAWS, VoiceOver, or actual screen-reader speech was run, so it does not establish spoken wording or end-to-end speech behavior.
 
-  test('AC 48.8: decorative chrome is hidden but the brand logo stays announced', async ({ dro }) => {
-    const { page } = dro;
-    await expect(page.getByRole('img', { name: 'Electronica Logo' })).toBeAttached();
-    await expect(page.getByTestId('axis-display-x')).toHaveAttribute('aria-hidden', 'true');
-  });
-});
-```
+## Verification Procedure
 
-## Implementation Details
-
-### sr-only labels over aria-label
-Interactive controls render an `<span className="sr-only">` describing the action
-(`Select X axis`, `Zero X axis`, `Settings`, `Abs/Inc`, `Toggle units`, …) alongside
-the decorative `<Icon>`. The sr-only text contributes the button's accessible name;
-`aria-label` is deliberately avoided so the label is part of the DOM text.
-
-### aria-live axis table
-`MultiAxisSection` renders two parallel views of the readout:
-- A visual seven-segment display (`Axis`), marked `aria-hidden="true"`, for sighted users.
-- An `sr-only` `<table aria-label="Axis positions">` whose value cells are
-  `aria-live="polite" aria-atomic="true"`. Each cell subscribes to a single axis hook,
-  so a position change re-announces only that axis.
-
-### Fieldset + legend grouping
-The three indicator clusters use `<fieldset>` + `<legend className="sr-only">`
-("Positioning mode", "Measurement units", "Status"). Grouping lets a screen reader
-report "X of N" membership for the radios within.
-
-### LED indicators as disabled radios
-`LEDIndicator` renders a disabled, read-only `<input type="radio" className="sr-only">`
-sharing a `name` per fieldset. `checked` mirrors the live state, so the active option in
-each group is announced. The radios are `disabled` because they are status read-outs,
-not user controls.
-
-### aria-pressed selection state
-`DROButton` forwards `aria-pressed={isActive}`. Axis-select buttons pass
-`isActive={activeAxis === axis}`, so the currently selected axis reports
-`aria-pressed="true"`. (Momentary function buttons remain `aria-pressed="false"`; their
-state is conveyed by the LED radios, not by a pressed toggle.)
-
-### sr-only section headings
-Each major section renders an `sr-only` `<h2>` heading so screen-reader users can navigate
-by heading and orient within the layout.
-
-### aria-hidden decorative chrome
-The PowerLED, both HousingEdge bezels, and the seven-segment visual display are
-`aria-hidden="true"`. The BrandLogo `<img alt="Electronica Logo">` lives in the
-HousingEdge `children` slot, which is NOT hidden, so the brand name stays in the
-accessibility tree.
-
-## Related Stories
-- US-034: Forced Colors Mode (visual accessibility)
-- US-037: Keyboard Navigation (keyboard operability)
-- US-038: Keyboard Shortcuts
-
-## Technical Notes
-- `sr-only` is the project-wide convention for screen-reader-only text (visually hidden,
-  still in the accessibility tree).
-- RTL/Playwright `getByRole` with a name resolves through the same accessible-name
-  computation a screen reader uses and excludes `aria-hidden` subtrees, so the tests
-  exercise the real assistive-tech surface.
+Use role/accessibility snapshots plus real actions in [`e2e/08-accessibility/US-048-screen-reader-support.spec.ts`](../../../e2e/08-accessibility/US-048-screen-reader-support.spec.ts). Check names, roles, states, grouping, headings, live-cell attributes/value changes, hidden duplicate visuals, and machine-connection status transitions. Role queries validate the browser's accessible-name computation; they do not substitute for a screen-reader session. See the [verification evidence and full-suite results](../README.md#verification).
 
 ## References
+
 - [WCAG 2.1 Name, Role, Value](https://www.w3.org/WAI/WCAG21/Understanding/name-role-value)
 - [WCAG 2.1 Info and Relationships](https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships)
-- [ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
 - [ARIA live regions](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Live_Regions)

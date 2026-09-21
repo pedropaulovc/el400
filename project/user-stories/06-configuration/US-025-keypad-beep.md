@@ -1,128 +1,41 @@
 # US-025: Setup Menu - Keypad Beep
 
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
-**Manual Reference:** SETUP MENU > BEEP (line 56)
+
+## Source
+
+- **Primary interaction constraint:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §8.3, p. 42 requires automatic near-zero warnings; the keypad preference cannot suppress those warnings.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.14, `[09:32–09:53]`: `bEEP on/oF` controls the audible confirmation for button presses.
 
 ## User Story
 
-**As a** machine operator
-**I want** to enable/disable keypad beep sounds
-**So that** I can work quietly or with audio confirmation
+**As a** machine operator  
+**I want** to turn keypad click feedback on or off  
+**So that** I can choose audible confirmation without muting machine-position warnings
 
 ## Acceptance Criteria
 
-- [ ] AC25.1: Navigate to BEEP parameter
-- [ ] AC25.2: Default is ON
-- [ ] AC25.3: Press 4 or 6 key to toggle ON/OFF
-- [ ] AC25.4: When ON, every key press produces beep
-- [ ] AC25.5: When OFF, keys are silent (except zero approach warning)
-- [ ] AC25.6: Error conditions may still beep regardless of setting
+- [x] **AC25.1:** The global `bEEP` setup row offers `on` (factory default) and `oF`.
+- [x] **AC25.2:** With `bEEP on`, each accepted physical or keyboard front-panel key action emits one short keypad click.
+- [x] **AC25.3:** With `bEEP oF`, keypad clicks are silent.
+- [x] **AC25.4:** Configurable and primary automatic zero-approach warnings are independent of the keypad setting and remain audible when required by US-024.
+- [x] **AC25.5:** No generic "error conditions always beep" behavior is promised; an error is audible only when a separately documented feature requires it.
+- [x] **AC25.6:** The setting is part of the setup draft and persists only after `SAU CHG`.
 
-## E2E Test Scenarios
+## Human Verification
 
-```typescript
-describe('US-025: Setup Menu - Keypad Beep', () => {
-  test('navigate to BEEP parameter', async ({ page }) => {
-    await page.goto('/');
+Instrument Web Audio before loading the page. With `bEEP on`, press numeric, Clear, axis-select, axis-zero, setup, ABS/INC, units, and function keys and confirm one buffer-source start per accepted press. Save `bEEP oF`, repeat, and confirm no keypad buffer starts. Independently trigger a zero-approach warning and confirm its oscillator bursts still occur. Audio-device/renderer errors are environmental unless these API-level events are absent.
 
-    // Enter setup
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
+## Automated Coverage
 
-    // Scroll to BEEP
-    // ... press 2 key multiple times ...
+- [`e2e/06-configuration/US-025-keypad-beep.spec.ts`](../../../e2e/06-configuration/US-025-keypad-beep.spec.ts)
+- Warning independence: [`e2e/06-configuration/US-024-zero-approach.spec.ts`](../../../e2e/06-configuration/US-024-zero-approach.spec.ts)
 
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('BEEP');
-  });
+## Verification
 
-  test('beep ON produces sound on key press', async ({ page }) => {
-    await page.goto('/');
+[Portable evidence and full-suite results](../README.md#verification)
 
-    // Ensure BEEP is ON (default)
-    // ... navigate to BEEP in setup ...
+With beep enabled, each sampled accepted panel action and focused keyboard shortcut started one 0.05-second keypad buffer. Saving beep off silenced the same control groups before and after reload, while configurable and mandatory zero-approach warnings still started their separate oscillator bursts. Unsaved beep changes were discarded.
 
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('ON');
-
-    // Save and exit
-    // ... save and exit ...
-
-    // Press a key
-    const audioPromise = page.waitForEvent('console', msg => msg.text().includes('beep'));
-
-    await page.click('[data-testid="1-key"]');
-
-    // Should hear/detect beep
-    // (In real implementation, check audio element or audio context)
-  });
-
-  test('toggle beep OFF', async ({ page }) => {
-    await page.goto('/');
-
-    // Navigate to BEEP
-    // ... setup ...
-
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('ON');
-
-    // Toggle OFF with 4 or 6 key
-    await page.click('[data-testid="6-key"]');
-
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('OFF');
-  });
-
-  test('verify silent key presses', async ({ page }) => {
-    await page.goto('/');
-
-    // Set BEEP to OFF
-    // ... setup and save ...
-
-    // Exit setup
-    await page.click('[data-testid="c-button"]');
-    await page.click('[data-testid="c-button"]');
-
-    // Press keys, verify no beep
-    await page.click('[data-testid="1-key"]');
-    await page.click('[data-testid="2-key"]');
-    await page.click('[data-testid="3-key"]');
-
-    // No audio should play
-    // (Verify audio element not playing or silent)
-  });
-
-  test('zero approach warning still audible', async ({ page }) => {
-    await page.goto('/');
-
-    // Set BEEP to OFF
-    // Enable zero approach warning
-    // ... setup both ...
-
-    // Exit setup
-    // ... exit ...
-
-    // Trigger zero approach (get close to zero in distance-to-go mode)
-    await page.evaluate(() => window.setDistanceToGo('X', 0.005));
-
-    // Zero approach warning should still beep
-    // (Zero approach warning is independent of keypad beep)
-    await expect(page.locator('[data-testid="audio-indicator"]')).toBeVisible();
-  });
-});
-```
-
-## Implementation Notes
-
-- **Purpose**: Provide audio feedback for key presses
-- **Default**: ON (user hears click/beep for every button press)
-- **When to disable**: Quiet work environment, personal preference
-- **Independence**: Separate from zero approach warning (US-024)
-- **Error beeps**: May still beep for invalid operations regardless of setting
-- **Implementation**:
-  - Single short beep (~50-100ms) on key press
-  - Use Web Audio API or HTML5 audio element
-  - Check BEEP setting before playing sound
-- **Accessibility**: Consider visual feedback alternative for users who disable beep
-
-## Related Stories
-
-- US-024: Zero Approach Warning (different beep type)
-- US-027: Save Changes (persist beep setting)
+The oracle was the browser's Web Audio API. It does not establish audibility through EL400 speaker hardware or the host audio device.

@@ -1,6 +1,7 @@
 /**
  * Non-volatile memory types - persisted to localStorage
  */
+import type { AxisCalibration } from './calibration';
 
 /** Valid SC scale-resolution values in microns (manual section 6.2). */
 export type ScaleResolutionValue =
@@ -71,12 +72,9 @@ export interface AngularResolutionByAxis {
 }
 
 /**
- * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`, used by
- * the Taper Calculation function in Section 9.2.2). The other axis of the pair
- * shows the radius. 'Zprime' is the lathe 4th-axis variant; on this 3-axis mill
- * simulator it behaves like 'Z' for the radius pairing.
+ * Axis on which the taper angle is displayed (Section 6.2 `tAPEr on`).
  */
-export type TaperOnAxis = 'X' | 'Z' | 'Zprime';
+export type TaperOnAxis = 'X' | 'Y' | 'Z';
 
 /**
  * Per-axis counting direction (manual section 6.2 `dir`). `'normal'` follows the
@@ -125,7 +123,7 @@ export type ZDepthSense = 'depth-negative' | 'depth-positive';
  * once an axis is within this distance of zero. The 0.002" default matches the
  * manual's "within 50 microns of the set value".
  */
-export type ZeroApproachDistance = '0.002' | '0.004' | '0.005' | '0.010' | '0.020';
+export type ZeroApproachDistance = string;
 
 /**
  * `BP TOLR` departure tolerance for the Near-Zero Warning (US-024). Hysteresis
@@ -133,7 +131,7 @@ export type ZeroApproachDistance = '0.002' | '0.004' | '0.005' | '0.010' | '0.02
  * clears, preventing beep flutter at the threshold. Default 0.0000" (the warning
  * clears as soon as the axis leaves the approach band).
  */
-export type ZeroApproachTolerance = '0' | '0.002' | '0.005' | '0.010';
+export type ZeroApproachTolerance = string;
 
 /**
  * Per-axis radius/diameter measurement mode (manual section 6.2 `rAd` / `diA`,
@@ -205,6 +203,8 @@ export interface NonVolatileMemory {
   displayResolution: DisplayResolutionByAxis;
   /** Per-axis angular display-resolution format - angular dP for angular axes (US-040, display-only) */
   angularResolution: AngularResolutionByAxis;
+  /** Per-axis error compensation, saved only by SAU CHG. */
+  calibration: Record<'X' | 'Y' | 'Z', AxisCalibration>;
   /** Axis on which the Taper function displays the angle (Section 6.2). */
   taperOnAxis: TaperOnAxis;
   /** Per-axis counting direction - dir parameter (US-002, manual section 6.2) */
@@ -212,17 +212,27 @@ export interface NonVolatileMemory {
   /** Z depth-sense preference: standard depth-negative or depth-positive (AC 2.4) */
   zDepthSense: ZDepthSense;
   /** Near-Zero Warning on/off — setup `ZERO AP` / `BU22` toggle (US-024, AC24.2) */
-  zeroApproachEnabled: boolean;
+  zeroApproachEnabled: Record<'X' | 'Y' | 'Z', boolean>;
   /** Near-Zero Warning approach distance — setup `BP DIST` (US-024, AC24.4) */
-  zeroApproachDistance: ZeroApproachDistance;
+  zeroApproachDistance: Record<'X' | 'Y' | 'Z', ZeroApproachDistance>;
   /** Near-Zero Warning departure tolerance — setup `BP TOLR` (US-024, AC24.5) */
-  zeroApproachTolerance: ZeroApproachTolerance;
+  zeroApproachTolerance: Record<'X' | 'Y' | 'Z', ZeroApproachTolerance>;
   /** Per-axis radius/diameter display mode - rAd/diA parameter (US-041, manual section 6.2) */
   measurementMode: MeasurementModeByAxis;
   /** Per-axis counting mode: linear scale vs angular (rotary) encoder (US-040) */
   countingMode: CountingModeByAxis;
   /** Touch-probe DRO type: transmit (count + flash) or freeze (US-032, §10.1.1) */
   probeDroType: ProbeDroType;
+  /** Touch-probe hold delay, in whole seconds (1–60). */
+  probeDelaySeconds: number;
+  /** Probe tip diameter used for measured-surface compensation, in mm. */
+  probeDiameterMm: number;
+  /** Probe tool length used for the Z datum, in mm. */
+  probeLengthMm: number;
+  /** RS232 transmission requested by ENT or continuously streamed. */
+  serialMode: 'request' | 'continuous';
+  /** Six-output signal behavior (§10.2). */
+  outputMode: 'pulse' | 'continuous';
   /**
    * Encoder-fail warning - EnF parameter (US-042, manual section 6.2). When
    * true, an axis that loses its encoder signal shows `no SIG`. Default off
@@ -318,17 +328,23 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
   displayResolution: DEFAULT_DISPLAY_RESOLUTION,
   angularResolution: DEFAULT_ANGULAR_RESOLUTION,
+  calibration: { X: { kind: 'none' }, Y: { kind: 'none' }, Z: { kind: 'none' } },
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',
   // Near-Zero Warning defaults (US-024): off until the operator enables it, with
   // the manual's 0.002" (≈50 micron) approach band and no departure hysteresis.
-  zeroApproachEnabled: false,
-  zeroApproachDistance: '0.002',
-  zeroApproachTolerance: '0',
+  zeroApproachEnabled: { X: false, Y: false, Z: false },
+  zeroApproachDistance: { X: '0.002', Y: '0.002', Z: '0.002' },
+  zeroApproachTolerance: { X: '0', Y: '0', Z: '0' },
   measurementMode: DEFAULT_MEASUREMENT_MODE,
   countingMode: DEFAULT_COUNTING_MODE,
   probeDroType: 'transmit',
+  probeDelaySeconds: 1,
+  probeDiameterMm: 0,
+  probeLengthMm: 0,
+  serialMode: 'request',
+  outputMode: 'pulse',
   encoderFailWarning: false,
   keypadLock: 'off',
   sleepTimeout: SLEEP_TIMEOUT_DISABLED,

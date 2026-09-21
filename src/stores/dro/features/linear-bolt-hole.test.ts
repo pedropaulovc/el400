@@ -76,6 +76,30 @@ describe('linearBoltHoleReducer', () => {
       }
     });
 
+    it.each([
+      ['X', 'BTN_SELECT_X'],
+      ['Y', 'BTN_SELECT_Y'],
+      ['Z', 'BTN_SELECT_Z'],
+    ] as const)('uses the reset %s position as hole 1 origin', (axis, eventName) => {
+      const seeded: DROStatePayload = {
+        ...axisState,
+        vMem: {
+          ...axisState.vMem,
+          manualAbsoluteValues: { X: 7, Y: 11, Z: 13 },
+        },
+      };
+      const selected = linearBoltHoleReducer(seeded, { eventName }, MM_CONTEXT)!;
+      const pitched = {
+        ...selected,
+        vMem: { ...selected.vMem, inputBuffer: '10' },
+      };
+      const result = linearBoltHoleReducer(pitched, { eventName: 'KEY_ENTER' }, MM_CONTEXT);
+
+      expect(result?.stateName).toBe('linear-bolt-hole-navigate');
+      expect(result?.display[axis]).toBeCloseTo(0, 4);
+      expect(result?.vMem.manualAbsoluteValues[axis]).toBe(0);
+    });
+
     it('ignores non-axis keys while selecting axis', () => {
       expect(linearBoltHoleReducer(axisState, { eventName: 'KEY_5' }, MM_CONTEXT)).toBeNull();
       expect(linearBoltHoleReducer(axisState, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
@@ -124,15 +148,16 @@ describe('linearBoltHoleReducer', () => {
       expect(r?.vMem.inputBuffer).toBe('1');
     });
 
-    it('confirms a valid pitch (mm) and advances to holes entry', () => {
+    it('confirms a valid pitch and directly activates hole 1', () => {
       const seeded = { ...pitchState, vMem: { ...pitchState.vMem, inputBuffer: '10' } };
       const r = linearBoltHoleReducer(seeded, { eventName: 'KEY_ENTER' }, MM_CONTEXT);
-      expect(r?.stateName).toBe('linear-bolt-hole-holes');
+      expect(r?.stateName).toBe('linear-bolt-hole-navigate');
       if (r?.stateData.stateDataType === 'linear-bolt-hole') {
         expect(r.stateData.pitch).toBeCloseTo(10, 4);
+        expect(r.stateData.currentHole).toBe(1);
       }
       expect(r?.vMem.inputBuffer).toBe('');
-      expect(r?.display.Y).toBe('hoLES');
+      expect(r?.display.X).toBeCloseTo(0, 4);
     });
 
     it('converts pitch from inches to mm in inch mode', () => {
@@ -150,54 +175,24 @@ describe('linearBoltHoleReducer', () => {
       expect(linearBoltHoleReducer(neg, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
     });
 
+    it('rejects a non-finite pitch', () => {
+      const huge = {
+        ...pitchState,
+        vMem: { ...pitchState.vMem, inputBuffer: '9'.repeat(400) },
+      };
+      expect(linearBoltHoleReducer(huge, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
+    });
+
     it('rejects ENTER with an empty buffer', () => {
       expect(linearBoltHoleReducer(pitchState, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
     });
   });
 
-  describe('holes entry (linear-bolt-hole-holes)', () => {
-    const holesState: DROStatePayload = {
-      stateName: 'linear-bolt-hole-holes',
-      stateData: dataWith({ axis: 'X', pitch: 10 }),
-      vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
-      display: { X: 0, Y: 'hoLES', Z: '' },
-    };
-
-    it('accepts a hole count and moves to navigate showing distance-to-go to hole 1 (0)', () => {
-      const seeded = { ...holesState, vMem: { ...holesState.vMem, inputBuffer: '5' } };
-      const r = linearBoltHoleReducer(seeded, { eventName: 'KEY_ENTER' }, MM_CONTEXT);
-      expect(r?.stateName).toBe('linear-bolt-hole-navigate');
-      if (r?.stateData.stateDataType === 'linear-bolt-hole') {
-        expect(r.stateData.holeCount).toBe(5);
-        expect(r.stateData.currentHole).toBe(1);
-      }
-      // Hole 1 is at the reset origin; distance-to-go on X is 0
-      expect(r?.display.X).toBeCloseTo(0, 4);
-    });
-
-    it('floors a fractional hole count', () => {
-      const seeded = { ...holesState, vMem: { ...holesState.vMem, inputBuffer: '5.9' } };
-      const r = linearBoltHoleReducer(seeded, { eventName: 'KEY_ENTER' }, MM_CONTEXT);
-      if (r?.stateData.stateDataType === 'linear-bolt-hole') {
-        expect(r.stateData.holeCount).toBe(5);
-      }
-    });
-
-    it('rejects a hole count below 2', () => {
-      const seeded = { ...holesState, vMem: { ...holesState.vMem, inputBuffer: '1' } };
-      expect(linearBoltHoleReducer(seeded, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
-    });
-
-    it('rejects a hole count above 999', () => {
-      const seeded = { ...holesState, vMem: { ...holesState.vMem, inputBuffer: '1000' } };
-      expect(linearBoltHoleReducer(seeded, { eventName: 'KEY_ENTER' }, MM_CONTEXT)).toBeNull();
-    });
-  });
 
   describe('navigation (linear-bolt-hole-navigate)', () => {
     const navState: DROStatePayload = {
       stateName: 'linear-bolt-hole-navigate',
-      stateData: dataWith({ axis: 'X', pitch: 10, holeCount: 5, currentHole: 1 }),
+      stateData: dataWith({ axis: 'X', pitch: 10, currentHole: 1 }),
       vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
       display: INITIAL_DISPLAY_STATE,
     };
@@ -211,35 +206,47 @@ describe('linearBoltHoleReducer', () => {
       expect(r?.display.X).toBeCloseTo(10, 4);
     });
 
-    it('wraps from the last hole to the first with KEY_6_RIGHT', () => {
-      const atLast = { ...navState, stateData: dataWith({ axis: 'X', pitch: 10, holeCount: 5, currentHole: 5 }) };
-      const r = linearBoltHoleReducer(atLast, { eventName: 'KEY_6_RIGHT' }, MM_CONTEXT);
+    it('continues past an old finite count without wrapping', () => {
+      const atFive = {
+        ...navState,
+        stateData: dataWith({ axis: 'X', pitch: 10, currentHole: 5 }),
+      };
+      const r = linearBoltHoleReducer(atFive, { eventName: 'KEY_6_RIGHT' }, MM_CONTEXT);
       if (r?.stateData.stateDataType === 'linear-bolt-hole') {
-        expect(r.stateData.currentHole).toBe(1);
+        expect(r.stateData.currentHole).toBe(6);
       }
+      expect(r?.display.X).toBeCloseTo(50, 4);
     });
 
     it('goes to the previous hole with KEY_4_LEFT', () => {
-      const atTwo = { ...navState, stateData: dataWith({ axis: 'X', pitch: 10, holeCount: 5, currentHole: 2 }) };
+      const atTwo = {
+        ...navState,
+        stateData: dataWith({ axis: 'X', pitch: 10, currentHole: 2 }),
+      };
       const r = linearBoltHoleReducer(atTwo, { eventName: 'KEY_4_LEFT' }, MM_CONTEXT);
       if (r?.stateData.stateDataType === 'linear-bolt-hole') {
         expect(r.stateData.currentHole).toBe(1);
       }
     });
 
-    it('wraps from the first hole to the last with KEY_4_LEFT', () => {
+    it('stays at the first hole when moving backward from the origin', () => {
       const r = linearBoltHoleReducer(navState, { eventName: 'KEY_4_LEFT' }, MM_CONTEXT);
       if (r?.stateData.stateDataType === 'linear-bolt-hole') {
-        expect(r.stateData.currentHole).toBe(5);
+        expect(r.stateData.currentHole).toBe(1);
       }
+      expect(r?.display.X).toBeCloseTo(0, 4);
     });
 
     it('shows distance-to-go relative to the current Y axis position too', () => {
       // Selected axis is Y; Z and X should show their normal INC positions.
       const yNav: DROStatePayload = {
         stateName: 'linear-bolt-hole-navigate',
-        stateData: dataWith({ axis: 'Y', pitch: 20, holeCount: 3, currentHole: 2 }),
-        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc', manualAbsoluteValues: { X: 7, Y: 5, Z: 0 } },
+        stateData: dataWith({ axis: 'Y', pitch: 20, currentHole: 2 }),
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          mode: 'inc',
+          manualAbsoluteValues: { X: 7, Y: 5, Z: 0 },
+        },
         display: INITIAL_DISPLAY_STATE,
       };
       const r = linearBoltHoleReducer(yNav, { eventName: 'MILL_STATE_CHANGED' }, MM_CONTEXT);
@@ -249,15 +256,29 @@ describe('linearBoltHoleReducer', () => {
       expect(r?.display.X).toBeCloseTo(7, 4);
     });
 
-    it('exits to idle when hole count is missing (defensive)', () => {
+    it('exits to idle when the selected axis is missing (defensive)', () => {
       const broken: DROStatePayload = {
         stateName: 'linear-bolt-hole-navigate',
-        stateData: dataWith({ axis: 'X', pitch: 10, holeCount: null }),
+        stateData: dataWith({ axis: null, pitch: 10 }),
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
         display: INITIAL_DISPLAY_STATE,
       };
       const r = linearBoltHoleReducer(broken, { eventName: 'KEY_6_RIGHT' }, MM_CONTEXT);
       expect(r?.stateName).toBe('idle');
+    });
+
+    it('refuses to advance beyond the safe integer boundary', () => {
+      const atLimit: DROStatePayload = {
+        ...navState,
+        stateData: dataWith({
+          axis: 'X',
+          pitch: Number.MIN_VALUE,
+          currentHole: Number.MAX_SAFE_INTEGER,
+        }),
+      };
+      expect(
+        linearBoltHoleReducer(atLimit, { eventName: 'KEY_6_RIGHT' }, MM_CONTEXT)
+      ).toBeNull();
     });
 
     it('ignores unhandled events', () => {
@@ -275,8 +296,12 @@ describe('linearBoltHoleReducer', () => {
     it('updates the navigate display as position changes', () => {
       const nav: DROStatePayload = {
         stateName: 'linear-bolt-hole-navigate',
-        stateData: dataWith({ axis: 'X', pitch: 10, holeCount: 5, currentHole: 3 }),
-        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc', manualAbsoluteValues: { X: 5, Y: 0, Z: 0 } },
+        stateData: dataWith({ axis: 'X', pitch: 10, currentHole: 3 }),
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          mode: 'inc',
+          manualAbsoluteValues: { X: 5, Y: 0, Z: 0 },
+        },
         display: INITIAL_DISPLAY_STATE,
       };
       const r = linearBoltHoleReducer(nav, { eventName: 'MILL_STATE_CHANGED' }, MM_CONTEXT);

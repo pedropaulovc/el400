@@ -3,6 +3,9 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useDispatch } from '../stores/dro';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 import { playClickSound } from '../utils/audio';
+import { useDROStore } from '../stores/droStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { isEventBlockedByKeypadLock } from '../stores/dro/features/keypad-lock';
 
 /**
  * Global keyboard shortcuts for power users (US-038).
@@ -154,10 +157,33 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsResult {
         return;
       }
 
-      // Handled key: suppress browser defaults (e.g. Backspace navigation) and beep.
+      // A handled shortcut always owns the browser key, even if the saved keypad
+      // lock makes the corresponding front-panel control unavailable.
       event.preventDefault();
-      void playClickSound();
+      const firstEvent = shortcut.kind === 'zero-all'
+        ? { eventName: 'BTN_ZERO_X' } as const
+        : shortcut.event;
+      const droState = useDROStore.getState();
+      const blocked = isEventBlockedByKeypadLock(
+        droState.stateName,
+        firstEvent.eventName,
+        useSettingsStore.getState().nvMem,
+      );
+      if (blocked) {
+        // Sleep is the reducer's global gate before keypad lock. Let one blocked
+        // key reach it solely to wake the display; an awake locked panel is a
+        // silent no-op, matching its disabled physical controls.
+        if (droState.vMem.displayPower === 'asleep') dispatch(firstEvent);
+        return;
+      }
 
+      void playClickSound();
+      // Sleep consumes one physical key operation before any feature action.
+      // Multi-event shortcuts must therefore stop after their waking event.
+      if (droState.vMem.displayPower === 'asleep') {
+        dispatch(firstEvent);
+        return;
+      }
       if (shortcut.kind === 'zero-all') {
         dispatch({ eventName: 'BTN_ZERO_X' });
         dispatch({ eventName: 'BTN_ZERO_Y' });

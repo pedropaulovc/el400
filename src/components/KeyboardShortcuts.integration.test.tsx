@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderSimulator,
@@ -78,7 +78,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-5, 4);
   });
 
-  it('AC 38.6 — Escape clears the input buffer before confirm', async () => {
+  it('AC 38.6 — Escape removes one input character before confirm', async () => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
 
@@ -88,8 +88,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     await user.keyboard('{Escape}');
     await user.keyboard('{Enter}');
 
-    // After clear, confirming should not commit 99.
-    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(9, 4);
   });
 
   it('AC 38.8 — Shift+X zeros the X axis', async () => {
@@ -121,6 +120,38 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
     expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 4);
+
+    await user.keyboard('{Shift>}0{/Shift}');
+
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
+    expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(0, 4);
+    expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(0, 4);
+  });
+
+  it('uses sleeping Shift+0 only to wake before its multi-axis action', async () => {
+    const { user } = await renderSimulator();
+    await focusSimulator(user);
+
+    for (const [axis, value] of [['x', '10'], ['y', '20'], ['z', '30']] as const) {
+      await user.keyboard(axis);
+      await user.keyboard(value);
+      await user.keyboard('{Enter}');
+    }
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
+    expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 4);
+    expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 4);
+
+    act(() => {
+      useDROStore.getState().dispatch({ eventName: 'SLEEP_TIMER_ELAPSED' });
+    });
+    expect(screen.getByTestId('display-panel')).toHaveAttribute('data-display-power', 'asleep');
+
+    await user.keyboard('{Shift>}0{/Shift}');
+
+    expect(screen.getByTestId('display-panel')).toHaveAttribute('data-display-power', 'awake');
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(10, 4);
+    expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(20, 4);
+    expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(30, 4);
 
     await user.keyboard('{Shift>}0{/Shift}');
 
@@ -178,7 +209,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     ['o', 'arc-contour-intro'],
     ['g', 'angle-hole-intro'],
     ['d', 'grid-intro'],
-    ['s', 'sdm-intro'],
+    ['s', 'sdm-menu-program'],
   ])('AC 38.14-38.21 — "%s" enters %s', async (key, expectedState) => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
@@ -188,7 +219,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(useDROStore.getState().stateName).toBe(expectedState);
   });
 
-  it('AC 38.19 — H halves the selected axis value', async () => {
+  it('AC 38.19 — H opens HALF selection and the chosen axis is halved', async () => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
 
@@ -200,6 +231,8 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
     await user.keyboard('h');
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent('SELECt');
+    await user.keyboard('x');
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
   });

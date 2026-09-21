@@ -29,9 +29,10 @@ import { polarReducer } from './features/polar';
 import { setupReducer } from './features/setup';
 import { oemModeReducer } from './features/oem-mode';
 import { restoreDefaultsReducer } from './features/restore-defaults';
-import { referenceReducer } from './features/reference';
+import { recordReferenceMark, referenceReducer } from './features/reference';
 import { taperReducer } from './features/taper';
 import { probeReducer } from './features/probe';
+import { auxiliaryReducer } from './features/aux-fn';
 import { sleepReducer } from './features/sleep';
 import { isEventBlockedByKeypadLock } from './features/keypad-lock';
 
@@ -43,7 +44,6 @@ import { isEventBlockedByKeypadLock } from './features/keypad-lock';
  * position updates (idle, center-finding). Calculator and menu ignore it.
  */
 const featureReducers: FeatureReducer[] = [
-  sleepReducer, // Display sleep timer (US-026): owns SLEEP_TIMER_ELAPSED and, while asleep, consumes the waking key/jog. First so it gates input during sleep.
   bootReducer,
   diagnosticsReducer, // Handles Self-Diagnostics Mode (US-046); owns diagnostics-* states and the ▲-at-boot entry
   calculatorReducer,
@@ -55,6 +55,7 @@ const featureReducers: FeatureReducer[] = [
   gridReducer, // Handles grid drilling pattern generation (US-020)
   sdmReducer, // Handles Sub Datum Memory learn/program/run (US-009/010/011)
   distanceToGoReducer, // Handles distance-to-go (US-008)
+  auxiliaryReducer,
   setupReducer, // Handles setup menu navigation (US-039) - before keypad/axis so it owns input in setup
   oemModeReducer, // Handles OEM Mode password gate + baseline capture (US-044); before keypad so it owns digit input
   restoreDefaultsReducer, // Handles Restore Defaults `IN ProG` dwell completion (US-028)
@@ -71,8 +72,6 @@ const featureReducers: FeatureReducer[] = [
   probeReducer, // Handles touch probe functions + Freeze-mode idle (US-032); before idle so it owns the frozen display
   idleReducer, // Handles MILL_STATE_CHANGED for idle state
   menuReducer,
-  // Future features:
-  // linearReducer,
 ];
 
 /**
@@ -87,14 +86,20 @@ export function droReducer(
   event: DROEventPayload,
   context: DROReducerContext
 ): DROStatePayload {
+  const referencedState = recordReferenceMark(current, event, context);
+  // Sleep is a global input gate, not a competing feature handler. Recording
+  // the reference first preserves encoder crossings received while asleep.
+  const sleepResult = sleepReducer(referencedState, event, context);
+  if (sleepResult !== null) return sleepResult;
+
   // Keypad lock gate (US-043, §6.2 `LoC`): when the panel is locked, drop every
   // front-panel key press (except the wrench/setup key and in-setup navigation)
   // before the feature reducers run, returning the current state unchanged so the
   // press is a true no-op (AC 43.3/43.7). Internal events -- crucially the
   // MILL_STATE_CHANGED position tick -- are never gated, so the live readout keeps
   // updating while locked (AC 43.5).
-  if (isEventBlockedByKeypadLock(current.stateName, event.eventName, context.nvMem)) {
-    return current;
+  if (isEventBlockedByKeypadLock(referencedState.stateName, event.eventName, context.nvMem)) {
+    return referencedState;
   }
 
   let firstResult: DROStatePayload | null = null;
@@ -103,7 +108,7 @@ export function droReducer(
   for (let i = 0; i < featureReducers.length; i++) {
     const reducer = featureReducers[i];
     if (!reducer) continue;
-    const result = reducer(current, event, context);
+    const result = reducer(referencedState, event, context);
 
     if (result !== null) {
       const reducerName = reducer.name || `reducer[${String(i)}]`;
@@ -120,11 +125,11 @@ export function droReducer(
       {
         handlersInOrder: handlers,
         eventName: event.eventName,
-        currentState: current,
+        currentState: referencedState,
       }
     );
   }
 
   // Return first result or current state unchanged
-  return firstResult ?? current;
+  return firstResult ?? referencedState;
 }

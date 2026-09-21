@@ -71,6 +71,28 @@ describe('droStore', () => {
     });
   });
 
+  it('rehydrates an absent record and persists unchanged operator data on the next update', async () => {
+    useDROStore.setState({
+      vMem: {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        workOffsets: { X: 12, Y: 0, Z: 0 },
+      },
+    });
+    const storageKey = useDROStore.persist.getOptions().name;
+    if (storageKey === undefined) throw new Error('DRO persistence name is missing');
+    localStorage.removeItem(storageKey);
+
+    await useDROStore.persist.rehydrate();
+    expect(useDROStore.persist.hasHydrated()).toBe(true);
+    expect(useDROStore.getState().vMem.workOffsets.X).toBe(12);
+
+    useDROStore.setState({ display: { X: 1, Y: 0, Z: 0 } });
+    const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as {
+      state: { vMem: { workOffsets: { X: number } } };
+    } | null;
+    expect(saved?.state.vMem.workOffsets.X).toBe(12);
+  });
+
   describe('dispatch', () => {
     it('dispatches events to update state', () => {
       // Set to idle state first (skip boot)

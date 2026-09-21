@@ -1,70 +1,41 @@
 # US-041: Setup Menu - Radius / Diameter Display Mode
 
-**Manual Reference:** Section 6.2 Parameters Setting (`rAd` / `diA`); EL400 video manual §1.7 "Radius / diameter mode `RAD`"
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 20–21: linear-axis measurement mode is per-axis `rAd / diA`.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.7, `[05:17–05:33]`: mills use radial 1:1 display; diameter is for lathe work.
+- **Simulator panel contract:** the seven-cell numeric display uses `-------` when a derived diameter cannot fit; the underlying coordinate is not clamped.
+
 ## User Story
-**As a** machinist
-**I want** to choose whether an axis displays radius or diameter values
-**So that** lathe-style turning shows the cut diameter (2× movement) while milling shows true 1:1 travel
+
+**As a** machinist  
+**I want** per-axis radius or diameter display  
+**So that** a linear slide can show true travel or lathe-style workpiece diameter
 
 ## Acceptance Criteria
-- [ ] **AC 41.1:** In the setup menu, the `rAd` / `diA` parameter is available for a linear axis.
-- [ ] **AC 41.2:** `◄` / `►` toggle between `rAd` (radial) and `diA` (diametric).
-- [ ] **AC 41.3:** In `rAd` mode the display equals actual axis movement (1:1) — the mill default.
-- [ ] **AC 41.4:** In `diA` mode the displayed value is **doubled** relative to actual movement (a 1.000 move shows 2.000), as used for lathe diameter turning.
-- [ ] **AC 41.5:** The mode is set **per individual axis**.
-- [ ] **AC 41.6:** The setting persists after power cycle when saved via `SAU CHG`.
-- [ ] **AC 41.7:** Only meaningful when counting mode (US-040) is `LinEAr`.
-- [ ] **AC 41.8:** The ×2 diameter scale composes with the 7-digit panel limit. If the
-  doubled value can't fit at the axis's display resolution — e.g. a stored `999.9999`
-  radius value switched to `diA` would render the 8-cell `1999.9998` — the readout shows
-  an **all-dashes overflow indicator** (`-------`) rather than growing past the physical
-  panel, mirroring the Acu-Rite DRO100 display-overflow behaviour. The stored slide value
-  is untouched, so the reading self-clears when the axis returns in range, the display
-  resolution `dP` is coarsened, or the axis is zeroed. This is the *derived-reading*
-  counterpart to the US-047 *entry-time* clamp (which bounds keyed values at commit and so
-  cannot catch an overflow introduced by a later mode switch).
 
-## E2E Test Scenarios
-```typescript
-describe('US-041: Radius/Diameter Mode', () => {
-  test('default radius mode is 1:1', async () => {
-    await dro.setMode('X', 'rAd');
-    await dro.simulateMove('X', 1.000);
-    await expect(dro.display.xAxis).toHaveValue(1.000);
-  });
+- [x] **AC41.1:** A linear axis exposes `rAd` (factory setting) and `diA`; Left/Right toggles and wraps.
+- [x] **AC41.2:** `rAd` displays compensated coordinate 1:1. `diA` displays 2× that coordinate.
+- [x] **AC41.3:** The mode is per-axis and has no effect on an angular axis's rendered value.
+- [x] **AC41.4:** Diameter multiplication happens after machine/error compensation and direction, before `dP` formatting.
+- [x] **AC41.5:** If the derived formatted value cannot fit the seven-cell axis display, render `-------`; retain the underlying coordinate so the reading self-clears after returning in range, coarsening `dP`, selecting radius, or zeroing.
+- [x] **AC41.6:** The draft mode persists only after `SAU CHG`.
 
-  test('diameter mode doubles the displayed value', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
-    await dro.navigateTo('rAd');
-    await dro.pressKey('KEY_6_RIGHT'); // ► to diA
-    await expect(dro.display.message).toHaveText('diA');
-    await dro.exitSetupSaving();
+## Human Verification
 
-    await dro.zeroAxis('X');
-    await dro.simulateMove('X', 1.000);
-    await expect(dro.display.xAxis).toHaveValue(2.000);
-  });
-});
-```
+Move X and Y by the same physical 1.000 mm, leave Y radial, and save X diameter; X must show 2.000 and Y 1.000. Exercise a negative value and `dP` rounding. Enter a representable near-limit radius coordinate, switch to diameter to force `-------`, then switch back and confirm the stored coordinate returns unchanged. Repeat with X angular to confirm no diameter transform.
 
-## Implementation Notes
-- Pure display transform: `displayed = mode === 'diameter' ? raw * 2 : raw`. Apply in
-  `src/stores/dro/utils/displayComputation.ts` after error compensation but before formatting.
-- Add a `diA` indicator hint if the hardware shows one; store as
-  `measurementMode: 'radius' | 'diameter'` per axis.
+## Automated Coverage
 
-## Related Stories
-- US-040: Counting Mode (linear required)
-- US-022: Display Resolution
-- US-002: Sign Convention and Axis Direction
-- US-047: Display Overflow on Value Entry (entry-time clamp; AC 41.8 is the derived-reading counterpart)
+- [`e2e/06-configuration/US-041-radius-diameter.spec.ts`](../../../e2e/06-configuration/US-041-radius-diameter.spec.ts)
 
-## Notes
-- New story from crosscheck. `rAd`/`diA` appears in the §6.2 table and video §1.7 but had no story.
-- Primarily a lathe convenience; included because it is a documented per-axis setup parameter
-  the simulator's setup menu must expose for faithful reproduction.
-</content>
+## Verification
+
+[Portable evidence and full-suite results](../README.md#verification)
+
+The corrected diameter contract was checked as 2× display-space coordinate, including positive preset interpretation, negative motion, post-compensation order, `dP` rounding, per-axis scope, angular precedence, and seven-dash overflow with retained-coordinate recovery. X `diA` and `dP 50.0` were saved, reloaded, and re-entered unchanged; drafting `rAd` and canceling returned to the saved `diA`. A later smoke check again produced X `2.0000` for 1 mm of debug travel.
+
+These checks used the visible debug table position. No physical lathe or workpiece was used. Returning in range was exercised directly, and the browser E2E switched back to radius without losing the stored coordinate. Coarsening `dP` and zeroing were not redundantly rerun as separate headed recovery arms.

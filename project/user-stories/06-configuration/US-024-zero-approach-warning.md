@@ -1,175 +1,43 @@
 # US-024: Setup Menu - Zero Approach Warning
 
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
-**Manual Reference:** SETUP MENU > ZERO AP (line 55), SPECIAL FUNCTIONS > ZERO APPROACH WARNING (lines 435-439), Section 8.3 Near Zero Warning
+
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §8.3, p. 42: a warning is automatically active within 50 µm of the set value in Preset, SDM, and every milling-specific function.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.13, `[08:36–09:32]`: `ZEro AP` is a parent menu; Enter opens the buzz control (rendered `bU22` on the simulator's seven-segment display), then Down reaches numeric `bP diSt` and `bP toLr`.
+- **Lower-priority detail where EL400 is silent:** [MagXact setup guide](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616), "ZERO APPROACH WARNING": `BP DIST` defaults to 0.002 inch, `BP TOLR` to 0.0000 inch, values are entered numerically, and warning setup is per-axis.
 
 ## User Story
 
-**As a** machine operator
-**I want** audible warning when approaching zero
-**So that** I know when I'm close to target position
+**As a** machine operator  
+**I want** a configurable audible approach/departure warning without losing the EL400's mandatory near-zero protection  
+**So that** I can approach target-bearing axes safely
 
 ## Acceptance Criteria
 
-- [ ] AC24.1: Navigate to ZERO AP parameter
-- [ ] AC24.2: Press ENT to toggle BU22 ON/OFF
-- [ ] AC24.3: When ON, continuous beeping starts near zero
-- [ ] AC24.4: BP DIST parameter sets approach distance (default 0.002")
-- [ ] AC24.5: BP TOLR parameter sets departure tolerance (default 0.0000")
-- [ ] AC24.6: Beeping occurs within BP DIST of zero
-- [ ] AC24.8: Beep distinct from key press beep
-- [ ] AC24.9: Automatically enabled in Preset, SDM, and Milling Functions (G-015)
-- [ ] AC24.10: Trigger when position is within threshold of zero
+- [x] **AC24.1:** For the selected axis, setup contains a parent `ZEro AP`; Enter opens nested `bU22 on/oF`, then Down reaches `bP diSt` and `bP toLr`.
+- [x] **AC24.2:** `bU22`, `BP DIST`, and `BP TOLR` are per-axis settings.
+- [x] **AC24.3:** On either numeric row, Enter displays the saved value; Enter again starts numeric replacement entry; digits and decimal are accepted; Enter stages the value and advances. `C` cancels partial numeric input and returns to the row without changing its draft value.
+- [x] **AC24.4:** Simulator defaults are 0.002 inch for `BP DIST` and 0.0000 inch for `BP TOLR`; the editor displays and accepts the active unit while preserving the same physical distances.
+- [x] **AC24.5:** When configurable warning is on, it warns on the physical axis that owns the active target inside `BP DIST`; `BP TOLR` supplies departure hysteresis. Prompt rows, placeholder zero axes, and unrelated menu text never trigger it.
+- [x] **AC24.6:** The primary 50 µm warning in Preset, SDM run, and milling functions is always active and cannot be disabled by `bU22 oF` or keypad `bEEP oF`. A larger configured approach distance may widen the warning region but may not remove that inclusive 50 µm floor.
+- [x] **AC24.7:** Warning audio is repeated and distinguishable from a keypad click.
+- [x] **AC24.8:** All three settings share the setup draft transaction and persist only after `SAU CHG`.
 
-## E2E Test Scenarios
+## Human Verification
 
-```typescript
-describe('US-024: Setup Menu - Zero Approach Warning', () => {
-  test('enable zero approach warning', async ({ page }) => {
-    await page.goto('/');
+Enter `ZEro AP` for X, replace both numeric values through the nested flow, save, and verify Y retains independent values. In Distance-to-Go, approach and leave an X target across the configured thresholds and observe repeated warning/hysteresis. Turn X `bU22 oF` and keypad beep off, then approach within 0.05 mm in Preset, SDM run, and one milling function; the primary warning must remain. Use Web Audio instrumentation to distinguish keypad buffer-source clicks from warning oscillator bursts; speaker-device errors alone are not a functional failure.
 
-    // Enter setup
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
+## Automated Coverage
 
-    // Navigate to ZERO AP
-    // ... scroll with 2 key ...
+- [`e2e/06-configuration/US-024-zero-approach.spec.ts`](../../../e2e/06-configuration/US-024-zero-approach.spec.ts)
 
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('ZERO AP');
+## Verification
 
-    // Toggle ON
-    await page.click('[data-testid="ent-button"]');
+[Portable evidence and full-suite results](../README.md#verification)
 
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('BU22 ON');
-  });
+Headed checks covered the nested editor, per-axis save/reload, configurable distance and tolerance hysteresis, and warning independence from `bU22` and keypad beep. The mandatory warning was off at 0.0600 mm and on at exactly 0.0500 mm and at 0.0400 mm in Preset, SDM Run, and a representative full-circle PCD flow. `BP DIST` and `BP TOLR` converted between inch and millimetre views without drift across save, reload, field cancel, and whole-draft discard.
 
-  test('set approach distance to 0.010', async ({ page }) => {
-    await page.goto('/');
-
-    // After enabling ZERO AP
-    // ... setup ...
-
-    // Navigate to BP DIST parameter
-    await page.click('[data-testid="2-key"]');
-
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('BP DIST');
-
-    // Enter 0.010
-    await page.click('[data-testid="ent-button"]');
-    await page.evaluate(() => window.enterValue('0.010'));
-    await page.click('[data-testid="ent-button"]');
-  });
-
-  test('approaching zero triggers beep', async ({ page }) => {
-    await page.goto('/');
-
-    // Enable zero approach warning, set BP DIST = 0.010
-    // ... setup and save ...
-
-    // Exit setup
-    await page.click('[data-testid="c-button"]');
-    await page.click('[data-testid="c-button"]');
-
-    // Simulate distance-to-go mode or SDM
-    // Set position to 0.015" from target
-    await page.evaluate(() => window.setDistanceToGo('X', 0.015));
-
-    // No beep yet (outside BP DIST)
-    await expect(page.locator('[data-testid="audio-indicator"]')).not.toBeVisible();
-
-    // Move closer, within 0.010"
-    await page.evaluate(() => window.setDistanceToGo('X', 0.008));
-
-    // Beeping should start
-    await expect(page.locator('[data-testid="audio-indicator"]')).toBeVisible();
-    // or verify audio element playing
-  });
-
-  test('beeping continuous within approach distance', async ({ page }) => {
-    await page.goto('/');
-
-    // With zero approach ON and within BP DIST
-    // ... setup ...
-
-    // Verify beeping continues while within range
-    await page.evaluate(() => window.setDistanceToGo('X', 0.005));
-
-    await page.waitForTimeout(2000);
-
-    // Still beeping
-    await expect(page.locator('[data-testid="audio-indicator"]')).toBeVisible();
-  });
-
-  test('beeping stops after leaving tolerance zone', async ({ page }) => {
-    await page.goto('/');
-
-    // Start within BP DIST (beeping)
-    await page.evaluate(() => window.setDistanceToGo('X', 0.005));
-
-    // Move away from zero, outside BP DIST + BP TOLR
-    await page.evaluate(() => window.setDistanceToGo('X', 0.015));
-
-    // Beeping stops
-    await expect(page.locator('[data-testid="audio-indicator"]')).not.toBeVisible();
-  });
-
-  test('disable zero approach warning', async ({ page }) => {
-    await page.goto('/');
-
-    // Enter setup, navigate to ZERO AP
-    // ... setup ...
-
-    // Toggle OFF
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('OFF');
-
-    // Save and exit
-    // ... save ...
-
-    // Verify no beeping even when near zero
-    await page.evaluate(() => window.setDistanceToGo('X', 0.005));
-
-    await expect(page.locator('[data-testid="audio-indicator"]')).not.toBeVisible();
-  });
-
-  test('Warning Beep in Preset mode (G-015)', async () => {
-    // In Preset mode
-    await dro.setPreset('X', 0);
-    await dro.simulateEncoderAbsoluteMove('X', 0.001);
-    await expect(dro.audio).toBePlaying();
-  });
-});
-```
-
-## Implementation Notes
-
-- **Purpose**: Audio feedback when approaching target position
-- **Use cases**:
-  - Distance-to-go mode
-  - SDM run mode
-  - Macro functions (bolt circle, etc.)
-- **Parameters**:
-  - **ZERO AP**: ON/OFF toggle
-  - **BP DIST**: Approach distance (when beeping starts)
-  - **BP TOLR**: Tolerance (hysteresis to prevent beep flutter)
-- **Beep behavior**:
-  - Continuous beep when |distance| ≤ BP DIST
-  - Stops when |distance| > BP DIST + BP TOLR
-- **Independent from keypad beep**: Different setting (US-025)
-- **Implementation**:
-  - Monitor distance-to-go in active modes
-  - Trigger audio alert when within threshold
-  - Use web Audio API for beep sound
-
-## Related Stories
-
-- US-008: Distance-to-Go Function (uses zero approach warning)
-- US-011: SDM Run Mode (uses zero approach warning)
-- US-016 through US-020: Pattern macros (use zero approach warning)
-- US-025: Keypad Beep (different audio feedback)
-
-## Notes
-- Merged from US-024 (Claude) and G-015 (Gemini)
-- Added automatic enablement behavior from G-015
+Web Audio node creation distinguished the repeated warning oscillator from keypad buffer clicks. This verifies browser behavior, not physical speaker audibility. Other milling functions are covered by their pattern stories and the full suite.

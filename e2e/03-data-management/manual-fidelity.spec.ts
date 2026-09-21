@@ -1,0 +1,100 @@
+import { test, expect } from '../helpers/fixtures';
+
+test.beforeEach(async ({ dro }) => {
+  await dro.goto({ source: 'debug', skipBootMessage: true });
+  await dro.toggleInchMm();
+});
+
+test('Learn stores exact XYZ, Program reads them intact, and Run survives reload', async ({ dro }) => {
+  await dro.simulateEncoderAbsoluteMove('X', 24.96);
+  await dro.simulateEncoderAbsoluteMove('Y', 1);
+  await dro.simulateEncoderAbsoluteMove('Z', -3);
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.waitForAxisPureTextValue('X', 'ProGrAn');
+  await dro.key6.click();
+  await dro.waitForAxisPureTextValue('X', 'rUn');
+  await dro.key6.click();
+  await dro.waitForAxisPureTextValue('X', 'LEArn');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'StEPno');
+  await dro.waitForAxisPureNumberValue('Y', 1, 0, undefined, 0);
+  await dro.selectAxis('Y');
+  await dro.enterNumber('7');
+  await dro.enterButton.click();
+  await dro.selectAxis('X');
+  await dro.waitForAxisPureNumberValue('Y', 7, 0, undefined, 0);
+  await dro.selectAxis('X');
+  await dro.clearButton.click();
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.enterButton.click();
+  await dro.selectAxis('Y');
+  await dro.enterNumber('7');
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  await dro.waitForAxisPureNumberValue('X', 24.96);
+  await dro.waitForAxisPureNumberValue('Y', 1);
+  await dro.waitForAxisPureNumberValue('Z', -3);
+  await dro.clearButton.click();
+  await dro.reload();
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.key6.click();
+  await dro.enterButton.click();
+  await dro.selectAxis('Y');
+  await dro.enterNumber('7');
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  expect(await dro.isIncMode()).toBe(true);
+  await dro.waitForAxisPureNumberValue('X', 24.96);
+  await dro.waitForAxisPureNumberValue('Y', 1);
+  await dro.waitForAxisPureNumberValue('Z', -3);
+  await dro.simulateEncoderAbsoluteMove('X', 24.92);
+  await dro.waitForAxisPureNumberValue('X', 0.04);
+  await expect(dro.page.getByTestId('audio-indicator')).toBeVisible();
+  await dro.simulateEncoderAbsoluteMove('X', 24.96);
+  await dro.simulateEncoderAbsoluteMove('Y', 1);
+  await dro.simulateEncoderAbsoluteMove('Z', -3);
+  await dro.waitForAxisPureNumberValue('X', 0);
+  await dro.waitForAxisPureNumberValue('Y', 0);
+  await dro.waitForAxisPureNumberValue('Z', 0);
+  await dro.key6.click();
+  await dro.waitForAxisPureTextValue('X', 'no dAtA');
+  await dro.key4.click();
+  await dro.waitForAxisPureNumberValue('X', 0);
+  await dro.clearButton.click();
+  await dro.waitForAxisPureNumberValue('X', 24.96);
+});
+
+test('Program persists signed sparse step1000 and rejects step1001 without wrapping', async ({ dro }) => {
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.enterButton.click();
+  await dro.selectAxis('Y');
+  await dro.enterNumber('1000');
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  for (const coordinate of ['-10.5', '100', '0.25']) {
+    await dro.enterNumber(coordinate);
+    await dro.enterButton.click();
+  }
+  await dro.key6.click();
+  await dro.waitForAxisPureNumberValue('Y', 1000, 0, undefined, 0);
+  await dro.selectAxis('Y');
+  await dro.enterNumber('1001');
+  await dro.enterButton.click();
+  await dro.waitForAxisPureNumberValue('Y', 1001, 0, undefined, 0);
+  await dro.waitForAxisPureTextValue('X', 'StEPno');
+  // Cancel the rejected numeric input completely, then leave the function.
+  for (let i = 0; i < 5; i++) await dro.clearButton.click();
+  await dro.reload();
+  await dro.page.getByTestId('btn-sdm').click();
+  await dro.key6.click();
+  await dro.enterButton.click();
+  await dro.selectAxis('Y');
+  await dro.enterNumber('1000');
+  await dro.enterButton.click();
+  await dro.enterButton.click();
+  await dro.waitForAxisPureNumberValue('X', -10.5);
+  await dro.waitForAxisPureNumberValue('Y', 100);
+  await dro.waitForAxisPureNumberValue('Z', 0.25);
+  await dro.key6.click();
+  await dro.waitForAxisPureNumberValue('X', -10.5);
+});

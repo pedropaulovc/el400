@@ -1,24 +1,12 @@
 /**
- * Integration tests: US-027 Setup Menu — Save Changes (SAV CHG).
- *
- * Drives the full simulator through real setup buttons (btn-settings,
- * axis-select-*, the 8/2 item-scroll keys, the 4/6 choice-cycle keys, key-enter,
- * key-clear) and asserts the LIVE settings store / localStorage. No forced state,
- * no window hooks, no direct localStorage poking to fake a save.
- *
- * Covered:
- * - AC27.2/27.3: ENT on SAV CHG persists a draft-only SC change to nvMem.
- * - AC27.4: a confirmation message (StorEd) is shown.
- * - AC27.5: the persisted value round-trips through the settingsStore localStorage
- *   middleware (read back from the storage key).
- * - AC27.6: exiting via End (or C) WITHOUT SAV CHG leaves nvMem unchanged.
- *
- * @see project/user-stories/06-configuration/US-027-save-changes.md
+ * Integration tests: setup changes form one draft transaction. ENT on SAU ChG
+ * commits it atomically and shows StorEd; End and C discard unsaved drafts.
+ * Persistence is exercised through the real front-panel setup flow.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import type userEvent from '@testing-library/user-event';
+import type { UserEvent } from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
@@ -27,22 +15,13 @@ import { useSettingsStore } from '../../settingsStore';
 import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../../types/nonVolatileMemory';
 
 describe('US-027 Save Changes (integration)', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
   });
 
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-  });
 
   /** Open setup, pick X, scroll up to the SC parameter (draft-only). */
-  async function gotoSC(user: ReturnType<typeof userEvent.setup>) {
+  async function gotoSC(user: UserEvent) {
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
     while (!getAxisDisplayPureTextValue('X').startsWith('SC')) {
@@ -51,7 +30,7 @@ describe('US-027 Save Changes (integration)', () => {
   }
 
   /** Scroll (up) from anywhere in the parameter list to a given exact label. */
-  async function scrollToLabel(user: ReturnType<typeof userEvent.setup>, label: string) {
+  async function scrollToLabel(user: UserEvent, label: string) {
     let guard = 0;
     while (getAxisDisplayPureTextValue('X') !== label) {
       await user.click(screen.getByTestId('key-8'));
@@ -60,7 +39,7 @@ describe('US-027 Save Changes (integration)', () => {
     }
   }
 
-  it('ENT on SAV CHG persists an SC change and shows the confirmation (AC27.2-27.5)', async () => {
+  it('ENT on SAU ChG persists an SC change and shows the confirmation (AC27.2-27.5)', async () => {
     const { user } = await renderSimulator();
 
     await gotoSC(user);
@@ -72,7 +51,7 @@ describe('US-027 Save Changes (integration)', () => {
     // Still unsaved in nvMem.
     expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
 
-    // Scroll to SAV CHG and confirm with ENT.
+    // Scroll to SAU ChG and confirm with ENT.
     await scrollToLabel(user, 'SAU ChG');
     await user.click(screen.getByTestId('key-enter'));
 
@@ -89,23 +68,21 @@ describe('US-027 Save Changes (integration)', () => {
     });
   });
 
-  it('the confirmation auto-returns to the SAV CHG item (AC27.4)', async () => {
+  it('the next key dismisses StorEd without replaying that key on SAU ChG', async () => {
     const { user } = await renderSimulator();
 
     await gotoSC(user);
-    await user.click(screen.getByTestId('key-4')); // draft SC 2.0
+    await user.click(screen.getByTestId('key-4'));
     await scrollToLabel(user, 'SAU ChG');
     await user.click(screen.getByTestId('key-enter'));
     expect(getAxisDisplayPureTextValue('X')).toBe('StorEd');
 
-    // The hook dispatches SETUP_SAVED_TIMEOUT after a delay; wait for the menu.
-    await waitFor(
-      () => { expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG'); },
-      { timeout: 2000 }
-    );
+    await user.click(screen.getByTestId('key-enter'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+    expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('2');
   });
 
-  it('exiting via End WITHOUT SAV CHG discards the SC change (AC27.6)', async () => {
+  it('exiting via End without SAU ChG discards the SC change (AC27.6)', async () => {
     const { user } = await renderSimulator();
 
     await gotoSC(user);
@@ -121,7 +98,7 @@ describe('US-027 Save Changes (integration)', () => {
     expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('5');
   });
 
-  it('exiting via C (clear) WITHOUT SAV CHG discards the SC change (AC27.6)', async () => {
+  it('exiting via C without SAU ChG discards the SC change (AC27.6)', async () => {
     const { user } = await renderSimulator();
 
     await gotoSC(user);
@@ -142,11 +119,9 @@ describe('US-027 Save Changes (integration)', () => {
     await user.click(screen.getByTestId('key-enter'));
     expect(useSettingsStore.getState().nvMem.scaleResolution.X).toBe('2');
 
-    // Wait for the menu to come back, make a NEW draft change, then exit via End.
-    await waitFor(
-      () => { expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG'); },
-      { timeout: 2000 }
-    );
+    // Dismiss StorEd, make a NEW draft change, then exit via End.
+    await user.click(screen.getByTestId('key-enter'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
     await scrollToLabel(user, 'SC 2.0');
     await user.click(screen.getByTestId('key-4')); // draft SC 1.0 (unsaved)
     await scrollToLabel(user, 'End');

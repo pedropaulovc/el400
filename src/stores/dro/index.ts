@@ -72,12 +72,6 @@ export {
   GRID_INTRO_DURATION_MS,
 } from './features/grid';
 
-// Re-export Sub Datum Memory feature (US-009)
-export {
-  useSdmIntro,
-  SDM_INTRO_DURATION_MS,
-} from './features/sdm';
-
 // Re-export SAV CHG save-confirmation feature (US-027)
 export {
   useSetupSavedConfirmation,
@@ -85,12 +79,7 @@ export {
   SETUP_SAVED_DURATION_MS,
 } from './features/save-changes';
 
-// Re-export AUX Fn hardware-absent dwell (`AUH Fn`, manual §6.2)
-export {
-  useAuxFnNoConn,
-  AUX_FN_NO_CONN_TEXT,
-  AUX_FN_DURATION_MS,
-} from './features/aux-fn';
+export { useAuxiliaryRuntime } from './features/aux-fn';
 
 // Re-export OEM Mode feature (US-044): password gate + custom-default capture
 export {
@@ -114,12 +103,6 @@ export {
   RESTORE_DURATION_MS,
 } from './features/restore-defaults';
 
-// Re-export reference / datum recall feature (US-012)
-export {
-  useReferenceMarkTestHook,
-  REFERENCE_MARK_HOOK,
-  MACHINE_REFERENCE_VALUES_MM,
-} from './features/reference';
 
 // Re-export bolt hole / arc / angle hole / grid / SDM types and guards
 export { isBoltHoleActive, isArcContourActive, isAngleHoleActive, isGridActive, isFnLedActive, isSdmActive } from './droStateMachine';

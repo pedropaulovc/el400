@@ -37,8 +37,8 @@ function setMillPosition(x: number, y: number, z: number): void {
 /** Navigate Fn -> PoLAr -> ENT to reach plane selection. */
 async function openPolarPlaneSelect(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('btn-function'));
-  // Menu ring: center -> circle -> line -> linear -> polar (4 right presses)
-  for (let i = 0; i < 4; i++) {
+  // Canonical top-level ring: CEntrE -> LinEAr -> PoLAr.
+  for (let i = 0; i < 2; i++) {
     await user.click(screen.getByTestId('key-6'));
   }
   expect(getAxisDisplayPureTextValue('X')).toBe('PoLAr');

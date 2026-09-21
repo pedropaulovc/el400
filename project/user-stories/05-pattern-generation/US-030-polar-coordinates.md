@@ -1,84 +1,45 @@
 # US-030: Polar Coordinates
 
-**Manual Reference:** Section 9.1.7 Polar Co-ordinates
-**Priority:** P4
-**Category:** Pattern Generation
+**Priority:** P4  
+**Category:** Pattern Generation  
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §9.1.7, pp. 58–59; [EL400 overview video](https://www.youtube.com/watch?v=7W47KPCu7jE) §2.13
 
 ## User Story
-**As a** milling operator
-**I want** to view positions in Polar coordinates (Radius/Angle)
-**So that** I can work with radial drawings
 
-## Acceptance Criteria
-- [x] **AC 30.1:** Press `Fn` -> navigate to `PoLAr`, press `ent↵`.
-- [x] **AC 30.2:** Select Plane: `H-Y` (XY horizontal), `H-Z` (XZ horizontal), or `Y-Z` (YZ vertical).
-- [x] **AC 30.3:** Display converts Cartesian (X,Y) coordinates to Polar (R, θ).
-- [x] **AC 30.4:** Radius (R) shows distance from origin.
-- [x] **AC 30.5:** Angle (θ) shows angle from reference axis.
-- [x] **AC 30.6:** Press `C` to exit polar mode and return to Cartesian.
+**As a** milling operator  
+**I want** a live radius/angle view in any principal plane  
+**So that** I can inspect positions defined in polar coordinates
 
-## E2E Test Scenarios
-```typescript
-describe('US-030: Polar Coordinates', () => {
-  test('Convert to polar coordinates on XY plane', async () => {
-    // Set position X=3, Y=4 (should be R=5, θ≈53.13°)
-    await dro.simulateEncoderAbsoluteMove('X', 3.0);
-    await dro.simulateEncoderAbsoluteMove('Y', 4.0);
+## Target Acceptance Criteria
 
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('PoLAr');
-    await dro.pressKey('ENT');
+- [x] **AC30.1:** Set any required Cartesian axis values before entry. Press Fn, navigate the top-level ring `CEntrE` → `LinEAr` → `PoLAr`, and press ENT.
+- [x] **AC30.2:** 4/6 cycles the three plane choices and ENT accepts one. Seven-segment `h-Y`, `h-Z`, and `Y-Z` represent the manual's X-Y, X-Z, and Y-Z planes.
+- [x] **AC30.3:** In X-Y, X displays radius and Y displays angle; in X-Z, X displays radius and Z displays angle; in Y-Z, Y displays radius and Z displays angle. The unused axis is blank.
+- [x] **AC30.4:** Radius is the Euclidean magnitude of the selected Cartesian coordinate pair before radius/diameter readout scaling, converted to the current linear unit. Angle is `atan2(second-axis, first-axis)` after applying each axis's Direction/Z-depth orientation, in degrees; inch/mm selection does not change it. Diameter settings do not distort this geometry. The manual does not specify the diameter interaction; this is the simulator's explicit convention.
+- [x] **AC30.5:** Radius and angle update live as either selected physical axis moves; entering Polar does not change the stored Cartesian coordinates.
+- [x] **AC30.6:** C exits and restores the live Cartesian X/Y/Z display with its prior mode and unit.
 
-    // Select XY plane
-    await dro.selectMenuOption('H-Y');
-    await dro.pressKey('ENT');
+## Operator Procedure and Independent Oracles
+These examples use radius mode and oriented Cartesian readings of `(3, 4)`, not unconditionally positive raw encoder travel:
 
-    // Display should show polar coordinates
-    await expect(dro.display.radius).toHaveValue(5.000);
-    await expect(dro.display.angle).toBeCloseTo(53.13, 1);
-  });
 
-  test('Exit polar mode returns to Cartesian', async () => {
-    // In polar mode
-    await dro.pressKey('Fn');
-    await dro.selectMenuOption('PoLAr');
-    await dro.pressKey('ENT');
-    await dro.selectMenuOption('H-Y');
-    await dro.pressKey('ENT');
+- X-Y with X=`3`, Y=`4`: X radius=`5.0000`, Y angle=`53.1301`, Z blank.
+- X-Z with X=`3`, Z=`4`: X radius=`5.0000`, Z angle=`53.1301`, Y blank.
+- Y-Z with Y=`3`, Z=`4`: Y radius=`5.0000`, Z angle=`53.1301`, X blank.
 
-    // Exit
-    await dro.pressKey('C');
+While X-Y is active, changing X from 3 to 4 with Y=4 must update the display to radius `5.6569`, angle `45.0000`. Exit must reveal Cartesian `(4,4)` unchanged by the view transformation.
 
-    // Should return to Cartesian display
-    await expect(dro.display.xAxis).toBeVisible();
-    await expect(dro.display.yAxis).toBeVisible();
-  });
-});
-```
+## Verification
 
-## Implementation Notes
-- Plane labels render as `h-Y` / `h-Z` / `Y-Z`. The seven-segment display has no
-  uppercase `H` glyph (only lowercase `h`), so the AC's "H-" prefix is shown as
-  `h-`. A `Z` glyph (sharing the `2` segment pattern, as on real 7-segment
-  hardware) was added to `SevenSegmentDigit` to render the Z-plane labels.
-- Per manual §9.1.7, R is shown on the first plane axis and θ on the second:
-  X-Y → R on X / θ on Y; X-Z → R on X / θ on Z; Y-Z → R on Y / θ on Z.
-- Converts Cartesian (X, Y, Z) to Polar (R, θ)
-- Useful for radial machining operations
-- Supports three planes: XY, XZ, YZ
-- Calculations:
-  - R = sqrt(X² + Y²)
-  - θ = atan2(Y, X)
-- Display updates in real-time as position changes
-- Does not change the actual coordinate system, only display format
+The headed pattern pass supersedes the baseline's unverified shortened route. It verified `CEntrE` → `LinEAr` → `PoLAr`, all three plane labels and mappings, independent 3-4-5 oracles, live X-Y updates, Cartesian restoration, and radius conversion between millimetres and inches while the angle remained in degrees. Movement used visible debug physical-millimetre controls; no physical encoder was exercised.
+
+See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
+
+## Automated coverage
+
+[`e2e/05-pattern-generation/US-030-polar-coordinates.spec.ts`](../../../e2e/05-pattern-generation/US-030-polar-coordinates.spec.ts) exercises all three physical plane pairs and live movement.
 
 ## Related Stories
-- US-016: Bolt Circle Drilling (uses polar concepts)
-- US-017: Bolt Circle Drilling - Arc
-- US-003: Absolute vs Incremental Mode
 
-## Notes
-- New story from G-021 (Gemini-only)
-- Assigned ID US-030 to continue Claude numbering sequence
-- Priority P4 to match other pattern generation/milling stories
-- Could also be categorized as "Auxiliary" but placed in Pattern Generation for consistency
+- US-016 / US-017: radial geometry expressed as target positions
+- US-003 / US-004: Cartesian mode and linear-unit preservation

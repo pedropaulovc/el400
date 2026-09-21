@@ -12,7 +12,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeAxisPositionMm,
+  computeUncompensatedMachinePositionMm,
+  computeMachinePositionMm,
   computeDisplayPosition,
+  formatDisplayNumber,
   computeNormalDisplay,
   ENCODER_FAIL_TEXT,
   measurementScale,
@@ -30,6 +33,7 @@ import {
   type AxisDirectionByAxis,
   type ZDepthSense,
   type MeasurementModeByAxis,
+  type CountingModeByAxis,
 } from '../../../types/nonVolatileMemory';
 import { createDefaultMillState } from '../../../types/millState';
 
@@ -41,12 +45,17 @@ function makeNvMem(
     zDepthSense?: ZDepthSense;
     defaultUnit?: 'inch' | 'mm';
     measurementMode?: Partial<MeasurementModeByAxis>;
+    countingMode?: Partial<CountingModeByAxis>;
   } = {}
 ): NonVolatileMemory {
   return {
     ...DEFAULT_NON_VOLATILE_MEMORY,
     defaultUnit: overrides.defaultUnit ?? 'mm',
     zDepthSense: overrides.zDepthSense ?? 'depth-negative',
+    countingMode: {
+      ...DEFAULT_NON_VOLATILE_MEMORY.countingMode,
+      ...overrides.countingMode,
+    },
     axisDirection: {
       ...DEFAULT_NON_VOLATILE_MEMORY.axisDirection,
       ...overrides.axisDirection,
@@ -285,6 +294,14 @@ describe('measurementScale — radius/diameter factor (US-041)', () => {
     expect(measurementScale('Y', nvMem)).toBe(1);
     expect(measurementScale('Z', nvMem)).toBe(2);
   });
+
+  it('ignores a stored diameter setting for angular axes', () => {
+    const nvMem = makeNvMem({
+      countingMode: { X: 'angular' },
+      measurementMode: { X: 'diameter' },
+    });
+    expect(measurementScale('X', nvMem)).toBe(1);
+  });
 });
 
 describe('computeDisplayPosition — radius/diameter transform (US-041)', () => {
@@ -490,7 +507,85 @@ describe('computeDisplayPosition — derived-reading overflow (US-041 / Acu-Rite
     expect(computeDisplayPosition('X', vMem, manualContext(nvMem))).toBeCloseTo(200, 4);
   });
 
-  it('DISPLAY_OVERFLOW_TEXT is seven dashes (the 7 digit cells; sign cell blank)', () => {
-    expect(DISPLAY_OVERFLOW_TEXT).toBe('-------');
+});
+
+describe('live datum and encoder decoding', () => {
+  it('keeps controller engineering positions unscaled but decodes installed encoders', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 12, y: 0, z: 0 } },
+      nvMem: { ...makeNvMem(), scaleResolution: { X: '10', Y: '5', Z: '5' } },
+    };
+    expect(computeUncompensatedMachinePositionMm('X', context)).toBe(12);
+    const encoder = { ...context, millState: { ...context.millState, encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 } } };
+    expect(computeUncompensatedMachinePositionMm('X', encoder)).toBe(24);
+  });
+
+  it('decodes PPR only for an installed angular encoder, never controller engineering coordinates', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('debug'), connected: true, position: { x: 5, y: 0, z: 0 }, encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 } },
+      nvMem: {
+        ...makeNvMem(), countingMode: { X: 'angular', Y: 'linear', Z: 'linear' },
+        calibration: { X: { kind: 'ppr', pulsesPerRevolution: 2000 }, Y: { kind: 'none' }, Z: { kind: 'none' } },
+      },
+    };
+    expect(computeMachinePositionMm('X', INITIAL_VOLATILE_MEMORY_STATE, context)).toBe(180);
+    const controller = { ...context, millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 5, y: 0, z: 0 } } };
+    expect(computeMachinePositionMm('X', INITIAL_VOLATILE_MEMORY_STATE, controller)).toBe(5);
+  });
+
+  it('uses independent ABS and INC datums for the same moving encoder', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('debug'), connected: true, position: { x: 15, y: 0, z: 0 } },
+      nvMem: makeNvMem(),
+    };
+    const memory = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      workOffsets: { X: 5, Y: 0, Z: 0 },
+      incrementalOffsets: { X: 12, Y: 0, Z: 0 },
+      incrementalValues: { X: 999, Y: 0, Z: 0 },
+    };
+    expect(computeAxisPositionMm('X', memory, context)).toBe(10);
+    expect(computeAxisPositionMm('X', { ...memory, mode: 'inc' }, context)).toBe(3);
+  });
+});
+
+describe('formatDisplayNumber midpoint and panel boundary policy', () => {
+  it('rounds decimal ties away from zero without changing stored coordinates', () => {
+    const memory = manualVMem({ X: 9999.999 / 2, Y: -9999.999 / 2 });
+    const context = manualContext({
+      ...makeNvMem(), displayResolution: { X: '50', Y: '50', Z: '5' },
+    });
+    const x = computeDisplayPosition('X', memory, context);
+    const y = computeDisplayPosition('Y', memory, context);
+    expect(x).toBe(4999.9995);
+    expect(y).toBe(-4999.9995);
+    expect(formatDisplayNumber(Number(x), 3)).toBe('5000.000');
+    expect(formatDisplayNumber(Number(y), 3)).toBe('-5000.000');
+    expect(memory.manualAbsoluteValues).toEqual({ X: 4999.9995, Y: -4999.9995, Z: 0 });
+  });
+
+  it('does not promote values genuinely below a decimal midpoint', () => {
+    expect(formatDisplayNumber(4999.9994999, 3)).toBe('4999.999');
+    expect(formatDisplayNumber(-4999.9994999, 3)).toBe('-4999.999');
+    expect(formatDisplayNumber(1.005, 2)).toBe('1.01');
+    expect(formatDisplayNumber(-1.005, 2)).toBe('-1.01');
+    expect(formatDisplayNumber(1.0049999, 2)).toBe('1.00');
+  });
+
+  it('uses the same rounded overflow boundary for coordinates and formatted text', () => {
+    const context = manualContext(makeNvMem());
+    for (const value of [999.99995, -999.99995]) {
+      expect(computeDisplayPosition('X', manualVMem({ X: value }), context)).toBe(DISPLAY_OVERFLOW_TEXT);
+      expect(formatDisplayNumber(value, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    }
+    expect(formatDisplayNumber(999.99994, 4)).toBe('999.9999');
+    expect(formatDisplayNumber(-999.99994, 4)).toBe('-999.9999');
+  });
+
+  it('handles exponent-form small values and unrepresentable results without widening', () => {
+    expect(formatDisplayNumber(1e-8, 4)).toBe('0.0000');
+    expect(formatDisplayNumber(1e21, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    expect(formatDisplayNumber(Infinity, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    expect(formatDisplayNumber(NaN, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
   });
 });

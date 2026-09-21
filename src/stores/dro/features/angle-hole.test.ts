@@ -81,6 +81,7 @@ describe('angleHoleReducer', () => {
           endAngle: null,
           holeCount: null,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         },
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
         display: INITIAL_DISPLAY_STATE,
@@ -175,6 +176,7 @@ describe('angleHoleReducer', () => {
         expect(result.stateData.lineAngle).toBe(30);
       }
       expect(result?.display.X).toBe('hoLES');
+      expect(result?.display.Y).toBe('0');
     });
 
     it('should normalize line angle to 0-359 range', () => {
@@ -265,7 +267,7 @@ describe('angleHoleReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should floor fractional hole count values', () => {
+    it('should reject fractional and non-finite hole counts', () => {
       const state: DROStatePayload = {
         stateName: 'angle-hole-holes',
         stateData: {
@@ -279,9 +281,42 @@ describe('angleHoleReducer', () => {
         display: INITIAL_DISPLAY_STATE,
       };
 
-      const result = angleHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      if (result?.stateData.stateDataType === 'angle-hole') {
-        expect(result.stateData.holeCount).toBe(6);
+      expect(
+        angleHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)
+      ).toBeNull();
+      expect(
+        angleHoleReducer(
+          {
+            ...state,
+            vMem: { ...state.vMem, inputBuffer: '9'.repeat(400) },
+          },
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
+    });
+
+    it('should reject non-finite values at every numeric parameter boundary', () => {
+      const states = [
+        'angle-hole-start-x',
+        'angle-hole-start-y',
+        'angle-hole-pitch',
+        'angle-hole-angle',
+      ] satisfies DROStateName[];
+
+      for (const stateName of states) {
+        const state: DROStatePayload = {
+          stateName,
+          stateData: INITIAL_ANGLE_HOLE_DATA,
+          vMem: {
+            ...INITIAL_VOLATILE_MEMORY_STATE,
+            inputBuffer: '9'.repeat(400),
+          },
+          display: INITIAL_DISPLAY_STATE,
+        };
+        expect(
+          angleHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)
+        ).toBeNull();
       }
     });
 
@@ -557,41 +592,89 @@ describe('angleHoleReducer', () => {
       }
     });
 
-    it('shows current hole number in buffer with KEY_8_UP', () => {
-      const result = angleHoleReducer(navState, { eventName: 'KEY_8_UP' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.vMem.inputBuffer).toBe('1');
+    it('toggles the visible current-hole number with KEY_8_UP', () => {
+      const shown = angleHoleReducer(navState, { eventName: 'KEY_8_UP' }, DEFAULT_TEST_CONTEXT);
+      expect(shown).toMatchObject({
+        stateData: {
+          stateDataType: 'angle-hole',
+          navigationPhase: 'current-number',
+        },
+        display: { X: 'hoLES', Y: '1' },
+      });
+
+      const restored = angleHoleReducer(
+        shown!,
+        { eventName: 'KEY_8_UP' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(restored).toMatchObject({
+        stateData: {
+          stateDataType: 'angle-hole',
+          navigationPhase: 'distance-to-go',
+        },
+      });
     });
 
-    it('clears buffer with KEY_2_DOWN (prepare for jump)', () => {
-      const seeded = { ...navState, vMem: { ...navState.vMem, inputBuffer: '99' } };
-      const result = angleHoleReducer(seeded, { eventName: 'KEY_2_DOWN' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.vMem.inputBuffer).toBe('');
+    it('shows jump input and treats arrow keys as digits in that phase', () => {
+      const request = angleHoleReducer(
+        navState,
+        { eventName: 'KEY_2_DOWN' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      expect(request.display).toMatchObject({ X: 'hoLES', Y: '0' });
+
+      const entered = angleHoleReducer(
+        request,
+        { eventName: 'KEY_4_LEFT' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      expect(entered.vMem.inputBuffer).toBe('4');
+      expect(entered.display.Y).toBe('4');
+
+      const jumped = angleHoleReducer(
+        entered,
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(jumped).toMatchObject({
+        stateName: 'angle-hole-navigate',
+        stateData: {
+          stateDataType: 'angle-hole',
+          currentHole: 4,
+          navigationPhase: 'distance-to-go',
+        },
+      });
     });
 
-    it('jumps to specific hole with buffered number and ENTER', () => {
-      const jump = { ...navState, vMem: { ...navState.vMem, inputBuffer: '4' } };
-      const result = angleHoleReducer(jump, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      if (result?.stateData.stateDataType === 'angle-hole') {
-        expect(result.stateData.currentHole).toBe(4);
-      }
-      expect(result?.vMem.inputBuffer).toBe('');
+    it('rejects fractional and out-of-range jump targets', () => {
+      const jumpState = (inputBuffer: string): DROStatePayload => ({
+        ...navState,
+        stateData: {
+          ...(navState.stateData as typeof INITIAL_ANGLE_HOLE_DATA),
+          navigationPhase: 'jump-entry',
+        },
+        vMem: { ...navState.vMem, inputBuffer },
+      });
+      expect(
+        angleHoleReducer(
+          jumpState('4.5'),
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
+      expect(
+        angleHoleReducer(
+          jumpState('7'),
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
     });
 
-    it('rejects jump to hole number less than 1', () => {
-      const jump = { ...navState, vMem: { ...navState.vMem, inputBuffer: '0' } };
-      const result = angleHoleReducer(jump, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      expect(result).toBeNull();
-    });
-
-    it('rejects jump to hole number greater than hole count', () => {
-      const jump = { ...navState, vMem: { ...navState.vMem, inputBuffer: '7' } };
-      const result = angleHoleReducer(jump, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-      expect(result).toBeNull();
-    });
-
-    it('accepts digit input in navigate state', () => {
-      const result = angleHoleReducer(navState, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.vMem.inputBuffer).toBe('3');
+    it('ignores digit input until jump entry is requested', () => {
+      expect(
+        angleHoleReducer(navState, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT)
+      ).toBeNull();
     });
 
     it('returns null for unhandled event in navigate state', () => {

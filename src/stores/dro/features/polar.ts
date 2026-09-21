@@ -29,6 +29,7 @@ import {
   computeAxisPositionMm,
   computeNormalDisplay,
   createDisplay,
+  directionSign,
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
@@ -81,7 +82,9 @@ function computePolarDisplay(
 
   const radiusMm = Math.hypot(a, b);
   const radius = fromMmToAnyUnit(radiusMm, context.nvMem.defaultUnit);
-  const angleDeg = (Math.atan2(b, a) * 180) / Math.PI;
+  const angleA = a * directionSign(radiusAxis, context.nvMem);
+  const angleB = b * directionSign(angleAxis, context.nvMem);
+  const angleDeg = (Math.atan2(angleB, angleA) * 180) / Math.PI;
 
   const display: Record<Axis, DisplayState[Axis]> = { X: '', Y: '', Z: '' };
   display[radiusAxis] = radius;

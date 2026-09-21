@@ -33,6 +33,7 @@ export class DebugMillAdapter implements MillAdapter {
   private state: MillState = {
     ...createDefaultMillState('debug'),
     controllerType: 'debug',
+    encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 },
   };
 
   constructor() {
@@ -50,6 +51,7 @@ export class DebugMillAdapter implements MillAdapter {
       const mpos = state.status?.mpos ?? [0, 0, 0];
       const pn = state.status?.pn ?? '';
 
+      const previous = this.state.position;
       this.updateState({
         position: {
           x: mpos[0] ?? 0,
@@ -60,6 +62,17 @@ export class DebugMillAdapter implements MillAdapter {
         encoderSignal: state.encoderSignal ?? { ...DEFAULT_ENCODER_SIGNAL },
         connected: true,
       });
+      // The simulated encoder index is at physical +10 mm on each scale.
+      // Publish after the position update so reference capture sees the live
+      // endpoint, including a move that overshoots the index.
+      const axes = ['X', 'Y', 'Z'] as const;
+      for (const axis of axes) {
+        const from = axis === 'X' ? previous.x : axis === 'Y' ? previous.y : previous.z;
+        const to = axis === 'X' ? this.state.position.x : axis === 'Y' ? this.state.position.y : this.state.position.z;
+        if ((from < 10 && to >= 10) || (from > 10 && to <= 10)) {
+          this.dispatch?.({ eventName: 'ENCODER_REF_MARK_CROSSED', axis, markPositionMm: 10 });
+        }
+      }
     });
 
     // Immediately set connected state

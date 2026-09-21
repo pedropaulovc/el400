@@ -3,11 +3,9 @@ import { test, expect } from '../helpers/fixtures';
 /**
  * E2E Tests: US-040 Setup Menu — Counting Mode (Linear vs Angular)
  *
- * Drives the feature end to end through real user actions: the counting-mode
- * change goes through the real setup menu (`dro.setAxisCountingMode`, no window
- * hooks / forced state), and table motion is emitted via the mock CNCjs server's
- * relative-move endpoint (`dro.simulateTableMove`, the same MILL_STATE_CHANGED
- * path a physical jog uses).
+ * Drives the feature through visible controls on the debug source: counting-mode
+ * changes use the real setup transaction and physical motion uses the debug
+ * position controls through the same MILL_STATE_CHANGED path as an adapter.
  *
  * Covers AC 40.1 (default LinEAr), AC 40.2 (◄/► toggle), AC 40.4 (angular axes
  * read degrees, wrapping at a full revolution), AC 40.5 (per-axis), AC 40.7
@@ -16,9 +14,9 @@ import { test, expect } from '../helpers/fixtures';
  * @see project/user-stories/06-configuration/US-040-counting-mode.md
  */
 test.describe('US-040: Counting Mode (Linear vs Angular)', () => {
-  // Setup-menu counting-mode changes commit to persisted nvMem; run serially so
-  // parallel workers do not race on shared localStorage.
-  test.describe.configure({ mode: 'serial' });
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
 
   test('AC 40.1 / 40.2: default is LinEAr; ► toggles to AnGULAr and ◄ back', async ({ dro }) => {
     await dro.settingsButton.click();
@@ -37,6 +35,7 @@ test.describe('US-040: Counting Mode (Linear vs Angular)', () => {
 
   test('AC 40.4: an AnGULAr axis reads degrees and wraps at a full revolution', async ({ dro }) => {
     await dro.setAxisCountingMode('X', 'AnGULAr');
+    await dro.reload();
 
     // Datum the angular axis at the current encoder position, then rotate. The
     // default angular format (dd.mn) renders degrees as "dd.mn" (e.g. 0 -> "0.00").

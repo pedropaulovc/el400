@@ -7,8 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import { calculatorReducer } from './calculator';
 import type { DROStatePayload } from '../types';
-import { INITIAL_DRO_STATE_DATA, INITIAL_CALCULATOR_DATA } from '../droStateMachine';
-import type { CalculatorData } from '../droStateMachine';
+import {
+  INITIAL_DRO_STATE_DATA,
+  INITIAL_CALCULATOR_DATA,
+  type CalculatorData,
+  type DROEventPayload,
+} from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
@@ -27,14 +31,27 @@ function stateWithBuffer(
   };
 }
 
+/** Drive the exported reducer through keypad events, as the store does. */
+function runCalculatorEvents(events: DROEventPayload[]): DROStatePayload {
+  let state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+  for (const event of events) {
+    const nextState = calculatorReducer(state, event, DEFAULT_TEST_CONTEXT);
+    if (nextState === null) throw new Error(`Calculator ignored ${event.eventName}`);
+    state = nextState;
+  }
+  return state;
+}
+
 describe('calculatorReducer', () => {
   describe('entering calculator mode', () => {
-    it('should transition from idle to calculator-idle on BTN_CALCULATOR', () => {
-      const state = createTestState('idle');
+    it('starts calculator mode with a clean numeric entry', () => {
+      const state = stateWithBuffer('idle', INITIAL_DRO_STATE_DATA, '12.5');
       const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('calculator-idle');
       expect(result?.stateData).toEqual(INITIAL_CALCULATOR_DATA);
+      expect(result?.vMem.inputBuffer).toBe('');
+      expect(result?.display.X).toBe(0);
     });
 
     it('should return null for non-calculator states', () => {
@@ -45,12 +62,13 @@ describe('calculatorReducer', () => {
   });
 
   describe('exiting calculator mode', () => {
-    it('should exit to idle on BTN_CALCULATOR', () => {
-      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
+    it('exits to idle without leaking an unfinished calculator entry', () => {
+      const state = stateWithBuffer('calculator-idle', INITIAL_CALCULATOR_DATA, '9.75');
       const result = calculatorReducer(state, { eventName: 'BTN_CALCULATOR' }, DEFAULT_TEST_CONTEXT);
 
       expect(result?.stateName).toBe('idle');
       expect(result?.stateData).toEqual(INITIAL_DRO_STATE_DATA);
+      expect(result?.vMem.inputBuffer).toBe('');
     });
   });
 
@@ -72,6 +90,8 @@ describe('calculatorReducer', () => {
 
       expect(result?.stateName).toBe('calculator-idle');
       expect(result?.stateData).toEqual(INITIAL_CALCULATOR_DATA);
+      expect(result?.vMem.inputBuffer).toBe('');
+      expect(result?.display.X).toBe(0);
     });
   });
 
@@ -136,6 +156,8 @@ describe('calculatorReducer', () => {
       const result = calculatorReducer(state, { eventName: 'BTN_SELECT_Y' }, DEFAULT_TEST_CONTEXT);
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.firstValue).toBe(7);
+      expect(result?.vMem.inputBuffer).toBe('99');
+      expect(result?.display.X).toBe('99');
     });
 
     it('should ignore BTN_SELECT_X in calculator mode (returns null)', () => {
@@ -180,7 +202,7 @@ describe('calculatorReducer', () => {
       expect(result?.stateName).toBe('calculator-idle');
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.currentValue).toBe(6.25);
-      expect(calcData.firstValue).toBeNull();
+      expect(calcData.firstValue).toBe(6.25);
       expect(calcData.operation).toBeNull();
     });
 
@@ -259,6 +281,136 @@ describe('calculatorReducer', () => {
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.currentValue).toBe('inF vAL');
     });
+
+    it('reuses a completed result as the first operand of the next operation', () => {
+      const completed = createTestState('calculator-idle', {
+        stateDataType: 'calculator',
+        firstValue: 46,
+        operation: null,
+        currentValue: 46,
+      });
+      const selected = calculatorReducer(
+        completed,
+        { eventName: 'BTN_SELECT_Y' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      const result = calculatorReducer(
+        { ...selected, vMem: { ...selected.vMem, inputBuffer: '56' } },
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+
+      expect((result?.stateData as CalculatorData).currentValue).toBe(102);
+      expect((result?.stateData as CalculatorData).firstValue).toBe(102);
+    });
+
+    it('uses a fresh entry as the first operand after a completed calculation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_3' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'KEY_4_LEFT' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(5);
+    });
+
+    it('uses an entry after ENT as the first operand of a selected operation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_5' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'KEY_3' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(5);
+    });
+
+    it('chains the completed result when selecting an operation with no fresh entry', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_2_DOWN' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_3' },
+        { eventName: 'KEY_ENTER' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_1' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(16);
+    });
+
+    it('retains the pending second operand while cycling the operation', () => {
+      const result = runCalculatorEvents([
+        { eventName: 'KEY_7' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_9' },
+        { eventName: 'KEY_9' },
+        { eventName: 'BTN_SELECT_Y' },
+        { eventName: 'KEY_ENTER' },
+      ]);
+
+      expect((result.stateData as CalculatorData).currentValue).toBe(-92);
+    });
+
+    it('shows inF vAL instead of an inaccurate unrepresentable finite result', () => {
+      const state = stateWithBuffer(
+        'calculator-multi',
+        {
+          stateDataType: 'calculator',
+          firstValue: 99_999_999,
+          operation: 'MULTI',
+          currentValue: 99_999_999,
+        },
+        '99999999'
+      );
+      const result = calculatorReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+      expect((result?.stateData as CalculatorData).currentValue).toBe('inF vAL');
+      expect(result?.display.X).toBe('inF vAL');
+    });
+
+    it('accepts the four-decimal upper boundary but rejects rounding past it', () => {
+      const within = calculatorReducer(
+        stateWithBuffer(
+          'calculator-add',
+          {
+            stateDataType: 'calculator',
+            firstValue: 999.99994,
+            operation: 'ADD',
+            currentValue: 999.99994,
+          },
+          '0'
+        ),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      const beyond = calculatorReducer(
+        stateWithBuffer(
+          'calculator-add',
+          {
+            stateDataType: 'calculator',
+            firstValue: 999.99995,
+            operation: 'ADD',
+            currentValue: 999.99995,
+          },
+          '0'
+        ),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+
+      expect((within?.stateData as CalculatorData).currentValue).toBe(999.99994);
+      expect((beyond?.stateData as CalculatorData).currentValue).toBe('inF vAL');
+    });
   });
 
   describe('edge cases', () => {
@@ -320,11 +472,34 @@ describe('calculatorReducer', () => {
       expect((second?.stateData as CalculatorData).currentValue).toBe(20);
     });
 
-    it('should handle digit input in calculator state (calculatorReducer owns digits)', () => {
-      const state = createTestState('calculator-idle', INITIAL_CALCULATOR_DATA);
-      const result = calculatorReducer(state, { eventName: 'KEY_5' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('calculator-idle');
-      expect(result?.vMem.inputBuffer).toBe('5');
+    it('renders the complete pending binary-entry editing path literally', () => {
+      const state = createTestState('calculator-add', {
+        stateDataType: 'calculator',
+        firstValue: 12,
+        operation: 'ADD',
+        currentValue: 12,
+      });
+
+      let result = calculatorReducer(state, { eventName: 'KEY_1' }, DEFAULT_TEST_CONTEXT)!;
+      expect(result.vMem.inputBuffer).toBe('1');
+      expect(result.display).toEqual({ X: '1', Y: 'Add', Z: '' });
+
+      result = calculatorReducer(result, { eventName: 'KEY_DECIMAL' }, DEFAULT_TEST_CONTEXT)!;
+      expect(result.vMem.inputBuffer).toBe('1.');
+      expect(result.display.X).toBe('1.');
+
+      result = calculatorReducer(result, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT)!;
+      result = calculatorReducer(result, { eventName: 'KEY_0' }, DEFAULT_TEST_CONTEXT)!;
+      expect(result.vMem.inputBuffer).toBe('1.00');
+      expect(result.display.X).toBe('1.00');
+
+      result = calculatorReducer(result, { eventName: 'KEY_SIGN' }, DEFAULT_TEST_CONTEXT)!;
+      expect(result.vMem.inputBuffer).toBe('-1.00');
+      expect(result.display).toEqual({ X: '-1.00', Y: 'Add', Z: '' });
+
+      result = calculatorReducer(result, { eventName: 'KEY_CLEAR' }, DEFAULT_TEST_CONTEXT)!;
+      expect(result.vMem.inputBuffer).toBe('');
+      expect(result.display.X).toBe(0);
     });
 
     it('should append digit 6 (KEY_6_RIGHT is just a digit, not operation cycling)', () => {
@@ -469,11 +644,11 @@ describe('calculatorReducer', () => {
       expect((result?.stateData as CalculatorData).currentValue).toBe(0);
     });
 
-    it('should clear operation and firstValue after computing', () => {
+    it('keeps the trig result ready for a following mixed chain', () => {
       const result = computeTrig('calculator-sin', 'SIN', '30');
       const calcData = result?.stateData as CalculatorData;
       expect(calcData.operation).toBeNull();
-      expect(calcData.firstValue).toBeNull();
+      expect(calcData.firstValue).toBeCloseTo(0.5, 4);
     });
 
     it('should use currentValue when buffer empty (chain on previous result)', () => {

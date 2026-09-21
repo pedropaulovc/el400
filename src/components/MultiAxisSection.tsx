@@ -4,8 +4,9 @@ import Axis, { type AxisDisplayValue } from "./Axis";
 import { useDisplayX, useDisplayY, useDisplayZ, useProbeTriggered, useIsAsleep } from "../stores/droStore";
 import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/settingsStore";
 import { useSleepTimer } from "../stores/dro/features/sleep";
-import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useAuxFnNoConn, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
+import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSetupSavedConfirmation, useAuxiliaryRuntime, useOemRejectedDismiss, useRestoreProgress, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
+import { formatDisplayNumber } from "../stores/dro/utils/displayComputation";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -27,7 +28,8 @@ const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
   // dP display resolution (US-022): render numeric values to this axis's decimal
   // count; keep text values (menu labels) as-is.
   const decimals = useAxisDisplayDecimals(axis);
-  const formatted = typeof value === 'number' ? value.toFixed(decimals) : value;
+  const isAsleep = useIsAsleep();
+  const formatted = isAsleep ? '' : typeof value === 'number' ? formatDisplayNumber(value, decimals) : value;
   return (
     <tr>
       <th scope="row">{axis}</th>
@@ -63,23 +65,16 @@ const MultiAxisSection = () => {
   // Arc contour intro timing - auto-advances after delay
   useArcContourIntro(dispatch, droState);
 
-  // SDM intro timing - auto-advances after delay (US-009)
-  useSdmIntro(dispatch, droState);
-
   // SAV CHG save-confirmation timing - auto-returns to setup after delay (US-027)
   useSetupSavedConfirmation(dispatch, droState);
 
-  // AUX Fn `no Conn` dwell - auto-returns to setup after delay (`AUH Fn`, §6.2)
-  useAuxFnNoConn(dispatch, droState);
+  useAuxiliaryRuntime();
 
   // OEM Mode wrong-password flash - auto-returns to setup after delay (US-044)
   useOemRejectedDismiss(dispatch, droState);
 
   // Restore Defaults `IN ProG` dwell - auto-returns to idle after delay (US-028)
   useRestoreProgress(dispatch, droState);
-
-  // Reference-mark crossing hook for E2E (US-012)
-  useReferenceMarkTestHook(dispatch);
 
   // Near-Zero Warning (US-024): plays the continuous beep while an axis is within
   // BP DIST of zero; returns whether the visual indicator should show.
@@ -93,7 +88,7 @@ const MultiAxisSection = () => {
   // Touch-probe trigger indication (US-032, AC 32.8): lights when a probe
   // contact is captured during a probe function.
   const probeTriggered = useProbeTriggered();
-  // Display sleep state (US-026): dims the readout and flashes the wrench LED.
+  // Display sleep state (US-026): blanks the readout and flashes the wrench LED.
   const isAsleep = useIsAsleep();
 
   const isAbs = mode === 'abs';
@@ -106,7 +101,7 @@ const MultiAxisSection = () => {
         <div
           data-testid="display-panel"
           data-display-power={isAsleep ? 'asleep' : 'awake'}
-          // US-026: when asleep the readout dims (display switched off, note *4).
+          // US-026: digits are blank while asleep; the panel retains its dimmed LEDs.
           className={`p-4 rounded-lg h-full flex flex-col${isAsleep ? ' sleeping opacity-10 transition-opacity' : ' transition-opacity'}`}
           style={{
             background: 'linear-gradient(180deg, #080808 0%, #030303 100%)',

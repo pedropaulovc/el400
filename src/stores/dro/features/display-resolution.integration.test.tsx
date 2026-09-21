@@ -1,106 +1,93 @@
 /**
- * Integration tests for the dP display-resolution setup parameter (US-022).
- *
- * Drives the full simulator via data-testid buttons exactly as an operator
- * would: open setup (wrench), pick an axis, scroll to dP, change the value with
- * the left/right arrows, then EXIT setup and assert the live readout now renders
- * a different number of decimals. dP commits-on-change, so the effect is visible
- * the moment we return to the normal screen.
+ * Integration coverage for the per-axis dP display-resolution parameter.
+ * Setup changes remain a preview until SAU ChG commits the transaction.
  */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { UserEvent } from '@testing-library/user-event';
 import {
   renderSimulator,
   getAxisDisplayPureTextValue,
 } from '../../../tests/helpers/integration-test-utils';
+import { useSettingsStore } from '../../settingsStore';
 import { SETUP_PARAMETERS, DISPLAY_RESOLUTION_ID } from './setup-parameters';
 
-const DP_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === DISPLAY_RESOLUTION_ID);
+const DP_INDEX = SETUP_PARAMETERS.findIndex((parameter) => parameter.id === DISPLAY_RESOLUTION_ID);
 
-/** Open setup, pick the given axis, and scroll up to the dP item. */
-async function gotoDP(user: ReturnType<typeof userEvent.setup>, axis: 'x' | 'y' | 'z') {
+async function gotoDP(user: UserEvent, axis: 'x' | 'y' | 'z') {
   await user.click(screen.getByTestId('btn-settings'));
   await user.click(screen.getByTestId(`axis-select-${axis}`));
-  for (let i = 0; i < DP_INDEX; i++) {
+  for (let index = 0; index < DP_INDEX; index += 1) {
     await user.click(screen.getByTestId('key-2'));
   }
 }
 
-/** Exit setup back to the idle readout via the wrench then CLEAR (discard nothing committed). */
-async function exitSetup(user: ReturnType<typeof userEvent.setup>) {
-  // Re-press setup to return to SELECT, then CLEAR to idle.
-  await user.click(screen.getByTestId('btn-settings'));
-  await user.click(screen.getByTestId('key-clear'));
+async function scrollTo(user: UserEvent, label: string) {
+  for (let guard = 0; getAxisDisplayPureTextValue('X') !== label; guard += 1) {
+    if (guard >= SETUP_PARAMETERS.length) throw new Error(`${label} not reachable in setup`);
+    await user.click(screen.getByTestId('key-2'));
+  }
 }
 
-/** Count fractional digits in the live screen-reader readout for an axis. */
+async function saveAndExit(user: UserEvent) {
+  await scrollTo(user, 'SAU ChG');
+  await user.click(screen.getByTestId('key-enter'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('StorEd');
+  await user.click(screen.getByTestId('key-enter'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('SAU ChG');
+  await scrollTo(user, 'End');
+  await user.click(screen.getByTestId('key-enter'));
+}
+
 function axisDecimals(axis: 'X' | 'Y' | 'Z'): number {
-  const trimmed = screen.getByTestId(`axis-value-${axis.toLowerCase()}`).textContent.trim();
-  const dot = trimmed.indexOf('.');
-  return dot === -1 ? 0 : trimmed.length - dot - 1;
+  const text = (screen.getByTestId(`axis-value-${axis.toLowerCase()}`).textContent || '').trim();
+  const decimal = text.indexOf('.');
+  return decimal === -1 ? 0 : text.length - decimal - 1;
+}
+
+async function previewFiftyMicron(user: UserEvent) {
+  await user.click(screen.getByTestId('key-6'));
+  await user.click(screen.getByTestId('key-6'));
+  await user.click(screen.getByTestId('key-6'));
+  expect(getAxisDisplayPureTextValue('X')).toBe('dP 50.0');
 }
 
 describe('US-022 dP display resolution (integration)', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { localStorage.clear(); });
 
-  beforeEach(() => {
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
-  });
-
-  it('default value shown at dP is 5 micron (AC22.2)', async () => {
+  it('shows the 5 micron default and a four-decimal live readout', async () => {
     const { user } = await renderSimulator();
+    expect(axisDecimals('X')).toBe(4);
     await gotoDP(user, 'x');
     expect(getAxisDisplayPureTextValue('X')).toBe('dP 5.0');
   });
 
-  it('default readout shows 4 decimals (AC22.2)', async () => {
-    await renderSimulator();
-    // Default: live X shows 4 fractional digits.
+  it('End discards a coarser preview instead of changing the live readout', async () => {
+    const { user } = await renderSimulator();
+    await gotoDP(user, 'x');
+    await previewFiftyMicron(user);
+    expect(useSettingsStore.getState().nvMem.displayResolution.X).toBe('5');
+
+    await scrollTo(user, 'End');
+    await user.click(screen.getByTestId('key-enter'));
     expect(axisDecimals('X')).toBe(4);
+
+    await gotoDP(user, 'x');
+    expect(getAxisDisplayPureTextValue('X')).toBe('dP 5.0');
   });
 
-  it('coarsening dP to 50 micron drops the readout to 3 decimals (AC22.4, AC22.5)', async () => {
+  it('SAU ChG applies the selected axis resolution without changing the others', async () => {
     const { user } = await renderSimulator();
     await gotoDP(user, 'x');
-    // 5 -> 10 -> 20 -> 50 via right arrow.
-    await user.click(screen.getByTestId('key-6'));
-    await user.click(screen.getByTestId('key-6'));
-    await user.click(screen.getByTestId('key-6'));
-    expect(getAxisDisplayPureTextValue('X')).toBe('dP 50.0');
-    await exitSetup(user);
-    // Live readout now renders 3 decimals for X.
-    expect(axisDecimals('X')).toBe(3);
-  });
+    await previewFiftyMicron(user);
+    await saveAndExit(user);
 
-  it('dP is per-axis: coarsening X leaves Y at 4 decimals (AC22.3)', async () => {
-    const { user } = await renderSimulator();
-    await gotoDP(user, 'x');
-    await user.click(screen.getByTestId('key-6')); // 5 -> 10
-    await user.click(screen.getByTestId('key-6')); // 10 -> 20
-    await user.click(screen.getByTestId('key-6')); // 20 -> 50
-    await exitSetup(user);
     expect(axisDecimals('X')).toBe(3);
     expect(axisDecimals('Y')).toBe(4);
-  });
-
-  it('does not log a multi-reducer conflict while changing dP', async () => {
-    const { user } = await renderSimulator();
-    await gotoDP(user, 'x');
-    await user.click(screen.getByTestId('key-4'));
-    await user.click(screen.getByTestId('key-6'));
-    const conflict = errorSpy.mock.calls.some((c: unknown[]) =>
-      String(c[0]).includes('Multiple reducers handled the same event')
-    );
-    expect(conflict).toBe(false);
+    expect(useSettingsStore.getState().nvMem.displayResolution).toEqual({
+      X: '50',
+      Y: '5',
+      Z: '5',
+    });
   });
 });

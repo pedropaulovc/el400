@@ -1,168 +1,52 @@
 # US-013: Basic Calculator Functions
 
-**Priority:** P3
-**Category:** Calculations
-**Manual Reference:** MATH CALCULATIONS (lines 265-286)
+**Priority:** P3  
+**Category:** Calculations  
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §7.6, pp. 31–32 (calculator selection and illustrated chained calculation); display text table, p. 86 (`Add`, `SUb`, `mULtI`, `dIv`, `inF uAL`)
 
 ## User Story
 
-**As a** machine operator
-**I want** to perform basic math calculations
-**So that** I can compute dimensions without external tools
+**As a** machine operator  
+**I want** to perform and chain calculations on the DRO  
+**So that** I can compute dimensions without leaving the machine
 
-## Acceptance Criteria
+## Target Acceptance Criteria
 
-- [ ] AC13.1: Pressing calculator key activates calculator mode
-- [ ] AC13.2: Pressing calculator key again exits calculator mode
-- [ ] AC13.3: Can perform ADD (addition)
-- [ ] AC13.4: Can perform SUB (subtraction)
-- [ ] AC13.5: Can perform MULTI (multiplication)
-- [ ] AC13.6: Can perform DIV (division)
-- [ ] AC13.7: Pressing Y key cycles through functions
-- [ ] AC13.8: Results display in X window
-- [ ] AC13.9: Pressing +/- key changes sign
-- [ ] AC13.10: Pressing ENT displays result
+- [x] **AC13.1:** Press Calculator to enter calculator mode; press Calculator again to leave it. Entry does not alter the current ABS/INC or inch/mm selection, and exit restores the continuously updated live axis display rather than writing the calculator result into machine position.
+- [x] **AC13.2:** The X window accepts the first operand. Pressing Y cycles in order through `Add`, `SUb`, `mULtI`, `dIv`, then the six functions in US-014.
+- [x] **AC13.3:** For a binary operation, selecting the operation commits the displayed first operand, the keypad enters the second operand, and ENT displays the result in X.
+- [x] **AC13.4:** Addition, subtraction, multiplication, and division use ordinary operand order. Operator checks include `2.5 + 3.75 = 6.2500`, `10 - 3.5 = 6.5000`, `2.5 × 4 = 10.0000`, and `10 ÷ 4 = 2.5000`.
+- [x] **AC13.5:** `+/-` changes the sign of the value currently being entered.
+- [x] **AC13.6:** A displayed result can be the first operand of the next operation without leaving calculator mode. The manual chain `12 + 34 = 46`, then `+ 56`, must produce `102.0000`.
+- [x] **AC13.7:** Arithmetic can also consume a trig result without leaving calculator mode. For example, `cos(30°)`, then `× 7`, produces `6.0622` at four-decimal display precision.
+- [x] **AC13.8:** Calculator values retain the simulator's four-decimal rendering contract.
+- [x] **AC13.9:** Division by zero, a non-finite result, or a finite result that cannot be represented accurately in the calculator display is reported as `inF vAL`; it must not silently display a rounded or incorrect integer as exact.
+- [x] **AC13.10:** C clears the displayed input and resets the whole active calculation. Press Calculator to leave calculator mode. Neither action changes the live DRO position.
 
-## E2E Test Scenarios
+## Operator Procedure and Oracles
 
-```typescript
-describe('US-013: Basic Calculator Functions', () => {
-  test('activate calculator mode', async ({ page }) => {
-    await page.goto('/');
+1. Press Calculator.
+2. Enter the first value in X.
+3. Press Y until the required operation is shown.
+4. Enter the second value and press ENT.
+5. To chain, press Y to choose the next operation while the result is still displayed, enter the next value, and press ENT.
+6. Press Calculator again to return to the live DRO.
 
-    await page.click('[data-testid="calculator-button"]');
+In addition to the chain above, use `99999999 × 99999999` as a finite-range guard: JavaScript's nearby rounded value must not be presented as an exact calculator result.
 
-    // Calculator mode active (may show indicator)
-    await expect(page.locator('[data-testid="calculator-indicator"]')).toBeVisible();
-  });
+## Verification
 
-  test('add 2.5 + 3.75 = 6.25', async ({ page }) => {
-    await page.goto('/');
+The headed calculation pass verified arithmetic and trig chaining, finite-representability and divide-by-zero errors, four-decimal results, recovery, and restoration of the live DRO. A later center-repair session exposed a separate calculator input defect: typed digits were buffered but not displayed and survived exit and re-entry. The targeted calculator recheck supersedes that failure. It showed each literal state from `1` through signed `-12.500`, preservation during debug movement and polling, clean state after exit and re-entry, visible second-operand entry, and `12.50 + 3.250 = 15.7500`. It also confirmed that C resets the entire calculation: after clearing a pending addition, a fresh `4 + 1` produced `5.0000`.
 
-    // Activate calculator
-    await page.click('[data-testid="calculator-button"]');
+Targeted rechecks covered the repaired input, recovery, and operand-chaining paths. They complement the earlier headed calculation pass rather than independently repeating every arithmetic example at one source checkpoint. See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
 
-    // Enter first value 2.5 in X window
-    await page.evaluate(() => window.enterValue('2.5'));
+Headed movement used the simulator's visible debug controls, not physical encoders or machine hardware. No installed screen-reader speech was assessed.
 
-    // Select ADD function
-    await page.click('[data-testid="y-axis-button"]'); // Cycles to ADD
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('ADD');
+## Automated coverage
 
-    // Enter second value 3.75 (or press ENT and enter)
-    await page.evaluate(() => window.enterValue('3.75'));
-
-    // Press ENT to calculate
-    await page.click('[data-testid="ent-button"]');
-
-    // Result in X window
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('6.25');
-  });
-
-  test('subtract 10 - 3.5 = 6.5', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-
-    await page.evaluate(() => window.enterValue('10'));
-    await page.click('[data-testid="y-axis-button"]'); // Cycle to SUB
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('SUB');
-
-    await page.evaluate(() => window.enterValue('3.5'));
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('6.5');
-  });
-
-  test('multiply 2.5 × 4 = 10', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-
-    await page.evaluate(() => window.enterValue('2.5'));
-
-    // Cycle Y key to MULTI
-    await page.click('[data-testid="y-axis-button"]');
-    await page.click('[data-testid="y-axis-button"]');
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('MULTI');
-
-    await page.evaluate(() => window.enterValue('4'));
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('10');
-  });
-
-  test('divide 10 ÷ 4 = 2.5', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-
-    await page.evaluate(() => window.enterValue('10'));
-
-    // Cycle Y key to DIV
-    await page.click('[data-testid="y-axis-button"]');
-    await page.click('[data-testid="y-axis-button"]');
-    await page.click('[data-testid="y-axis-button"]');
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('DIV');
-
-    await page.evaluate(() => window.enterValue('4'));
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('2.5');
-  });
-
-  test('change sign of value', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-
-    // Enter positive value
-    await page.evaluate(() => window.enterValue('5.5'));
-
-    // Change sign
-    await page.click('[data-testid="plus-minus-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('-5.5');
-
-    // Change back
-    await page.click('[data-testid="plus-minus-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('5.5');
-  });
-
-  test('exit calculator mode', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-    await expect(page.locator('[data-testid="calculator-indicator"]')).toBeVisible();
-
-    // Exit calculator
-    await page.click('[data-testid="calculator-button"]');
-
-    await expect(page.locator('[data-testid="calculator-indicator"]')).not.toBeVisible();
-  });
-});
-```
-
-## Implementation Notes
-
-- **Calculator mode**: Separate from normal DRO operation
-- **Display usage**:
-  - X window: Shows input values and results
-  - Y window: Shows selected function (ADD, SUB, MULTI, DIV)
-  - Z window: May show intermediate values
-- **Function cycling**: Y key cycles through math functions
-- **Operation flow**:
-  1. Enter first value
-  2. Select function (press Y repeatedly)
-  3. Enter second value
-  4. Press ENT for result
-- **Sign change**: +/- key toggles sign before or after entry
-- **Precision**: Maintains 4 decimal places
-- **Error handling**: Division by zero, overflow
+[`e2e/04-calculations/US-013-basic-calculator.spec.ts`](../../../e2e/04-calculations/US-013-basic-calculator.spec.ts) exercises the calculator controls. US-014 owns the direct trig and domain scenarios used by the mixed-chain criterion.
 
 ## Related Stories
 
-- US-014: Trigonometric Calculator Functions (extends calculator with trig)
-- US-010: SDM Direct Entry (calculator useful for coordinate calculations)
-- US-013 through US-020: Pattern macros (may need calculations for parameters)
+- US-014: Trigonometric Calculator Functions
+- US-003 / US-004: mode and unit state preserved while calculator is active

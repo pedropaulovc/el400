@@ -65,7 +65,7 @@ test.describe('US-017: Bolt Hole Arc', () => {
     // Holes = 4
     await dro.waitForAxisPureTextValue('X', 'hoLES');
     await dro.enterNumber('4');
-    await dro.waitForAxisPureNumberValue('Y', 4);
+    await dro.waitForAxisPureNumberValue('Y', 4, 0, 500, 0);
     await dro.enterButton.click();
 
     // Switches to INC distance-to-go to hole 1 (0°) at (10, 0) from origin
@@ -95,6 +95,7 @@ test.describe('US-017: Bolt Hole Arc', () => {
    * Hole 1 (350°): X = 10*cos350 = 9.8481, Y = 10*sin350 = -1.7365
    */
   test('arc spanning across 0 degrees distributes holes correctly (AC17.10)', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     await dro.toggleUnitButton.click(); // mm
 
     await dro.page.click('[data-testid="btn-bolt-circle"]');

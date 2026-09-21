@@ -1,150 +1,47 @@
 # US-014: Trigonometric Calculator Functions
 
-**Priority:** P3
-**Category:** Calculations
-**Manual Reference:** MATH CALCULATIONS > Functions (lines 274-279)
+**Priority:** P3  
+**Category:** Calculations  
+**Manual reference:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §7.6, pp. 31–32; display text table, p. 86 (`S in`, `CoS`, `tAn`, `AS in`, `ACoS`, `AtAn`, `inF uAL`)
 
 ## User Story
 
-**As a** machine operator
-**I want** to calculate sine, cosine, tangent, and their inverses
-**So that** I can solve angular machining problems
+**As a** machine operator  
+**I want** degree-based trigonometric calculations on the DRO  
+**So that** I can solve angular machining problems without an external calculator
 
-## Acceptance Criteria
+## Target Acceptance Criteria
 
-- [ ] AC14.1: Can calculate SIN (sine)
-- [ ] AC14.2: Can calculate COS (cosine)
-- [ ] AC14.3: Can calculate TAN (tangent)
-- [ ] AC14.4: Can calculate ASIN (arcsine)
-- [ ] AC14.5: Can calculate ACOS (arccosine)
-- [ ] AC14.6: Can calculate ATAN (arctangent)
-- [ ] AC14.7: Trig functions accept angles in degrees
-- [ ] AC14.8: Inverse trig functions return degrees
-- [ ] AC14.9: Results maintain 4 decimal precision
+- [x] **AC14.1:** In calculator mode, repeated Y presses select SIN, COS, TAN, ASIN, ACOS, and ATAN after the four arithmetic operations.
+- [x] **AC14.2:** SIN, COS, and TAN interpret their input in degrees. Representative results are `sin(30°) = 0.5000`, `cos(60°) = 0.5000`, and `tan(45°) = 1.0000`.
+- [x] **AC14.3:** ASIN, ACOS, and ATAN return degrees. Representative results are `asin(0.5) = 30.0000`, `acos(0.5) = 60.0000`, and `atan(1) = 45.0000`.
+- [x] **AC14.4:** Results appear in X with the calculator's four-decimal rendering contract.
+- [x] **AC14.5:** Inputs outside the ASIN/ACOS domain and undefined tangent values such as 90° display `inF vAL`; a stale numeric result is not left on screen.
+- [x] **AC14.6:** A trig result remains available to the next operation in the same calculator session, as specified by US-013.
+- [x] **AC14.7:** Pressing Calculator exits and restores the live DRO without changing machine coordinates, ABS/INC, or inch/mm state.
 
-## E2E Test Scenarios
+## Operator Procedure
 
-```typescript
-describe('US-014: Trigonometric Calculator Functions', () => {
-  test('calculate sin(30) = 0.5000', async ({ page }) => {
-    await page.goto('/');
+1. Press Calculator and key the input in X.
+2. Press Y until the required function label appears.
+3. Press ENT; read the result in X.
+4. Either select another operation to chain from that result or press Calculator to exit.
 
-    // Activate calculator
-    await page.click('[data-testid="calculator-button"]');
+Angular values are degrees regardless of the linear inch/mm selection.
 
-    // Enter 30
-    await page.evaluate(() => window.enterValue('30'));
+## Verification
 
-    // Cycle Y to SIN function
-    await page.click('[data-testid="y-axis-button"]'); // cycle to SIN
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('SIN');
+The headed calculation pass verified degree-based trig chaining, four-decimal results, domain and tangent errors, C recovery, and restoration of the live DRO. The later calculator recheck, after the literal-entry repair, supersedes the input-display failure found during the center recheck. It visibly entered `30` and obtained `cos(30°) = 0.8660`, displayed `inF vAL` for `asin(1.1)`, then used C and obtained `atan(1) = 45.0000`.
 
-    // Calculate
-    await page.click('[data-testid="ent-button"]');
+The repaired input and recovery paths were rechecked; direct examples for every function were covered by the earlier headed pass rather than independently repeated at one source checkpoint. See the [verification evidence, source snapshots, and full-suite results](../README.md#verification).
 
-    // Result should be 0.5
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('0.5000');
-  });
+No installed screen-reader speech was assessed.
 
-  test('calculate cos(60) = 0.5000', async ({ page }) => {
-    await page.goto('/');
+## Automated coverage
 
-    await page.click('[data-testid="calculator-button"]');
-    await page.evaluate(() => window.enterValue('60'));
-
-    // Cycle to COS
-    await page.click('[data-testid="y-axis-button"]'); // cycle to COS
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('COS');
-
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('0.5000');
-  });
-
-  test('calculate tan(45) = 1.0000', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-    await page.evaluate(() => window.enterValue('45'));
-
-    // Cycle to TAN
-    await page.click('[data-testid="y-axis-button"]'); // cycle to TAN
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('TAN');
-
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('1.0000');
-  });
-
-  test('calculate asin(0.5) = 30 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-    await page.evaluate(() => window.enterValue('0.5'));
-
-    // Cycle to ASIN
-    await page.click('[data-testid="y-axis-button"]'); // cycle to ASIN
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('ASIN');
-
-    await page.click('[data-testid="ent-button"]');
-
-    // Result in degrees
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('30');
-  });
-
-  test('calculate acos(0.5) = 60 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-    await page.evaluate(() => window.enterValue('0.5'));
-
-    // Cycle to ACOS
-    await page.click('[data-testid="y-axis-button"]'); // cycle to ACOS
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('ACOS');
-
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('60');
-  });
-
-  test('calculate atan(1) = 45 degrees', async ({ page }) => {
-    await page.goto('/');
-
-    await page.click('[data-testid="calculator-button"]');
-    await page.evaluate(() => window.enterValue('1'));
-
-    // Cycle to ATAN
-    await page.click('[data-testid="y-axis-button"]'); // cycle to ATAN
-    await expect(page.locator('[data-testid="y-axis-display"]')).toContainText('ATAN');
-
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="x-axis-display"]')).toContainText('45');
-  });
-});
-```
-
-## Implementation Notes
-
-- **Angular units**: All angles in degrees, not radians
-- **Function list** (cycle through with Y key):
-  - ADD, SUB, MULTI, DIV (from US-013)
-  - SIN, COS, TAN
-  - ASIN, ACOS, ATAN
-- **Trig functions**: Take angle in degrees, return ratio
-  - sin(30°) = 0.5
-  - cos(60°) = 0.5
-  - tan(45°) = 1.0
-- **Inverse trig functions**: Take ratio, return angle in degrees
-  - asin(0.5) = 30°
-  - acos(0.5) = 60°
-  - atan(1) = 45°
-- **Precision**: Maintain 4 decimal places for ratios, degrees may be whole numbers
-- **Error handling**: Domain errors (asin > 1, acos > 1), tan(90°)
-- **Use cases**: Calculating coordinates on angles, verifying hole positions
+[`e2e/04-calculations/US-014-trig-functions.spec.ts`](../../../e2e/04-calculations/US-014-trig-functions.spec.ts) exercises the Calculator, Y, keypad, ENT, and display surfaces.
 
 ## Related Stories
 
-- US-013: Basic Calculator Functions (provides base calculator functionality)
-- US-019: Angle Hole Pattern (uses angles for hole placement)
-- US-020: Grid Drilling (supports rotated grids with angle parameter)
+- US-013: Basic Calculator Functions and chaining
+- US-019 / US-020: pattern geometry uses the same degree convention

@@ -9,6 +9,7 @@ import type { AxisValues, VolatileMemoryState } from '../../types/volatileMemory
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import type { DisplayState } from './utils/displayComputation';
 import { createDisplay } from './utils/displayComputation';
+import type { CalibrationEditor } from '../../types/calibration';
 
 /**
  * Model number displayed during boot sequence.
@@ -58,6 +59,7 @@ export type DROStateName =
   | 'boot-show-message'
   // Normal operation
   | 'idle'
+  | 'half-select'
   // Transitional toggle states
   | 'abs-inc-mode'
   // Function menu selection states
@@ -67,9 +69,19 @@ export type DROStateName =
   | 'function-menu-linear'
   | 'function-menu-polar'
   | 'function-menu-probe'
+  | 'function-menu-six-output'
+  | 'six-output-menu'
+  | 'six-output-program'
+  | 'six-output-run'
+  | 'auxiliary-menu'
+  | 'serial-active'
+  | 'serial-failed'
   // Touch probe function states (US-032)
   | 'probe-menu-function'
   | 'probe-diameter'
+  | 'probe-length'
+  | 'probe-coordinate'
+  | 'probe-edge-select'
   | 'probe-axis-select'
   | 'probe-waiting'
   | 'probe-result'
@@ -137,7 +149,6 @@ export type DROStateName =
   // Linear bolt hole states (US-029)
   | 'linear-bolt-hole-axis'
   | 'linear-bolt-hole-pitch'
-  | 'linear-bolt-hole-holes'
   | 'linear-bolt-hole-navigate'
   // Grid drilling states (US-020)
   | 'grid-intro'
@@ -150,7 +161,6 @@ export type DROStateName =
   | 'grid-holes-y'
   | 'grid-navigate'
   // Sub Datum Memory (SDM) states (US-009 Learn; extended by US-010/US-011)
-  | 'sdm-intro'
   | 'sdm-menu-program'
   | 'sdm-menu-learn'
   | 'sdm-menu-run'
@@ -176,9 +186,6 @@ export type DROStateName =
   | 'setup-parameter'
   // SAV CHG save-confirmation state (US-027) - shows StorEd, auto-returns to setup
   | 'setup-saved'
-  // AUX Fn hardware-absent dwell (§6.2 `AUH Fn`): shows `no Conn` because the
-  // optional DB15 auxiliary connector is not present, then auto-returns to setup.
-  | 'setup-aux-fn'
   // OEM Mode states (US-044): password-gated capture of a custom default baseline.
   // `oem-password` collects the code; `oem-mode` is the entered screen where ENT
   // stores the live config as nvMem.oemDefaults; `oem-rejected` flashes on a wrong
@@ -195,6 +202,8 @@ export type DROStateName =
   // Reference / Datum recall states (US-012)
   | 'reference-menu-home'
   | 'reference-menu-machine'
+  | 'reference-menu-set-machine'
+  | 'reference-set-machine-select'
   | 'reference-home-select'
   | 'reference-home-waiting'
   | 'reference-machine-select'
@@ -232,6 +241,9 @@ export type DROStateData =
   | TaperData
   | ReferenceData
   | ProbeData
+  | AuxiliaryData
+  | SixOutputData
+  | SerialData
   | DiagnosticsData;
 
 /** Compile-time assertion: all context types must extend BaseDROContext */
@@ -245,9 +257,13 @@ export interface EmptyData extends BaseDROStateData {
 
 export interface CenterFindingData extends BaseDROStateData {
   readonly stateDataType: 'center-finding';
+  captureStatus: 'ready' | 'invalid';
   storedPoints: StoredPoint[];
   centerResult: AxisValues | null;
 }
+
+/** Visible phase of a drilling-pattern navigation screen. */
+export type PatternNavigationPhase = 'distance-to-go' | 'current-number' | 'jump-entry';
 
 export interface BoltHoleData extends BaseDROStateData {
   readonly stateDataType: 'bolt-hole';
@@ -260,6 +276,7 @@ export interface BoltHoleData extends BaseDROStateData {
   endAngle: number | null;
   holeCount: number | null;
   currentHole: number;
+  navigationPhase: PatternNavigationPhase;
 }
 
 export interface AngleHoleData extends BaseDROStateData {
@@ -270,6 +287,7 @@ export interface AngleHoleData extends BaseDROStateData {
   lineAngle: number | null;
   holeCount: number | null;
   currentHole: number;
+  navigationPhase: PatternNavigationPhase;
 }
 
 export interface LinearBoltHoleData extends BaseDROStateData {
@@ -278,8 +296,6 @@ export interface LinearBoltHoleData extends BaseDROStateData {
   axis: 'X' | 'Y' | 'Z' | null;
   /** Spacing between holes, stored in mm (null until entered) */
   pitch: number | null;
-  /** Total number of holes in the pattern (null until entered) */
-  holeCount: number | null;
   /** 1-indexed current hole the user is navigating to */
   currentHole: number;
 }
@@ -294,6 +310,7 @@ export interface GridData extends BaseDROStateData {
   holesX: number | null;   // columns
   holesY: number | null;   // rows
   currentHole: number;     // 1-indexed, row-major
+  navigationPhase: Exclude<PatternNavigationPhase, 'jump-entry'>;
 }
 
 /**
@@ -322,7 +339,7 @@ export type SdmLearnPhase = 'awaiting-first-press' | 'step-shown';
  *
  * `points` is a sparse map keyed by 1-indexed step number; a step is only
  * present once a position has been stored for it. Each entry holds X/Y/Z
- * coordinates in millimetres (internal storage unit).
+ * display-frame coordinates: linear millimetres or angular degrees.
  */
 export interface SdmData extends BaseDROStateData {
   readonly stateDataType: 'sdm';
@@ -332,6 +349,8 @@ export interface SdmData extends BaseDROStateData {
   currentStep: number;
   /** Learn-mode two-press capture phase (unused outside learn states). */
   learnPhase: SdmLearnPhase;
+  navigationPhase: 'browse' | 'jump';
+  returnMode: 'abs' | 'inc';
 }
 
 /** Cut offset type for arc contouring (which side of the radius the tool runs). */
@@ -349,6 +368,7 @@ export interface ArcData extends BaseDROStateData {
   maxCut: number | null;
   pointCount: number | null;
   currentPoint: number;
+  navigationPhase: PatternNavigationPhase;
 }
 
 /** Binary calculator operations (require two operands) */
@@ -370,11 +390,13 @@ export interface CalculatorData extends BaseDROStateData {
 export interface PresetData extends BaseDROStateData {
   readonly stateDataType: 'preset';
   presetTargets: {
-    X: number | null;  // Target in mm (null = not set)
+    X: number | null;  // Relative target in linear mm or angular degrees (null = not set)
     Y: number | null;
     Z: number | null;
   };
   activeInputAxis: 'X' | 'Y' | 'Z' | null;
+  /** Signed display-frame coordinates in linear mm or angular degrees at execution. */
+  entryPosition: AxisValues;
 }
 
 /** Plane selected for polar coordinate display (US-030) */
@@ -397,23 +419,26 @@ export interface SetupData extends BaseDROStateData {
    * key. Committed only on SAU CHG exit (US-027); discarded on End (AC 39.8).
    */
   draftValues: Record<string, string>;
+  editor?: { phase: 'view' | 'input'; buffer: string };
+  calibrationEditor?: CalibrationEditor;
 }
 
 /**
  * OEM Mode context (US-044, manual §6.2 `oEm mod`).
  *
  * `passwordBuffer` accumulates the digit keys typed at the password prompt;
- * it is matched against the module-private OEM code on ENT. `returnParamIndex`
- * remembers which setup item (the `oEm mod` row) to re-highlight when the flow
- * returns to the menu, so entry/exit is transparent. The password is NEVER
- * stored here in cleartext beyond the live keystrokes the operator is typing.
+ * it is matched against the module-private OEM code on ENT. `setup` preserves
+ * the complete setup transaction while the password flow is active, so the
+ * selected axis, highlighted row, and uncommitted drafts survive the round
+ * trip. The password is NEVER stored here in cleartext beyond the live
+ * keystrokes the operator is typing.
  */
 export interface OemData extends BaseDROStateData {
   readonly stateDataType: 'oem';
   /** Digits typed so far at the password prompt (cleared on entry/exit). */
   passwordBuffer: string;
-  /** Setup param index of the `oEm mod` row, to restore on return to the menu. */
-  returnParamIndex: number;
+  /** Setup transaction to restore after accepting or rejecting the password. */
+  setup: SetupData;
 }
 
 export interface TaperData extends BaseDROStateData {
@@ -441,14 +466,8 @@ export interface TaperData extends BaseDROStateData {
  */
 export interface ReferenceData extends BaseDROStateData {
   readonly stateDataType: 'reference';
-  referenceMode: 'HOME' | 'MACHINE_RECALL';
+  referenceMode: 'HOME' | 'MACHINE_RECALL' | 'MACHINE_SET';
   selectedAxis: 'X' | 'Y' | 'Z' | null;
-  /**
-   * Machine position (mm) of the selected axis at the last sampled tick while
-   * waiting for the mark. Used to detect the jog segment crossing the encoder
-   * reference mark. null until an axis is selected.
-   */
-  markArmedFromPos: number | null;
 }
 
 /**
@@ -458,7 +477,7 @@ export interface ReferenceData extends BaseDROStateData {
  * - 'inside'   : Inside measurement - internal width = travel + probe diameter
  * - 'outside'  : Outside measurement - external width = travel - probe diameter
  */
-export type ProbeFunction = 'edge' | 'midpoint' | 'inside' | 'outside';
+export type ProbeFunction = 'edge' | 'midpoint' | 'inside' | 'outside' | 'config';
 
 /**
  * Touch probe function context (US-032, manual §10.1).
@@ -476,7 +495,13 @@ export interface ProbeData extends BaseDROStateData {
   probeAxis: 'X' | 'Y' | 'Z' | null;
   /** Probe tip diameter in mm (inside/outside compensation); 0 until entered. */
   probeDiameterMm: number;
-  /** Captured contact positions (mm) for the selected axis, in order. */
+  probeLengthMm: number;
+  edge: 'positive' | 'negative';
+  contactTimeMs: number;
+  /** Center coordinate in linear mm or angular degrees. */
+  centerMm: number | null;
+  resultView: 'width' | 'center';
+  /** Captured axis coordinates (linear mm or angular degrees), in order. */
   captures: number[];
   /** Computed measurement result in mm (inside/outside); null otherwise. */
   resultMm: number | null;
@@ -488,6 +513,29 @@ export interface ProbeData extends BaseDROStateData {
   lastProbeTriggered: boolean;
   /** True for one capture; drives the visual/audible trigger indication (AC 32.8). */
   probeTriggered: boolean;
+}
+
+export interface AuxiliaryData extends BaseDROStateData {
+  readonly stateDataType: 'auxiliary';
+  selection: 'probe' | 'outputs' | 'serial';
+  setup: SetupData;
+}
+
+export interface SixOutputData extends BaseDROStateData {
+  readonly stateDataType: 'six-output';
+  mode: 'program' | 'run';
+  phase: 'count' | 'select' | 'entry';
+  slot: number;
+  axis: 'X' | 'Y' | 'Z';
+  previous: AxisValues | null;
+  highUntil: number[];
+  outputs: ('low' | 'high')[];
+}
+
+export interface SerialData extends BaseDROStateData {
+  readonly stateDataType: 'serial';
+  sequence: number;
+  payload: string;
 }
 
 /** Stored point for center finding operations */
@@ -545,10 +593,9 @@ export type DROEventPayload =
   | { eventName: 'ARC_CONTOUR_INTRO_TIMEOUT' }
   | { eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' }
   | { eventName: 'GRID_INTRO_TIMEOUT' }
-  | { eventName: 'SDM_INTRO_TIMEOUT' }
   | { eventName: 'SETUP_SAVED_TIMEOUT' }
-  // AUX Fn `no Conn` dwell elapsed (§6.2 `AUH Fn`); dispatched by useAuxFnNoConn.
-  | { eventName: 'AUX_FN_TIMEOUT' }
+  | { eventName: 'AUXILIARY_TICK'; nowMs: number }
+  | { eventName: 'SERIAL_FAILURE' }
   // Wrong OEM password flash elapsed (US-044); dispatched by useOemRejectedDismiss.
   | { eventName: 'OEM_REJECTED_TIMEOUT' }
   // Restore Defaults dwell elapsed (US-028); dispatched by useRestoreProgress.
@@ -594,7 +641,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_SDM' }
   // Reference / Datum recall (US-012)
   | { eventName: 'BTN_REFERENCE' }
-  | { eventName: 'ENCODER_REF_MARK_CROSSED'; axis: 'X' | 'Y' | 'Z' };
+  | { eventName: 'ENCODER_REF_MARK_CROSSED'; axis: 'X' | 'Y' | 'Z'; markPositionMm: number };
 
 // ─────────────────────────────────────────────────────────────────
 // STATE HELPER FUNCTIONS
@@ -667,7 +714,9 @@ export const isFnLedActive = (s: DROStateName): boolean =>
   isGridActive(s) ||
   isPolarActive(s) ||
   isTaperActive(s) ||
-  isProbeActive(s);
+  isProbeActive(s) ||
+  s.startsWith('six-output-') ||
+  s.startsWith('serial-');
 
 /** Check if preset/distance-to-go mode is active */
 export const isPresetActive = (s: DROStateName): boolean =>
@@ -737,6 +786,7 @@ export const INITIAL_DRO_STATE_DATA: DROStateData = { stateDataType: 'none' };
 
 export const INITIAL_CENTER_FINDING_DATA: CenterFindingData = {
   stateDataType: 'center-finding',
+  captureStatus: 'ready',
   storedPoints: [],
   centerResult: null,
 };
@@ -758,6 +808,7 @@ export const INITIAL_BOLT_HOLE_DATA: BoltHoleData = {
   endAngle: null,
   holeCount: null,
   currentHole: 1,
+  navigationPhase: 'distance-to-go',
 };
 
 export const INITIAL_ARC_DATA: ArcData = {
@@ -772,6 +823,7 @@ export const INITIAL_ARC_DATA: ArcData = {
   maxCut: null,
   pointCount: null,
   currentPoint: 1,
+  navigationPhase: 'distance-to-go',
 };
 
 export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
@@ -782,13 +834,13 @@ export const INITIAL_ANGLE_HOLE_DATA: AngleHoleData = {
   lineAngle: null,
   holeCount: null,
   currentHole: 1,
+  navigationPhase: 'distance-to-go',
 };
 
 export const INITIAL_LINEAR_BOLT_HOLE_DATA: LinearBoltHoleData = {
   stateDataType: 'linear-bolt-hole',
   axis: null,
   pitch: null,
-  holeCount: null,
   currentHole: 1,
 };
 
@@ -802,14 +854,17 @@ export const INITIAL_GRID_DATA: GridData = {
   holesX: null,
   holesY: null,
   currentHole: 1,
+  navigationPhase: 'distance-to-go',
 };
 
 export const INITIAL_SDM_DATA: SdmData = {
   stateDataType: 'sdm',
-  sdmMode: 'LEARN',
+  sdmMode: 'PROGRAM',
   points: {},
   currentStep: 1,
   learnPhase: 'awaiting-first-press',
+  navigationPhase: 'browse',
+  returnMode: 'abs',
 };
 
 export const INITIAL_PRESET_DATA: PresetData = {
@@ -820,6 +875,7 @@ export const INITIAL_PRESET_DATA: PresetData = {
     Z: null,
   },
   activeInputAxis: null,
+  entryPosition: { X: 0, Y: 0, Z: 0 },
 };
 
 export const INITIAL_POLAR_DATA: PolarData = {
@@ -837,7 +893,7 @@ export const INITIAL_SETUP_DATA: SetupData = {
 export const INITIAL_OEM_DATA: OemData = {
   stateDataType: 'oem',
   passwordBuffer: '',
-  returnParamIndex: 0,
+  setup: { ...INITIAL_SETUP_DATA, draftValues: {} },
 };
 
 export const INITIAL_TAPER_DATA: TaperData = {
@@ -851,7 +907,6 @@ export const INITIAL_REFERENCE_DATA: ReferenceData = {
   stateDataType: 'reference',
   referenceMode: 'HOME',
   selectedAxis: null,
-  markArmedFromPos: null,
 };
 
 export const INITIAL_PROBE_DATA: ProbeData = {
@@ -859,6 +914,11 @@ export const INITIAL_PROBE_DATA: ProbeData = {
   probeFunction: 'edge',
   probeAxis: null,
   probeDiameterMm: 0,
+  probeLengthMm: 0,
+  edge: 'positive',
+  contactTimeMs: -Infinity,
+  centerMm: null,
+  resultView: 'width',
   captures: [],
   resultMm: null,
   lastProbeTriggered: false,

@@ -1,100 +1,173 @@
 import { test, expect } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
 
-/**
- * E2E Tests: US-032 Touch Probe (manual §10.1)
- *
- * Probe contacts are fired through the mock CNCjs server's probe-trigger /
- * probe-clear endpoints, which set the GRBL `pn` pin state and broadcast
- * controller:state. The REAL CncjsMillAdapter parses that pin state into
- * MillState.probe.triggered and dispatches MILL_STATE_CHANGED - the same path a
- * physical probe input takes. No window hooks or forced state.
- *
- * @see project/user-stories/07-auxiliary/US-032-touch-probe.md
- */
-test.describe('US-032: Touch Probe', () => {
-  /**
-   * AC 32.4 / 32.7 / 32.8 / 32.10: Probe Edge sets the axis datum at the contact
-   * edge, lights the trigger indicator, and exits on C.
-   */
-  test('Probe Edge sets the axis datum at the contact', async ({ dro }) => {
-    await dro.toggleInchMm(); // work in mm
-    expect(await dro.isMmUnits()).toBe(true);
+async function configureProbe(dro: DROPage, diameter: string, length: string) {
+  await dro.openProbeMenu();
+  await dro.key4.click(); // edge -> ConFiG
+  await dro.waitForAxisPureTextValue('X', 'ConFiG');
+  await dro.enterButton.click();
+  await dro.enterNumber(diameter);
+  await dro.enterButton.click();
+  await dro.waitForAxisPureTextValue('X', 'Prb LEn');
+  await dro.enterNumber(length);
+  await dro.enterButton.click();
+  await dro.clearButton.click();
+}
+async function selectFunction(dro: DROPage, rightPresses: number) {
+  await dro.openProbeMenu();
+  for (let index = 0; index < rightPresses; index++) await dro.key6.click();
+  await dro.enterButton.click();
+  await dro.xButton.click();
+}
+async function twoContacts(dro: DROPage, first: number, second: number) {
+  await dro.simulateEncoderAbsoluteMove('X', first);
+  await dro.simulateProbeContact();
+  await dro.simulateProbeClear();
+  // Respect the configured one-second hardware debounce before a new contact.
+  await dro.page.waitForTimeout(1100);
+  await dro.simulateEncoderAbsoluteMove('X', second);
+  await dro.simulateProbeContact();
+}
 
-    // Fn -> ProbE -> ENT -> (Edge default) ENT -> select X.
-    await dro.openProbeMenu();
-    await dro.enterButton.click(); // confirm Edge
-    await dro.xButton.click(); // axis X
-    expect(await dro.isFnModeActive()).toBe(true);
-
-    // Approach the edge at X=50, then make contact.
-    await dro.simulateEncoderAbsoluteMove('X', 50.0);
+test.describe('US-032 touch probe', () => {
+  test('CNCjs probe contact anchors the entered datum rather than silently zeroing', async ({ dro }) => {
+    await dro.toggleInchMm();
+    await selectFunction(dro, 0);
+    await dro.enterButton.click(); // Edge1
+    await dro.simulateEncoderAbsoluteMove('X', 50);
     await dro.simulateProbeContact();
-
-    // Datum set: X reads 0 at the edge.
-    await dro.waitForAxisValue('X', 0.0);
-    // Visual indication on trigger (AC 32.8).
-    await expect(dro.page.getByTestId('led-probe').locator('span').first()).toHaveClass(/text-red-400/);
-
-    // C exits the probe function (AC 32.10).
+    await dro.enterNumber('7');
+    await dro.enterButton.click();
+    await dro.waitForAxisValue('X', 7);
     await dro.clearButton.click();
     expect(await dro.isFnModeActive()).toBe(false);
   });
 
-  /**
-   * AC 32.6: Inside diameter = travel + probe tip diameter.
-   * Edges at X=10 and X=60 with a 6 mm probe -> (60-10)+6 = 56 mm.
-   */
-  test('Inside diameter measurement adds the probe diameter', async ({ dro }) => {
+  test('debug probe configuration persists and edge datum compensates diameter and length', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     await dro.toggleInchMm();
-
-    await dro.openProbeMenu();
-    // Cycle edge -> midpoint -> inside.
-    await dro.key6.click();
-    await dro.key6.click();
-    await dro.waitForAxisPureTextValue('X', 'inS dE');
+    await configureProbe(dro, '6', '20');
+    await dro.page.reload();
+    await selectFunction(dro, 0);
     await dro.enterButton.click();
-
-    // Enter 6 mm probe tip diameter.
-    await dro.waitForAxisPureTextValue('X', 'Prb d A');
-    await dro.enterNumber('6');
-    await dro.enterButton.click();
-    await dro.xButton.click();
-
-    // First inside wall at X=10.
-    await dro.simulateEncoderAbsoluteMove('X', 10.0);
+    await dro.simulateEncoderAbsoluteMove('X', 50);
     await dro.simulateProbeContact();
+    await dro.enterNumber('5');
+    await dro.enterButton.click();
+    await dro.waitForAxisValue('X', 2); // surface53 has desired coordinate5
     await dro.simulateProbeClear();
-
-    // Opposite wall at X=60.
-    await dro.simulateEncoderAbsoluteMove('X', 60.0);
+    await dro.clearButton.click();
+    await dro.openProbeMenu();
+    await dro.enterButton.click();
+    await dro.zButton.click();
+    await dro.key6.click(); // Edge2, negative approach
+    await dro.enterButton.click();
+    await dro.simulateEncoderAbsoluteMove('Z', 50);
     await dro.simulateProbeContact();
-
-    // Inside diameter = (60 - 10) + 6 = 56 mm.
-    await dro.waitForAxisValue('X', 56.0);
+    await dro.enterButton.click(); // surface30 is zero
+    await dro.waitForAxisValue('Z', 20);
   });
 
-  /**
-   * AC 32.2 / 32.3: Freeze mode halts the display on contact and resumes after
-   * the probe clears. Configured via the `dro F` DRO type (URL seeded).
-   */
-  test('Freeze mode halts the display on probe contact', async ({ dro }) => {
-    await dro.goto({ probeDroType: 'freeze' });
+  test('debug midpoint ignores held contacts and applies a nonzero requested midpoint', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     await dro.toggleInchMm();
-
-    // Normal counting up to X=25.
-    await dro.simulateEncoderAbsoluteMove('X', 25.0);
-    await dro.waitForAxisValue('X', 25.0);
-
-    // Probe contact freezes the display.
+    await selectFunction(dro, 1);
+    await dro.simulateEncoderAbsoluteMove('X', 10);
     await dro.simulateProbeContact();
-    await dro.waitForAxisValue('X', 25.0);
-
-    // Continue moving while triggered: display stays frozen at 25.
-    await dro.simulateEncoderAbsoluteMove('X', 30.0);
-    await dro.waitForAxisValue('X', 25.0);
-
-    // Probe clears: counting resumes at the current position.
+    await dro.simulateEncoderAbsoluteMove('X', 50); // still held, not second contact
+    await expect(dro.simulatorRoot).toHaveAttribute('data-dro-state', 'probe-waiting');
     await dro.simulateProbeClear();
-    await dro.waitForAxisValue('X', 30.0);
+    await dro.page.waitForTimeout(1100);
+    await dro.simulateProbeContact();
+    await dro.enterNumber('8');
+    await dro.enterButton.click();
+    await dro.simulateProbeClear();
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 8);
+    await dro.clearButton.click();
+    await dro.waitForAxisValue('X', 8);
+  });
+
+  for (const flow of [{ label: 'inside', steps: 2, width: 56 }, { label: 'outside', steps: 3, width: 44 }]) {
+    test(`debug ${flow.label} shows width and center`, async ({ dro }) => {
+      await dro.goto({ source: 'debug', skipBootMessage: true });
+      await dro.toggleInchMm();
+      await configureProbe(dro, '6', '0');
+      await selectFunction(dro, flow.steps);
+      await twoContacts(dro, 10, 60);
+      await dro.waitForAxisValue('X', flow.width);
+      await dro.key6.click();
+      await dro.waitForAxisValue('X', 35);
+      await dro.waitForAxisPureTextValue('Z', 'CEntrE');
+      await dro.key4.click();
+      await dro.waitForAxisValue('X', flow.width);
+      await dro.clearButton.click();
+    });
+  }
+
+  test('probe delay rejects out-of-range settings and ignores a fresh contact before the saved delay', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.toggleInchMm();
+    await dro.settingsButton.click();
+    await dro.xButton.click();
+    for (let i = 0; i < 45 && (await dro.getAxisRawText('X')) !== 'Prb dLY'; i++) await dro.key2.click();
+    await dro.waitForAxisPureTextValue('X', 'Prb dLY');
+    for (const invalid of ['0', '61']) {
+      await dro.enterButton.click(); // view
+      await dro.enterButton.click(); // edit
+      await dro.enterNumber(invalid);
+      await dro.enterButton.click();
+      await dro.waitForAxisPureTextValue('X', 'Error');
+      await dro.clearButton.click(); // cancel this edit, stay on delay row
+    }
+    await dro.enterButton.click();
+    await dro.enterButton.click();
+    await dro.enterNumber('2');
+    await dro.enterButton.click();
+    for (let i = 0; i < 45 && (await dro.getAxisRawText('X')) !== 'SAU ChG'; i++) await dro.key2.click();
+    await dro.waitForAxisPureTextValue('X', 'SAU ChG');
+    await dro.enterButton.click();
+    await dro.enterButton.click(); // dismiss StorEd
+    await dro.clearButton.click();
+    await selectFunction(dro, 1);
+    await dro.simulateEncoderAbsoluteMove('X', 10);
+    await dro.simulateProbeContact();
+    await dro.simulateProbeClear();
+    await dro.simulateEncoderAbsoluteMove('X', 50);
+    await dro.simulateProbeContact();
+    await expect(dro.simulatorRoot).toHaveAttribute('data-dro-state', 'probe-waiting');
+    await dro.page.waitForTimeout(2100);
+    await expect(dro.simulatorRoot).toHaveAttribute('data-dro-state', 'probe-waiting'); // held through expiry
+    await dro.simulateProbeClear();
+    await dro.simulateProbeContact();
+    await expect(dro.simulatorRoot).toHaveAttribute('data-dro-state', 'probe-coordinate');
+    await dro.enterButton.click();
+    await dro.simulateProbeClear();
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 0);
+  });
+
+  test('debug T flashes without datum mutation; freeze resumes and rearms after release', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+    await dro.toggleInchMm();
+    await dro.simulateEncoderAbsoluteMove('X', 25);
+    await dro.simulateProbeContact();
+    await dro.waitForAxisPureTextValue('X', 'ProbE');
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 30, 2000);
+    await dro.goto({ source: 'debug', skipBootMessage: true, probeDroType: 'freeze' });
+    if (!(await dro.isMmUnits())) await dro.toggleInchMm();
+    await dro.simulateEncoderAbsoluteMove('X', 25);
+    await dro.simulateProbeContact();
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 25);
+    await dro.simulateProbeClear();
+    await dro.waitForAxisValue('X', 30);
+    await dro.page.waitForTimeout(1100);
+    await dro.simulateProbeContact();
+    await dro.simulateEncoderAbsoluteMove('X', 40);
+    await dro.waitForAxisValue('X', 30);
+    await dro.simulateProbeClear();
+    await dro.waitForAxisValue('X', 40);
   });
 });

@@ -1,6 +1,10 @@
+import { Profiler } from 'react';
+import { act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@/tests/helpers/render-utils';
 import userEvent from '@testing-library/user-event';
+import { useDROStore } from '@/stores/droStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import DROButton from './DROButton';
 
 describe('DROButton', () => {
@@ -89,6 +93,62 @@ describe('DROButton', () => {
       
       expect(handleClick).toHaveBeenCalledTimes(1);
     });
+    it('honors an explicitly disabled control', async () => {
+      const user = userEvent.setup();
+      const handleClick = vi.fn();
+
+      render(
+        <DROButton title="Unavailable action" disabled onClick={handleClick}>
+          Unavailable
+        </DROButton>
+      );
+      const button = screen.getByRole('button', { name: 'Unavailable' });
+
+      expect(button).toBeDisabled();
+      await user.click(button);
+      expect(handleClick).not.toHaveBeenCalled();
+    });
+
+    it('does not let disabled=false bypass the saved lock policy', () => {
+      const { rerender } = render(
+        <DROButton title="Physical control" disabled={false}>
+          Physical
+        </DROButton>
+      );
+
+      act(() => {
+        useSettingsStore.getState().updateNvMem({ keypadLock: 'on' });
+      });
+      expect(screen.getByRole('button', { name: 'Physical' })).toBeDisabled();
+
+      rerender(
+        <DROButton
+          title="Setup access"
+          disabled={false}
+          keypadLockBehavior="setup-access"
+        >
+          Setup
+        </DROButton>
+      );
+      expect(screen.getByRole('button', { name: 'Setup' })).toBeEnabled();
+    });
+
+    it('does not rerender for unlocked state changes outside setup', () => {
+      const onRender = vi.fn();
+      render(
+        <Profiler id="dro-button" onRender={onRender}>
+          <DROButton title="Stable control">Stable</DROButton>
+        </Profiler>
+      );
+      expect(onRender).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        useDROStore.setState({ stateName: 'calculator-idle' });
+      });
+
+      expect(onRender).toHaveBeenCalledTimes(1);
+    });
+
 
     it('does not call onClick if not provided', async () => {
       const user = userEvent.setup();

@@ -1,177 +1,42 @@
 # US-026: Setup Menu - Display Sleep Timer
 
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
-**Manual Reference:** SETUP MENU > SLEEP T (lines 57-58)
+
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 20–21: `SLEEP t` accepts 0–120 minutes; after timeout the display is off and any key operation turns it on.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.15, `[09:53–10:17]`: at `SLEEP t`, press Enter twice and enter the desired numeric value.
+- **Lower-priority UI detail:** [MagXact setup guide](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616): default `000` disables timeout and the sleeping indicator is the red LED below the wrench.
 
 ## User Story
 
-**As a** machine operator
-**I want** to set display timeout period
-**So that** I can save power when machine is idle
+**As a** machine operator  
+**I want** a global idle display timer  
+**So that** the readout sleeps when unused and wakes immediately for work
 
 ## Acceptance Criteria
 
-- [ ] AC26.1: Navigate to SLEEP T parameter
-- [ ] AC26.2: Press ENT to display current timeout (default 000 = disabled)
-- [ ] AC26.3: Press ENT again, enter minutes (0-120)
-- [ ] AC26.4: Press ENT to confirm
-- [ ] AC26.5: Display times out after specified idle period
-- [ ] AC26.6: Red LED below wrench key flashes when timed out
-- [ ] AC26.7: Pressing X, Y, or Z key wakes display
-- [ ] AC26.8: Setting 0 disables timeout
+- [x] **AC26.1:** `SLEEP t` is global, defaults to fixed-width `000`, and accepts whole minutes from `000` through `120`.
+- [x] **AC26.2:** Enter displays the stored three-digit value; Enter again opens numeric replacement; digits followed by Enter confirm. Out-of-range input is not stored; `C` cancels the numeric edit.
+- [x] **AC26.3:** `000` disables sleep. For `001–120`, the display sleeps after that many minutes without an operator key press.
+- [x] **AC26.4:** Unchanged adapter polling, connection heartbeats, and other background store activity do not count as operator activity or re-arm the timer. A real physical-position change wakes the simulator.
+- [x] **AC26.5:** Sleeping blanks the visible readouts and their screen-reader value cells while showing the sleep indicator; internal position tracking and saved data remain intact.
+- [x] **AC26.6:** A front-panel key wakes the display and is consumed; pressing it again performs its normal command.
+- [x] **AC26.7:** The draft timer persists only after `SAU CHG`; unsaved exit restores the saved timer.
 
-## E2E Test Scenarios
+## Human Verification
 
-```typescript
-describe('US-026: Setup Menu - Display Sleep Timer', () => {
-  test('navigate to sleep timer parameter', async ({ page }) => {
-    await page.goto('/');
+Using the connected debug source, enter `001` through the documented two-Enter numeric path, save, and leave the panel untouched while background debug updates continue. After 60 seconds confirm blank readouts and the flashing indicator. Move the machine while asleep, press a key to wake, and confirm the current tracked position appears. Save `000` and confirm the same wait does not sleep.
 
-    // Enter setup
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
+## Automated Coverage
 
-    // Scroll to SLEEP T
-    // ... press 2 key multiple times ...
+- [`e2e/06-configuration/US-026-sleep-timer.spec.ts`](../../../e2e/06-configuration/US-026-sleep-timer.spec.ts)
 
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('SLEEP T');
-  });
+## Verification
 
-  test('set timeout to 5 minutes', async ({ page }) => {
-    await page.goto('/');
+[Portable evidence and full-suite results](../README.md#verification)
 
-    // Navigate to SLEEP T
-    // ... setup ...
+The stored field rendered exactly `000` and, after save/reload, `001`. Two real one-minute runs entered sleep after about 63 seconds despite unchanged 10 Hz debug polling. Sleeping left all three DRO rows visually blank and removed their value cells from the accessibility snapshot while the debug source retained the physical position. Physical motion woke to the current reading. On the second run, the first Zero X press woke without zeroing and the second press zeroed normally. Saving `000` disabled the timeout, and no reducer-collision error recurred.
 
-    // Press ENT to edit
-    await page.click('[data-testid="ent-button"]');
-
-    // Default should be 000
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('000');
-
-    // Press ENT to enter edit mode
-    await page.click('[data-testid="ent-button"]');
-
-    // Enter 5 minutes
-    await page.click('[data-testid="5-key"]');
-    await page.click('[data-testid="ent-button"]');
-
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('5');
-  });
-
-  test('display sleeps after 5 minutes idle', async ({ page }) => {
-    await page.goto('/');
-
-    // Set SLEEP T to 5 minutes (use shorter time for testing, e.g., 0.1 min)
-    // ... setup and save ...
-
-    // Wait for timeout (in test, use short duration)
-    await page.waitForTimeout(6000); // 6 seconds if using 0.1 min for testing
-
-    // Display should be dimmed/off
-    await expect(page.locator('[data-testid="display-panel"]')).toHaveClass(/sleeping|dimmed/);
-  });
-
-  test('red LED flashes when sleeping', async ({ page }) => {
-    await page.goto('/');
-
-    // Set sleep timer and wait for timeout
-    // ... setup ...
-
-    await page.waitForTimeout(6000);
-
-    // Red LED below wrench key should flash
-    await expect(page.locator('[data-testid="sleep-led"]')).toHaveClass(/flashing/);
-  });
-
-  test('X key wakes display', async ({ page }) => {
-    await page.goto('/');
-
-    // Put display to sleep
-    // ... setup and wait ...
-
-    // Press X key
-    await page.click('[data-testid="x-axis-button"]');
-
-    // Display wakes up
-    await expect(page.locator('[data-testid="display-panel"]')).not.toHaveClass(/sleeping/);
-  });
-
-  test('Y key wakes display', async ({ page }) => {
-    await page.goto('/');
-
-    // Put display to sleep
-    // ... setup and wait ...
-
-    // Press Y key
-    await page.click('[data-testid="y-axis-button"]');
-
-    // Display wakes up
-    await expect(page.locator('[data-testid="display-panel"]')).not.toHaveClass(/sleeping/);
-  });
-
-  test('Z key wakes display', async ({ page }) => {
-    await page.goto('/');
-
-    // Put display to sleep
-    // ... setup and wait ...
-
-    // Press Z key
-    await page.click('[data-testid="z-axis-button"]');
-
-    // Display wakes up
-    await expect(page.locator('[data-testid="display-panel"]')).not.toHaveClass(/sleeping/);
-  });
-
-  test('set 0 to disable timeout', async ({ page }) => {
-    await page.goto('/');
-
-    // Navigate to SLEEP T
-    // ... setup ...
-
-    await page.click('[data-testid="ent-button"]');
-    await page.click('[data-testid="ent-button"]');
-
-    // Enter 0
-    await page.click('[data-testid="0-key"]');
-    await page.click('[data-testid="ent-button"]');
-
-    // Save and exit
-    // ... save ...
-
-    // Wait for extended period
-    await page.waitForTimeout(60000); // 1 minute
-
-    // Display should NOT sleep
-    await expect(page.locator('[data-testid="display-panel"]')).not.toHaveClass(/sleeping/);
-  });
-});
-```
-
-## Implementation Notes
-
-- **Purpose**: Power saving for idle DRO
-- **Timeout range**: 0-120 minutes
-  - 0 = disabled (never sleeps)
-  - 1-120 = timeout in minutes
-- **Sleep behavior**:
-  - Display dims or turns off
-  - Red LED flashes to indicate sleep state
-  - Position tracking continues in background
-  - No data loss during sleep
-- **Wake triggers**:
-  - X, Y, or Z axis button
-  - Does NOT wake on other keys (intentional)
-- **Implementation**:
-  - Track last user interaction timestamp
-  - setTimeout for idle detection
-  - Reduce display brightness or hide displays
-  - Flash LED indicator
-  - Resume on axis button press
-- **Testing**: Use shorter timeout for automated tests
-
-## Related Stories
-
-- US-027: Save Changes (persist sleep timer setting)
-- US-025: Keypad Beep (may be silent during sleep)
+Accessibility-tree inspection verifies blank browser cells, not speech from an installed screen reader.

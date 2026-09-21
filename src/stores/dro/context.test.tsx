@@ -20,6 +20,7 @@ import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 
 /**
  * Reset all stores to initial state before each test.
@@ -28,26 +29,8 @@ function resetStores(initialState?: DROShape) {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
-      scaleResolution: { X: '5', Y: '5', Z: '5' },
-      displayResolution: { X: '5', Y: '5', Z: '5' },
-      angularResolution: { X: 'dd-mn', Y: 'dd-mn', Z: 'dd-mn' },
-      taperOnAxis: 'X',
-      axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
-      zDepthSense: 'depth-negative',
-      zeroApproachEnabled: false,
-      zeroApproachDistance: '0.002',
-      zeroApproachTolerance: '0',
-      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
-      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
-      probeDroType: 'transmit',
-      encoderFailWarning: false,
-      keypadLock: 'off',
-      sleepTimeout: 0,
-      oemDefaults: null,
     },
   });
 
@@ -62,6 +45,7 @@ function resetStores(initialState?: DROShape) {
   // Reset DRO store
   if (initialState) {
     useDROStore.setState({
+      activityVersion: 0,
       stateName: initialState.stateName,
       stateData: initialState.stateData,
       vMem: initialState.vMem,
@@ -69,6 +53,7 @@ function resetStores(initialState?: DROShape) {
     });
   } else {
     useDROStore.setState({
+      activityVersion: 0,
       stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
       stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
       vMem: INITIAL_VOLATILE_MEMORY_STATE,
@@ -167,6 +152,7 @@ describe('useDROContext', () => {
 
     act(() => {
       result.current.dispatch({ eventName: 'KEY_ENTER' });
+      result.current.dispatch({ eventName: 'KEY_ENTER' });
     });
 
     expect(result.current.data.stateDataType).toBe('center-finding');
@@ -176,11 +162,6 @@ describe('useDROContext', () => {
 describe('useDRODispatch', () => {
   beforeEach(() => {
     resetStores();
-  });
-
-  it('should return dispatch function', () => {
-    const { result } = renderHook(() => useDRODispatch());
-    expect(typeof result.current).toBe('function');
   });
 
   it('should dispatch events that trigger state transitions', () => {
@@ -221,8 +202,10 @@ describe('Store integration', () => {
     });
     expect(result.current.state).toBe('function-menu-center');
 
-    // Enter center finding
+    // Open the Center submenu, then choose LinE instead of the default CirCLE.
     act(() => {
+      result.current.dispatch({ eventName: 'KEY_ENTER' });
+      result.current.dispatch({ eventName: 'KEY_6_RIGHT' });
       result.current.dispatch({ eventName: 'KEY_ENTER' });
     });
     expect(result.current.state).toBe('function-menu-center-line-point-1');

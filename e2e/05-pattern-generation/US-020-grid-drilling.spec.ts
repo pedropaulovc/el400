@@ -16,6 +16,7 @@ import { test, expect } from '../helpers/fixtures';
  */
 test.describe('US-020: Grid Drilling Pattern', () => {
   test('complete grid workflow: enter parameters and navigate holes', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     // Work in mm so entered values map directly to stored mm (no conversion)
     await dro.toggleInchMm();
     expect(await dro.isMmUnits()).toBe(true);
@@ -60,13 +61,13 @@ test.describe('US-020: Grid Drilling Pattern', () => {
     // AC20.7: holes X = 3
     await dro.waitForAxisPureTextValue('X', 'hoLE X');
     await dro.key3.click();
-    await dro.waitForAxisPureNumberValue('Y', 3);
+    await dro.waitForAxisPureNumberValue('Y', 3, 0, 500, 0);
     await dro.enterButton.click();
 
     // AC20.8: holes Y = 3 (AC20.9: total = 9 holes)
     await dro.waitForAxisPureTextValue('X', 'hoLE Y');
     await dro.key3.click();
-    await dro.waitForAxisPureNumberValue('Y', 3);
+    await dro.waitForAxisPureNumberValue('Y', 3, 0, 500, 0);
     await dro.enterButton.click();
 
     // AC20.5: now in INC mode for distance-to-go navigation
@@ -137,4 +138,5 @@ test.describe('US-020: Grid Drilling Pattern', () => {
     await dro.waitForAxisPureNumberValue('X', -0.7071);
     await dro.waitForAxisPureNumberValue('Y', 0.7071);
   });
+
 });

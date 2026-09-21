@@ -274,9 +274,9 @@ describe('boltHoleReducer', () => {
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.startAngle).toBe(20);
       }
-      // Display should show holes prompt (numeric 0)
+      // Count entry is literal text, independent of coordinate dP.
       expect(result?.display.X).toBe('hoLES');
-      expect(result?.display.Y).toBe(0);
+      expect(result?.display.Y).toBe('0');
     });
 
     it('should normalize angle to 0-359 range', () => {
@@ -363,7 +363,7 @@ describe('boltHoleReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should floor fractional hole count values', () => {
+    it('should reject fractional and non-finite hole counts', () => {
       const state: DROStatePayload = {
         stateName: 'bolt-hole-circle-holes',
         stateData: {
@@ -377,11 +377,49 @@ describe('boltHoleReducer', () => {
         display: INITIAL_DISPLAY_STATE,
       };
 
-      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+      expect(
+        boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)
+      ).toBeNull();
+      expect(
+        boltHoleReducer(
+          {
+            ...state,
+            vMem: { ...state.vMem, inputBuffer: '9'.repeat(400) },
+          },
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
+    });
 
-      expect(result).not.toBeNull();
-      if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.holeCount).toBe(6);
+    it('should reject non-finite values at every numeric parameter boundary', () => {
+      const states = [
+        'bolt-hole-circle-center-x',
+        'bolt-hole-circle-center-y',
+        'bolt-hole-circle-radius',
+        'bolt-hole-circle-angle',
+        'bolt-hole-circle-holes',
+        'bolt-hole-arc-center-x',
+        'bolt-hole-arc-center-y',
+        'bolt-hole-arc-radius',
+        'bolt-hole-arc-start-angle',
+        'bolt-hole-arc-end-angle',
+        'bolt-hole-arc-holes',
+      ] satisfies DROStateName[];
+
+      for (const stateName of states) {
+        const state: DROStatePayload = {
+          stateName,
+          stateData: INITIAL_BOLT_HOLE_DATA,
+          vMem: {
+            ...INITIAL_VOLATILE_MEMORY_STATE,
+            inputBuffer: '9'.repeat(400),
+          },
+          display: INITIAL_DISPLAY_STATE,
+        };
+        expect(
+          boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT)
+        ).toBeNull();
       }
     });
 
@@ -459,7 +497,7 @@ describe('boltHoleReducer', () => {
       expect(result).not.toBeNull();
       expect(result?.vMem.inputBuffer).toBe('6');
       expect(result?.display.X).toBe('hoLES');
-      expect(result?.display.Y).toBe(6);
+      expect(result?.display.Y).toBe('6');
     });
   });
 
@@ -544,81 +582,122 @@ describe('boltHoleReducer', () => {
       }
     });
 
-    it('should put current hole number in inputBuffer with KEY_8_UP', () => {
-      const result = boltHoleReducer(navigateState, { eventName: 'KEY_8_UP' }, DEFAULT_TEST_CONTEXT);
+    it('toggles a visible current-hole view with KEY_8_UP', () => {
+      const shown = boltHoleReducer(
+        navigateState,
+        { eventName: 'KEY_8_UP' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(shown?.display.X).toBe('hoLES');
+      expect(shown?.display.Y).toBe('1');
+      expect(shown?.vMem.inputBuffer).toBe('');
+      if (shown?.stateData.stateDataType === 'bolt-hole') {
+        expect(shown.stateData.navigationPhase).toBe('current-number');
+      }
 
-      expect(result).not.toBeNull();
-      expect(result?.stateName).toBe('bolt-hole-circle-navigate');
-      expect(result?.vMem.inputBuffer).toBe('1');
+      const restored = boltHoleReducer(
+        shown!,
+        { eventName: 'KEY_8_UP' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(typeof restored?.display.X).toBe('number');
+      if (restored?.stateData.stateDataType === 'bolt-hole') {
+        expect(restored.stateData.navigationPhase).toBe('distance-to-go');
+      }
     });
 
-    it('should clear input buffer with KEY_2_DOWN (prepare for jump)', () => {
+    it('opens a visible hole-number request with KEY_2_DOWN', () => {
       const result = boltHoleReducer(
         navigateState,
         { eventName: 'KEY_2_DOWN' },
         DEFAULT_TEST_CONTEXT
       );
-
-      expect(result).not.toBeNull();
-      expect(result?.vMem.inputBuffer).toBe('');
-    });
-
-    it('should jump to specific hole with buffered number and ENTER', () => {
-      const jumpState: DROStatePayload = {
-        ...navigateState,
-        vMem: { ...navigateState.vMem, inputBuffer: '4' },
-      };
-
-      const result = boltHoleReducer(jumpState, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).not.toBeNull();
+      expect(result?.display.X).toBe('hoLES');
+      expect(result?.display.Y).toBe('0');
       if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.currentHole).toBe(4);
-      }
-      expect(result?.vMem.inputBuffer).toBe('');
-    });
-
-    it('should reject jump to hole number less than 1', () => {
-      const jumpState: DROStatePayload = {
-        ...navigateState,
-        vMem: { ...navigateState.vMem, inputBuffer: '0' },
-      };
-
-      const result = boltHoleReducer(jumpState, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).toBeNull();
-    });
-
-    it('should reject jump to hole number greater than hole count', () => {
-      const jumpState: DROStatePayload = {
-        ...navigateState,
-        vMem: { ...navigateState.vMem, inputBuffer: '7' },
-      };
-
-      const result = boltHoleReducer(jumpState, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).toBeNull();
-    });
-
-    it('should floor fractional hole numbers when jumping', () => {
-      const jumpState: DROStatePayload = {
-        ...navigateState,
-        vMem: { ...navigateState.vMem, inputBuffer: '4.7' },
-      };
-
-      const result = boltHoleReducer(jumpState, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result).not.toBeNull();
-      if (result?.stateData.stateDataType === 'bolt-hole') {
-        expect(result.stateData.currentHole).toBe(4);
+        expect(result.stateData.navigationPhase).toBe('jump-entry');
       }
     });
 
-    it('should accept digit input in navigate state', () => {
-      const result = boltHoleReducer(navigateState, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT);
+    it.each([
+      ['KEY_2_DOWN', 2],
+      ['KEY_4_LEFT', 4],
+      ['KEY_6_RIGHT', 6],
+      ['KEY_8_UP', 8],
+    ] as const)('treats %s as digit %i during jump entry', (eventName, target) => {
+      const eightHoleState: DROStatePayload = {
+        ...navigateState,
+        stateData: {
+          ...(navigateState.stateData as typeof INITIAL_BOLT_HOLE_DATA),
+          holeCount: 8,
+          navigationPhase: 'jump-entry',
+        },
+      };
+      const entered = boltHoleReducer(
+        eightHoleState,
+        { eventName },
+        DEFAULT_TEST_CONTEXT
+      )!;
+      expect(entered.vMem.inputBuffer).toBe(String(target));
+      expect(entered.display.Y).toBe(String(target));
 
-      expect(result).not.toBeNull();
-      expect(result?.vMem.inputBuffer).toBe('3');
+      const jumped = boltHoleReducer(
+        entered,
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      if (jumped?.stateData.stateDataType === 'bolt-hole') {
+        expect(jumped.stateData.currentHole).toBe(target);
+        expect(jumped.stateData.navigationPhase).toBe('distance-to-go');
+      }
+    });
+
+    it('rejects fractional and out-of-range jump targets', () => {
+      const jumpState = (inputBuffer: string): DROStatePayload => ({
+        ...navigateState,
+        stateData: {
+          ...(navigateState.stateData as typeof INITIAL_BOLT_HOLE_DATA),
+          navigationPhase: 'jump-entry',
+        },
+        vMem: { ...navigateState.vMem, inputBuffer },
+      });
+
+      expect(
+        boltHoleReducer(
+          jumpState('4.7'),
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
+      expect(
+        boltHoleReducer(
+          jumpState('7'),
+          { eventName: 'KEY_ENTER' },
+          DEFAULT_TEST_CONTEXT
+        )
+      ).toBeNull();
+    });
+
+    it('keeps navigation digits inactive until KEY_2_DOWN', () => {
+      expect(
+        boltHoleReducer(navigateState, { eventName: 'KEY_3' }, DEFAULT_TEST_CONTEXT)
+      ).toBeNull();
+    });
+
+    it('updates the visible current number while navigating', () => {
+      const currentView: DROStatePayload = {
+        ...navigateState,
+        stateData: {
+          ...(navigateState.stateData as typeof INITIAL_BOLT_HOLE_DATA),
+          navigationPhase: 'current-number',
+        },
+      };
+      const result = boltHoleReducer(
+        currentView,
+        { eventName: 'KEY_6_RIGHT' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(result?.display.Y).toBe('2');
     });
   });
 
@@ -975,6 +1054,7 @@ describe('boltHoleReducer', () => {
           endAngle: null,
           holeCount: null,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' },
         display: INITIAL_DISPLAY_STATE,
@@ -1291,6 +1371,7 @@ describe('boltHoleReducer - ARC mode (US-017)', () => {
         expect(result.stateData.endAngle).toBe(260);
       }
       expect(result?.display.X).toBe('hoLES');
+      expect(result?.display.Y).toBe('0');
     });
 
     it('normalizes end angle to 0-359 range', () => {
@@ -1303,6 +1384,50 @@ describe('boltHoleReducer - ARC mode (US-017)', () => {
       const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
       if (result?.stateData.stateDataType === 'bolt-hole') {
         expect(result.stateData.endAngle).toBe(10); // 370 % 360
+      }
+    });
+
+    it('rejects multiple holes when normalized arc span is zero', () => {
+      const endAngleState: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 0 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '360' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const holeCountState = boltHoleReducer(
+        endAngleState,
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      )!;
+
+      expect(holeCountState.stateName).toBe('bolt-hole-arc-holes');
+      if (holeCountState.stateData.stateDataType === 'bolt-hole') {
+        expect(holeCountState.stateData.endAngle).toBe(0);
+      }
+
+      const rejected = boltHoleReducer(
+        {
+          ...holeCountState,
+          vMem: { ...holeCountState.vMem, inputBuffer: '6' },
+        },
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+      expect(rejected).toBeNull();
+    });
+
+    it('accepts a wrapped nonzero arc', () => {
+      const state: DROStatePayload = {
+        stateName: 'bolt-hole-arc-end-angle',
+        stateData: { ...ARC_BASE, startAngle: 350 },
+        vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '10' },
+        display: INITIAL_DISPLAY_STATE,
+      };
+      const result = boltHoleReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+
+      expect(result?.stateName).toBe('bolt-hole-arc-holes');
+      if (result?.stateData.stateDataType === 'bolt-hole') {
+        expect(result.stateData.endAngle).toBe(10);
       }
     });
 

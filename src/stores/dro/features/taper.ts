@@ -1,26 +1,24 @@
 /**
  * Taper Calculation Feature Reducer (US-045)
  *
- * Lathe-class function (manual Section 9.2.2). From two ends of a tapered job
- * the DRO derives the taper Radius (R) and half-angle (theta). The user
- * touches one end, (optionally) zeroes the axes, enters the function, then
- * moves to the other end; the angle and radius update live.
+ * This is an explicit milling-simulator adaptation of the lathe-class function
+ * in manual Section 9.2.2. The DRO derives the taper radius and acute half-angle
+ * from movement between the two touched ends:
  *
- * Geometry: the cross-slide axis (X) measures the radius travel and the bed
- * axis (Z) measures the length travel. The taper half-angle is
- *   theta = atan(deltaX / deltaZ)
- * measured from the position captured when the function was entered.
+ *   radius = |delta X|
+ *   length = |delta Z|
+ *   half-angle = atan(radius / length)
  *
- * The `tAPEr on` setup parameter (Section 6.2) selects which display shows the
- * angle; the paired display shows the radius:
+ * Using magnitudes makes the measurement independent of traversal direction;
+ * a zero axial length is not a taper and is displayed as INVALID. The `tAPEr
+ * on` setup choice selects the angle display while the paired display shows
+ * radius:
  *
- *   tAPEr on | Radius (R) | Angle (theta)
- *   ---------|------------|--------------
- *   X        | Z display  | X display
- *   Z        | X display  | Z display
- *   Z'       | X display  | Z display   (Z' maps to Z on this 3-axis sim)
+ *   X -> angle X, radius Z
+ *   Y -> angle Y, radius X
+ *   Z -> angle Z, radius X
  *
- * Entered from the function menu (PoLAr-style lathe entry); exits on `C`.
+ * The angle follows the primary manual's degrees-minutes-seconds presentation.
  */
 
 import type { FeatureReducer, DROReducerContext } from '../types';
@@ -31,39 +29,38 @@ import {
   computeAxisPositionMm,
   computeNormalDisplay,
   createDisplay,
+  formatAngularValue,
   type DisplayState,
 } from '../utils/displayComputation';
-import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+import { fromMmToAnyUnit } from '@/utils/unitConversion';
 
-/** Convert radians to degrees. */
-function toDegrees(radians: number): number {
-  return (radians * 180) / Math.PI;
-}
+const INVALID_ENTRY = 'inuAL d';
 
 /**
- * Compute the taper Radius (mm) and half-angle (degrees) from the travel since the
- * function was entered.
- *
- * - radius = travel on the radius axis (X)
- * - angle  = atan(radiusTravel / lengthTravel) = atan(deltaX / deltaZ)
+ * Compute radius and the acute taper half-angle from travel since entry.
+ * `null` angle means the two ends have no axial separation.
  */
 function computeTaper(
   data: TaperData,
   vMem: VolatileMemoryState,
   context: DROReducerContext
-): { radiusMm: number; angleDeg: number } {
+): { radiusMm: number; angleDeg: number | null } {
   const deltaX = computeAxisPositionMm('X', vMem, context) - data.entryX;
   const deltaZ = computeAxisPositionMm('Z', vMem, context) - data.entryZ;
+  const radiusMm = Math.abs(deltaX);
+  const lengthMm = Math.abs(deltaZ);
 
-  const radiusMm = deltaX;
-  const angleDeg = toDegrees(Math.atan2(deltaX, deltaZ));
-  return { radiusMm, angleDeg };
+  return {
+    radiusMm,
+    angleDeg: lengthMm === 0
+      ? null
+      : (Math.atan(radiusMm / lengthMm) * 180) / Math.PI,
+  };
 }
 
 /**
- * Compute the live taper display: angle on the taper-on axis, radius on the
- * paired axis, blank on the unused (Y) axis. The angle is always in degrees;
- * the radius respects the user's unit (AC 45.6).
+ * Compute the live taper display. Radius follows the current linear unit; the
+ * half-angle is rendered as the manual's `dd.mn.SS` readout.
  */
 export function computeTaperDisplay(
   data: TaperData,
@@ -72,13 +69,18 @@ export function computeTaperDisplay(
 ): DisplayState {
   const { radiusMm, angleDeg } = computeTaper(data, vMem, context);
   const radius = fromMmToAnyUnit(radiusMm, context.nvMem.defaultUnit);
+  const angle = angleDeg === null
+    ? INVALID_ENTRY
+    : formatAngularValue(angleDeg, 'dd-mn-ss');
 
-  if (context.nvMem.taperOnAxis === 'X') {
-    // Angle on X, radius on Z.
-    return createDisplay(angleDeg, '', radius);
+  switch (context.nvMem.taperOnAxis) {
+    case 'X':
+      return createDisplay(angle, '', radius);
+    case 'Y':
+      return createDisplay(radius, angle, '');
+    case 'Z':
+      return createDisplay(radius, '', angle);
   }
-  // taper on Z or Z': angle on Z, radius on X.
-  return createDisplay(radius, '', angleDeg);
 }
 
 export const taperReducer: FeatureReducer = (current, event, context) => {

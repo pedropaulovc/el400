@@ -80,49 +80,38 @@ describe('AxisPanel Integration', () => {
   });
 
   describe('Clear Button', () => {
-    it('cancels numeric entry when clear button is pressed', async () => {
+    it('backspaces numeric entry one character at a time', async () => {
       const { user } = await renderSimulator();
 
-      // Set X to a known value
+      // Set X to a known value.
       await user.click(screen.getByTestId('axis-select-x'));
       await typeValue(user, '50');
       await pressEnter(user);
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
 
-      // Try to enter a new value but clear it
+      // One C removes only the final 9, so ENT commits the remaining 99.
       await user.click(screen.getByTestId('axis-select-x'));
-      await user.click(screen.getByTestId('key-9'));
-      await user.click(screen.getByTestId('key-9'));
-      await user.click(screen.getByTestId('key-9'));
-      
-      // Clear the entry
+      await typeValue(user, '999');
       await user.click(screen.getByTestId('key-clear'));
-      
-      // Press enter (should do nothing since buffer is empty)
       await user.click(screen.getByTestId('key-enter'));
 
-      // Value should remain 50
-      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
+      expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(99, 4);
     });
 
-    it('clears partial entry and allows new entry', async () => {
+    it('clears a partial entry one character at a time and allows new entry', async () => {
       const { user } = await renderSimulator();
 
       await user.click(screen.getByTestId('axis-select-y'));
-      
-      // Enter a wrong value
-      await user.click(screen.getByTestId('key-1'));
-      await user.click(screen.getByTestId('key-2'));
-      await user.click(screen.getByTestId('key-3'));
-      
-      // Clear it
+
+      // Remove the wrong value one character at a time.
+      await typeValue(user, '123');
       await user.click(screen.getByTestId('key-clear'));
-      
-      // Enter the correct value
+      await user.click(screen.getByTestId('key-clear'));
+      await user.click(screen.getByTestId('key-clear'));
+
       await typeValue(user, '45.6');
       await pressEnter(user);
 
-      // Verify only the second value was set
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(45.6, 4);
     });
   });

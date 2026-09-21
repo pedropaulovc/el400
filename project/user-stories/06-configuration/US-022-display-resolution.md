@@ -1,109 +1,41 @@
 # US-022: Setup Menu - Display Resolution
 
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
-**Manual Reference:** SETUP MENU > DP (Display Resolution) (line 48)
+
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 20–21: linear `dP` choices are `0.1 / 0.2 / 0.5 / 1 / 2 / 5 / 10 / 20 / 50` microns; display resolution may be coarser than the measuring system.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.6, `[03:36–05:00]`: `dP 5.0` is the fine mill setting; `dP 50.0` renders three decimal places and 0.002-inch steps without changing the scale.
 
 ## User Story
 
-**As a** machine operator
-**I want** to configure display resolution
-**So that** I can choose between fine (0.0002") or coarse (0.002") increments
+**As a** machine operator  
+**I want** per-axis display resolution independent of encoder resolution  
+**So that** I can trade visible precision for a steadier coarse-work readout
 
 ## Acceptance Criteria
 
-- [ ] AC22.1: Navigate to DP parameter in setup menu
-- [ ] AC22.2: Default is 0.0002" / 4 digits right of decimal
-- [ ] AC22.3: Display resolution independent of scale resolution
-- [ ] AC22.4: Reducing resolution makes display less sensitive
-- [ ] AC22.5: Change affects display only, not measurement accuracy
+- [x] **AC22.1:** `dP` follows `SC` in the selected axis's setup sequence.
+- [x] **AC22.2:** A linear axis offers exactly the nine micron choices listed above; the mill default is `dP 5.0`.
+- [x] **AC22.3:** `dP` is per-axis and independent of `SC`.
+- [x] **AC22.4:** `dP 5.0` shows the fine four-decimal inch readout; `dP 50.0` shows three decimals and quantizes the visible result to 0.002-inch steps.
+- [x] **AC22.5:** Changing `dP` changes formatting/quantization only. The underlying physical position and datum are unchanged.
+- [x] **AC22.6:** The change participates in the single setup draft transaction and persists only after `SAU CHG`.
 
-## E2E Test Scenarios
+## Human Verification
 
-```typescript
-describe('US-022: Setup Menu - Display Resolution', () => {
-  test('navigate to DP parameter', async ({ page }) => {
-    await page.goto('/');
+Configure X as `dP 50.0` and Y as `dP 5.0`, save, then give both axes precise physical-mm moves. Confirm X is visibly coarser, Y remains fine, debug positions are unchanged, and both settings survive reload. Repeat a draft change followed by `End` without save and confirm it is discarded.
 
-    // Enter setup menu
-    await page.click('[data-testid="wrench-button"]');
-    await page.click('[data-testid="x-axis-button"]');
+## Automated Coverage
 
-    // Scroll to DP
-    // ... press 2 key multiple times ...
+- [`e2e/06-configuration/US-022-display-resolution.spec.ts`](../../../e2e/06-configuration/US-022-display-resolution.spec.ts)
+- Angular formats: [`e2e/06-configuration/US-040-dms.spec.ts`](../../../e2e/06-configuration/US-040-dms.spec.ts)
 
-    await expect(page.locator('[data-testid="prompt-display"]')).toContainText('DP');
-  });
+## Verification
 
-  test('default shows 0.0002"', async ({ page }) => {
-    await page.goto('/');
+[Portable evidence and full-suite results](../README.md#verification)
 
-    // Navigate to DP
-    // ... setup ...
+Headed checks cycled all nine linear choices and both wrap points. X retained `dP 50.0` while Y retained its finer setting after reload. At the same 10.0000 mm debug position, X changed from 0.3937 to the expected 0.394 when only `dP` changed; canceling an unsaved reversal restored `dP 50.0`.
 
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('0.0002');
-  });
-
-  test('change to 0.002', async ({ page }) => {
-    await page.goto('/');
-
-    // Navigate to DP
-    // ... setup ...
-
-    // Change value to 50
-    await page.click('[data-testid="4-key"]'); // or enter value directly
-    // ... input 50 ...
-
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('0.002');
-  });
-
-  test('change back to 5 microns', async ({ page }) => {
-    await page.goto('/');
-
-    // Set DP back to 5
-    // ... setup ...
-
-    await page.click('[data-testid="4-key"]');
-    await expect(page.locator('[data-testid="value-display"]')).toContainText('5');
-  });
-
-  test('display shows 4 decimal places', async ({ page }) => {
-    await page.goto('/');
-
-    // Set DP to 5 microns
-    // ... setup and save ...
-
-    // Exit setup
-    // ... exit ...
-
-    // Verify display format
-    // 0.0002" increments = 4 decimal places
-    const xDisplay = await page.locator('[data-testid="x-axis-display"]').textContent();
-    expect(xDisplay).toMatch(/\d+\.\d{4}$/); // 4 digits right of decimal
-  });
-});
-```
-
-## Implementation Notes
-
-- **Display Resolution (DP)**: Controls how finely display shows position
-  - Independent of scale resolution (SC)
-  - Affects visual display only, not actual measurement
-- **Common values**:
-  - 0.0002" increments (4 decimal places)
-  - 0.002" increments (3 decimal places)
-- **Why reduce resolution**: Less "jitter" in display for rough work
-- **Relationship to SC**:
-  - DP should be ≥ SC for best results
-  - Can set DP < SC but wastes display precision
-  - Can set DP > SC to reduce sensitivity
-- **Effect on display**:
-  - Changes number of decimal places shown
-  - Changes minimum increment displayed
-  - Does NOT affect internal position tracking
-
-## Related Stories
-
-- US-021: Scale Resolution (related but different parameter)
-- US-001: First Use and Power-Up Display (default display resolution)
-- US-004: Inch vs Metric Display (precision in both units)
+The rendered simulator and visible debug position supplied the display and position oracles. No physical DRO display or encoder was used.

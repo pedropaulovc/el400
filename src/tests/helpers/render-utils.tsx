@@ -9,6 +9,7 @@ import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { INITIAL_DRO_STATE_DATA as INITIAL_DRO_CONTEXT } from '../../stores/dro/droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { createDefaultMillState } from '../../types/millState';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 import {
   DeepProfiler,
   startTestProfiling,
@@ -69,26 +70,8 @@ function resetStoresForTest(): void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip',
-      scaleResolution: { X: '5', Y: '5', Z: '5' },
-      displayResolution: { X: '5', Y: '5', Z: '5' },
-      angularResolution: { X: 'dd-mn', Y: 'dd-mn', Z: 'dd-mn' },
-      taperOnAxis: 'X',
-      axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
-      zDepthSense: 'depth-negative',
-      zeroApproachEnabled: false,
-      zeroApproachDistance: '0.002',
-      zeroApproachTolerance: '0',
-      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
-      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
-      probeDroType: 'transmit',
-      encoderFailWarning: false,
-      keypadLock: 'off',
-      sleepTimeout: 0,
-      oemDefaults: null,
     },
   });
 
@@ -102,6 +85,7 @@ function resetStoresForTest(): void {
 
   // Reset DRO store - start in idle state for unit tests (skip boot sequence)
   useDROStore.setState({
+    activityVersion: 0,
     stateName: 'idle',
     stateData: INITIAL_DRO_CONTEXT,
     vMem: INITIAL_VOLATILE_MEMORY_STATE,

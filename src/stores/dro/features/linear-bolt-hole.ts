@@ -8,10 +8,9 @@
  * 1. Select the axis along which the pattern is generated (X, Y or Z).
  * 2. Selecting the axis resets (zeroes) it and switches to INC mode.
  * 3. Enter the pitch (spacing between holes) and confirm.
- * 4. Enter the number of holes and confirm.
- * 5. The DRO returns to counting mode showing distance-to-go to the first
- *    hole. Pressing 6 (right) advances to the next hole.
- * 6. Pressing C exits the macro back to idle/ABS.
+ * 4. The DRO returns to counting mode showing distance-to-go to the first
+ *    hole. Pressing 6 (right) advances indefinitely; 4 clamps at hole one.
+ * 5. Pressing C exits the macro back to idle/ABS.
  */
 
 import type { FeatureReducer, DROReducerContext } from '../types';
@@ -31,8 +30,8 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
-  computeAxisPositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -41,13 +40,9 @@ import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion'
 /** Prompt text shown for the axis-selection and parameter-entry states. */
 const AXIS_PROMPT = 'AXIS';
 const PITCH_PROMPT = 'PitCh';
-const HOLES_PROMPT = 'hoLES';
 
-/** States that accept numeric input for parameter entry. */
-const PARAMETER_ENTRY_STATES: DROStateName[] = [
-  'linear-bolt-hole-pitch',
-  'linear-bolt-hole-holes',
-];
+/** The pitch state accepts numeric input. */
+const PARAMETER_ENTRY_STATES: DROStateName[] = ['linear-bolt-hole-pitch'];
 
 function isParameterEntryState(state: DROStateName): boolean {
   return PARAMETER_ENTRY_STATES.includes(state);
@@ -68,7 +63,7 @@ function formatBufferForDisplay(buffer: string): number {
     return 0;
   }
   const value = parseFloat(buffer);
-  return isNaN(value) ? 0 : value;
+  return Number.isFinite(value) ? value : 0;
 }
 
 /**
@@ -79,21 +74,19 @@ export function computeLinearAxisSelectDisplay(): DisplayState {
 }
 
 /**
- * Display for parameter-entry states (pitch, holes).
- * The selected axis shows the live buffer value; another axis shows the prompt.
+ * Display for pitch entry. The selected axis shows the live buffer value and
+ * another axis shows the prompt.
  */
 function computeParameterEntryDisplay(
-  state: DROStateName,
   data: LinearBoltHoleData,
   vMem: VolatileMemoryState
 ): DisplayState {
-  const prompt = state === 'linear-bolt-hole-pitch' ? PITCH_PROMPT : HOLES_PROMPT;
   const value = formatBufferForDisplay(vMem.inputBuffer);
   const valueAxis = data.axis ?? 'X';
 
   const cellFor = (axis: Axis): number | string => {
     if (axis === valueAxis) return value;
-    if (axis === promptAxisFor(data.axis)) return prompt;
+    if (axis === promptAxisFor(data.axis)) return PITCH_PROMPT;
     return '';
   };
   return createDisplay(cellFor('X'), cellFor('Y'), cellFor('Z'));
@@ -112,8 +105,9 @@ function distanceToGoMm(
 ): number {
   const pitch = data.pitch ?? 0;
   const holePositionMm = (data.currentHole - 1) * pitch;
-  // Always read the ABS position regardless of the active mode.
-  const currentMm = computeAxisPositionMm(axis, { ...vMem, mode: 'abs' }, context);
+  const currentMm = context.millState.connected
+    ? computeMachinePositionMm(axis, vMem, context) - vMem.workOffsets[axis]
+    : vMem.manualAbsoluteValues[axis];
   return holePositionMm - currentMm;
 }
 
@@ -149,14 +143,8 @@ function resetAxis(
   axis: Axis,
   context: DROReducerContext
 ): VolatileMemoryState {
-  const { millState } = context;
-  if (millState.connected) {
-    const machinePos =
-      axis === 'X'
-        ? millState.position.x
-        : axis === 'Y'
-          ? millState.position.y
-          : millState.position.z;
+  if (context.millState.connected) {
+    const machinePos = computeMachinePositionMm(axis, vMem, context);
     return { ...vMem, workOffsets: { ...vMem.workOffsets, [axis]: machinePos } };
   }
   return { ...vMem, manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: 0 } };
@@ -191,7 +179,7 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
         ...statePayload,
         vMem: newVMem,
         display: isParameterEntryState(state)
-          ? computeParameterEntryDisplay(state, linearData, newVMem)
+          ? computeParameterEntryDisplay(linearData, newVMem)
           : statePayload.display,
       };
     }
@@ -212,7 +200,7 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
       return {
         ...statePayload,
         vMem: newVMem,
-        display: computeParameterEntryDisplay(state, linearData, newVMem),
+        display: computeParameterEntryDisplay(linearData, newVMem),
       };
     }
     if (eventName === 'KEY_DECIMAL') {
@@ -220,7 +208,7 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
       return {
         ...statePayload,
         vMem: newVMem,
-        display: computeParameterEntryDisplay(state, linearData, newVMem),
+        display: computeParameterEntryDisplay(linearData, newVMem),
       };
     }
     if (eventName === 'KEY_SIGN') {
@@ -228,7 +216,7 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
       return {
         ...statePayload,
         vMem: newVMem,
-        display: computeParameterEntryDisplay(state, linearData, newVMem),
+        display: computeParameterEntryDisplay(linearData, newVMem),
       };
     }
   }
@@ -246,7 +234,11 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
               : null;
       if (axisFromEvent === null) return null;
 
-      const newData: LinearBoltHoleData = { ...linearData, axis: axisFromEvent };
+      const newData: LinearBoltHoleData = {
+        ...linearData,
+        axis: axisFromEvent,
+        currentHole: 1,
+      };
       const resetVMem = {
         ...resetAxis(vMem, axisFromEvent, context),
         mode: 'inc' as const,
@@ -256,34 +248,19 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
         stateName: 'linear-bolt-hole-pitch',
         stateData: newData,
         vMem: resetVMem,
-        display: computeParameterEntryDisplay('linear-bolt-hole-pitch', newData, resetVMem),
+        display: computeParameterEntryDisplay(newData, resetVMem),
       };
     }
 
     case 'linear-bolt-hole-pitch': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const pitchMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
-        const newData: LinearBoltHoleData = { ...linearData, pitch: pitchMm };
-        const newVMem = { ...vMem, inputBuffer: '' };
-        return {
-          stateName: 'linear-bolt-hole-holes',
-          stateData: newData,
-          vMem: newVMem,
-          display: computeParameterEntryDisplay('linear-bolt-hole-holes', newData, newVMem),
-        };
-      }
-      return null;
-    }
-
-    case 'linear-bolt-hole-holes': {
-      if (eventName === 'KEY_ENTER') {
-        const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 2 || value > 999) return null;
+        if (!Number.isFinite(pitchMm) || pitchMm <= 0) return null;
         const newData: LinearBoltHoleData = {
           ...linearData,
-          holeCount: Math.floor(value),
+          pitch: pitchMm,
           currentHole: 1,
         };
         const newVMem = { ...vMem, inputBuffer: '' };
@@ -298,8 +275,15 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
     }
 
     case 'linear-bolt-hole-navigate': {
-      const { holeCount, currentHole } = linearData;
-      if (holeCount === null) {
+      const { axis, pitch, currentHole } = linearData;
+      if (
+        axis === null ||
+        pitch === null ||
+        !Number.isFinite(pitch) ||
+        pitch <= 0 ||
+        !Number.isSafeInteger(currentHole) ||
+        currentHole < 1
+      ) {
         return {
           stateName: 'idle',
           stateData: INITIAL_DRO_STATE_DATA,
@@ -308,9 +292,14 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
         };
       }
 
-      // Key 6: advance to next hole (wraps to first).
+      // The manual defines no terminal count. Advance while both the ordinal
+      // and its generated target remain numerically safe.
       if (eventName === 'KEY_6_RIGHT') {
-        const nextHole = currentHole >= holeCount ? 1 : currentHole + 1;
+        const nextHole = currentHole + 1;
+        const nextPositionMm = (nextHole - 1) * pitch;
+        if (!Number.isSafeInteger(nextHole) || !Number.isFinite(nextPositionMm)) {
+          return null;
+        }
         const newData: LinearBoltHoleData = { ...linearData, currentHole: nextHole };
         return {
           stateName: 'linear-bolt-hole-navigate',
@@ -320,9 +309,10 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
         };
       }
 
-      // Key 4: go to previous hole (wraps to last).
+      // There is no upper-count wrap. At the first hole, previous remains at
+      // the reset origin.
       if (eventName === 'KEY_4_LEFT') {
-        const prevHole = currentHole <= 1 ? holeCount : currentHole - 1;
+        const prevHole = currentHole > 1 ? currentHole - 1 : 1;
         const newData: LinearBoltHoleData = { ...linearData, currentHole: prevHole };
         return {
           stateName: 'linear-bolt-hole-navigate',

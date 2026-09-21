@@ -21,17 +21,15 @@ test.describe('US-010: SDM Program Mode', () => {
 
     // AC 10.1: enter SDM, navigate to Program, confirm.
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
+    await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     expect(await dro.isLEDOn(dro.page.getByTestId('led-sdm'))).toBe(true);
 
-    await dro.page.click('[data-testid="key-6"]'); // -> rUn
-    await dro.page.click('[data-testid="key-6"]'); // -> ProGrAn
     await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     await dro.enterButton.click();
 
     // AC 10.2: step prompt with step number 1.
-    await dro.waitForAxisPureTextValue('X', 'StEP');
-    await dro.waitForAxisPureNumberValue('Y', 1);
+    await dro.waitForAxisPureTextValue('X', 'StEPno');
+    await dro.waitForAxisPureNumberValue('Y', 1, 0, undefined, 0);
 
     // Confirm step 1 -> X coordinate entry (AC 10.3).
     await dro.enterButton.click();
@@ -43,28 +41,25 @@ test.describe('US-010: SDM Program Mode', () => {
     await dro.enterButton.click();
 
     // Back at the step prompt for step 1.
-    await dro.waitForAxisPureTextValue('X', 'StEP');
-    await dro.waitForAxisPureNumberValue('Y', 1);
+    await dro.waitForAxisPureTextValue('X', 'StEPno');
+    await dro.waitForAxisPureNumberValue('Y', 1, 0, undefined, 0);
 
     // AC 10.4: 6► saves and advances to step 2.
     await dro.page.click('[data-testid="key-6"]');
-    await dro.waitForAxisPureNumberValue('Y', 2);
+    await dro.waitForAxisPureNumberValue('Y', 2, 0, undefined, 0);
 
     // AC 10.5: jump directly to step 5 with Y + number + ent.
     await dro.yButton.click();
     await dro.enterNumber('5');
     await dro.enterButton.click();
-    await dro.waitForAxisPureNumberValue('Y', 5);
+    await dro.waitForAxisPureNumberValue('Y', 5, 0, undefined, 0);
   });
 
   test('clear exits SDM Program back to normal operation (AC 10.6)', async ({ dro }) => {
     await dro.page.click('[data-testid="btn-sdm"]');
-    await dro.waitForAxisPureTextValue('X', 'LEArn', 3000);
-    await dro.page.click('[data-testid="key-6"]');
-    await dro.page.click('[data-testid="key-6"]');
     await dro.waitForAxisPureTextValue('X', 'ProGrAn');
     await dro.enterButton.click();
-    await dro.waitForAxisPureTextValue('X', 'StEP');
+    await dro.waitForAxisPureTextValue('X', 'StEPno');
 
     await dro.clearButton.click();
     await dro.waitForAxisValue('X', 0);

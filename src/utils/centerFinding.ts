@@ -8,10 +8,11 @@
  */
 
 /**
- * Epsilon value for floating point comparisons.
- * Used to determine if values are effectively zero or if lines are parallel.
+ * Relative tolerance for a 2-D cross product. Scaling by the square of the
+ * largest coordinate delta keeps the degeneracy decision independent of units
+ * and coordinate magnitude.
  */
-const EPSILON = 1e-10;
+const CROSS_PRODUCT_EPSILON = Number.EPSILON * 16;
 
 export interface Point2D {
   x: number;
@@ -43,17 +44,15 @@ export function findLineCenter(p1: Point2D, p2: Point2D): Point2D {
 }
 
 /**
- * Calculate the center of a circle given three points on its circumference.
- * Uses the mathematical property that the center is equidistant from all three points.
- * 
- * Algorithm:
- * 1. Find the perpendicular bisectors of two chords
- * 2. The intersection of these bisectors is the center
- * 
+ * Calculate the circumcenter using translated vectors and a determinant.
+ * Translation avoids the vertical/horizontal slope special cases, and the
+ * determinant rejects every non-circle input: collinear points and repeated
+ * points alike.
+ *
  * @param p1 - First point on the circle
  * @param p2 - Second point on the circle
  * @param p3 - Third point on the circle
- * @returns The center point of the circle, or null if points are collinear
+ * @returns The center point, or null when no unique finite circle exists
  * 
  * @example
  * const center = findCircleCenter(
@@ -68,80 +67,25 @@ export function findCircleCenter(
   p2: Point2D,
   p3: Point2D
 ): Point2D | null {
-  // Calculate midpoints of two chords
-  const mid1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-  const mid2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
+  const ax = p2.x - p1.x;
+  const ay = p2.y - p1.y;
+  const bx = p3.x - p1.x;
+  const by = p3.y - p1.y;
+  const scale = Math.max(Math.abs(ax), Math.abs(ay), Math.abs(bx), Math.abs(by));
 
-  // Calculate slopes of the chords, handling vertical lines
-  const dx1 = p2.x - p1.x;
-  const dy1 = p2.y - p1.y;
-  const dx2 = p3.x - p2.x;
-  const dy2 = p3.y - p2.y;
+  if (!Number.isFinite(scale) || scale === 0) return null;
 
-  // Check if chords are vertical (dx = 0)
-  const isVertical1 = Math.abs(dx1) < EPSILON;
-  const isVertical2 = Math.abs(dx2) < EPSILON;
+  const cross = ax * by - ay * bx;
+  if (Math.abs(cross) <= CROSS_PRODUCT_EPSILON * scale * scale) return null;
 
-  // Calculate slopes (only if not vertical)
-  const slope1 = isVertical1 ? Infinity : dy1 / dx1;
-  const slope2 = isVertical2 ? Infinity : dy2 / dx2;
+  const aSquared = ax * ax + ay * ay;
+  const bSquared = bx * bx + by * by;
+  const denominator = 2 * cross;
+  const centerX = p1.x + (by * aSquared - ay * bSquared) / denominator;
+  const centerY = p1.y + (ax * bSquared - bx * aSquared) / denominator;
 
-  // Check if points are collinear
-  if (isVertical1 && isVertical2) {
-    // Both chords vertical means all points on same vertical line
-    return null;
-  } else if (!isVertical1 && !isVertical2) {
-    // Both chords have finite slope - check if parallel
-    if (Math.abs(slope1 - slope2) < EPSILON) {
-      return null; // Points are collinear, no unique circle
-    }
-  }
-
-  // Calculate slopes of perpendicular bisectors
-  // Perpendicular slope is negative reciprocal
-  let perpSlope1: number;
-  let perpSlope2: number;
-
-  // Handle vertical chords (infinite slope -> horizontal bisector)
-  if (isVertical1) {
-    perpSlope1 = 0; // Horizontal bisector
-  } else if (Math.abs(slope1) < EPSILON) {
-    perpSlope1 = Infinity; // Vertical bisector
-  } else {
-    perpSlope1 = -1 / slope1;
-  }
-
-  if (isVertical2) {
-    perpSlope2 = 0; // Horizontal bisector
-  } else if (Math.abs(slope2) < EPSILON) {
-    perpSlope2 = Infinity; // Vertical bisector
-  } else {
-    perpSlope2 = -1 / slope2;
-  }
-
-  // Find intersection of perpendicular bisectors
-  let centerX: number;
-  let centerY: number;
-
-  if (!isFinite(perpSlope1)) {
-    // First bisector is vertical: x = mid1.x
-    centerX = mid1.x;
-    centerY = perpSlope2 * (centerX - mid2.x) + mid2.y;
-  } else if (!isFinite(perpSlope2)) {
-    // Second bisector is vertical: x = mid2.x
-    centerX = mid2.x;
-    centerY = perpSlope1 * (centerX - mid1.x) + mid1.y;
-  } else {
-    // Both bisectors have finite slope
-    // Solve system of equations:
-    // y - mid1.y = perpSlope1 * (x - mid1.x)
-    // y - mid2.y = perpSlope2 * (x - mid2.x)
-    centerX =
-      (mid2.y - mid1.y + perpSlope1 * mid1.x - perpSlope2 * mid2.x) /
-      (perpSlope1 - perpSlope2);
-    centerY = perpSlope1 * (centerX - mid1.x) + mid1.y;
-  }
-
-  return { x: centerX, y: centerY };
+  return Number.isFinite(centerX) && Number.isFinite(centerY)
+    ? { x: centerX, y: centerY }
+    : null;
 }
 

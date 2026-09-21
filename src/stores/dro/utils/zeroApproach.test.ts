@@ -60,6 +60,11 @@ describe('nextAxisWarning hysteresis (AC24.3, AC24.6, AC24.10)', () => {
     expect(nextAxisWarning(0.016 * INCH_MM, true, true, distMm, tolMm)).toBe(false);
   });
 
+  it('keeps the release boundary inclusive despite cancellation without extending it to a real outside position', () => {
+    expect(nextAxisWarning(32 - 31.95, true, true, 0.04, 0.01)).toBe(true);
+    expect(nextAxisWarning(0.05 + 1e-9, true, true, 0.04, 0.01)).toBe(false);
+  });
+
   it('treats non-finite distance as far (no warning)', () => {
     expect(nextAxisWarning(Infinity, false, true, distMm, tolMm)).toBe(false);
     expect(nextAxisWarning(NaN, true, true, distMm, tolMm)).toBe(false);
@@ -74,17 +79,22 @@ function display(x: number, y: number | string, z: number | string): DisplayStat
 const CTX = 'distance-to-go' as const;
 
 describe('computeZeroApproach per-axis (AC24.10)', () => {
-  it('off entirely when disabled', () => {
-    const settings = nv({ zeroApproachEnabled: false, defaultUnit: 'inch' });
-    const next = computeZeroApproach(display(0.0, 0.0, 0.0), settings, ZERO_APPROACH_OFF, CTX);
-    expect(next).toEqual({ X: false, Y: false, Z: false });
+  it('retains mandatory 50um target protection with BUZZ and keypad BEEP off', () => {
+    const settings = nv({ beepEnabled: false, defaultUnit: 'mm' });
+    const next = computeZeroApproach(display(0.05, 0.05001, 'SELECt'), settings, ZERO_APPROACH_OFF, CTX);
+    expect(next).toEqual({ X: true, Y: false, Z: false });
+  });
+
+  it('engages at the physical 50um boundary after coordinate subtraction, but not just outside it', () => {
+    const settings = nv({ defaultUnit: 'mm' });
+    const next = computeZeroApproach(display(32 - 31.95, 0.05 + 1e-9, ''), settings, ZERO_APPROACH_OFF, CTX);
+    expect(next).toEqual({ X: true, Y: false, Z: false });
   });
 
   it('engages only the axis inside BP DIST, leaves others off', () => {
     const settings = nv({
-      zeroApproachEnabled: true,
-      zeroApproachDistance: '0.010',
-      zeroApproachTolerance: '0',
+      zeroApproachEnabled: { X: true, Y: false, Z: false },
+      zeroApproachDistance: { X: '0.010', Y: '0.002', Z: '0.002' },
       defaultUnit: 'inch',
     });
     // X within 0.010", Y outside, Z far text
@@ -94,9 +104,9 @@ describe('computeZeroApproach per-axis (AC24.10)', () => {
 
   it('respects hysteresis carried from previous state', () => {
     const settings = nv({
-      zeroApproachEnabled: true,
-      zeroApproachDistance: '0.010',
-      zeroApproachTolerance: '0.005',
+      zeroApproachEnabled: { X: true, Y: false, Z: false },
+      zeroApproachDistance: { X: '0.010', Y: '0.002', Z: '0.002' },
+      zeroApproachTolerance: { X: '0.005', Y: '0', Z: '0' },
       defaultUnit: 'inch',
     });
     const prev = { X: true, Y: false, Z: false };
@@ -107,9 +117,8 @@ describe('computeZeroApproach per-axis (AC24.10)', () => {
 
   it('works in mm units (display value already in mm)', () => {
     const settings = nv({
-      zeroApproachEnabled: true,
-      zeroApproachDistance: '0.010', // 0.254 mm
-      zeroApproachTolerance: '0',
+      zeroApproachEnabled: { X: true, Y: false, Z: false },
+      zeroApproachDistance: { X: '0.010', Y: '0.002', Z: '0.002' },
       defaultUnit: 'mm',
     });
     // 0.2 mm < 0.254 mm -> engage
@@ -118,16 +127,19 @@ describe('computeZeroApproach per-axis (AC24.10)', () => {
     expect(next.Y).toBe(false);
   });
 
-  it('is off in non-context states (idle) even at zero (AC24.9 gating)', () => {
+  it('warns on configured axes in idle but never on configuration prompts', () => {
     const settings = nv({
-      zeroApproachEnabled: true,
-      zeroApproachDistance: '0.010',
-      zeroApproachTolerance: '0',
+      zeroApproachEnabled: { X: true, Y: false, Z: false },
       defaultUnit: 'inch',
     });
-    // All axes at zero, but plain idle has no target being approached.
-    const next = computeZeroApproach(display(0, 0, 0), settings, ZERO_APPROACH_OFF, 'idle');
-    expect(next).toEqual({ X: false, Y: false, Z: false });
+    expect(computeZeroApproach(display(0, 0, 0), settings, ZERO_APPROACH_OFF, 'idle')).toEqual({ X: true, Y: false, Z: false });
+    expect(computeZeroApproach(display(0, 0, 0), settings, ZERO_APPROACH_OFF, 'bolt-hole-circle-radius')).toEqual(ZERO_APPROACH_OFF);
+  });
+
+  it('uses physical distance for diameter displays and ignores unarmed target axes', () => {
+    const settings = nv({ defaultUnit: 'mm', measurementMode: { X: 'diameter', Y: 'radius', Z: 'radius' } });
+    expect(computeZeroApproach(display(0.09, 0, ''), settings, ZERO_APPROACH_OFF, CTX,
+      { X: true, Y: false, Z: false })).toEqual({ X: true, Y: false, Z: false });
   });
 });
 

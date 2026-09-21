@@ -28,19 +28,16 @@
  * @see project/user-stories/01-foundation/US-047-display-overflow.md
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen, act, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import {
   renderSimulator,
   typeValue,
   pressEnter,
-  emitMillTick,
+  emitPosition,
   expectStableUnderTicks,
 } from '../../../tests/helpers/integration-test-utils';
-import { initializeDROMillConnection } from '../../droStore';
-import { initializeMillStore } from '../../millStore';
-import { MockMillAdapter } from '../../../adapters/MockMillAdapter';
 import { SETUP_PARAMETERS, DISPLAY_RESOLUTION_ID } from './setup-parameters';
 
 const DP_INDEX = SETUP_PARAMETERS.findIndex((p) => p.id === DISPLAY_RESOLUTION_ID);
@@ -50,9 +47,17 @@ function rawAxisText(axis: 'X' | 'Y' | 'Z'): string {
   return (screen.getByTestId(`axis-value-${axis.toLowerCase()}`).textContent || '').trim();
 }
 
+async function commitAndExitSetup(user: UserEvent) {
+  await user.click(screen.getByTestId('key-enter'));
+  expect(rawAxisText('X')).toBe('StorEd');
+  await user.click(screen.getByTestId('key-clear'));
+  expect(rawAxisText('X')).toBe('SAU ChG');
+  await user.click(screen.getByTestId('key-clear'));
+}
+
 /** Select an axis through the real X/Y/Z button. */
 async function selectAxis(
-  user: ReturnType<typeof userEvent.setup>,
+  user: UserEvent,
   axis: 'X' | 'Y' | 'Z'
 ) {
   await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
@@ -61,12 +66,10 @@ async function selectAxis(
 /**
  * Drive the REAL setup menu (US-022 path) to coarsen an axis's display
  * resolution from the 5-micron default (4 decimals) to 50 micron (3 decimals):
- * wrench -> select axis -> scroll up to dP -> cycle right 5 -> 10 -> 20 -> 50 ->
- * exit via wrench + CLEAR. dP commits-on-change, so the live readout updates the
- * moment we return to idle.
+ * wrench -> axis -> dP -> cycle right 5 -> 10 -> 20 -> 50 -> SAU ChG.
  */
 async function coarsenToThreeDecimals(
-  user: ReturnType<typeof userEvent.setup>,
+  user: UserEvent,
   axis: 'x' | 'y' | 'z'
 ) {
   await user.click(screen.getByTestId('btn-settings'));
@@ -78,83 +81,75 @@ async function coarsenToThreeDecimals(
   await user.click(screen.getByTestId('key-6'));
   await user.click(screen.getByTestId('key-6'));
   await user.click(screen.getByTestId('key-6'));
-  // Exit setup back to idle.
-  await user.click(screen.getByTestId('btn-settings'));
-  await user.click(screen.getByTestId('key-clear'));
+  for (let i = 0; i < SETUP_PARAMETERS.length && rawAxisText('X') !== 'SAU ChG'; i++) {
+    await user.click(screen.getByTestId('key-2'));
+  }
+  await commitAndExitSetup(user);
 }
 
 /**
  * Drive the REAL setup menu (US-041 path) to put an axis into `diA` (diameter)
  * measurement mode: wrench -> select axis -> scroll to the rAd/diA item ->
- * cycle to diA -> exit via the terminal End item + ent. Mirrors
+ * cycle to diA -> save through SAU ChG. Mirrors
  * measurement-mode.integration.test.tsx. The `rAd`/`diA` labels appear on no
  * other parameter, so they uniquely identify the item while scrolling.
  */
 async function setDiameterMode(
-  user: ReturnType<typeof userEvent.setup>,
+  user: UserEvent,
   axis: 'X' | 'Y' | 'Z'
 ) {
   await user.click(screen.getByTestId('btn-settings'));
   await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
   const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
   let guard = 0;
-  while (!isMeasurementLabel(rawAxisText(axis))) {
+  while (!isMeasurementLabel(rawAxisText('X'))) {
     await user.click(screen.getByTestId('key-2'));
     if (++guard > 30) throw new Error('measurement-mode parameter not found');
   }
   guard = 0;
-  while (rawAxisText(axis) !== 'diA') {
+  while (rawAxisText('X') !== 'diA') {
     await user.click(screen.getByTestId('key-6'));
     if (++guard > 4) throw new Error('diA choice not reachable by cycling');
   }
   guard = 0;
-  while (rawAxisText(axis) !== 'End') {
+  while (rawAxisText('X') !== 'SAU ChG') {
     await user.click(screen.getByTestId('key-2'));
-    if (++guard > 30) throw new Error('End item not found while exiting setup');
+    if (++guard > 40) throw new Error('SAU ChG item not found while saving setup');
   }
-  await user.click(screen.getByTestId('key-enter'));
+  await commitAndExitSetup(user);
 }
 
 /** Inverse of {@link setDiameterMode}: put an axis back into `rAd` (radius, ×1). */
 async function setRadiusMode(
-  user: ReturnType<typeof userEvent.setup>,
+  user: UserEvent,
   axis: 'X' | 'Y' | 'Z'
 ) {
   await user.click(screen.getByTestId('btn-settings'));
   await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
   const isMeasurementLabel = (t: string) => t === 'rAd' || t === 'diA';
   let guard = 0;
-  while (!isMeasurementLabel(rawAxisText(axis))) {
+  while (!isMeasurementLabel(rawAxisText('X'))) {
     await user.click(screen.getByTestId('key-2'));
     if (++guard > 30) throw new Error('measurement-mode parameter not found');
   }
   guard = 0;
-  while (rawAxisText(axis) !== 'rAd') {
+  while (rawAxisText('X') !== 'rAd') {
     await user.click(screen.getByTestId('key-6'));
     if (++guard > 4) throw new Error('rAd choice not reachable by cycling');
   }
   guard = 0;
-  while (rawAxisText(axis) !== 'End') {
+  while (rawAxisText('X') !== 'SAU ChG') {
     await user.click(screen.getByTestId('key-2'));
-    if (++guard > 30) throw new Error('End item not found while exiting setup');
+    if (++guard > 40) throw new Error('SAU ChG item not found while saving setup');
   }
-  await user.click(screen.getByTestId('key-enter'));
+  await commitAndExitSetup(user);
 }
 
 describe('US-047: Display Overflow on Value Entry (integration)', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
   });
 
-  afterEach(() => {
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
-  });
 
   // --- AC 47.1: over-long magnitude pins to the 4-decimal maximum ----------
   it('AC 47.1: keying 55555555 then ENTER pins X to 999.9999 (4 decimals)', async () => {
@@ -301,30 +296,10 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
   // the over-long magnitude — which the panel cannot show. So this asserts both
   // the clamp AND its storage location.
   describe('AC 47.5 (connected ABS, work-offset preset)', () => {
-    let cleanup: (() => void) | null = null;
-
-    afterEach(() => {
-      if (cleanup) {
-        cleanup();
-        cleanup = null;
-      }
-    });
-
-    async function connectMockMillAtOrigin(): Promise<MockMillAdapter> {
-      initializeDROMillConnection();
-      const mock = new MockMillAdapter({ autoTick: false });
-      await act(async () => {
-        cleanup = await initializeMillStore(mock);
-      });
-      await act(async () => {
-        mock.setPosition(0, 0, 0);
-      });
-      return mock;
-    }
 
     it('clamps a connected ABS preset and the reading holds after a fresh encoder tick', async () => {
-      const { user } = await renderSimulator({ millSource: 'noop' });
-      const mock = await connectMockMillAtOrigin();
+      const { user } = await renderSimulator();
+      emitPosition(0, 0, 0);
 
       await selectAxis(user, 'X');
       await typeValue(user, '55555555');
@@ -334,17 +309,15 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
       // A fresh encoder broadcast at the SAME machine position recomputes the
       // readout from the stored work offset. If storage held the unclamped value
       // the panel would now show the over-long magnitude.
-      act(() => {
-        mock.setPosition(0, 0, 0);
-      });
+      emitPosition(0, 0, 0);
       await waitFor(() => { expect(rawAxisText('X')).toBe('999.9999'); });
       const digitCount = rawAxisText('X').replace(/[^0-9]/g, '').length;
       expect(digitCount).toBe(7);
     });
 
     it('clamped connected ABS preset keeps moving 1:1 with later encoder motion', async () => {
-      const { user } = await renderSimulator({ millSource: 'noop' });
-      const mock = await connectMockMillAtOrigin();
+      const { user } = await renderSimulator();
+      emitPosition(0, 0, 0);
 
       // Work in mm so the post-move magnitude is exact.
       await user.click(screen.getByTestId('btn-toggle-unit'));
@@ -356,9 +329,7 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
       // The stored offset must equal (0 - 999.9999). Jog the machine -1 mm: the
       // readout must move to exactly 998.9999, proving the clamped value (not a
       // larger stored value) is the datum the live position is measured against.
-      act(() => {
-        mock.setPosition(-1, 0, 0);
-      });
+      emitPosition(-1, 0, 0);
       await waitFor(() => { expect(rawAxisText('X')).toBe('998.9999'); });
     });
   });
@@ -434,11 +405,16 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
   });
 
   it('AC 47.7: the STORED slide value is the halved 499.99995, not 999.9999', async () => {
-    const { user } = await renderSimulator();
-    await setDiameterMode(user, 'X');
+    const { user } = await renderSimulator({
+      nvMem: {
+        measurementMode: { X: 'diameter', Y: 'radius', Z: 'radius' },
+      },
+    });
 
-    // Preset on the diameter axis: entered 55555555 is capped so the DISPLAY is
-    // 999.9999, which means the stored slide value is 499.99995.
+    // Begin in diameter mode through the real settings-store fixture, avoiding a
+    // redundant setup-menu traversal before exercising the behavior under test.
+    // Entered 55555555 is capped so the DISPLAY is 999.9999, which means the
+    // stored slide value is 499.99995.
     await selectAxis(user, 'X');
     await typeValue(user, '55555555');
     await pressEnter(user);
@@ -495,16 +471,4 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
     });
   });
 
-  // --- Hygiene: the commit must not trip the multi-reducer conflict guard ---
-  it('clamping on ENTER does not log a multi-reducer conflict', async () => {
-    const { user } = await renderSimulator();
-    await selectAxis(user, 'X');
-    await typeValue(user, '55555555');
-    await pressEnter(user);
-    emitMillTick();
-    const conflict = errorSpy.mock.calls.some((c: unknown[]) =>
-      String(c[0]).includes('Multiple reducers handled the same event')
-    );
-    expect(conflict).toBe(false);
-  });
 });

@@ -1,6 +1,11 @@
 import { cn } from "@/lib/utils";
 import { ReactNode, ButtonHTMLAttributes, useCallback } from "react";
 import { playClickSound } from "@/utils/audio";
+import { useDROStore } from "@/stores/droStore";
+import { isSetupActive } from "@/stores/dro/droStateMachine";
+import { useSettingsStore } from "@/stores/settingsStore";
+
+type KeypadLockBehavior = 'disable' | 'setup-access';
 
 interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
@@ -10,6 +15,7 @@ interface DROButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   size?: 'icon' | 'secondary' | 'axis' | 'square' | 'enter';
   isActive?: boolean;
   title: string;
+  keypadLockBehavior?: KeypadLockBehavior;
 }
 
 const DROButton = ({
@@ -20,8 +26,21 @@ const DROButton = ({
   size = 'square',
   isActive = false,
   title,
+  disabled,
+  keypadLockBehavior = 'disable',
   ...props
 }: DROButtonProps) => {
+  const keypadLock = useSettingsStore((state) => state.nvMem.keypadLock);
+  const isBlockedByKeypadLock = useDROStore(
+    useCallback(
+      ({ stateName }) =>
+        keypadLock === 'on' &&
+        keypadLockBehavior === 'disable' &&
+        !isSetupActive(stateName),
+      [keypadLock, keypadLockBehavior],
+    ),
+  );
+  const isDisabled = disabled === true || isBlockedByKeypadLock;
   const variantClasses = {
     default: 'bg-gradient-to-b from-[#707070] to-[#505050] text-[#1a1a1a] border-t-[#808080] border-l-[#808080] border-b-[#3a3a3a] border-r-[#3a3a3a]',
     dark: 'bg-gradient-to-b from-[#404040] to-[#2a2a2a] text-[#1a1a1a] border-t-[#505050] border-l-[#505050] border-b-[#1a1a1a] border-r-[#1a1a1a]',
@@ -51,6 +70,7 @@ const DROButton = ({
         "dro-button flex items-center justify-center rounded-lg border-2 font-bold",
         "shadow-md active:shadow-inner transition-all duration-75",
         "focus:outline-none focus:ring-2 focus:ring-white/50",
+        "disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-0 disabled:shadow-none disabled:active:shadow-none",
         variantClasses[variant],
         sizeClasses[size],
         isActive && "ring-2 ring-white shadow-lg brightness-110",
@@ -58,6 +78,7 @@ const DROButton = ({
       )}
       aria-pressed={isActive}
       title={title}
+      disabled={isDisabled}
       {...props}
     >
       {children}

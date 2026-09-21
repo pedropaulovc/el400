@@ -203,6 +203,7 @@ describe('gridReducer', () => {
         expect(result.stateData.angle).toBe(45);
       }
       expect(result?.display.X).toBe('hoLE X');
+      expect(result?.display.Y).toBe('0');
     });
 
     it('should normalize angle to 0-359 range', () => {
@@ -234,6 +235,7 @@ describe('gridReducer', () => {
         expect(result.stateData.holesX).toBe(5);
       }
       expect(result?.display.X).toBe('hoLE Y');
+      expect(result?.display.Y).toBe('0');
     });
 
     it('should reject holes X less than 1', () => {
@@ -294,17 +296,48 @@ describe('gridReducer', () => {
       expect(result).toBeNull();
     });
 
-    it('should floor fractional holes counts', () => {
+    it('should reject fractional hole counts', () => {
       const state: DROStatePayload = {
         stateName: 'grid-holes-x',
-        stateData: { ...INITIAL_GRID_DATA, startX: 0, startY: 0, pitchX: 10, pitchY: 8, angle: 0 },
+        stateData: {
+          ...INITIAL_GRID_DATA,
+          startX: 0,
+          startY: 0,
+          pitchX: 10,
+          pitchY: 8,
+          angle: 0,
+        },
         vMem: { ...INITIAL_VOLATILE_MEMORY_STATE, inputBuffer: '3.9' },
         display: INITIAL_DISPLAY_STATE,
       };
 
-      const result = gridReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
-      if (result?.stateData.stateDataType === 'grid') {
-        expect(result.stateData.holesX).toBe(3);
+      expect(gridReducer(state, { eventName: 'KEY_ENTER' }, mmContext)).toBeNull();
+    });
+
+    it('should reject non-finite values at every numeric parameter boundary', () => {
+      const states = [
+        'grid-start-x',
+        'grid-start-y',
+        'grid-pitch-x',
+        'grid-pitch-y',
+        'grid-angle',
+        'grid-holes-x',
+        'grid-holes-y',
+      ] satisfies DROStateName[];
+
+      for (const stateName of states) {
+        const state: DROStatePayload = {
+          stateName,
+          stateData: INITIAL_GRID_DATA,
+          vMem: {
+            ...INITIAL_VOLATILE_MEMORY_STATE,
+            inputBuffer: '9'.repeat(400),
+          },
+          display: INITIAL_DISPLAY_STATE,
+        };
+        expect(
+          gridReducer(state, { eventName: 'KEY_ENTER' }, mmContext)
+        ).toBeNull();
       }
     });
 
@@ -468,43 +501,53 @@ describe('gridReducer', () => {
       }
     });
 
-    it('shows current hole number in buffer with KEY_8_UP', () => {
-      const result = gridReducer(navState, { eventName: 'KEY_8_UP' }, mmContext);
-      expect(result?.vMem.inputBuffer).toBe('1');
+    it('toggles the visible X/Y hole-index pair with KEY_8_UP', () => {
+      const shown = gridReducer(navState, { eventName: 'KEY_8_UP' }, mmContext);
+      expect(shown).toMatchObject({
+        stateData: {
+          stateDataType: 'grid',
+          navigationPhase: 'current-number',
+        },
+        display: { X: '1', Y: '1' },
+      });
+
+      const next = gridReducer(shown!, { eventName: 'KEY_6_RIGHT' }, mmContext);
+      expect(next).toMatchObject({
+        stateData: {
+          stateDataType: 'grid',
+          currentHole: 2,
+          navigationPhase: 'current-number',
+        },
+        display: { X: '2', Y: '1' },
+      });
+
+      const restored = gridReducer(next!, { eventName: 'KEY_8_UP' }, mmContext);
+      expect(restored).toMatchObject({
+        stateData: {
+          stateDataType: 'grid',
+          navigationPhase: 'distance-to-go',
+        },
+      });
     });
 
-    it('clears buffer with KEY_2_DOWN', () => {
-      const buffered: DROStatePayload = {
+    it('shows row two as X index 1 and Y index 2', () => {
+      const rowTwo: DROStatePayload = {
         ...navState,
-        vMem: { ...navState.vMem, inputBuffer: '7' },
+        stateData: {
+          ...(navState.stateData as typeof INITIAL_GRID_DATA),
+          currentHole: 6,
+          navigationPhase: 'current-number',
+        },
       };
-      const result = gridReducer(buffered, { eventName: 'KEY_2_DOWN' }, mmContext);
-      expect(result?.vMem.inputBuffer).toBe('');
+      const result = gridReducer(rowTwo, { eventName: 'MILL_STATE_CHANGED' }, mmContext);
+      expect(result?.display.X).toBe('1');
+      expect(result?.display.Y).toBe('2');
     });
 
-    it('jumps to specific hole with buffered number and ENTER', () => {
-      const jump: DROStatePayload = {
-        ...navState,
-        vMem: { ...navState.vMem, inputBuffer: '10' },
-      };
-      const result = gridReducer(jump, { eventName: 'KEY_ENTER' }, mmContext);
-      if (result?.stateData.stateDataType === 'grid') {
-        expect(result.stateData.currentHole).toBe(10);
-      }
-    });
-
-    it('rejects jump out of range', () => {
-      const jump: DROStatePayload = {
-        ...navState,
-        vMem: { ...navState.vMem, inputBuffer: '26' },
-      };
-      const result = gridReducer(jump, { eventName: 'KEY_ENTER' }, mmContext);
-      expect(result).toBeNull();
-    });
-
-    it('accepts digit input in navigate state', () => {
-      const result = gridReducer(navState, { eventName: 'KEY_3' }, mmContext);
-      expect(result?.vMem.inputBuffer).toBe('3');
+    it('does not offer direct jump with KEY_2_DOWN', () => {
+      expect(gridReducer(navState, { eventName: 'KEY_2_DOWN' }, mmContext)).toBeNull();
+      expect(gridReducer(navState, { eventName: 'KEY_9' }, mmContext)).toBeNull();
+      expect(gridReducer(navState, { eventName: 'KEY_ENTER' }, mmContext)).toBeNull();
     });
 
     it('exits to idle when navigate state has missing holes count', () => {

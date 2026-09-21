@@ -1,95 +1,28 @@
 # US-002: Sign Convention and Axis Direction
 
-**Manual Reference:** MagXact MX-100M "COORDINATES" / "The coordinate sign contradiction" / "OTHER SIGN vs. DIRECTION FACTORS"; EL400 Section 6.2 Direction (`LEFT` / `riGht`)
+**Authority:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2 (Direction); [MagXact](https://cdn.shopify.com/s/files/1/0576/0984/6859/files/MagXact-MX-100M-Mill-DRO-V1-9-1-2021.pdf?v=1740669616) “The coordinate sign contradiction” and “OTHER SIGN vs. DIRECTION FACTORS” for coordinate guidance.  
 **Priority:** P0
-**Category:** Foundation
 
 ## User Story
-**As a** machinist setting up a workpiece datum
-**I want** the displayed coordinate signs to follow the standard tool's-eye-view convention
-**So that** macros (bolt circle, SDM, etc.) and coordinate entry behave predictably regardless of how the scales were physically installed
+**As a** machinist  
+**I want** scale direction, datum and source decoding to compose predictably  
+**So that** displayed signs and entered coordinates remain correct for the installed machine
 
-## Background
-Coordinate sign is a common source of confusion (the manual calls it "the coordinate sign
-contradiction"). The convention is the **tool's-eye view**: imagine looking down from the
-cutting tool onto the workpiece. From that viewpoint a table moving **left** makes the tool
-effectively move **right** — the conventional positive X direction. Per-axis Left/Right setup
-(US-023) and datum choice flip the observed sign, but macros assume the standard convention.
+## Target Acceptance Criteria
+- [x] **AC 2.1:** Under the Figure 1 tool's-eye convention, motion that moves the tool in +X/+Y increases the displayed coordinate; positive values have no sign and negative values use the dedicated leading `-` cell.
+- [x] **AC 2.2:** Each axis's `LEFt`/`riGht` Direction setting recomputes the sign of the live coordinate. It does not preserve the old numeric reading when the direction is changed.
+- [x] **AC 2.3:** Zeroing or presetting relocates the datum. A preset is interpreted in display space, then converted through the active unit, radius/diameter scale and direction before deriving the stored offset, so entering `+10` still displays `+10` under `riGht`.
+- [x] **AC 2.4:** The simulator's persisted `dEP nEG`/`dEP PoS` option is an explicit product extension, not an EL400 §6.2 hardware claim. It changes only the displayed Z sense and composes with Z Direction; it does not mutate machine position or stored datums.
+- [x] **AC 2.5:** Routine work may use the operator's preferred direction. SDMs and generated macro coordinates use the Figure 1 convention required by MagXact; a macro's live Z passthrough continues to use the operator's Z display preference.
+- [x] **AC 2.6:** Source decoding precedes sign/datum transforms. CNCjs positions are already engineering millimetres and must not be multiplied by `SC`; a simulated raw-scale source with an installed encoder resolution may apply configured-microns / installed-microns before Direction.
 
-## Acceptance Criteria
-- [ ] **AC 2.1:** With the standard convention, table motion that moves the **tool** in the +X / +Y direction increases the displayed value (tool's-eye view, not operator's-eye view).
-- [ ] **AC 2.2:** The displayed sign of an axis flips when the per-axis Direction parameter (US-023, `LEFT`/`riGht`) is changed.
-- [ ] **AC 2.3:** The displayed sign also depends on the chosen datum location (e.g. lower-left vs. lower-right corner): a coordinate negative from one datum is positive from another.
-- [ ] **AC 2.4:** Z increases as cutting depth increases when the operator zeroes Z at tool-touch and prefers depth-positive — a documented user preference, selectable at runtime via the global `dEP nEG` / `dEP PoS` setup toggle (default `dEP nEG`, the standard depth-negative convention).
-- [ ] **AC 2.5:** For sub-datums (US-009..011) and pre-programmed macros (bolt circle US-016, etc.), the **standard sign convention (Figure 1)** is used regardless of the operator's routine preference.
-- [ ] **AC 2.6:** A negative value is shown with a leading `-`; positive values have no sign.
+## Verification
+The headed core run covered positive and negative motion, the dedicated sign cell, all-axis Direction changes, positive presets under `riGht`, diameter composition and the independent Z-depth preference. A targeted raw-source recheck showed an installed 5 µm encoder display 10 mm at `SC 5.0`, 2 mm at `SC 1.0`, then 10 mm after restoring `SC 5.0`. A separate mock-CNCjs run kept engineering values unchanged at `SC 1.0` and `SC 5.0`, including live update and reconnect. SDM and macro sign behavior is covered by those stories' headed runs rather than duplicated here. No physical encoder or CNC controller was exercised.
 
-## E2E Test Scenarios
-```typescript
-describe('US-002: Sign Convention', () => {
-  test("tool's-eye +X is table-left under default direction", async () => {
-    await dro.zeroAxis('X');
-    await dro.simulateTableMove('X', 'left', 10.000);
-    await expect(dro.display.xAxis).toHaveValue(10.000); // positive
-  });
+## Evidence
+- [Verification index and headed-session reports](../README.md#verification)
+- [`e2e/01-foundation/US-002-sign-convention.spec.ts`](../../../e2e/01-foundation/US-002-sign-convention.spec.ts)
+- [`e2e/02-core-operations/US-005-zero-axes.spec.ts`](../../../e2e/02-core-operations/US-005-zero-axes.spec.ts)
 
-  test('Direction parameter flips the sign', async () => {
-    await dro.setAxisDirection('X', 'riGht');
-    await dro.zeroAxis('X');
-    await dro.simulateTableMove('X', 'left', 10.000);
-    await expect(dro.display.xAxis).toHaveValue(-10.000);
-  });
-
-  test('negative values display a leading minus', async () => {
-    await dro.zeroAxis('Y');
-    await dro.simulateMove('Y', -3.250);
-    await expect(dro.display.yAxis).toHaveText('-3.250');
-  });
-});
-```
-
-## Implementation Notes
-- Sign is the product of (raw scale delta) × (per-axis Direction setting). The datum offset is
-  applied separately (zeroing/preset). Keep these as distinct transforms in
-  `src/stores/dro/utils/displayComputation.ts`.
-- Macros must compute against the canonical convention, independent of the user's Direction
-  preference, so generated hole coordinates land where the figures show. This applies to the
-  coordinates a macro **generates** (the X/Y hole positions and their distance-to-go). The Z
-  field shown during a 2D drill macro (bolt circle, grid, etc.) is **not** a generated
-  coordinate — it is the operator's live tool-depth readout passed through, and it therefore
-  correctly follows their Z direction/depth preference (consistent with the Z reading
-  everywhere else in the session). AC 2.5 covers generated coordinates, not the live-position
-  passthrough.
-- **Z depth-sense (AC 2.4) is a documented, operator-reachable user preference.** The standard
-  convention is depth-negative (`zDepthSense: 'depth-negative'`, the default): with Z zeroed at
-  tool-touch, cutting deeper makes the displayed Z more negative. An operator who prefers to read
-  cutting depth as a positive number selects depth-positive (`'depth-positive'`), which inverts
-  the Z display sign so the value increases as the tool cuts deeper. It is toggled at runtime
-  through the global setup-menu parameter labelled `dEP nEG` / `dEP PoS` (see the Label Contract
-  below) and persisted in non-volatile memory — not a hidden constant. It is a **display-only**
-  Z-axis factor: it composes with the per-axis Z Direction inside `directionSign` (a Z that is
-  both `reversed` and `depth-positive` double-inverts back to standard) and never alters stored
-  machine position, datum offsets, or macro coordinate math.
-- Accessibility: announce sign to screen readers (US-037) — "negative three point two five".
-
-## Setup-Menu Label Contract (pinned)
-The seven-segment glyph set has no uppercase `T` (lowercase `t` only), so the manual's "LEFT"
-renders as `LEFt`. Pinned, renderable labels (single source of truth for impl + E2E helpers):
-- Per-axis **Direction** parameter (`axisDirection`): choice value `'normal'` → label **`LEFt`**;
-  value `'reversed'` → label **`riGht`**. The parameter's own highlight label is `LEFt`.
-- Global **Z depth-sense** parameter (`zDepthSense`): value `'depth-negative'` → label
-  **`dEP nEG`**; value `'depth-positive'` → label **`dEP PoS`**.
-The E2E `setAxisDirection` helper locates the Direction parameter by matching a label of exactly
-`LEFt` or `riGht` (note lowercase `t`).
-
-## Related Stories
-- US-005: Zeroing Individual Axes (datum choice)
-- US-023: Scale Direction (Left/Right parameter)
-- US-016: Bolt Circle (macros that assume the standard convention)
-- US-009..011: Sub-Datum Memory
-
-## Notes
-- **Recovered missing file.** The user-stories index linked `US-002-sign-convention.md` and the
-  priority matrix listed US-002 (P0), but the file did not exist on disk. Authored from the
-  MagXact "COORDINATES" sections and EL400 §6.2 Direction during the README spec crosscheck.
-</content>
+## Authority Note
+MagXact explicitly says there is no universal sign preference for routine shop work. The Figure 1 convention is mandatory here only where SDMs or generated macro coordinates depend on it.

@@ -3,32 +3,24 @@
  *
  * Handles the idle state, which is the default operating state of the DRO.
  * From idle, users can access mode toggles and the function menu.
- * Also handles MILL_STATE_CHANGED to update display when position changes.
+ * Live idle position updates are owned by the probe feature.
  */
 
 import type { FeatureReducer } from '../types';
 import { INITIAL_DRO_STATE_DATA, INITIAL_BOLT_HOLE_DATA, INITIAL_ARC_DATA, INITIAL_ANGLE_HOLE_DATA, INITIAL_GRID_DATA, INITIAL_SDM_DATA } from '../droStateMachine';
-import { computeNormalDisplay, createDisplay } from '../utils/displayComputation';
+import { createDisplay } from '../utils/displayComputation';
 import { MENU_TEXT_MAP } from './menu';
 
-export const idleReducer: FeatureReducer = (statePayload, eventPayload, context) => {
+export const idleReducer: FeatureReducer = (statePayload, eventPayload) => {
   const { stateName: state, vMem } = statePayload;
   const { eventName } = eventPayload;
 
   if (state !== 'idle') return null;
 
   switch (eventName) {
-    // Handle position updates - update display when mill position changes.
-    // In probe Freeze mode the probeReducer owns the idle display (it may hold
-    // the readout frozen on a probe trigger), so defer to it (US-032, AC 32.3).
+    // Probe handles all idle motion ticks, including ordinary live readout.
     case 'MILL_STATE_CHANGED':
-      if (context.nvMem.probeDroType === 'freeze') {
-        return null;
-      }
-      return {
-        ...statePayload,
-        display: computeNormalDisplay(vMem, context),
-      };
+      return null;
     // BTN_ABS_INC is handled by absIncReducer which toggles vMem.mode
     // BTN_INCH_MM is handled by inchMmReducer which toggles nvMem.defaultUnit
     case 'BTN_FUNCTION':
@@ -86,10 +78,10 @@ export const idleReducer: FeatureReducer = (statePayload, eventPayload, context)
       // Seed the session from the retained sub-datum store so Run (US-011) can
       // recall points learned/programmed in a previous SDM session.
       return {
-        stateName: 'sdm-intro',
-        stateData: { ...INITIAL_SDM_DATA, points: { ...vMem.sdmPoints } },
-        vMem,
-        display: createDisplay('Sdm', '', ''),
+        stateName: 'sdm-menu-program',
+        stateData: { ...INITIAL_SDM_DATA, points: vMem.sdmPoints, returnMode: vMem.mode },
+        vMem: { ...vMem, mode: 'abs', activeAxis: null, inputBuffer: '' },
+        display: createDisplay('ProGrAn', '', ''),
       };
     default:
       return null;

@@ -1,60 +1,47 @@
-# US-040: Setup Menu - Counting Mode (Linear vs Angular)
+# US-040: Setup Menu - Counting Mode
 
-**Manual Reference:** Section 6.2 Parameters Setting (`LinEAr` / `AnGULAr`); EL400 video manual §1.4 "Scale type — linear vs. angular"
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, p. 20: `LinEAr / AnGULAr`; angular `dP` formats are degrees-minutes, degrees-minutes-seconds, and decimal degrees.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.4, `[02:18–03:00]`: Linear is the mill default; angular is for rotary measurement.
+
 ## User Story
-**As a** machine installer
-**I want** to set each axis to either linear or angular (rotary) counting
-**So that** the axis displays correctly for the kind of scale installed (linear glass/magnetic scale vs. a rotary encoder)
+
+**As a** machine installer  
+**I want** each axis configured as linear or angular  
+**So that** its units, display formats, and calibration method match the installed measuring system
 
 ## Acceptance Criteria
-- [ ] **AC 40.1:** The first setup parameter for a selected axis is `LinEAr` (default).
-- [ ] **AC 40.2:** `◄` / `►` toggle the choice between `LinEAr` and `AnGULAr`.
-- [ ] **AC 40.3:** When `LinEAr` is selected, display resolution (`dP`) uses linear micron options (see US-022) and radius/diameter mode (US-041) is available.
-- [ ] **AC 40.4:** When `AnGULAr` is selected, the angular display-resolution formats become available: `dd.mn` (degrees-minutes), `dd.mn.SS` (degrees-minutes-seconds), and `dd.dEC` (degrees-decimal).
-- [ ] **AC 40.5:** Counting mode is set **per individual axis**.
-- [ ] **AC 40.6:** For a mill, all axes default to `LinEAr` (all DRO PROS mill kits use linear scales).
-- [ ] **AC 40.7:** The setting persists after power cycle when saved via `SAU CHG`.
 
-## E2E Test Scenarios
-```typescript
-describe('US-040: Counting Mode', () => {
-  test('default is linear', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
-    await expect(dro.display.message).toHaveText('LinEAr');
-  });
+- [x] **AC40.1:** `LinEAr` is the first row and factory setting for each mill axis; Left/Right toggles and wraps with `AnGULAr`.
+- [x] **AC40.2:** Counting mode is per-axis.
+- [x] **AC40.3:** Linear mode uses micron `dP` choices and makes radial/diametric measurement meaningful.
+- [x] **AC40.4:** Angular mode offers `dd.mn`, `dd.mn.SS`, and `dd.dEC` display formats and angular CALib methods.
+- [x] **AC40.5:** Changing mode reformats/reinterprets that axis coherently without changing other axes.
+- [x] **AC40.6:** The mode is drafted and becomes durable only after `SAU CHG`.
 
-  test('switching to angular exposes angular display formats', async () => {
-    await dro.pressKey('SETUP');
-    await dro.pressKey('X');
-    await dro.pressKey('KEY_6_RIGHT'); // ► to AnGULAr
-    await expect(dro.display.message).toHaveText('AnGULAr');
+Center, Preset, and SDM use signed decimal-degree residuals on angular axes;
+IN/MM and a stored diameter setting do not scale those values. This derived
+readout presentation is simulator policy where the manual is silent. Normal
+angular counting retains its selected wrapped decimal or DMS format.
 
-    await dro.navigateTo('dP'); // ▼ to display resolution
-    // Angular formats available instead of micron values
-    await dro.pressKey('KEY_6_RIGHT');
-    await expect(dro.display.message).toHaveTextMatching(/dd\.mn|dd\.mn\.SS|dd\.dEC/);
-  });
-});
-```
+## Human Verification
 
-## Implementation Notes
-- Couples to US-022 (display resolution): the resolution option set depends on counting mode.
-- Angular axes feed the angular-resolution rendering and (if implemented) angular error
-  compensation (US-031 §6.3.2).
-- Store as an enum on the per-axis non-volatile config, e.g. `countingMode: 'linear' | 'angular'`.
+Keep Y linear, set X angular, cycle all three X angular formats, and exercise decimal-degree/DMS boundary values. Re-enter X CALib and confirm angular methods are available; return X to linear and confirm micron formats and radius/diameter semantics. Save/reload, then repeat an unsaved reversal as a rollback control.
 
-## Related Stories
-- US-021: Scale Resolution
-- US-022: Display Resolution
-- US-041: Radius/Diameter Mode
-- US-031: Error Compensation (angular methods)
+## Automated Coverage
 
-## Notes
-- New story from crosscheck. The `LinEAr`/`AnGULAr` parameter heads the §6.2 setup table but
-  had no user story; angular display-resolution formats were also uncovered.
-- Scope note: most mill installs never leave `LinEAr`; angular support is for rotary-axis setups.
-</content>
+- [`e2e/06-configuration/US-040-counting-mode.spec.ts`](../../../e2e/06-configuration/US-040-counting-mode.spec.ts)
+- [`e2e/06-configuration/US-040-dms.spec.ts`](../../../e2e/06-configuration/US-040-dms.spec.ts)
+- Angular calibration: [`e2e/06-configuration/US-031-calibration.spec.ts`](../../../e2e/06-configuration/US-031-calibration.spec.ts)
+
+## Verification
+
+[Portable evidence and full-suite results](../README.md#verification)
+
+Headed checks covered the default and wrap, per-axis isolation, all three angular formats, DMS second-to-minute carry, linear micron and radius/diameter rows, and the angular calibration choices. Y was saved as angular decimal degrees, reloaded, and re-entered with that draft committed while X remained linear. A separate unsaved reversal returned to the saved mode. A later smoke check reproduced Y `12.30.00` alongside linear X diameter `2.0000`.
+
+The angular input came from the visible debug engineering-position controls. No physical rotary encoder or rotary table was used.

@@ -1,160 +1,151 @@
-/**
- * Integration tests: US-028 Restore Defaults (`rSt oEm`).
- *
- * Drives the full simulator through real front-panel buttons (btn-settings,
- * axis-select-x, the 2-key item-scroll, key-enter) and asserts the LIVE settings
- * store / volatile memory. No forced state, no window backdoors — the restore is
- * triggered by a real ENT over the real `rSt oEm` setup row, and the IN ProG
- * dwell completes via the real timeout hook (driven by fake timers).
- *
- * Covered:
- * - AC28.1/28.2/28.3: reach the `rSt oEm` row in setup.
- * - AC28.7/28.8: ENT shows `IN ProG`.
- * - AC28.9/28.10: the dwell completes and every setting returns to defaults.
- * - AC44.4: when an OEM baseline exists, restore returns to THAT baseline.
- * - "verify data cleared": SDM points and tool/work offsets are wiped.
- *
- * @see project/user-stories/06-configuration/US-028-restore-defaults.md
- */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act } from 'react';
-import { screen, waitFor, cleanup } from '@testing-library/react';
-import type userEvent from '@testing-library/user-event';
+/** Integration coverage for selected-axis `rSt oEm` restore semantics. */
+import { describe, it, expect, beforeEach } from 'vitest';
+import { act, screen, waitFor } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import {
   renderSimulator,
-  getAxisDisplayPureTextValue,
+  pressEnter,
+  emitPosition,
   getAxisDisplayPureNumberValue,
+  getAxisDisplayPureTextValue,
 } from '../../../tests/helpers/integration-test-utils';
+import type { OemDefaultsSnapshot } from '../../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../settingsStore';
-import { useDROStore } from '../../droStore';
-import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+import { SETUP_PARAMETERS } from './setup-parameters';
 import {
   RESTORE_DEFAULTS_LABEL,
   RESTORE_IN_PROGRESS_TEXT,
   RESTORE_DURATION_MS,
 } from './restore-defaults';
 
-describe('US-028 Restore Defaults (integration)', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+type Axis = 'X' | 'Y' | 'Z';
 
-  beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.clear();
-    useSettingsStore.getState().resetMemory();
-  });
+function rawAxisText(axis: Axis): string {
+  return (screen.getByTestId(`axis-value-${axis.toLowerCase()}`).textContent || '').trim();
+}
 
-  afterEach(() => {
-    // Unmount the simulator between tests so a lingering `In ProG` dwell timer
-    // (the real-timer useRestoreProgress hook) and stale DOM nodes don't bleed
-    // into the next test's queries / state.
-    cleanup();
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-  });
-
-  /** Open setup, pick X, scroll the 2-key to the `rSt oEm` row (AC28.1-28.3). */
-  async function gotoRestoreRow(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByTestId('btn-settings'));
-    await waitFor(() => { expect(getAxisDisplayPureTextValue('X')).toBe('SELECt'); });
-    await user.click(screen.getByTestId('axis-select-x'));
-
-    let guard = 0;
-    while (getAxisDisplayPureTextValue('X') !== RESTORE_DEFAULTS_LABEL) {
-      await user.click(screen.getByTestId('key-2'));
-      guard += 1;
-      if (guard > 40) throw new Error('rSt oEm row not reachable in setup');
-    }
+async function scrollSetupTo(user: UserEvent, predicate: (text: string) => boolean, name: string) {
+  for (let guard = 0; !predicate(rawAxisText('X')); guard += 1) {
+    if (guard >= SETUP_PARAMETERS.length) throw new Error(`${name} not reachable in setup`);
+    await user.click(screen.getByTestId('key-2'));
   }
+}
 
-  it('reaches the rSt oEm row and shows IN ProG on ENT (AC28.3/28.7/28.8)', async () => {
+async function openSetup(user: UserEvent, axis: Axis) {
+  await user.click(screen.getByTestId('btn-settings'));
+  await user.click(screen.getByTestId(`axis-select-${axis.toLowerCase()}`));
+}
+
+async function restoreAxisAndWait(user: UserEvent, axis: Axis) {
+  await openSetup(user, axis);
+  await scrollSetupTo(user, (text) => text === RESTORE_DEFAULTS_LABEL, RESTORE_DEFAULTS_LABEL);
+  await pressEnter(user);
+  expect(getAxisDisplayPureTextValue('X')).toBe(RESTORE_IN_PROGRESS_TEXT);
+  await waitFor(
+    () => { expect(rawAxisText('X')).not.toBe(RESTORE_IN_PROGRESS_TEXT); },
+    { timeout: RESTORE_DURATION_MS + 2000 }
+  );
+}
+
+async function expectSavedDisplayResolution(user: UserEvent, axis: Axis, expected: string) {
+  await openSetup(user, axis);
+  await scrollSetupTo(user, (text) => text.startsWith('dP '), 'dP');
+  expect(getAxisDisplayPureTextValue('X')).toBe(expected);
+  await user.click(screen.getByTestId('key-clear'));
+}
+
+describe('US-028 Restore Defaults (integration)', () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('shows In ProG when ENT confirms rSt oEm for the selected axis', async () => {
     const { user } = await renderSimulator();
-
-    await gotoRestoreRow(user);
-    expect(getAxisDisplayPureTextValue('X')).toBe(RESTORE_DEFAULTS_LABEL);
-
-    await user.click(screen.getByTestId('key-enter'));
+    await openSetup(user, 'Y');
+    await scrollSetupTo(user, (text) => text === RESTORE_DEFAULTS_LABEL, RESTORE_DEFAULTS_LABEL);
+    await pressEnter(user);
     expect(getAxisDisplayPureTextValue('X')).toBe(RESTORE_IN_PROGRESS_TEXT);
   });
 
-  it('restores all settings to factory defaults after the dwell (AC28.9/28.10)', async () => {
+  it('restores only the selected axis to factory config while preserving other axes and globals', async () => {
     const { user } = await renderSimulator();
 
-    // Move several settings away from factory first.
     act(() => {
-      useSettingsStore.getState().updateNvMem({
-        beepEnabled: false,
-        encoderFailWarning: true,
-        sleepTimeout: 30,
+      const current = useSettingsStore.getState().nvMem;
+      useSettingsStore.setState({
+        nvMem: {
+          ...current,
+          beepEnabled: false,
+          displayResolution: {
+            ...current.displayResolution,
+            X: '50',
+            Y: '20',
+          },
+        },
       });
     });
+    await restoreAxisAndWait(user, 'X');
+    await expectSavedDisplayResolution(user, 'X', 'dP 5.0');
+    await expectSavedDisplayResolution(user, 'Y', 'dP 20.0');
 
-    await gotoRestoreRow(user);
-    await user.click(screen.getByTestId('key-enter'));
-    expect(getAxisDisplayPureTextValue('X')).toBe(RESTORE_IN_PROGRESS_TEXT);
-
-    // The restore itself is durable on ENT (settings already back to factory).
-    expect(useSettingsStore.getState().nvMem.beepEnabled).toBe(
-      DEFAULT_NON_VOLATILE_MEMORY.beepEnabled
-    );
-    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(
-      DEFAULT_NON_VOLATILE_MEMORY.encoderFailWarning
-    );
-    expect(useSettingsStore.getState().nvMem.sleepTimeout).toBe(
-      DEFAULT_NON_VOLATILE_MEMORY.sleepTimeout
-    );
-
-    // After the brief dwell (RESTORE_DURATION_MS) the In ProG screen returns to
-    // the normal position display on its own (real-timer useRestoreProgress hook):
-    // X reads the numeric idle position (0) rather than the In ProG text.
-    await waitFor(
-      () => {
-        expect(getAxisDisplayPureNumberValue('X')).toBe(0);
-      },
-      { timeout: RESTORE_DURATION_MS + 2000 }
-    );
+    await openSetup(user, 'Z');
+    await scrollSetupTo(user, (text) => text === 'bEEP on' || text === 'bEEP oFF', 'bEEP');
+    expect(getAxisDisplayPureTextValue('X')).toBe('bEEP oFF');
   });
 
-  it('AC44.4: restores to the OEM baseline when one is captured', async () => {
+  it('restores the selected axis from the captured OEM baseline without changing another axis', async () => {
     const { user } = await renderSimulator();
 
-    // Capture an OEM baseline with EnF ON, then change it OFF.
     act(() => {
-      useSettingsStore.getState().updateNvMem({ encoderFailWarning: true });
-      const live = useSettingsStore.getState().nvMem;
-      const { oemDefaults: _drop, ...snapshot } = live;
-      useSettingsStore.getState().updateNvMem({ oemDefaults: snapshot });
-      useSettingsStore.getState().updateNvMem({ encoderFailWarning: false });
-    });
-    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(false);
-
-    await gotoRestoreRow(user);
-    await user.click(screen.getByTestId('key-enter'));
-
-    // Restore returned EnF to the OEM baseline value (ON), NOT factory (off).
-    expect(useSettingsStore.getState().nvMem.encoderFailWarning).toBe(true);
-  });
-
-  it('clears user data (SDM points and tool/work offsets)', async () => {
-    const { user } = await renderSimulator();
-
-    // Seed user data directly into volatile memory.
-    act(() => {
-      useDROStore.setState((s) => ({
-        vMem: {
-          ...s.vMem,
-          sdmPoints: { 1: { X: 1, Y: 2, Z: 3 } },
-          workOffsets: { X: 5, Y: 5, Z: 5 },
+      const current = useSettingsStore.getState().nvMem;
+      const { oemDefaults: _ignored, ...factoryBaseline } = current;
+      const oemDefaults: OemDefaultsSnapshot = {
+        ...factoryBaseline,
+        displayResolution: {
+          ...factoryBaseline.displayResolution,
+          X: '20',
         },
-      }));
+      };
+      useSettingsStore.setState({
+        nvMem: {
+          ...current,
+          displayResolution: {
+            ...current.displayResolution,
+            X: '50',
+            Y: '10',
+          },
+          oemDefaults,
+        },
+      });
     });
+    await restoreAxisAndWait(user, 'X');
+    await expectSavedDisplayResolution(user, 'X', 'dP 20.0');
+    await expectSavedDisplayResolution(user, 'Y', 'dP 10.0');
+  });
 
-    await gotoRestoreRow(user);
-    await user.click(screen.getByTestId('key-enter'));
+  it('preserves the selected-axis datum and learned SDM job data', async () => {
+    const { user } = await renderSimulator();
+    await user.click(screen.getByTestId('btn-toggle-unit'));
+    emitPosition(5, 2, 3);
+    await user.click(screen.getByTestId('axis-zero-x'));
 
-    expect(useDROStore.getState().vMem.sdmPoints).toEqual({});
-    expect(useDROStore.getState().vMem.workOffsets).toEqual({ X: 0, Y: 0, Z: 0 });
+    await user.click(screen.getByTestId('btn-sdm'));
+    await user.click(screen.getByTestId('key-4'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('LEArn');
+    await pressEnter(user);
+    await pressEnter(user);
+    await user.click(screen.getByTestId('axis-select-x'));
+    await user.click(screen.getByTestId('axis-select-x'));
+    await user.click(screen.getByTestId('key-clear'));
+
+    emitPosition(6, 2, 3);
+    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1, 4); });
+    await restoreAxisAndWait(user, 'X');
+    await waitFor(() => { expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(1, 4); });
+
+    await user.click(screen.getByTestId('btn-sdm'));
+    await user.click(screen.getByTestId('key-6'));
+    await pressEnter(user);
+    await pressEnter(user);
+    expect(rawAxisText('X')).not.toBe('no dAtA');
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-1, 4);
   });
 });

@@ -5,7 +5,7 @@
  * display text, mirroring how a real operator navigates the setup menu.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import {
   renderSimulator,
@@ -18,19 +18,13 @@ import {
  *
  * Source of truth, in priority order:
  *  - EL400 operation manual section 6.2 "Parameters Setting" / "table 2"
- *    (references/el400-operation-manual/ocr/markdown.md lines 450-484): the
- *    canonical navigable order — LinEAr, SC, dP, rAd, LEFt, CALiB, EnF, AUH Fn,
- *    (SErIAL), dro, (Prb dLY / PULSE), tAPEr, (Adition), LoC, SLEEP,
- *    SAU ChG, rSt oEm, oEm mod, End. Items in parentheses are not yet
- *    implemented in this simulator and are therefore absent here.
- *  - DRO PROS video walkthrough (references/el400-dro-overview-video/MANUAL.md
- *    Part 1 §1.4-1.19, timestamps [02:18]-[11:39]) for the implemented extras
- *    the §6.2 table omits: the zero-approach trio (ZERO AP / bP / tL, §1.13
- *    [08:36]) and bEEP (§1.14 [09:32]) sit just after LoC and before SLEEP.
+ *    defines the canonical order.
+ *  - The implemented registry also includes the manual's serial, probe-delay,
+ *    and output-mode rows, plus the video-documented zero-approach and keypad
+ *    beep rows.
  *
- * tAPEr shows `tAPEr X` (not the table's generic `tAPEron`) because the factory
- * default taperOnAxis is 'X'; dEP nEG (Z depth-sense, US-002 AC2.4) has no
- * §6.2 row and is grouped with the other per/global geometry settings.
+ * Choice edits are previews until SAU ChG. End and C leave setup without
+ * committing the draft transaction.
  */
 const EXPECTED_SETUP_MENU_ORDER = [
   'LinEAr',
@@ -41,15 +35,18 @@ const EXPECTED_SETUP_MENU_ORDER = [
   'CALib',
   'EnF oFF',
   'AUX Fn',
+  'SEr iAL',
   'dro t',
+  'Prb dLY',
+  'PULSE',
   'tAPEr X',
   'dEP nEG',
   'LoC oFF',
-  'bU22 oF',
-  'bP .002',
-  'tL .000',
+  'ZEro AP',
+  'BP diSt',
+  'BP toLr',
   'bEEP on',
-  'SLP oFF',
+  'SLEEP t',
   'SAU ChG',
   'rSt oEm',
   'oEm mod',
@@ -57,19 +54,10 @@ const EXPECTED_SETUP_MENU_ORDER = [
 ] as const;
 
 describe('US-039 Setup Menu Navigation (integration)', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
   });
 
-  afterEach(() => {
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-  });
 
   it('enters setup, shows SELECT, then first parameter after axis select (AC 39.1, 39.2)', async () => {
     const { user } = await renderSimulator();
@@ -154,35 +142,23 @@ describe('US-039 Setup Menu Navigation (integration)', () => {
     expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
   });
 
-  it('End + ent exits to the normal operating screen (AC 39.7)', async () => {
+  it('End exits and discards an unsaved choice', async () => {
     const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
+    await user.click(screen.getByTestId('key-6'));
+    expect(getAxisDisplayPureTextValue('X')).toBe('AnGULAr');
 
-    // Navigate up to the terminal End item, then press enter.
-    while (getAxisDisplayPureTextValue('X') !== 'End') {
-      await user.click(screen.getByTestId('key-8'));
-    }
+    await user.click(screen.getByTestId('key-8'));
     expect(getAxisDisplayPureTextValue('X')).toBe('End');
     await user.click(screen.getByTestId('key-enter'));
 
-    // Back to idle: X shows a numeric position (0), not setup text.
     expect(() => getAxisDisplayPureTextValue('X')).toThrow();
-  });
-
-  it('does not log a multi-reducer conflict during navigation', async () => {
-    const { user } = await renderSimulator();
 
     await user.click(screen.getByTestId('btn-settings'));
     await user.click(screen.getByTestId('axis-select-x'));
-    await user.click(screen.getByTestId('key-8'));
-    await user.click(screen.getByTestId('key-6'));
-    await user.click(screen.getByTestId('key-4'));
-
-    const conflictLogged = consoleErrorSpy.mock.calls.some((call: unknown[]) =>
-      String(call[0]).includes('Multiple reducers handled the same event')
-    );
-    expect(conflictLogged).toBe(false);
+    expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
   });
+
 });

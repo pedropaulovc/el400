@@ -1,60 +1,39 @@
-# US-042: Setup Menu - Encoder Fail Warning (ENF)
+# US-042: Setup Menu - Encoder Fail Warning
 
-**Manual Reference:** Section 6.2 Parameters Setting (`EnF oFF` / `EnF on`, note *2 "no SIG"); EL400 video manual §1.10 "Encoder-fail warning `ENF`"
-**Priority:** P5
+**Priority:** P5  
 **Category:** Configuration
 
+## Source
+
+- **Primary:** [EL400 Operation Manual](https://www.dropros.com/documents/EL400%20OpManual.pdf) §6.2, pp. 20–21: global `EnF oFF / EnF on`; a disconnected or damaged encoder shows `no SIG` on the corresponding axis.
+- **Video:** [DROPROS EL400 overview](https://www.youtube.com/watch?v=7W47KPCu7jE) §1.10, `[07:14–07:44]`: off by default, on is recommended, and the setting applies to all axes.
+
 ## User Story
-**As a** machine operator
-**I want** the DRO to alert me when an encoder cable becomes disconnected or damaged
-**So that** I don't keep working against a stale/incorrect reading after a scale drops out
+
+**As a** machine operator  
+**I want** a visible warning when an encoder signal is lost  
+**So that** I do not machine against a stale reading
 
 ## Acceptance Criteria
-- [ ] **AC 42.1:** The `EnF` parameter is available in setup with choices `EnF oFF` (default) and `EnF on`.
-- [ ] **AC 42.2:** `◄` / `►` toggle the setting; it applies to **all axes** (global), not per-axis.
-- [ ] **AC 42.3:** When `EnF on` and an axis loses its encoder signal, that axis display shows the error message `no SIG`.
-- [ ] **AC 42.4:** When `EnF oFF`, a lost encoder signal produces no warning (legacy behavior).
-- [ ] **AC 42.5:** The warning clears automatically once a valid encoder signal is restored.
-- [ ] **AC 42.6:** DRO PROS recommends `EnF on`; the simulator should make turning it on easy/discoverable.
-- [ ] **AC 42.7:** The setting persists after power cycle when saved via `SAU CHG`.
 
-## E2E Test Scenarios
-```typescript
-describe('US-042: Encoder Fail Warning', () => {
-  test('with ENF on, signal loss shows no SIG', async () => {
-    await dro.setEncoderFailWarning(true);
-    await dro.simulateEncoderDisconnect('X');
-    await expect(dro.display.xAxis).toHaveText('no SIG');
-  });
+- [x] **AC42.1:** Global `EnF` offers `oFF` (factory setting) and `on`.
+- [x] **AC42.2:** With `EnF on`, loss of one encoder signal replaces only that axis's readout with `no SIG`; unaffected axes continue updating.
+- [x] **AC42.3:** Restoring valid signal clears `no SIG` immediately and resumes the numeric coordinate.
+- [x] **AC42.4:** With `EnF oFF`, signal loss does not show `no SIG`.
+- [x] **AC42.5:** The draft setting persists only after `SAU CHG`.
 
-  test('reconnect clears the warning', async () => {
-    await dro.setEncoderFailWarning(true);
-    await dro.simulateEncoderDisconnect('X');
-    await dro.simulateEncoderReconnect('X');
-    await expect(dro.display.xAxis).toHaveValue(0.0000);
-  });
+## Human Verification
 
-  test('with ENF off, signal loss is silent', async () => {
-    await dro.setEncoderFailWarning(false);
-    await dro.simulateEncoderDisconnect('X');
-    await expect(dro.display.xAxis).not.toHaveText('no SIG');
-  });
-});
-```
+Enable and save ENF, use the visible debug signal control to drop X, jog Y, then restore X. Confirm only X shows and clears `no SIG` while Y stays live. Disable and save ENF, repeat X loss, and confirm the numeric display remains. Reload after each saved state and include an unsaved toggle control.
 
-## Implementation Notes
-- In the simulator there is no physical cable; model "signal loss" from the adapter layer —
-  e.g. a `MillState.connected === false` per-axis, a probe/encoder fault flag from the
-  DebugServer, or a CNCjs disconnect. The DebugControlPanel can expose a toggle to simulate it.
-- `no SIG` rendering belongs in `displayComputation.ts` as an axis display override.
-- Store as global `encoderFailWarning: boolean` in non-volatile memory.
+## Automated Coverage
 
-## Related Stories
-- US-035: External Machine Connection (where signal loss originates)
-- US-027: Save Changes
-- US-046: Self-Diagnostics Mode (encoder diagnostics)
+- [`e2e/06-configuration/US-042-encoder-fail.spec.ts`](../../../e2e/06-configuration/US-042-encoder-fail.spec.ts)
 
-## Notes
-- New story from crosscheck. `EnF` is in the §6.2 table and video §1.10 but had no story.
-- The on-screen text per OCR note *2 is `no SIG` on the affected axis.
-</content>
+## Verification
+
+[Portable evidence and full-suite results](../README.md#verification)
+
+With saved `EnF on`, dropping X through the visible signal control changed only X to `no SIG`; Y continued updating, and restoring X returned its numeric value immediately. Saved `EnF off` survived reload and suppressed the warning. Both saved states were reloaded, and an unsaved opposite draft reverted to the saved value.
+
+The signal control simulates encoder validity. No physical cable was disconnected, so this does not establish electrical fault-detection latency on EL400 hardware.

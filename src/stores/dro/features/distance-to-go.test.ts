@@ -439,3 +439,89 @@ describe('distanceToGoReducer', () => {
     });
   });
 });
+
+describe('relative Preset', () => {
+  it('measures travel from execution at a nonzero origin without relocating ABS', () => {
+    const context = connectedContext({ x: 12, y: 0, z: 0 });
+    context.nvMem = { ...context.nvMem, defaultUnit: 'mm' };
+    const initial = createTestState('preset-select', {
+      ...INITIAL_PRESET_DATA, presetTargets: { X: 20, Y: null, Z: null },
+    });
+    initial.vMem = { ...initial.vMem, workOffsets: { X: 7, Y: 0, Z: 0 } };
+    let state = distanceToGoReducer(initial, { eventName: 'BTN_DISTANCE_TO_GO' }, context)!;
+    expect(state.display.X).toBe(20);
+    context.millState = { ...context.millState, position: { x: 32, y: 0, z: 0 } };
+    state = distanceToGoReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(state.display.X).toBe(0);
+    state = distanceToGoReducer(state, { eventName: 'KEY_CLEAR' }, context)!;
+    expect(state.display.X).toBe(25);
+  });
+});
+
+describe('angular relative Preset', () => {
+  it('keeps degree targets and signed residual travel invariant under inch and diameter modes', () => {
+    const context = connectedContext({ x: 30, y: 0, z: 0 });
+    context.nvMem = {
+      ...context.nvMem,
+      defaultUnit: 'inch',
+      countingMode: { ...context.nvMem.countingMode, X: 'angular' },
+      measurementMode: { ...context.nvMem.measurementMode, X: 'diameter' },
+    };
+
+    let state = createTestState('idle');
+    for (const eventName of [
+      'BTN_DISTANCE_TO_GO',
+      'BTN_SELECT_X',
+      'KEY_1',
+      'KEY_0',
+      'KEY_ENTER',
+      'BTN_DISTANCE_TO_GO',
+    ] as const) {
+      state = distanceToGoReducer(state, { eventName }, context)!;
+    }
+
+    expect((state.stateData as PresetData).presetTargets.X).toBe(10);
+    expect(state.display.X).toBe(10);
+
+    context.millState = { ...context.millState, position: { x: 31, y: 0, z: 0 } };
+    state = distanceToGoReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(state.display.X).toBe(9);
+
+    state = distanceToGoReducer(state, { eventName: 'BTN_INCH_MM' }, context)!;
+    expect(state.display.X).toBe(9);
+  });
+
+  it('keeps an untargeted angular axis on the wrapped configured readout in Preset INC mode', () => {
+    const context = connectedContext({ x: 0, y: 370.5, z: 0 });
+    context.nvMem = {
+      ...context.nvMem,
+      defaultUnit: 'inch',
+      countingMode: { ...context.nvMem.countingMode, Y: 'angular' },
+      angularResolution: { ...context.nvMem.angularResolution, Y: 'dd-mn-ss' },
+      measurementMode: { ...context.nvMem.measurementMode, Y: 'diameter' },
+    };
+    const initial = createTestState('preset-select', {
+      ...INITIAL_PRESET_DATA,
+      presetTargets: { X: 1, Y: null, Z: null },
+    });
+    initial.vMem = {
+      ...initial.vMem,
+      incrementalOffsets: { ...initial.vMem.incrementalOffsets, Y: 360 },
+    };
+
+    let state = distanceToGoReducer(
+      initial,
+      { eventName: 'BTN_DISTANCE_TO_GO' },
+      context
+    )!;
+    expect(state.vMem.mode).toBe('inc');
+    expect(state.display.Y).toBe('10.30.00');
+
+    context.millState = {
+      ...context.millState,
+      position: { x: 0, y: 1000.5, z: 0 },
+    };
+    state = distanceToGoReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(state.display.Y).toBe('280.30.00');
+  });
+});

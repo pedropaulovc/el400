@@ -34,6 +34,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -124,15 +125,12 @@ function computeGridNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   const holePos = calculateHolePosition(gridData, gridData.currentHole);
-
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
-
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
@@ -142,13 +140,36 @@ function computeGridNavigateDisplay(
   );
 }
 
+function computeGridCurrentPairDisplay(gridData: GridData): DisplayState {
+  const holesX = gridData.holesX ?? 1;
+  const zeroBased = gridData.currentHole - 1;
+  const xIndex = (zeroBased % holesX) + 1;
+  const yIndex = Math.floor(zeroBased / holesX) + 1;
+  return createDisplay(String(xIndex), String(yIndex), '');
+}
+
+function computeGridActiveDisplay(
+  gridData: GridData,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): DisplayState {
+  return gridData.navigationPhase === 'current-number'
+    ? computeGridCurrentPairDisplay(gridData)
+    : computeGridNavigateDisplay(gridData, vMem, context);
+}
+
 /** Parse the buffer to a numeric value for display (empty/invalid => 0). */
 function formatBufferForDisplay(buffer: string): number {
   if (!buffer || buffer === '-' || buffer === '.' || buffer === '-.') {
     return 0;
   }
   const value = parseFloat(buffer);
-  return isNaN(value) ? 0 : value;
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** Preserve integer-entry text without applying the axis coordinate precision. */
+function formatIntegerBufferForDisplay(buffer: string): string {
+  return buffer || '0';
 }
 
 /**
@@ -161,7 +182,10 @@ function computeParameterEntryDisplay(
   vMem: VolatileMemoryState
 ): DisplayState {
   const promptText = GRID_DISPLAY_TEXT[state] ?? '';
-  const bufferValue = formatBufferForDisplay(vMem.inputBuffer);
+  const bufferValue =
+    state === 'grid-holes-x' || state === 'grid-holes-y'
+      ? formatIntegerBufferForDisplay(vMem.inputBuffer)
+      : formatBufferForDisplay(vMem.inputBuffer);
 
   if (state === 'grid-start-x') {
     return createDisplay(bufferValue, promptText, '');
@@ -188,12 +212,12 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
 
   const gridData = data.stateDataType === 'grid' ? data : INITIAL_GRID_DATA;
 
-  // Update display when mill position changes
+  // Keep the active display in sync when the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
     if (state === 'grid-navigate') {
       return {
         ...statePayload,
-        display: computeGridNavigateDisplay(gridData, vMem, context),
+        display: computeGridActiveDisplay(gridData, vMem, context),
       };
     }
     if (isParameterEntryState(state)) {
@@ -274,8 +298,9 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-start-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         return advanceParameter(statePayload, { ...gridData, startX: valueMm });
       }
       return null;
@@ -284,8 +309,9 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-start-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm)) return null;
         return advanceParameter(statePayload, { ...gridData, startY: valueMm });
       }
       return null;
@@ -294,8 +320,9 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-pitch-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         return advanceParameter(statePayload, { ...gridData, pitchX: valueMm });
       }
       return null;
@@ -304,8 +331,9 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-pitch-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value <= 0) return null;
+        if (value === null || !Number.isFinite(value) || value <= 0) return null;
         const valueMm = fromAnyUnitToMm(value, context.nvMem.defaultUnit);
+        if (!Number.isFinite(valueMm) || valueMm <= 0) return null;
         return advanceParameter(statePayload, { ...gridData, pitchY: valueMm });
       }
       return null;
@@ -314,7 +342,7 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-angle': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null) return null;
+        if (value === null || !Number.isFinite(value)) return null;
         const normalizedAngle = ((value % 360) + 360) % 360;
         return advanceParameter(statePayload, { ...gridData, angle: normalizedAngle });
       }
@@ -324,8 +352,13 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-holes-x': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 1 || value > 99) return null;
-        return advanceParameter(statePayload, { ...gridData, holesX: Math.floor(value) });
+        if (
+          value === null ||
+          !Number.isSafeInteger(value) ||
+          value < 1 ||
+          value > 99
+        ) return null;
+        return advanceParameter(statePayload, { ...gridData, holesX: value });
       }
       return null;
     }
@@ -333,12 +366,18 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
     case 'grid-holes-y': {
       if (eventName === 'KEY_ENTER') {
         const value = getBufferValue(vMem.inputBuffer);
-        if (value === null || value < 1 || value > 99) return null;
+        if (
+          value === null ||
+          !Number.isSafeInteger(value) ||
+          value < 1 ||
+          value > 99
+        ) return null;
 
         const newData: GridData = {
           ...gridData,
-          holesY: Math.floor(value),
+          holesY: value,
           currentHole: 1,
+          navigationPhase: 'distance-to-go',
         };
         // Switch to INC mode for distance-to-go display
         const newVMem = { ...vMem, mode: 'inc' as const, inputBuffer: '' };
@@ -354,7 +393,7 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
 
     case 'grid-navigate': {
       const total = totalHoles(gridData);
-      const { currentHole } = gridData;
+      const { currentHole, navigationPhase } = gridData;
 
       if (total < 1) {
         return {
@@ -365,67 +404,43 @@ export const gridReducer: FeatureReducer = (statePayload, eventPayload, context)
         };
       }
 
-      // Key 6: next hole (wrap to 1)
+      // Grid has no direct-hole request. Key 8 only toggles the current X/Y
+      // hole-index pair documented by the macro manual.
+      if (eventName === 'KEY_8_UP') {
+        const newData: GridData = {
+          ...gridData,
+          navigationPhase:
+            navigationPhase === 'current-number' ? 'distance-to-go' : 'current-number',
+        };
+        return {
+          ...statePayload,
+          stateData: newData,
+          vMem: { ...vMem, inputBuffer: '' },
+          display: computeGridActiveDisplay(newData, vMem, context),
+        };
+      }
+
       if (eventName === 'KEY_6_RIGHT') {
         const nextHole = currentHole >= total ? 1 : currentHole + 1;
         const newData = { ...gridData, currentHole: nextHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'grid-navigate',
           stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeGridNavigateDisplay(newData, vMem, context),
+          vMem: newVMem,
+          display: computeGridActiveDisplay(newData, newVMem, context),
         };
       }
 
-      // Key 4: previous hole (wrap to last)
       if (eventName === 'KEY_4_LEFT') {
         const prevHole = currentHole <= 1 ? total : currentHole - 1;
         const newData = { ...gridData, currentHole: prevHole };
+        const newVMem = { ...vMem, inputBuffer: '' };
         return {
           stateName: 'grid-navigate',
           stateData: newData,
-          vMem: { ...vMem, inputBuffer: '' },
-          display: computeGridNavigateDisplay(newData, vMem, context),
-        };
-      }
-
-      // Key 8: show current hole number in buffer
-      if (eventName === 'KEY_8_UP') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: String(currentHole) },
-        };
-      }
-
-      // Key 2: clear buffer to prepare a jump
-      if (eventName === 'KEY_2_DOWN') {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: '' },
-        };
-      }
-
-      // ENTER with a buffered number: jump to that hole
-      if (eventName === 'KEY_ENTER' && vMem.inputBuffer !== '') {
-        const targetHole = getBufferValue(vMem.inputBuffer);
-        if (targetHole !== null && targetHole >= 1 && targetHole <= total) {
-          const newData = { ...gridData, currentHole: Math.floor(targetHole) };
-          return {
-            stateName: 'grid-navigate',
-            stateData: newData,
-            vMem: { ...vMem, inputBuffer: '' },
-            display: computeGridNavigateDisplay(newData, vMem, context),
-          };
-        }
-        return null;
-      }
-
-      // Digit entry for jump target (non-arrow digit keys: 0,1,3,5,7,9)
-      const digit = KEY_TO_DIGIT[eventName];
-      if (digit !== undefined) {
-        return {
-          ...statePayload,
-          vMem: { ...vMem, inputBuffer: appendDigit(vMem.inputBuffer, digit) },
+          vMem: newVMem,
+          display: computeGridActiveDisplay(newData, newVMem, context),
         };
       }
 

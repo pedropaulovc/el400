@@ -3,14 +3,13 @@ import { test, expect } from '../helpers/fixtures';
 /**
  * E2E Tests: US-041 Setup Menu — Radius / Diameter Display Mode
  *
- * Drives the lathe-style radius/diameter readout end to end through real user
- * actions: table motion is emitted via the mock CNCjs server's relative-move
- * endpoint (`dro.simulateTableMove`, the same MILL_STATE_CHANGED path a physical
- * jog uses), and the measurement-mode change goes through the real setup menu
- * (`dro.setMeasurementMode`, no window hooks / forced state).
+ * Drives radius/diameter readout through visible controls on the debug source.
+ * Physical motion uses the debug position controls through the live
+ * MILL_STATE_CHANGED path, while measurement-mode changes use the real setup
+ * transaction.
  *
- * Values are asserted in MILLIMETRES (the tests toggle to mm with the real in/mm
- * key) so the spec's clean magnitudes hold; the default unit is inches.
+ * Values are asserted in millimetres so the physical and doubled numerical
+ * magnitudes remain independent and explicit.
  *
  * Covers AC 41.2 (◄/► toggle rAd/diA), AC 41.3 (rAd is 1:1, the default),
  * AC 41.4 (diA doubles the displayed value), AC 41.5 (per-axis),
@@ -20,9 +19,9 @@ import { test, expect } from '../helpers/fixtures';
  * @see project/user-stories/06-configuration/US-041-radius-diameter-mode.md
  */
 test.describe('US-041: Radius/Diameter Mode', () => {
-  // Setup-menu mode changes commit to persisted nvMem; run serially so parallel
-  // workers do not race on shared localStorage.
-  test.describe.configure({ mode: 'serial' });
+  test.beforeEach(async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
+  });
 
   /**
    * AC 41.3: the default radius (`rAd`) mode shows actual axis movement 1:1.
@@ -49,6 +48,8 @@ test.describe('US-041: Radius/Diameter Mode', () => {
     expect(await dro.isMmUnits()).toBe(true);
 
     await dro.setMeasurementMode('X', 'diA');
+    await dro.reload();
+    expect(await dro.isMmUnits()).toBe(true);
     await dro.zeroAxis('X');
     await dro.waitForAxisValue('X', 0);
 

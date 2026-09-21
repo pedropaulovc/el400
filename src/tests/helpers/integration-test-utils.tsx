@@ -18,7 +18,7 @@ import type { MockMillAdapter } from '../../adapters/MockMillAdapter';
 import EL400Simulator from '../../components/EL400Simulator';
 import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
-import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
+import { DEFAULT_NON_VOLATILE_MEMORY, NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMillStore } from '../../stores/millStore';
 import { useDROStore } from '../../stores/droStore';
@@ -104,26 +104,8 @@ export function resetStores(): void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
-      beepEnabled: true,
-      defaultUnit: 'inch',
-      precision: 4,
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       bootMessageMode: 'skip', // Skip boot for faster tests
-      scaleResolution: { X: '5', Y: '5', Z: '5' },
-      displayResolution: { X: '5', Y: '5', Z: '5' },
-      angularResolution: { X: 'dd-mn', Y: 'dd-mn', Z: 'dd-mn' },
-      taperOnAxis: 'X',
-      axisDirection: { X: 'normal', Y: 'normal', Z: 'normal' },
-      zDepthSense: 'depth-negative',
-      zeroApproachEnabled: false,
-      zeroApproachDistance: '0.002',
-      zeroApproachTolerance: '0',
-      measurementMode: { X: 'radius', Y: 'radius', Z: 'radius' },
-      countingMode: { X: 'linear', Y: 'linear', Z: 'linear' },
-      probeDroType: 'transmit',
-      encoderFailWarning: false,
-      keypadLock: 'off',
-      sleepTimeout: 0,
-      oemDefaults: null,
     },
   });
 
@@ -137,6 +119,7 @@ export function resetStores(): void {
 
   // Reset DRO store
   useDROStore.setState({
+    activityVersion: 0,
     stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
     stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
     vMem: INITIAL_VOLATILE_MEMORY_STATE,
@@ -170,6 +153,8 @@ export type MillSource = 'live' | 'noop';
 interface RenderSimulatorOptions {
   /** Boot message mode - defaults to 'skip' for faster tests */
   bootMessageMode?: 'show' | 'skip';
+  /** Non-volatile settings applied to the real settings store before render. */
+  nvMem?: Partial<NonVolatileMemory>;
   /** Enable render profiling for performance measurement */
   profile?: boolean;
   /** Use component-level profiling for detailed metrics */
@@ -206,13 +191,14 @@ export async function renderSimulator(
     profile = false,
     componentProfiling = false,
     millSource = 'live',
+    nvMem,
   } = options ?? {};
 
   // Reset stores first (also initializes NoOpMillAdapter)
   resetStores();
 
-  // Set boot message mode
-  useSettingsStore.getState().updateNvMem({ bootMessageMode });
+  // Apply fixture settings before mounting so the first render observes them.
+  useSettingsStore.getState().updateNvMem({ ...nvMem, bootMessageMode });
 
   // If skipping boot, start in idle state
   if (bootMessageMode === 'skip') {

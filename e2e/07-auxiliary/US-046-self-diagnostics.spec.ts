@@ -1,4 +1,5 @@
 import { test, expect } from '../helpers/fixtures';
+import type { DROPage } from '../helpers/dro-page';
 
 /**
  * US-046: Self-Diagnostics Mode
@@ -14,10 +15,12 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
   test.describe.configure({ mode: 'serial' });
 
   /** Boot with the version message shown, then press ▲ to enter diagnostics. */
-  async function enterDiagnostics(dro: import('../helpers/dro-page').DROPage) {
+  async function enterDiagnostics(
+    dro: DROPage,
+    source: 'cncjs' | 'debug' = 'cncjs',
+  ) {
     await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
-    await dro.goto({ skipBootMessage: false });
-    // The version-message screen must be committed before ▲ enters diagnostics.
+    await dro.goto({ source, skipBootMessage: false });
     // Await the state machine reaching boot-show-message (deterministic, frozen-clock
     // safe) rather than polling the 'EL400' glyph behind a load-sensitive timeout.
     await dro.waitForReady('boot-show-message');
@@ -53,6 +56,23 @@ test.describe('US-046: Self-Diagnostics Mode', () => {
     await dro.key1.click(); // display -> keyboard
     await dro.key5.click(); // echo
     await expect.poll(() => dro.getAxisRawText('X')).toContain('5');
+  });
+
+  test('AC 46.5: ENTER from PrESS opens encoder diagnostics and proves all debug axes', async ({ dro }) => {
+    await enterDiagnostics(dro, 'debug');
+    await dro.key1.click(); // memory -> display
+    await dro.key1.click(); // display -> keyboard
+    await dro.waitForAxisPureTextValue('X', 'PrESS');
+
+    await dro.enterButton.click();
+    await dro.waitForAxisPureTextValue('X', 'EnCodEr');
+
+    await dro.simulateEncoderRelativeMove('X', 1);
+    await dro.waitForAxisPureTextValue('X', 'X');
+    await dro.simulateEncoderRelativeMove('Y', 1);
+    await dro.waitForAxisPureTextValue('Y', 'Y');
+    await dro.simulateEncoderRelativeMove('Z', 1);
+    await dro.waitForAxisPureTextValue('Z', 'Z');
   });
 
   test('AC 46.6/46.7: double C exits diagnostics to the normal screen', async ({ dro }) => {

@@ -162,28 +162,51 @@ describe('Angle Hole (Linear Hole Pattern) Integration', () => {
 
       await user.click(screen.getByTestId('key-6'));
       let stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'angle-hole') {
-        expect(stateData.currentHole).toBe(2);
-      }
+      expect(stateData).toMatchObject({
+        stateDataType: 'angle-hole',
+        currentHole: 2,
+      });
 
       await user.click(screen.getByTestId('key-4'));
       stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'angle-hole') {
-        expect(stateData.currentHole).toBe(1);
-      }
+      expect(stateData).toMatchObject({
+        stateDataType: 'angle-hole',
+        currentHole: 1,
+      });
     });
 
-    it('jumps to specific hole with number entry then enter (key 3)', async () => {
+    it('shows jump entry and accepts an arrow-labelled hole digit', async () => {
       const { user } = await renderSimulator({ millSource: 'noop' });
       await setupNavigateState(user);
 
-      await user.click(screen.getByTestId('key-3'));
+      await user.click(screen.getByTestId('key-2'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(0);
+      await user.click(screen.getByTestId('key-4'));
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(4);
       await user.click(screen.getByTestId('key-enter'));
 
       const stateData = useDROStore.getState().stateData;
-      if (stateData.stateDataType === 'angle-hole') {
-        expect(stateData.currentHole).toBe(3);
-      }
+      expect(stateData).toMatchObject({
+        stateDataType: 'angle-hole',
+        currentHole: 4,
+      });
+    });
+
+    it('toggles a visible current-hole view with key 8', async () => {
+      const { user } = await renderSimulator({ millSource: 'noop' });
+      await setupNavigateState(user);
+
+      await user.click(screen.getByTestId('key-8'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('hoLES');
+      expect(getAxisDisplayPureNumberValue('Y', 0)).toBe(1);
+      await user.click(screen.getByTestId('key-8'));
+
+      const stateData = useDROStore.getState().stateData;
+      expect(stateData).toMatchObject({
+        stateDataType: 'angle-hole',
+        navigationPhase: 'distance-to-go',
+      });
     });
   });
 

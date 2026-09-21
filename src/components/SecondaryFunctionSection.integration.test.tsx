@@ -29,6 +29,7 @@ describe('SecondaryFunctionSection Integration', () => {
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
     });
 
@@ -41,6 +42,7 @@ describe('SecondaryFunctionSection Integration', () => {
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(-80, 4);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-y'));
       expect(getAxisDisplayPureNumberValue('Y')).toBeCloseTo(-40, 4);
     });
 
@@ -53,6 +55,7 @@ describe('SecondaryFunctionSection Integration', () => {
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(12.5, 4);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-z'));
       expect(getAxisDisplayPureNumberValue('Z')).toBeCloseTo(6.25, 4);
     });
 
@@ -64,12 +67,15 @@ describe('SecondaryFunctionSection Integration', () => {
       await pressEnter(user);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
 
       await user.click(screen.getByTestId('btn-half'));
+      await user.click(screen.getByTestId('axis-select-x'));
       expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(25, 4);
     });
   });

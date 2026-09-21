@@ -11,14 +11,15 @@ import { test, expect } from '../helpers/fixtures';
 test.describe('US-029: Linear Bolt Hole', () => {
   /**
    * AC 29.1 Enter the menu and select LinEAr.
-   * AC 29.2 Select the pattern axis (X).
+   * AC 29.2 Select/reset the pattern axis (X/Y/Z).
    * AC 29.3 Enter pitch (spacing between holes).
-   * AC 29.4 Enter number of holes.
+   * AC 29.4 Final ENT directly activates first-hole DTG; no count exists.
    * AC 29.5 Counting mode shows distance-to-go to the first hole.
-   * AC 29.6 Right (key 6) advances to the next hole.
+   * AC 29.6 Right (key 6) advances without an upper-count wrap.
    * AC 29.7 C exits the function.
    */
   test('create a linear hole pattern on X and navigate holes', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     // Start at a known encoder position (5mm on X).
     await dro.simulateEncoderAbsoluteMove('X', 5);
 
@@ -27,8 +28,6 @@ test.describe('US-029: Linear Bolt Hole', () => {
     // AC 29.1: open the function menu and navigate to LinEAr.
     await dro.functionButton.click();
     await dro.waitForAxisPureTextValue('X', 'CEntrE');
-    await dro.key6.click(); // CirCLE
-    await dro.key6.click(); // LinE
     await dro.key6.click(); // LinEAr
     await dro.waitForAxisPureTextValue('X', 'LinEAr');
     await dro.enterButton.click();
@@ -41,17 +40,13 @@ test.describe('US-029: Linear Bolt Hole', () => {
     expect(await dro.isIncMode()).toBe(true);
     await dro.waitForAxisPureTextValue('Y', 'PitCh');
 
-    // AC 29.3: enter the pitch. Default units are inch; 0.5" = 12.7mm.
+    // AC 29.3/29.4: enter the pitch. Default units are inch;
+    // 0.5" = 12.7mm. ENT directly activates the first hole.
     await dro.enterNumber('0.5');
     await dro.waitForAxisPureNumberValue('X', 0.5);
     await dro.enterButton.click();
-    await dro.waitForAxisPureTextValue('Y', 'hoLES');
 
-    // AC 29.4: enter the number of holes.
-    await dro.enterNumber('5');
-    await dro.enterButton.click();
-
-    // AC 29.5: distance-to-go to the first hole is 0 (we reset at the start point).
+    // AC 29.5: distance-to-go to the first hole is 0 (reset origin).
     await dro.waitForAxisPureNumberValue('X', 0);
 
     // AC 29.6: advance to the next hole -> distance equals the pitch (0.5").
@@ -75,8 +70,6 @@ test.describe('US-029: Linear Bolt Hole', () => {
     expect(await dro.isAbsMode()).toBe(true);
 
     await dro.functionButton.click();
-    await dro.key6.click();
-    await dro.key6.click();
     await dro.key6.click();
     await dro.waitForAxisPureTextValue('X', 'LinEAr');
     await dro.enterButton.click();

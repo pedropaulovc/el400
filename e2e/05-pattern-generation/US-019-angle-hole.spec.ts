@@ -20,6 +20,7 @@ test.describe('US-019: Angle Hole (Linear Hole Pattern)', () => {
    * Hole 2 = (10 + 20*cos30, 5 + 20*sin30) = (27.3205, 15).
    */
   test('complete angle hole workflow: enter parameters and navigate holes', async ({ dro }) => {
+    await dro.goto({ source: 'debug', skipBootMessage: true });
     // Switch to mm so displayed values map 1:1 to stored mm
     await dro.toggleInchMm();
     expect(await dro.isMmUnits()).toBe(true);
@@ -61,7 +62,7 @@ test.describe('US-019: Angle Hole (Linear Hole Pattern)', () => {
     // Holes = 6
     await dro.waitForAxisPureTextValue('X', 'hoLES');
     await dro.enterNumber('6');
-    await dro.waitForAxisPureNumberValue('Y', 6);
+    await dro.waitForAxisPureNumberValue('Y', 6, 0, 500, 0);
     await dro.enterButton.click();
 
     // Now navigating: INC mode, distance-to-go to hole 1 (start) from origin
@@ -122,4 +123,5 @@ test.describe('US-019: Angle Hole (Linear Hole Pattern)', () => {
     await dro.waitForAxisPureNumberValue('X', 20);
     await dro.waitForAxisPureNumberValue('Y', 0);
   });
+
 });
