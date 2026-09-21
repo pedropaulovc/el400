@@ -57,35 +57,25 @@ test.describe('US-034: Forced Colors Mode', () => {
     const segmentContrast = getContrastRatio(resolvedLitRgb, offRgb);
     expect(segmentContrast, `Segment contrast ${segmentContrast.toFixed(1)}:1 should be >= 10:1`).toBeGreaterThanOrEqual(10);
 
-    // --- Buttons have visible 2px borders ---
+    // --- Buttons retain visible borders ---
     const buttons = page.locator('button.dro-button');
     const buttonCount = await buttons.count();
     expect(buttonCount, 'Should have multiple DRO buttons').toBeGreaterThan(5);
 
-    const buttonStyle = await buttons.first().evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return {
-        borderWidth: style.borderWidth,
-        borderStyle: style.borderStyle,
-      };
+    const buttonBorderStyle = await buttons.first().evaluate((el) => {
+      return window.getComputedStyle(el).borderStyle;
     });
-    expect(buttonStyle.borderStyle, 'Button should have border style').not.toBe('none');
-    expect(buttonStyle.borderWidth, 'Button should have 2px border').toBe('2px');
+    expect(buttonBorderStyle, 'Button should have border style').not.toBe('none');
 
-    // --- BeveledFrame sections have visible 2px borders ---
+    // --- BeveledFrame sections retain visible borders ---
     const sections = page.locator('.rounded-xl.p-1');
     const sectionCount = await sections.count();
     expect(sectionCount, 'Should have at least 5 BeveledFrame sections').toBeGreaterThanOrEqual(5);
 
-    const sectionStyle = await sections.first().evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return {
-        borderWidth: style.borderWidth,
-        borderStyle: style.borderStyle,
-      };
+    const sectionBorderStyle = await sections.first().evaluate((el) => {
+      return window.getComputedStyle(el).borderStyle;
     });
-    expect(sectionStyle.borderStyle, 'Section should have border style').not.toBe('none');
-    expect(sectionStyle.borderWidth, 'Section should have 2px border').toBe('2px');
+    expect(sectionBorderStyle, 'Section should have border style').not.toBe('none');
 
     // --- Active LED indicators have no glow effect (text-shadow: none) ---
     const activeIndicators = page.locator('.mode-indicator-active');

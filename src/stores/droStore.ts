@@ -7,6 +7,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage, type PersistStorage } from 'zustand/middleware';
 import type { DROStatePayload, DROReducerContext } from './dro/types';
 import type {
   DROStateName,
@@ -72,7 +73,35 @@ interface DROStore {
 // STORE IMPLEMENTATION
 // ─────────────────────────────────────────────────────────────────
 
-export const useDROStore = create<DROStore>()((set, get) => ({
+
+interface PersistedUserData {
+  vMem: Pick<VolatileMemoryState, 'workOffsets' | 'manualAbsoluteValues'>;
+}
+const jsonUserDataStorage = createJSONStorage<PersistedUserData>(() => localStorage);
+let lastSavedUserData: PersistedUserData['vMem'] | null = null;
+const userDataStorage: PersistStorage<PersistedUserData> = {
+  getItem: (name) => {
+    const stored = jsonUserDataStorage?.getItem(name) ?? null;
+    if (stored === null) lastSavedUserData = null;
+    return stored;
+  },
+  setItem: (name, value) => {
+    const next = value.state.vMem;
+    const previous = lastSavedUserData;
+    if (previous !== null &&
+      previous.workOffsets === next.workOffsets &&
+      previous.manualAbsoluteValues === next.manualAbsoluteValues) return;
+    const result = jsonUserDataStorage?.setItem(name, value);
+    lastSavedUserData = next;
+    return result;
+  },
+  removeItem: (name) => {
+    lastSavedUserData = null;
+    return jsonUserDataStorage?.removeItem(name);
+  },
+};
+
+export const useDROStore = create<DROStore>()(persist((set, get) => ({
   // Initial state from DRO state machine
   stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
   stateData: INITIAL_DRO_STATE_PAYLOAD.stateData,
@@ -133,6 +162,22 @@ export const useDROStore = create<DROStore>()((set, get) => ({
         armedAxesFor(payload.stateData)
       ),
     });
+  },
+}), {
+  name: 'el400-dro-user-data',
+  storage: userDataStorage,
+  partialize: (state) => ({
+    vMem: {
+      workOffsets: state.vMem.workOffsets,
+      manualAbsoluteValues: state.vMem.manualAbsoluteValues,
+    },
+  }),
+  // Restore operator data without resurrecting an in-progress function or a
+  // referenced-encoder latch from a previous power session.
+  merge: (persisted, current) => {
+    if (persisted === undefined) return current;
+    const saved = persisted as { vMem?: Partial<VolatileMemoryState> };
+    return { ...current, vMem: { ...current.vMem, ...saved.vMem } };
   },
 }));
 

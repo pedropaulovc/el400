@@ -8,6 +8,7 @@ import { INITIAL_VOLATILE_MEMORY_STATE } from "../types/volatileMemory";
 import { useVolatileMemory } from "../hooks/useVolatileMemory";
 import { MockMillAdapter } from "../adapters/MockMillAdapter";
 import type { Axis } from "../types/volatileMemory";
+import { DEFAULT_NON_VOLATILE_MEMORY } from "../types/nonVolatileMemory";
 
 /**
  * Initialize stores for storybook - starts in idle state (skip boot).
@@ -17,6 +18,7 @@ function initializeStoresForStory(connection: MockMillAdapter): () => void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       beepEnabled: true,
       defaultUnit: 'inch',
       precision: 4,

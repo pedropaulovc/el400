@@ -46,6 +46,8 @@ export interface VolatileMemoryState {
   mode: DatumMode;
   activeAxis: Axis | null;
   workOffsets: AxisValues;
+  /** Observed encoder marks in uncompensated scale-decoded machine mm. */
+  referenceMarks: Partial<AxisValues>;
   incrementalValues: AxisValues;
   manualAbsoluteValues: AxisValues;
   inputBuffer: string;
@@ -76,6 +78,7 @@ export const INITIAL_VOLATILE_MEMORY_STATE: VolatileMemoryState = {
   mode: 'abs',
   activeAxis: null,
   workOffsets: ZERO_AXIS_VALUES,
+  referenceMarks: {},
   incrementalValues: ZERO_AXIS_VALUES,
   manualAbsoluteValues: ZERO_AXIS_VALUES,
   inputBuffer: '',

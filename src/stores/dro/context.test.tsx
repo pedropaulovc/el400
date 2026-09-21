@@ -20,6 +20,7 @@ import { INITIAL_VOLATILE_MEMORY_STATE } from '../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from './utils/displayComputation';
 import { NoOpMillAdapter } from '../../adapters/NoOpMillAdapter';
 import { createDefaultMillState } from '../../types/millState';
+import { DEFAULT_NON_VOLATILE_MEMORY } from '../../types/nonVolatileMemory';
 
 /**
  * Reset all stores to initial state before each test.
@@ -28,6 +29,7 @@ function resetStores(initialState?: DROShape) {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       beepEnabled: true,
       defaultUnit: 'inch',
       precision: 4,

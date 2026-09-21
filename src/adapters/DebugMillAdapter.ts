@@ -33,6 +33,7 @@ export class DebugMillAdapter implements MillAdapter {
   private state: MillState = {
     ...createDefaultMillState('debug'),
     controllerType: 'debug',
+    encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 },
   };
 
   constructor() {

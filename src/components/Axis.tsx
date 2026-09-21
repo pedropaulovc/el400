@@ -1,7 +1,8 @@
 import SevenSegmentDigit from "./SevenSegmentDigit";
-import { useDisplayX, useDisplayY, useDisplayZ, useStateName, useReferenceWaitingAxis, useZeroApproachX, useZeroApproachY, useZeroApproachZ } from "../stores/droStore";
-import { useAxisDisplayDecimals, useAxisIsAngular } from "../stores/settingsStore";
+import { useDROStore, useDisplayX, useDisplayY, useDisplayZ, useReferenceWaitingAxis, useZeroApproachX, useZeroApproachY, useZeroApproachZ } from "../stores/droStore";
+import { useAxisDisplayDecimals } from "../stores/settingsStore";
 import { formatAxisDigits } from "./axisDigits";
+import type { DROStatePayload } from "../stores/dro/types";
 
 export type AxisDisplayValue = number | string;
 
@@ -23,11 +24,19 @@ interface AxisProps {
   axis: 'X' | 'Y' | 'Z';
 }
 
+/** Shared marker routing; feature layers extend this switch with their result states. */
+function functionMarker(
+  { stateName }: DROStatePayload,
+  _axis: AxisProps['axis']
+): 'none' | 'leading' | 'terminal' {
+  return stateName === 'distance-to-go' ? 'leading' : 'none';
+}
+
 const Axis = ({ axis }: AxisProps) => {
   // Each axis subscribes to its own value only
   const useAxisValue = axisHooks[axis];
   const value = useAxisValue();
-  const stateName = useStateName();
+  const marker = useDROStore((state) => functionMarker(state, axis));
   // Reference waiting (§7.7.1): the selected axis's zero blinks until the mark is crossed.
   const blinkAxis = useReferenceWaitingAxis();
   // Near-Zero Warning (US-024): this axis flashes while within BP DIST of zero.
@@ -36,20 +45,14 @@ const Axis = ({ axis }: AxisProps) => {
   const isBlinking = blinkAxis === axis || isNearZero;
   // dP display resolution (US-022): fractional digits to render for this axis.
   const decimals = useAxisDisplayDecimals(axis);
-  // Angular axes (US-040) render their pre-formatted DMS string verbatim.
-  const isAngular = useAxisIsAngular(axis);
 
-  // Check if in function mode (distance-to-go displays leading decimal on 2nd digit)
-  const isFunctionMode = stateName === 'distance-to-go';
 
-  const digits = formatAxisDigits(value, { decimals, isAngular });
+  const digits = formatAxisDigits(value, { decimals });
 
-  // Add leading decimal to 2nd digit when in function mode
-  if (isFunctionMode && digits.length >= 2) {
-    const secondDigit = digits[1];
-    if (secondDigit) {
-      digits[1] = { ...secondDigit, hasDecimal: true };
-    }
+  const markerIndex = marker === 'leading' ? 1 : digits.length - 1;
+  if (marker !== 'none') {
+    const digit = digits[markerIndex];
+    if (digit) digits[markerIndex] = { ...digit, hasDecimal: true };
   }
 
   return (

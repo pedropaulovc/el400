@@ -64,6 +64,8 @@ export const DEFAULT_ENCODER_SIGNAL: EncoderSignalByAxis = {
 export interface MillState {
   /** Absolute machine coordinates */
   position: MillPosition;
+  /** Installed encoder resolution; absent for already-decoded engineering positions. */
+  encoderResolutionMicrons?: { X: number; Y: number; Z: number };
   /** Work coordinates (if available from controller) */
   workPosition?: MillPosition;
   /** Probe input state */

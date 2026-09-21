@@ -18,7 +18,10 @@ import type { MockMillAdapter } from '../../adapters/MockMillAdapter';
 import EL400Simulator from '../../components/EL400Simulator';
 import { VALID_NUMBER_PATTERN, parseNumericValue } from './test-constants';
 import type { NonVolatileMemory } from '../../types/nonVolatileMemory';
-import { NON_VOLATILE_MEMORY_STORAGE_KEY } from '../../types/nonVolatileMemory';
+import {
+  DEFAULT_NON_VOLATILE_MEMORY,
+  NON_VOLATILE_MEMORY_STORAGE_KEY,
+} from '../../types/nonVolatileMemory';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMillStore } from '../../stores/millStore';
 import { useDROStore } from '../../stores/droStore';
@@ -104,6 +107,7 @@ export function resetStores(): void {
   // Reset settings store
   useSettingsStore.setState({
     nvMem: {
+      ...DEFAULT_NON_VOLATILE_MEMORY,
       beepEnabled: true,
       defaultUnit: 'inch',
       precision: 4,

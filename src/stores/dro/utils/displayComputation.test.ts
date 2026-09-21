@@ -12,8 +12,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeAxisPositionMm,
+  computeUncompensatedMachinePositionMm,
+  computeMachinePositionMm,
   computeDisplayPosition,
   computeNormalDisplay,
+  formatDisplayNumber,
   ENCODER_FAIL_TEXT,
   measurementScale,
   maxDisplayableMagnitude,
@@ -492,5 +495,71 @@ describe('computeDisplayPosition — derived-reading overflow (US-041 / Acu-Rite
 
   it('DISPLAY_OVERFLOW_TEXT is seven dashes (the 7 digit cells; sign cell blank)', () => {
     expect(DISPLAY_OVERFLOW_TEXT).toBe('-------');
+  });
+});
+
+describe('live datum and encoder decoding', () => {
+  it('keeps controller engineering positions unscaled but decodes installed encoders', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 12, y: 0, z: 0 } },
+      nvMem: { ...makeNvMem(), scaleResolution: { X: '10', Y: '5', Z: '5' } },
+    };
+    expect(computeUncompensatedMachinePositionMm('X', context)).toBe(12);
+    const encoder = { ...context, millState: { ...context.millState, encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 } } };
+    expect(computeUncompensatedMachinePositionMm('X', encoder)).toBe(24);
+  });
+
+  it('decodes PPR only for an installed angular encoder, never controller engineering coordinates', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('debug'), connected: true, position: { x: 5, y: 0, z: 0 }, encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 } },
+      nvMem: {
+        ...makeNvMem(), countingMode: { X: 'angular', Y: 'linear', Z: 'linear' },
+        calibration: { X: { kind: 'ppr', pulsesPerRevolution: 2000 }, Y: { kind: 'none' }, Z: { kind: 'none' } },
+      },
+    };
+    expect(computeMachinePositionMm('X', INITIAL_VOLATILE_MEMORY_STATE, context)).toBe(180);
+    const controller = { ...context, millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 5, y: 0, z: 0 } } };
+    expect(computeMachinePositionMm('X', INITIAL_VOLATILE_MEMORY_STATE, controller)).toBe(5);
+  });
+});
+
+describe('formatDisplayNumber midpoint and panel boundary policy', () => {
+  it('rounds decimal ties away from zero without changing stored coordinates', () => {
+    const memory = manualVMem({ X: 9999.999 / 2, Y: -9999.999 / 2 });
+    const context = manualContext({
+      ...makeNvMem(), displayResolution: { X: '50', Y: '50', Z: '5' },
+    });
+    const x = computeDisplayPosition('X', memory, context);
+    const y = computeDisplayPosition('Y', memory, context);
+    expect(x).toBe(4999.9995);
+    expect(y).toBe(-4999.9995);
+    expect(formatDisplayNumber(Number(x), 3)).toBe('5000.000');
+    expect(formatDisplayNumber(Number(y), 3)).toBe('-5000.000');
+    expect(memory.manualAbsoluteValues).toEqual({ X: 4999.9995, Y: -4999.9995, Z: 0 });
+  });
+
+  it('does not promote values genuinely below a decimal midpoint', () => {
+    expect(formatDisplayNumber(4999.9994999, 3)).toBe('4999.999');
+    expect(formatDisplayNumber(-4999.9994999, 3)).toBe('-4999.999');
+    expect(formatDisplayNumber(1.005, 2)).toBe('1.01');
+    expect(formatDisplayNumber(-1.005, 2)).toBe('-1.01');
+    expect(formatDisplayNumber(1.0049999, 2)).toBe('1.00');
+  });
+
+  it('uses the same rounded overflow boundary for coordinates and formatted text', () => {
+    const context = manualContext(makeNvMem());
+    for (const value of [999.99995, -999.99995]) {
+      expect(computeDisplayPosition('X', manualVMem({ X: value }), context)).toBe(DISPLAY_OVERFLOW_TEXT);
+      expect(formatDisplayNumber(value, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    }
+    expect(formatDisplayNumber(999.99994, 4)).toBe('999.9999');
+    expect(formatDisplayNumber(-999.99994, 4)).toBe('-999.9999');
+  });
+
+  it('handles exponent-form small values and unrepresentable results without widening', () => {
+    expect(formatDisplayNumber(1e-8, 4)).toBe('0.0000');
+    expect(formatDisplayNumber(1e21, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    expect(formatDisplayNumber(Infinity, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
+    expect(formatDisplayNumber(NaN, 4)).toBe(DISPLAY_OVERFLOW_TEXT);
   });
 });

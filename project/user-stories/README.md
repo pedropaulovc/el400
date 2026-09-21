@@ -340,3 +340,13 @@ targets a **milling-machine** X/Y/Z DRO, so the following are intentionally not 
 
 Taper (§9.2.2) is the one lathe-class function kept (now **US-045**) because the project README's
 feature-comparison table explicitly markets "Taper Calculations" as an EL400 capability.
+
+## Verification
+
+The aggregate automated checkpoint `4fe7a9c` passed 1,572 unit/integration tests,
+196 E2Es, and 44 Storybook tests. The [headed audit reports](https://github.com/pedropaulovc/el400/pull/308#issuecomment-5761904651)
+record the source and scope of each successive browser recheck.
+
+The Foundation code checkpoint `f6ae2da` independently passed 1,732 unit/integration
+tests, 155 E2Es, and 44 Storybook tests. Later story-group layers report their own
+checks in their PRs; aggregate evidence does not establish an intermediate layer's result.

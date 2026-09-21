@@ -60,6 +60,14 @@ function setDisplay(display: DisplayState): void {
 }
 
 describe('MultiAxisSection sr-only axis-value cell (AC 2.6)', () => {
+  it('renders documented auxiliary and calibration labels across all readouts', () => {
+    render(<MultiAxisSection />);
+    setDisplay({ X: 'Pc fail', Y: 'diSPuAL', Z: 'BP diSt' });
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent('Pc fail');
+    expect(screen.getByTestId('axis-value-y')).toHaveTextContent('diSPuAL');
+    expect(screen.getByTestId('axis-value-z')).toHaveTextContent('BP diSt');
+  });
+
   it('shows a leading minus for a negative value', () => {
     render(<MultiAxisSection />);
     setDisplay({ X: -3.25, Y: 0, Z: 0 });
@@ -72,6 +80,20 @@ describe('MultiAxisSection sr-only axis-value cell (AC 2.6)', () => {
     const cell = screen.getByTestId('axis-value-x');
     expect(cell).toHaveTextContent('3.2500');
     expect(cell.textContent.startsWith('-')).toBe(false);
+  });
+
+  it('announces the same decimal midpoint as the physical readout', () => {
+    render(<MultiAxisSection />);
+    act(() => {
+      useSettingsStore.setState({
+        nvMem: {
+          ...DEFAULT_NON_VOLATILE_MEMORY,
+          displayResolution: { X: '50', Y: '5', Z: '5' },
+        },
+      });
+    });
+    setDisplay({ X: 4999.9995, Y: 0, Z: 0 });
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent(/^5000\.000$/);
   });
 });
 
