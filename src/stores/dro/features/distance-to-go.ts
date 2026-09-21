@@ -26,6 +26,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -130,8 +131,7 @@ function getAbsolutePositionMm(
   const { millState } = context;
 
   if (millState.connected) {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    return millState.position[axisKey] - workOffsets[axis];
+    return computeMachinePositionMm(axis, vMem, context) - workOffsets[axis];
   }
   return manualAbsoluteValues[axis];
 }

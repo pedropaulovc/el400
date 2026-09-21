@@ -34,6 +34,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -125,12 +126,11 @@ function computeGridNavigateDisplay(
 ): DisplayState {
   const holePos = calculateHolePosition(gridData, gridData.currentHole);
 
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
 
   const unit = context.nvMem.defaultUnit;

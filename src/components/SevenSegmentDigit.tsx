@@ -35,12 +35,15 @@ const SevenSegmentDigit = ({
 
     // Letters actually used in the screenshots
     'A': [true,  true,  true,  false, true,  true,  true ],
+    'a': [true,  true,  true,  true,  true,  false, true ],
+    'B': [false, false, true,  true,  true,  true,  true ],
     'b': [false, false, true,  true,  true,  true,  true ],
     'C': [true,  false, false, true,  true,  true,  false],
     'c': [false, false, false, true,  true,  false, true ],
     'd': [false, true,  true,  true,  true,  false, true ],
     'E': [true,  false, false, true,  true,  true,  true ],
     'F': [true,  false, false, false, true,  true,  true ],
+    'f': [true,  false, false, false, true,  true,  true ],
     'G': [true,  false, true,  true,  true,  true,  false],
     'h': [false, false, true,  false, true,  true,  true ],
     'I': [false, true,  true,  false, false, false, false],
@@ -60,6 +63,7 @@ const SevenSegmentDigit = ({
     't': [false, false, false, true,  true,  true,  true ],
     'U': [false, true,  true,  true,  true,  true,  false],
     'v': [false, true,  true,  true,  true,  true,  false],
+    'u': [false, false, true,  true,  true,  false, false],
     'X': [false, true,  true,  false, true,  true,  true ],
     'Y': [false, true,  true,  true,  false, true,  true ],
     // Z shares the 2-glyph on a 7-segment display (segments a,b,d,e,g)

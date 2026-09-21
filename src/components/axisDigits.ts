@@ -1,11 +1,5 @@
-/**
- * Seven-segment digit formatting for the axis readout.
- *
- * Pure helpers that convert an axis value into the per-glyph sequence rendered by
- * SevenSegmentDigit. Kept out of the Axis component file so the component module
- * exports only a component (react-refresh) and so the sign/format logic is unit
- * testable in isolation.
- */
+/** Pure seven-segment formatting: numeric coordinates or verbatim display text. */
+import { formatDisplayNumber, DISPLAY_OVERFLOW_TEXT } from '../stores/dro/utils/displayComputation';
 
 /** A single seven-segment cell: the glyph plus whether its decimal point is lit. */
 export interface AxisDigit {
@@ -13,115 +7,60 @@ export interface AxisDigit {
   hasDecimal: boolean;
 }
 
-/** Number of seven-segment cells in the axis readout. */
+/** One sign cell followed by seven numeric cells. */
 export const DISPLAY_WIDTH = 8;
 
-/**
- * Convert a numeric axis value into the per-digit glyph sequence. The first glyph
- * is the sign cell: `'-'` for negatives, a blank space for non-negatives
- * (AC 2.6 — positives carry no sign).
- *
- * `decimals` is the fractional-digit count the dP display resolution selects for
- * this axis (US-022); it defaults to the panel maximum of 4, preserving the
- * standard readout for callers that do not vary precision.
- */
-export const formatNumberValue = (num: number, decimals = 4): AxisDigit[] => {
-  const isNegative = num < 0;
-  const absNum = Math.abs(num);
-  const formatted = absNum.toFixed(decimals);
+/** Coordinate formatting shares its decimal rounding and overflow policy with SR text. */
+export const formatNumberValue = (num: number, decimals = 4): AxisDigit[] =>
+  formatTextValue(formatDisplayNumber(num, decimals));
 
-  const result: AxisDigit[] = [];
-
-  result.push({ char: isNegative ? '-' : ' ', hasDecimal: false });
-
-  const parts = formatted.split('.');
-  const intPart = parts[0] ?? '';
-  const decPart = parts[1] ?? '';
-  // The panel has DISPLAY_WIDTH cells: 1 sign cell + (DISPLAY_WIDTH - 1) digit
-  // cells, split between integer and fraction. Pad the integer to the cells the
-  // fraction leaves free so the reading right-aligns at ANY dP resolution. A
-  // hardcoded 3 only right-aligns the 4-decimal default; coarser dP (e.g. the
-  // 50-micron / 3-decimal setting) would otherwise under-pad and shift the
-  // reading left, leaving a trailing blank instead of a leading one.
-  const intCells = DISPLAY_WIDTH - 1 - decimals;
-  const paddedInt = intPart.padStart(intCells, ' ');
-
-  for (let i = 0; i < paddedInt.length; i++) {
-    result.push({
-      char: paddedInt[i] ?? ' ',
-      hasDecimal: i === paddedInt.length - 1,
-    });
-  }
-
-  for (const char of decPart) {
-    result.push({ char, hasDecimal: false });
-  }
-
-  return result;
-};
-
-import { VALID_NUMBER_PATTERN } from "@/lib/patterns";
-
-/** Options governing how an axis display value is routed to seven-segment cells. */
 export interface FormatAxisDigitsOptions {
-  /** dP fractional-digit count applied to NUMERIC values (US-022). */
+  /** dP fractional-digit count applied only to numeric coordinate values. */
   decimals: number;
-  /**
-   * Whether this axis counts in angular mode (US-040). Angular values arrive as
-   * pre-formatted DMS strings (e.g. "12.30.00", or "90.00" which must stay two
-   * decimals) and are rendered verbatim through the text path, never re-parsed
-   * as a number and re-padded to `decimals`.
-   */
-  isAngular: boolean;
 }
 
-/**
- * Route an axis display value to its seven-segment cells (US-040 AC 40.3).
- *
- * - Angular axes always render their pre-formatted DMS string verbatim (text path).
- * - Otherwise a number, or a numeric-looking string, renders through the number
- *   path with the dP `decimals`; any other string (menu labels) renders as text.
- */
+/** Strings already carry their intended input/count/DMS formatting. */
 export const formatAxisDigits = (
   value: number | string,
   options: FormatAxisDigitsOptions
-): AxisDigit[] => {
-  // Angular DMS strings are pre-formatted (intentional digit counts and group
-  // separators); render verbatim so dP decimals never re-pad them.
-  if (options.isAngular && typeof value === 'string') {
-    return formatTextValue(value);
-  }
+): AxisDigit[] => typeof value === 'number'
+  ? formatNumberValue(value, options.decimals)
+  : formatTextValue(value);
 
-  if (typeof value === 'number') {
-    return formatNumberValue(value, options.decimals);
-  }
-  // A numeric-looking string gets the dP number path; any other string (menu
-  // labels) renders as text.
-  if (VALID_NUMBER_PATTERN.test(value.trim())) {
-    return formatNumberValue(parseFloat(value), options.decimals);
-  }
-  return formatTextValue(value);
-};
-
-/** Convert a text value (e.g. menu label) into right-aligned seven-segment cells. */
+/** Numeric text reserves the sign cell; ordinary messages and DMS retain text layout. */
 export const formatTextValue = (text: string): AxisDigit[] => {
-  const raw: AxisDigit[] = [];
+  if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) {
+    const signed = text.startsWith('-') || text.startsWith('+');
+    const magnitude = signed ? text.slice(1) : text;
+    const digitCount = magnitude.length - (magnitude.includes('.') ? 1 : 0);
+    if (digitCount > DISPLAY_WIDTH - 1) return formatTextValue(DISPLAY_OVERFLOW_TEXT);
+    const digits: AxisDigit[] = Array.from({ length: DISPLAY_WIDTH }, () => ({ char: ' ', hasDecimal: false }));
+    const signCell = digits[0];
+    if (signed && signCell) signCell.char = text.charAt(0);
+    let cursor = DISPLAY_WIDTH - digitCount;
+    for (const char of magnitude) {
+      if (char === '.') {
+        const previous = digits[cursor - 1];
+        if (previous) previous.hasDecimal = true;
+      } else {
+        const cell = digits[cursor];
+        if (cell) cell.char = char;
+        cursor++;
+      }
+    }
+    return digits;
+  }
 
+  const raw: AxisDigit[] = [];
   for (const char of text) {
     if (char === '.') {
-      if (raw.length > 0) {
-        const lastChar = raw[raw.length - 1];
-        if (lastChar) {
-          lastChar.hasDecimal = true;
-        }
-      }
-      continue;
+      const previous = raw[raw.length - 1];
+      if (previous) previous.hasDecimal = true;
+    } else {
+      raw.push({ char, hasDecimal: false });
     }
-    raw.push({ char, hasDecimal: false });
   }
-
   const truncated = raw.slice(-DISPLAY_WIDTH);
   const padded = Array.from({ length: DISPLAY_WIDTH - truncated.length }, () => ({ char: ' ', hasDecimal: false }));
-
   return padded.concat(truncated);
 };

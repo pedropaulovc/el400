@@ -52,11 +52,6 @@ describe('SevenSegmentDigit', () => {
       }).toThrow('Unsupported character: "W"');
     });
 
-    it('throws error for lowercase a (when uppercase A is supported)', () => {
-      expect(() => {
-        render(<SevenSegmentDigit value="a" />);
-      }).toThrow('Unsupported character: "a"');
-    });
 
     it('throws error for special character @', () => {
       expect(() => {

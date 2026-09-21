@@ -13,7 +13,8 @@ import type {
 } from '../../../types/nonVolatileMemory';
 import type { MillState } from '../../../types/millState';
 import type { DROReducerContext } from '../types';
-import { fromMmToAnyUnit } from '../../../utils/unitConversion';
+import { fromAnyUnitToMm, fromMmToAnyUnit } from '../../../utils/unitConversion';
+import { applyAxisCalibration } from './calibration';
 
 /**
  * Maximum fractional digits the 8-cell seven-segment panel can render
@@ -102,6 +103,29 @@ export const ENCODER_FAIL_TEXT = 'no SIG';
 export const DISPLAY_OVERFLOW_TEXT = '-------';
 
 /**
+ * Shift the decimal representation before rounding so decimal midpoint values
+ * such as 4999.9995 do not inherit binary toFixed's downward tie error.
+ * Round magnitude first: negative ties use the same away-from-zero policy.
+ */
+function roundedDisplayMagnitude(value: number, decimals: number): number {
+  const text = Math.abs(value).toString();
+  const exponentIndex = text.indexOf('e');
+  const shifted = exponentIndex < 0
+    ? `${text}e${String(decimals)}`
+    : `${text.slice(0, exponentIndex)}e${String(Number(text.slice(exponentIndex + 1)) + decimals)}`;
+  return Math.round(Number(shifted));
+}
+
+/** Format only the readout, retaining the full-precision coordinate in memory. */
+export function formatDisplayNumber(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return DISPLAY_OVERFLOW_TEXT;
+  const rounded = roundedDisplayMagnitude(value, decimals);
+  if (rounded >= 10 ** PANEL_DIGIT_CELLS) return DISPLAY_OVERFLOW_TEXT;
+  const magnitude = (rounded / 10 ** decimals).toFixed(decimals);
+  return value < 0 ? `-${magnitude}` : magnitude;
+}
+
+/**
  * Whether an axis should show the encoder-fail warning (US-042): the `EnF`
  * parameter must be on AND the live mill must report that axis's signal as lost.
  * A pure predicate so reducers and the display computation share one rule.
@@ -140,20 +164,54 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
 }
 
 /**
- * Pure radius/diameter scale factor for an axis (US-041).
+ * Effective radius/diameter scale factor for an axis (US-041).
  *
  * Lathe diameter turning shows the cut diameter, which is twice the slide travel,
  * so a `'diameter'`-mode axis displays `2 ×` the actual movement; `'radius'` (the
  * mill default) is 1:1. Like `directionSign`, this is a display-only transform
  * applied AFTER the datum offset is subtracted; it never mutates stored machine
  * position, offsets, or macro coordinate math.
+ * Angular axes always remain 1:1, even if a dormant diameter setting is stored.
  *
  * @param axis - The axis to compute the scale for
- * @param nvMem - Non-volatile memory (per-axis measurement mode)
- * @returns 2 (diameter) or 1 (radius)
+ * @param nvMem - Non-volatile memory (counting mode + per-axis measurement mode)
+ * @returns 2 for linear diameter mode, otherwise 1
  */
 export function measurementScale(axis: Axis, nvMem: NonVolatileMemory): 1 | 2 {
-  return nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+  return nvMem.countingMode[axis] === 'linear' &&
+    nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+}
+
+/**
+ * Convert a canonical axis coordinate into the operator's display unit.
+ *
+ * Canonical coordinates are millimetres for linear axes and degrees for angular
+ * axes. Angular values therefore pass through unchanged.
+ */
+export function axisUnitsToDisplayUnits(
+  axis: Axis,
+  value: number,
+  nvMem: NonVolatileMemory
+): number {
+  return nvMem.countingMode[axis] === 'angular'
+    ? value
+    : fromMmToAnyUnit(value, nvMem.defaultUnit);
+}
+
+/**
+ * Convert an operator-entered display value into canonical axis units.
+ *
+ * Angular display values are already degrees; linear values are converted to
+ * millimetres. This function performs only unit conversion.
+ */
+export function displayUnitsToAxisUnits(
+  axis: Axis,
+  value: number,
+  nvMem: NonVolatileMemory
+): number {
+  return nvMem.countingMode[axis] === 'angular'
+    ? value
+    : fromAnyUnitToMm(value, nvMem.defaultUnit);
 }
 
 /**
@@ -247,6 +305,57 @@ export const INITIAL_DISPLAY_STATE: DisplayState = {
   Z: 0,
 };
 
+/** Scale-decode installed encoders in their raw encoder-mm frame. */
+export function computeUncompensatedMachinePositionMm(
+  axis: Axis,
+  context: DROReducerContext
+): number {
+  const position = context.millState.position;
+  const physical = axis === 'X' ? position.x : axis === 'Y' ? position.y : position.z;
+  const installed = context.millState.encoderResolutionMicrons?.[axis];
+  return installed === undefined
+    ? physical
+    : physical * Number(context.nvMem.scaleResolution[axis]) / installed;
+}
+
+/**
+ * Convert a scale-decoded raw coordinate into the machine coordinate used by
+ * datums. Raw reference marks and their displacements stay in the same linear
+ * frame; installed PPR encoders decode that frame to degrees at this boundary.
+ * Controller-provided engineering coordinates bypass PPR decoding.
+ */
+export function convertRawToMachinePosition(
+  axis: Axis,
+  rawPosition: number,
+  vMem: VolatileMemoryState,
+  nvMem: NonVolatileMemory,
+  fromInstalledEncoder: boolean
+): number {
+  const calibration = nvMem.calibration[axis];
+  if (calibration.kind === 'ppr' && nvMem.countingMode[axis] === 'angular' &&
+    fromInstalledEncoder) {
+    const counts = rawPosition * 1000 / Number(nvMem.scaleResolution[axis]);
+    return counts * 360 / calibration.pulsesPerRevolution;
+  }
+  return applyAxisCalibration(axis, rawPosition, vMem, nvMem);
+}
+
+/** Canonical machine coordinate (linear mm or angular degrees), before datum. */
+export function computeMachinePositionMm(
+  axis: Axis,
+  vMem: VolatileMemoryState,
+  context: DROReducerContext
+): number {
+  const raw = computeUncompensatedMachinePositionMm(axis, context);
+  return convertRawToMachinePosition(
+    axis,
+    raw,
+    vMem,
+    context.nvMem,
+    context.millState.encoderResolutionMicrons?.[axis] !== undefined
+  );
+}
+
 /**
  * Compute the raw position (in mm) for a single axis.
  * Handles abs vs inc mode and connected vs manual positioning.
@@ -266,8 +375,7 @@ export function computeAxisPositionMm(
 
   if (mode === 'abs') {
     if (millState.connected) {
-      const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-      return millState.position[axisKey] - workOffsets[axis];
+      return computeMachinePositionMm(axis, vMem, context) - workOffsets[axis];
     }
     return manualAbsoluteValues[axis];
   }
@@ -310,7 +418,7 @@ export function computeDisplayPosition(
   }
   // Diameter mode shows 2× the slide travel (the turned diameter); radius is 1:1.
   const signedMm = signed * measurementScale(axis, context.nvMem);
-  const displayed = fromMmToAnyUnit(signedMm, context.nvMem.defaultUnit);
+  const displayed = axisUnitsToDisplayUnits(axis, signedMm, context.nvMem);
   // Derived-reading overflow (Acu-Rite precedent): if the value, as it would round
   // on the panel, needs more than the 7 digit cells at this axis's dP resolution,
   // show the all-dashes indicator instead of growing past the physical panel. This
@@ -318,8 +426,8 @@ export function computeDisplayPosition(
   // entry-time clamp can't, since nothing was keyed) and any other derived overflow
   // (e.g. a connected machine position jogged far out of range).
   const decimals = axisDisplayDecimals(axis, context.nvMem);
-  const rounded = Number(Math.abs(displayed).toFixed(decimals));
-  if (rounded > maxDisplayableMagnitude(decimals)) {
+  const rounded = roundedDisplayMagnitude(displayed, decimals);
+  if (!Number.isFinite(rounded) || rounded >= 10 ** PANEL_DIGIT_CELLS) {
     return DISPLAY_OVERFLOW_TEXT;
   }
   return displayed;

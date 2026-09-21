@@ -1,6 +1,7 @@
 /**
  * Non-volatile memory types - persisted to localStorage
  */
+import type { AxisCalibration } from './calibration';
 
 /** Valid SC scale-resolution values in microns (manual section 6.2). */
 export type ScaleResolutionValue =
@@ -205,6 +206,8 @@ export interface NonVolatileMemory {
   displayResolution: DisplayResolutionByAxis;
   /** Per-axis angular display-resolution format - angular dP for angular axes (US-040, display-only) */
   angularResolution: AngularResolutionByAxis;
+  /** Per-axis compensation applied before datum and display transforms. */
+  calibration: Record<'X' | 'Y' | 'Z', AxisCalibration>;
   /** Axis on which the Taper function displays the angle (Section 6.2). */
   taperOnAxis: TaperOnAxis;
   /** Per-axis counting direction - dir parameter (US-002, manual section 6.2) */
@@ -318,6 +321,7 @@ export const DEFAULT_NON_VOLATILE_MEMORY: NonVolatileMemory = {
   scaleResolution: DEFAULT_SCALE_RESOLUTION,
   displayResolution: DEFAULT_DISPLAY_RESOLUTION,
   angularResolution: DEFAULT_ANGULAR_RESOLUTION,
+  calibration: { X: { kind: 'none' }, Y: { kind: 'none' }, Z: { kind: 'none' } },
   taperOnAxis: 'X',
   axisDirection: DEFAULT_AXIS_DIRECTION,
   zDepthSense: 'depth-negative',

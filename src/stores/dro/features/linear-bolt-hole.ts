@@ -31,8 +31,8 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
-  computeAxisPositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -113,7 +113,9 @@ function distanceToGoMm(
   const pitch = data.pitch ?? 0;
   const holePositionMm = (data.currentHole - 1) * pitch;
   // Always read the ABS position regardless of the active mode.
-  const currentMm = computeAxisPositionMm(axis, { ...vMem, mode: 'abs' }, context);
+  const currentMm = context.millState.connected
+    ? computeMachinePositionMm(axis, vMem, context) - vMem.workOffsets[axis]
+    : vMem.manualAbsoluteValues[axis];
   return holePositionMm - currentMm;
 }
 
@@ -149,14 +151,8 @@ function resetAxis(
   axis: Axis,
   context: DROReducerContext
 ): VolatileMemoryState {
-  const { millState } = context;
-  if (millState.connected) {
-    const machinePos =
-      axis === 'X'
-        ? millState.position.x
-        : axis === 'Y'
-          ? millState.position.y
-          : millState.position.z;
+  if (context.millState.connected) {
+    const machinePos = computeMachinePositionMm(axis, vMem, context);
     return { ...vMem, workOffsets: { ...vMem.workOffsets, [axis]: machinePos } };
   }
   return { ...vMem, manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: 0 } };

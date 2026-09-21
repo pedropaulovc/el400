@@ -27,6 +27,7 @@ import {
   KEY_TO_DIGIT,
 } from './buffer-utils';
 import {
+  computeMachinePositionMm,
   computeNormalDisplay,
   createDisplay,
   type DisplayState,
@@ -165,13 +166,12 @@ function computeBoltHoleNavigateDisplay(
 ): DisplayState {
   const holePos = calculateHolePosition(boltData, boltData.currentHole);
 
-  // Always use absolute position for distance-to-go calculation (not mode-dependent)
-  const { millState } = context;
-  const currentX = millState.connected
-    ? millState.position.x - vMem.workOffsets.X
+  // Always use the decoded absolute position for distance-to-go calculation.
+  const currentX = context.millState.connected
+    ? computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
-    ? millState.position.y - vMem.workOffsets.Y
+  const currentY = context.millState.connected
+    ? computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
 
   const unit = context.nvMem.defaultUnit;

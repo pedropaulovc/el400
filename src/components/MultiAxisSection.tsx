@@ -6,6 +6,7 @@ import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/sett
 import { useSleepTimer } from "../stores/dro/features/sleep";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useAuxFnNoConn, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
+import { formatDisplayNumber } from "../stores/dro/utils/displayComputation";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -27,7 +28,7 @@ const ScreenReaderAxisValue = ({ axis }: { axis: 'X' | 'Y' | 'Z' }) => {
   // dP display resolution (US-022): render numeric values to this axis's decimal
   // count; keep text values (menu labels) as-is.
   const decimals = useAxisDisplayDecimals(axis);
-  const formatted = typeof value === 'number' ? value.toFixed(decimals) : value;
+  const formatted = typeof value === 'number' ? formatDisplayNumber(value, decimals) : value;
   return (
     <tr>
       <th scope="row">{axis}</th>

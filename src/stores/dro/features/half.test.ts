@@ -155,6 +155,37 @@ describe('halfReducer', () => {
       expect(result?.vMem.workOffsets.X).toBe(50);
     });
 
+    it('halves the decoded ABS frame when SC differs from the installed encoder', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        workOffsets: { X: 0, Y: 0, Z: 0 },
+      });
+      const baseContext = connectedContext({ x: 10, y: 0, z: 0 });
+      const context: DROReducerContext = {
+        ...baseContext,
+        millState: {
+          ...baseContext.millState,
+          encoderResolutionMicrons: { X: 5, Y: 5, Z: 5 },
+        },
+        nvMem: {
+          ...DEFAULT_NON_VOLATILE_MEMORY,
+          defaultUnit: 'mm',
+          scaleResolution: {
+            ...DEFAULT_NON_VOLATILE_MEMORY.scaleResolution,
+            X: '10',
+          },
+        },
+      };
+
+      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context);
+
+      // Physical 10 mm decodes to machine 20 mm. HALF must therefore set a
+      // 10 mm datum and leave the connected ABS readout at 10, not 15.
+      expect(result?.vMem.workOffsets.X).toBe(10);
+      expect(result?.display.X).toBe(10);
+    });
+
     it('should handle Y axis in connected mode', () => {
       const state = idleStateWithVMem({
         mode: 'abs',

@@ -6,10 +6,13 @@ import * as crypto from 'crypto';
  * Page Object Model for the EL400 DRO Simulator
  * Provides a clean API for E2E tests to interact with the DRO
  */
+export type DROSource = 'cncjs' | 'debug';
+
 export class DROPage {
   readonly page: Page;
   private readonly mockServerPort: number;
   private readonly sessionId: string;
+  private source: DROSource = 'cncjs';
 
   // Simulator root — carries data-dro-state, the deterministic readiness signal
   readonly simulatorRoot: Locator;
@@ -121,15 +124,24 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator connected to the mock CNCjs server.
+   * Navigate to the DRO simulator.
+   * @param options.source - Data source to exercise (default: CNCjs mock server)
    * @param options.skipBootMessage - Skip boot message via URL param (default: true)
    */
-  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime'; probeDroType?: 'transmit' | 'freeze' }) {
+  async goto(options?: {
+    source?: DROSource;
+    skipBootMessage?: boolean;
+    taperOn?: 'X' | 'Z' | 'Zprime';
+    probeDroType?: 'transmit' | 'freeze';
+  }) {
+    const source = options?.source ?? 'cncjs';
     const params = new URLSearchParams();
-    params.set('source', 'cncjs');
-    params.set('host', 'localhost');
-    params.set('port', this.mockServerPort.toString());
-    params.set('sessionId', this.sessionId);
+    params.set('source', source);
+    if (source === 'cncjs') {
+      params.set('host', 'localhost');
+      params.set('port', this.mockServerPort.toString());
+      params.set('sessionId', this.sessionId);
+    }
 
     const skipBoot = options?.skipBootMessage !== false;
     if (skipBoot) {
@@ -154,6 +166,7 @@ export class DROPage {
     // domcontentloaded fires before React mounts, so without this barrier a one-shot
     // read of the display races the first render and can sample an empty string.
     await this.waitForReady(skipBoot ? 'idle' : 'boot-show-message');
+    this.source = source;
   }
 
   /**
@@ -308,6 +321,19 @@ export class DROPage {
     return await this.isLEDOn(this.mmLED);
   }
 
+  private debugPosition(axis: 'X' | 'Y' | 'Z'): Locator {
+    return this.page.getByTestId(`debug-position-${axis.toLowerCase()}`);
+  }
+
+  private async setDebugPosition(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    const input = this.page.getByRole('spinbutton', {
+      name: `Set ${axis} position in millimetres`,
+    });
+    await input.fill(String(value));
+    await input.press('Enter');
+    await expect(this.debugPosition(axis)).toHaveText(value.toFixed(4));
+  }
+
   /**
    * Simulate encoder movement for an axis.
    * Calls the mock CNCjs server HTTP API to update position.
@@ -316,6 +342,10 @@ export class DROPage {
    * @param value - The new position value to simulate (in mm)
    */
   async simulateEncoderAbsoluteMove(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    if (this.source === 'debug') {
+      await this.setDebugPosition(axis, value);
+      return;
+    }
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-move?sessionId=${this.sessionId}`,
       {
@@ -446,6 +476,14 @@ export class DROPage {
    * @param delta - The delta value to add to current position (in mm)
    */
   async simulateEncoderRelativeMove(axis: 'X' | 'Y' | 'Z', delta: number): Promise<void> {
+    if (this.source === 'debug') {
+      const current = Number((await this.debugPosition(axis).textContent())?.trim());
+      if (!Number.isFinite(current)) {
+        throw new Error(`Unable to read debug ${axis} position`);
+      }
+      await this.setDebugPosition(axis, current + delta);
+      return;
+    }
     const response = await fetch(
       `http://localhost:${this.mockServerPort}/api/encoder-move-relative?sessionId=${this.sessionId}`,
       {
