@@ -76,13 +76,12 @@ describe('Function Menu Integration', () => {
       await user.click(screen.getByTestId('btn-function'));
       expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
 
-      // Navigate forward in menu
+      // Top-level navigation skips the nested CirCLE/LinE choices.
       await user.click(screen.getByTestId('key-6'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
+      expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
 
-      // Navigate forward again
       await user.click(screen.getByTestId('key-6'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('LinE');
+      expect(getAxisDisplayPureTextValue('X')).toBe('PoLAr');
 
       // Exit with CLEAR
       await user.click(screen.getByTestId('key-clear'));
@@ -129,32 +128,25 @@ describe('Function Menu Integration', () => {
       expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
     });
 
-    it('should update display when navigating menu items', async () => {
+    it('keeps CirCLE/LinE nested under CEntrE while the Fn ring stays top-level', async () => {
       const { user } = await renderSimulator();
 
-      // Enter function menu
       await user.click(screen.getByTestId('btn-function'));
       expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
 
-      // Navigate forward through menu items
-      await user.click(screen.getByTestId('key-6'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
-
-      await user.click(screen.getByTestId('key-6'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('LinE');
-
+      // Top-level navigation skips the nested center choices.
       await user.click(screen.getByTestId('key-6'));
       expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
-
-      // Navigate backward
-      await user.click(screen.getByTestId('key-4'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('LinE');
-
-      await user.click(screen.getByTestId('key-4'));
-      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
-
       await user.click(screen.getByTestId('key-4'));
       expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
+
+      // Confirming CEntrE opens CirCLE by default; 4/6 only toggle CirCLE/LinE.
+      await user.click(screen.getByTestId('key-enter'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('LinE');
+      await user.click(screen.getByTestId('key-6'));
+      expect(getAxisDisplayPureTextValue('X')).toBe('CirCLE');
     });
   });
 });

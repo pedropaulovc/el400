@@ -46,6 +46,15 @@ function zeroAxis(
     };
   }
 
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: computeMachinePositionMm(axis, vMem, context),
+      },
+    };
+  }
   // In INC mode: zero the incremental counter
   return {
     ...vMem,
@@ -54,22 +63,29 @@ function zeroAxis(
 }
 
 /**
- * Set an axis to a display value, converting it to the canonical stored
- * coordinate after applying the fixed-width display clamp.
+ * Set an axis to a display value, converting it to canonical axis units
+ * (millimetres for linear axes or degrees for angular axes) after applying the
+ * fixed-width display clamp to linear values.
  */
 function setAxisValue(
   vMem: DROStatePayload['vMem'],
   axis: Axis,
   value: number,
   context: DROReducerContext
-): DROStatePayload['vMem'] {
+): DROStatePayload['vMem'] | null {
   const { nvMem } = context;
-  // Clamp in the operator's display frame. Even a very long input parsed as
-  // Infinity normalizes to the finite panel boundary through Math.min.
-  const clamped = Math.sign(value) * Math.min(
-    Math.abs(value),
-    maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem))
-  );
+  // Linear entries are clamped to what the physical 7-digit panel can show at
+  // the current dP resolution (US-047), keeping sign. Even an input parsed as
+  // Infinity normalizes to the finite panel boundary. Angular entries use their
+  // separate configured format and wrap only for display, so their stored value
+  // must retain the unwrapped revolution count and ignore this linear limit.
+  const clamped = nvMem.countingMode[axis] === 'angular'
+    ? value
+    : Math.sign(value) * Math.min(
+      Math.abs(value),
+      maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem))
+    );
+  if (!Number.isFinite(clamped)) return null;
   const valueMm = displayUnitsToAxisUnits(axis, clamped, nvMem) /
     measurementScale(axis, nvMem) *
     directionSign(axis, nvMem);
@@ -77,8 +93,9 @@ function setAxisValue(
 }
 
 /**
- * Set an axis to a specific value (value already in mm).
- * Keeps the axis selected for further operations (like half).
+ * Set an axis to a canonical coordinate (linear mm or angular degrees).
+ * Keeps the axis selected for further operations (like half). The legacy `Mm`
+ * suffix is retained because it is already internal vocabulary.
  */
 function setAxisValueMm(
   vMem: DROStatePayload['vMem'],
@@ -103,6 +120,16 @@ function setAxisValueMm(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: valueMm },
+      inputBuffer: '',
+    };
+  }
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: computeMachinePositionMm(axis, vMem, context) - valueMm,
+      },
       inputBuffer: '',
     };
   }
@@ -197,6 +224,7 @@ export const axisOperationsReducer: FeatureReducer = (
         const value = getBufferValue(vMem.inputBuffer);
         if (value !== null) {
           const newVMem = setAxisValue(vMem, vMem.activeAxis, value, context);
+          if (newVMem === null) return null;
           return {
             ...state,
             vMem: newVMem,

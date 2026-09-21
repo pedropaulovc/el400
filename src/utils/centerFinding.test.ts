@@ -128,6 +128,27 @@ describe('centerFinding utilities', () => {
       expect(center).toBeNull();
     });
 
+    it('returns null when any two points are duplicates', () => {
+      const unique = { x: 10, y: 0 };
+      const repeated = { x: 0, y: 10 };
+
+      expect(findCircleCenter(repeated, repeated, unique)).toBeNull();
+      expect(findCircleCenter(repeated, unique, repeated)).toBeNull();
+      expect(findCircleCenter(unique, repeated, repeated)).toBeNull();
+    });
+
+    it('remains stable for a circle far from the coordinate origin', () => {
+      const center = findCircleCenter(
+        { x: 1_000_010, y: -2_000_000 },
+        { x: 1_000_000, y: -1_999_990 },
+        { x: 999_990, y: -2_000_000 }
+      );
+
+      expect(center).not.toBeNull();
+      expect(center!.x).toBeCloseTo(1_000_000, 6);
+      expect(center!.y).toBeCloseTo(-2_000_000, 6);
+    });
+
     it('should handle negative coordinates', () => {
       // Circle centered at (-10, -10) with radius 5
       const p1: Point2D = { x: -5, y: -10 };   // Right

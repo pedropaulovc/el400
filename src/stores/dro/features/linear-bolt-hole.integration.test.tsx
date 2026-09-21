@@ -33,9 +33,7 @@ describe('Linear Bolt Hole Integration (US-029)', () => {
   async function openLinearMenu(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByTestId('btn-function'));
     expect(getAxisDisplayPureTextValue('X')).toBe('CEntrE');
-    // CEntrE -> CirCLE -> LinE -> LinEAr
-    await user.click(screen.getByTestId('key-6'));
-    await user.click(screen.getByTestId('key-6'));
+    // Canonical top-level ring: CEntrE -> LinEAr.
     await user.click(screen.getByTestId('key-6'));
     expect(getAxisDisplayPureTextValue('X')).toBe('LinEAr');
   }

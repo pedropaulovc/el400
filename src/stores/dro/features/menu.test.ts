@@ -28,15 +28,15 @@ describe('menuReducer', () => {
       }
     });
 
-    it('should handle all menu selection states', () => {
+    it('should handle every top-level and center-submenu selection state', () => {
       const menuStates: DROStateName[] = [
         'function-menu-center',
         'function-menu-circle',
         'function-menu-line',
         'function-menu-linear',
         'function-menu-polar',
-        'function-menu-taper',
         'function-menu-probe',
+        'function-menu-taper',
       ];
 
       for (const menuState of menuStates) {
@@ -48,147 +48,67 @@ describe('menuReducer', () => {
   });
 
   describe('forward navigation (KEY_6_RIGHT)', () => {
-    it('should navigate from center to circle', () => {
-      const state = createTestState('function-menu-center');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-circle');
+    it('cycles the authoritative top-level Fn ring without flattening center choices', () => {
+      const expected: DROStateName[] = [
+        'function-menu-linear',
+        'function-menu-polar',
+        'function-menu-probe',
+        'function-menu-taper',
+        'function-menu-center',
+      ];
+      let state = createTestState('function-menu-center');
+
+      for (const stateName of expected) {
+        state = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)!;
+        expect(state.stateName).toBe(stateName);
+      }
     });
 
-    it('should navigate from circle to line', () => {
-      const state = createTestState('function-menu-circle');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-line');
+    it('toggles only CirCLE and LinE inside the CEntrE submenu', () => {
+      let state = createTestState('function-menu-circle');
+      state = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.stateName).toBe('function-menu-line');
+      state = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.stateName).toBe('function-menu-circle');
     });
 
-    it('should navigate from line to linear', () => {
-      const state = createTestState('function-menu-line');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-linear');
-    });
-
-    it('should navigate from linear to polar', () => {
-      const state = createTestState('function-menu-linear');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-polar');
-    });
-
-    it('should navigate from polar to taper', () => {
-      const state = createTestState('function-menu-polar');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-taper');
-    });
-
-    it('should navigate from taper to probe', () => {
-      const state = createTestState('function-menu-taper');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-probe');
-    });
-
-    it('should wrap from probe to center', () => {
-      const state = createTestState('function-menu-probe');
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-center');
-    });
-
-    it('should preserve data during navigation', () => {
+    it('preserves state data while navigating', () => {
       const data = { stateDataType: 'none' as const };
-      const state = createTestState('function-menu-center', data);
-      const result = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT);
+      const result = menuReducer(
+        createTestState('function-menu-center', data),
+        { eventName: 'KEY_6_RIGHT' },
+        DEFAULT_TEST_CONTEXT
+      );
       expect(result?.stateData).toBe(data);
     });
   });
 
   describe('backward navigation (KEY_4_LEFT)', () => {
-    it('should navigate from circle to center', () => {
-      const state = createTestState('function-menu-circle');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-center');
-    });
-
-    it('should navigate from line to circle', () => {
-      const state = createTestState('function-menu-line');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-circle');
-    });
-
-    it('should navigate from linear to line', () => {
-      const state = createTestState('function-menu-linear');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-line');
-    });
-
-    it('should navigate from polar to linear', () => {
-      const state = createTestState('function-menu-polar');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-linear');
-    });
-
-    it('should navigate from taper to polar', () => {
-      const state = createTestState('function-menu-taper');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-polar');
-    });
-
-    it('should wrap from center to probe', () => {
-      const state = createTestState('function-menu-center');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-probe');
-    });
-
-    it('should navigate from probe to taper', () => {
-      const state = createTestState('function-menu-probe');
-      const result = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT);
-      expect(result?.stateName).toBe('function-menu-taper');
-    });
-  });
-
-  describe('menu ring cycle', () => {
-    it('should complete full forward cycle', () => {
-      const menuStates: DROStateName[] = [
-        'function-menu-center',
-        'function-menu-circle',
-        'function-menu-line',
-        'function-menu-linear',
-        'function-menu-polar',
+    it('cycles the authoritative top-level Fn ring backward', () => {
+      const expected: DROStateName[] = [
         'function-menu-taper',
         'function-menu-probe',
-      ];
-
-      let state = createTestState('function-menu-center');
-
-      for (let i = 0; i < menuStates.length; i++) {
-        const expectedNext = menuStates[(i + 1) % menuStates.length];
-        state = menuReducer(state, { eventName: 'KEY_6_RIGHT' }, DEFAULT_TEST_CONTEXT)!;
-        expect(state.stateName).toBe(expectedNext);
-      }
-
-      // Should be back at center after full cycle
-      expect(state.stateName).toBe('function-menu-center');
-    });
-
-    it('should complete full backward cycle', () => {
-      const menuStates: DROStateName[] = [
-        'function-menu-center',
-        'function-menu-circle',
-        'function-menu-line',
-        'function-menu-linear',
         'function-menu-polar',
-        'function-menu-taper',
-        'function-menu-probe',
+        'function-menu-linear',
+        'function-menu-center',
       ];
-
       let state = createTestState('function-menu-center');
 
-      for (let i = 0; i < menuStates.length; i++) {
-        const expectedPrev = menuStates[(menuStates.length - 1 - i + menuStates.length) % menuStates.length];
+      for (const stateName of expected) {
         state = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)!;
-        expect(state.stateName).toBe(expectedPrev);
+        expect(state.stateName).toBe(stateName);
       }
+    });
 
-      // Should be back at center after full cycle
-      expect(state.stateName).toBe('function-menu-center');
+    it('toggles only LinE and CirCLE inside the CEntrE submenu', () => {
+      let state = createTestState('function-menu-circle');
+      state = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.stateName).toBe('function-menu-line');
+      state = menuReducer(state, { eventName: 'KEY_4_LEFT' }, DEFAULT_TEST_CONTEXT)!;
+      expect(state.stateName).toBe('function-menu-circle');
     });
   });
+
 
   describe('menu exit (KEY_CLEAR)', () => {
     it('should exit to idle from any menu state', () => {
@@ -198,6 +118,8 @@ describe('menuReducer', () => {
         'function-menu-line',
         'function-menu-linear',
         'function-menu-polar',
+        'function-menu-probe',
+        'function-menu-taper',
       ];
 
       for (const menuState of menuStates) {
@@ -210,33 +132,39 @@ describe('menuReducer', () => {
   });
 
   describe('menu entry (KEY_ENTER)', () => {
-    it('should enter center-line point collection from center menu', () => {
-      const state = createTestState('function-menu-center');
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+    it('should open the CirCLE/LinE submenu from CEntrE', () => {
+      const result = menuReducer(
+        createTestState('function-menu-center'),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
+
+      expect(result?.stateName).toBe('function-menu-circle');
+      expect(result?.display.X).toBe('CirCLE');
+    });
+
+    it('should enter line point collection with the Point 1 prompt', () => {
+      const result = menuReducer(
+        createTestState('function-menu-line'),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
 
       expect(result?.stateName).toBe('function-menu-center-line-point-1');
       expect(result?.stateData.stateDataType).toBe('center-finding');
-      expect(result?.stateData).toEqual({
-        stateDataType: 'center-finding',
-        storedPoints: [],
-        centerResult: null,
-      });
+      expect(result?.display.Z).toBe('Point 1');
     });
 
-    it('should enter center-line point collection from line menu', () => {
-      const state = createTestState('function-menu-line');
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
-
-      expect(result?.stateName).toBe('function-menu-center-line-point-1');
-      expect(result?.stateData.stateDataType).toBe('center-finding');
-    });
-
-    it('should enter center-circle point collection from circle menu', () => {
-      const state = createTestState('function-menu-circle');
-      const result = menuReducer(state, { eventName: 'KEY_ENTER' }, DEFAULT_TEST_CONTEXT);
+    it('should enter circle point collection with the Point 1 prompt', () => {
+      const result = menuReducer(
+        createTestState('function-menu-circle'),
+        { eventName: 'KEY_ENTER' },
+        DEFAULT_TEST_CONTEXT
+      );
 
       expect(result?.stateName).toBe('function-menu-center-circle-point-1');
       expect(result?.stateData.stateDataType).toBe('center-finding');
+      expect(result?.display.Z).toBe('Point 1');
     });
 
     it('should enter linear bolt hole axis selection from linear menu (US-029)', () => {
@@ -255,6 +183,7 @@ describe('menuReducer', () => {
       expect(result?.stateData.stateDataType).toBe('polar');
       expect(result?.display.X).toBe('h-Y');
     });
+
   });
 
   describe('unhandled events', () => {

@@ -78,7 +78,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(-5, 4);
   });
 
-  it('AC 38.6 — Escape clears the input buffer before confirm', async () => {
+  it('AC 38.6 — Escape removes one input character before confirm', async () => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
 
@@ -88,8 +88,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     await user.keyboard('{Escape}');
     await user.keyboard('{Enter}');
 
-    // After clear, confirming should not commit 99.
-    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(0, 4);
+    expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(9, 4);
   });
 
   it('AC 38.8 — Shift+X zeros the X axis', async () => {
@@ -188,7 +187,7 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(useDROStore.getState().stateName).toBe(expectedState);
   });
 
-  it('AC 38.19 — H halves the selected axis value', async () => {
+  it('AC 38.19 — H opens HALF selection and the chosen axis is halved', async () => {
     const { user } = await renderSimulator();
     await focusSimulator(user);
 
@@ -200,6 +199,8 @@ describe('US-038 Keyboard Shortcuts Integration', () => {
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(100, 4);
 
     await user.keyboard('h');
+    expect(screen.getByTestId('axis-value-x')).toHaveTextContent('SELECt');
+    await user.keyboard('x');
 
     expect(getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 4);
   });

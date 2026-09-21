@@ -531,6 +531,21 @@ describe('live datum and encoder decoding', () => {
     const controller = { ...context, millState: { ...createDefaultMillState('cncjs'), connected: true, position: { x: 5, y: 0, z: 0 } } };
     expect(computeMachinePositionMm('X', INITIAL_VOLATILE_MEMORY_STATE, controller)).toBe(5);
   });
+
+  it('uses independent ABS and INC datums for the same moving encoder', () => {
+    const context: DROReducerContext = {
+      millState: { ...createDefaultMillState('debug'), connected: true, position: { x: 15, y: 0, z: 0 } },
+      nvMem: makeNvMem(),
+    };
+    const memory = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      workOffsets: { X: 5, Y: 0, Z: 0 },
+      incrementalOffsets: { X: 12, Y: 0, Z: 0 },
+      incrementalValues: { X: 999, Y: 0, Z: 0 },
+    };
+    expect(computeAxisPositionMm('X', memory, context)).toBe(10);
+    expect(computeAxisPositionMm('X', { ...memory, mode: 'inc' }, context)).toBe(3);
+  });
 });
 
 describe('formatDisplayNumber midpoint and panel boundary policy', () => {
