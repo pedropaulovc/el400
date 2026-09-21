@@ -70,7 +70,7 @@ function setAxisValue(
   axis: Axis,
   value: number,
   context: DROReducerContext
-): DROStatePayload['vMem'] {
+): DROStatePayload['vMem'] | null {
   const { nvMem } = context;
   // Linear entries are clamped to what the physical 7-digit panel can show at
   // the current dP resolution (US-047), keeping sign. Angular entries use their
@@ -82,6 +82,7 @@ function setAxisValue(
       Math.abs(value),
       maxDisplayableMagnitude(axisDisplayDecimals(axis, nvMem))
     );
+  if (!Number.isFinite(clamped)) return null;
   const valueMm = displayUnitsToAxisUnits(axis, clamped, nvMem) /
     measurementScale(axis, nvMem) *
     directionSign(axis, nvMem);
@@ -220,6 +221,7 @@ export const axisOperationsReducer: FeatureReducer = (
         const value = getBufferValue(vMem.inputBuffer);
         if (value !== null) {
           const newVMem = setAxisValue(vMem, vMem.activeAxis, value, context);
+          if (newVMem === null) return null;
           return {
             ...state,
             vMem: newVMem,

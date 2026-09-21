@@ -6,12 +6,15 @@
 
 import { describe, it, expect } from 'vitest';
 import { axisOperationsReducer } from './axis-operations';
+import { droReducer } from '../reducer';
 import type { DROStatePayload, DROReducerContext } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+
+const NON_FINITE_INPUT = '9'.repeat(400);
 
 /** Helper to create idle state with specific vMem */
 function idleStateWithVMem(vMemOverrides: Partial<typeof INITIAL_VOLATILE_MEMORY_STATE>): DROStatePayload {
@@ -282,6 +285,19 @@ describe('axisOperationsReducer', () => {
       expect(result?.vMem.manualAbsoluteValues.X).toBeCloseTo(999.9999, 4);
     });
 
+    it('still clamps a linear input parsed as Infinity to the finite panel limit', () => {
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        inputBuffer: NON_FINITE_INPUT,
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+      const result = droReducer(state, { eventName: 'KEY_ENTER' }, mmContext);
+
+      expect(result.vMem.manualAbsoluteValues.X).toBeCloseTo(999.9999, 4);
+      expect(result.vMem.inputBuffer).toBe('');
+    });
+
     it('preserves sign when clamping a too-large negative (AC 47.2)', () => {
       const state = idleStateWithVMem({
         mode: 'abs',
@@ -540,4 +556,31 @@ it('preserves unwrapped angular entries across linear dP settings', () => {
     expect(result.vMem.manualAbsoluteValues.X).toBe(1234);
     expect(result.display.X).toBe('154.000');
   }
+});
+
+it('rejects a non-finite angular entry without changing its datum or buffer', () => {
+  const context: DROReducerContext = {
+    ...DEFAULT_TEST_CONTEXT,
+    nvMem: {
+      ...DEFAULT_TEST_CONTEXT.nvMem,
+      countingMode: {
+        ...DEFAULT_TEST_CONTEXT.nvMem.countingMode,
+        X: 'angular',
+      },
+      angularResolution: {
+        ...DEFAULT_TEST_CONTEXT.nvMem.angularResolution,
+        X: 'dd-dec',
+      },
+    },
+  };
+  const state = idleStateWithVMem({
+    activeAxis: 'X',
+    inputBuffer: NON_FINITE_INPUT,
+    manualAbsoluteValues: { X: 27, Y: 0, Z: 0 },
+  });
+  const result = droReducer(state, { eventName: 'KEY_ENTER' }, context);
+
+  expect(result.vMem.manualAbsoluteValues.X).toBe(27);
+  expect(result.vMem.inputBuffer).toBe(NON_FINITE_INPUT);
+  expect(result.vMem.activeAxis).toBe('X');
 });

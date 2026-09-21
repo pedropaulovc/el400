@@ -405,11 +405,16 @@ describe('US-047: Display Overflow on Value Entry (integration)', () => {
   });
 
   it('AC 47.7: the STORED slide value is the halved 499.99995, not 999.9999', async () => {
-    const { user } = await renderSimulator();
-    await setDiameterMode(user, 'X');
+    const { user } = await renderSimulator({
+      nvMem: {
+        measurementMode: { X: 'diameter', Y: 'radius', Z: 'radius' },
+      },
+    });
 
-    // Preset on the diameter axis: entered 55555555 is capped so the DISPLAY is
-    // 999.9999, which means the stored slide value is 499.99995.
+    // Begin in diameter mode through the real settings-store fixture, avoiding a
+    // redundant setup-menu traversal before exercising the behavior under test.
+    // Entered 55555555 is capped so the DISPLAY is 999.9999, which means the
+    // stored slide value is 499.99995.
     await selectAxis(user, 'X');
     await typeValue(user, '55555555');
     await pressEnter(user);

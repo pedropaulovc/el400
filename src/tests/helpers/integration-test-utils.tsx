@@ -153,6 +153,8 @@ export type MillSource = 'live' | 'noop';
 interface RenderSimulatorOptions {
   /** Boot message mode - defaults to 'skip' for faster tests */
   bootMessageMode?: 'show' | 'skip';
+  /** Non-volatile settings applied to the real settings store before render. */
+  nvMem?: Partial<NonVolatileMemory>;
   /** Enable render profiling for performance measurement */
   profile?: boolean;
   /** Use component-level profiling for detailed metrics */
@@ -189,13 +191,14 @@ export async function renderSimulator(
     profile = false,
     componentProfiling = false,
     millSource = 'live',
+    nvMem,
   } = options ?? {};
 
   // Reset stores first (also initializes NoOpMillAdapter)
   resetStores();
 
-  // Set boot message mode
-  useSettingsStore.getState().updateNvMem({ bootMessageMode });
+  // Apply fixture settings before mounting so the first render observes them.
+  useSettingsStore.getState().updateNvMem({ ...nvMem, bootMessageMode });
 
   // If skipping boot, start in idle state
   if (bootMessageMode === 'skip') {
