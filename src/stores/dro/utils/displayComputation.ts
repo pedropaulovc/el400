@@ -164,20 +164,22 @@ export function directionSign(axis: Axis, nvMem: NonVolatileMemory): 1 | -1 {
 }
 
 /**
- * Pure radius/diameter scale factor for an axis (US-041).
+ * Effective radius/diameter scale factor for an axis (US-041).
  *
  * Lathe diameter turning shows the cut diameter, which is twice the slide travel,
  * so a `'diameter'`-mode axis displays `2 ×` the actual movement; `'radius'` (the
  * mill default) is 1:1. Like `directionSign`, this is a display-only transform
  * applied AFTER the datum offset is subtracted; it never mutates stored machine
  * position, offsets, or macro coordinate math.
+ * Angular axes always remain 1:1, even if a dormant diameter setting is stored.
  *
  * @param axis - The axis to compute the scale for
- * @param nvMem - Non-volatile memory (per-axis measurement mode)
- * @returns 2 (diameter) or 1 (radius)
+ * @param nvMem - Non-volatile memory (counting mode + per-axis measurement mode)
+ * @returns 2 for linear diameter mode, otherwise 1
  */
 export function measurementScale(axis: Axis, nvMem: NonVolatileMemory): 1 | 2 {
-  return nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
+  return nvMem.countingMode[axis] === 'linear' &&
+    nvMem.measurementMode[axis] === 'diameter' ? 2 : 1;
 }
 
 /**

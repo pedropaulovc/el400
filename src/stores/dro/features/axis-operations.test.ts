@@ -377,6 +377,32 @@ describe('axisOperationsReducer', () => {
       expect(result?.vMem.manualAbsoluteValues.X).toBe(-10);
       expect(result?.display.X).toBe(20);
     });
+
+    it('stores and displays an angular entry 1:1 despite a dormant diameter setting', () => {
+      const angularDiameterContext: DROReducerContext = {
+        ...mmContext,
+        nvMem: {
+          ...mmContext.nvMem,
+          countingMode: { ...mmContext.nvMem.countingMode, X: 'angular' },
+          measurementMode: { ...mmContext.nvMem.measurementMode, X: 'diameter' },
+        },
+      };
+      const state = idleStateWithVMem({
+        mode: 'abs',
+        activeAxis: 'X',
+        inputBuffer: '20',
+        manualAbsoluteValues: { X: 0, Y: 0, Z: 0 },
+      });
+
+      const result = axisOperationsReducer(
+        state,
+        { eventName: 'KEY_ENTER' },
+        angularDiameterContext
+      );
+
+      expect(result?.vMem.manualAbsoluteValues.X).toBe(20);
+      expect(Number(result?.display.X)).toBe(20);
+    });
   });
 
   describe('KEY_ENTER value entry - connected mode (abs)', () => {

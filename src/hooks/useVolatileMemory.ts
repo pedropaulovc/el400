@@ -9,13 +9,10 @@
 
 import { useMemo, useCallback } from 'react';
 import {
-  useMode,
-  useActiveAxis,
-  useWorkOffsets,
-  useIncrementalValues,
-  useManualAbsoluteValues,
   useDispatch,
   useMillState,
+  useNvMem,
+  useVMem,
 } from '../stores';
 import type {
   VolatileMemory,
@@ -24,6 +21,7 @@ import type {
   Axis,
   DatumMode,
 } from '../types/volatileMemory';
+import { computeMachinePositionMm } from '../stores/dro/utils/displayComputation';
 
 export type { VolatileMemory, VolatileMemoryActions, AxisValues, Axis, DatumMode };
 
@@ -42,28 +40,25 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
  * - Zero resets incremental counter
  */
 export function useVolatileMemory(): VolatileMemoryContextValue {
-  // Granular store subscriptions - only re-render when specific values change
-  const mode = useMode();
-  const activeAxis = useActiveAxis();
-  const workOffsets = useWorkOffsets();
-  const incrementalValues = useIncrementalValues();
-  const manualAbsoluteValues = useManualAbsoluteValues();
+  const vMem = useVMem();
+  const { mode, activeAxis, workOffsets, incrementalValues, manualAbsoluteValues } = vMem;
+  const nvMem = useNvMem();
   const dispatch = useDispatch();
   const millState = useMillState();
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
     if (millState.connected) {
-      // Use external machine position with work offsets applied
+      const context = { millState, nvMem };
       return {
-        X: millState.position.x - workOffsets.X,
-        Y: millState.position.y - workOffsets.Y,
-        Z: millState.position.z - workOffsets.Z,
+        X: computeMachinePositionMm('X', vMem, context) - workOffsets.X,
+        Y: computeMachinePositionMm('Y', vMem, context) - workOffsets.Y,
+        Z: computeMachinePositionMm('Z', vMem, context) - workOffsets.Z,
       };
     }
     // Manual mode: use manual values directly
     return manualAbsoluteValues;
-  }, [millState.connected, millState.position, workOffsets, manualAbsoluteValues]);
+  }, [millState, nvMem, vMem, workOffsets, manualAbsoluteValues]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {

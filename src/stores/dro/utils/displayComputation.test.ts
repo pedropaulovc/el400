@@ -288,6 +288,16 @@ describe('measurementScale — radius/diameter factor (US-041)', () => {
     expect(measurementScale('Y', nvMem)).toBe(1);
     expect(measurementScale('Z', nvMem)).toBe(2);
   });
+
+  it('ignores a stored diameter setting for angular axes', () => {
+    const linearDiameter = makeNvMem({ measurementMode: { X: 'diameter' } });
+    const angularDiameter: NonVolatileMemory = {
+      ...linearDiameter,
+      countingMode: { ...linearDiameter.countingMode, X: 'angular' },
+    };
+
+    expect(measurementScale('X', angularDiameter)).toBe(1);
+  });
 });
 
 describe('computeDisplayPosition — radius/diameter transform (US-041)', () => {

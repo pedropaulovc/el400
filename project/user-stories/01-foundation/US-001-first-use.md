@@ -16,11 +16,12 @@
 - [x] **NF 1.1:** E2E setup may bypass the boot delay by default, but dedicated boot coverage exercises both timeout and the visible `C` key.
 
 ## Verification
-The completed headed Chromium run observed `EL400` on X, `vEr 1.0.0` on Y and a blank Z. The visible `C` key bypassed the delay, while a separate reload reached normal counting after the timeout. A reload also restored the saved unit, direction, diameter and datum settings. This verifies the simulator identity and persistence behavior, not the identity or startup timing of physical firmware.
+The historical headed Chromium audit of aggregate checkpoint `4fe7a9c` observed `EL400` on X, `vEr 1.0.0` on Y, a blank Z, both timeout and visible-`C` transitions to counting, and restoration of saved unit, direction, diameter and datum settings after reload. This layer's owned US-001 E2E spec covers the identity, timeout, visible-`C` bypass, default indicators and absence of startup warnings; the store regression covers loading saved operator datums through Zustand hydration. The verification index records this layer's independent gate separately from the aggregate's headed evidence.
 
 ## Evidence
 - [Verification index and headed-session reports](../README.md#verification)
 - [`e2e/01-foundation/US-001-first-use.spec.ts`](../../../e2e/01-foundation/US-001-first-use.spec.ts)
+- [`src/stores/droStore.test.ts`](../../../src/stores/droStore.test.ts)
 
 ## Scope
 The simulator is X/Y/Z only; a fourth Z/U axis is deliberately out of scope.

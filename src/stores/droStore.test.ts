@@ -93,6 +93,39 @@ describe('droStore', () => {
     expect(saved?.state.vMem.workOffsets.X).toBe(12);
   });
 
+  it('restores persisted operator datums through Zustand hydration', async () => {
+    const storageKey = useDROStore.persist.getOptions().name;
+    if (storageKey === undefined) throw new Error('DRO persistence name is missing');
+    localStorage.setItem(storageKey, JSON.stringify({
+      state: {
+        vMem: {
+          workOffsets: { X: 7, Y: -2, Z: 0 },
+          manualAbsoluteValues: { X: 3, Y: 0, Z: 11 },
+        },
+      },
+      version: 0,
+    }));
+
+    const { result: workOffsetX } = renderHook(() => useWorkOffsetX());
+    const { result: manualAbsoluteZ } = renderHook(() => useManualAbsoluteZ());
+    expect(workOffsetX.current).toBe(0);
+    expect(manualAbsoluteZ.current).toBe(0);
+
+    await act(async () => {
+      await useDROStore.persist.rehydrate();
+    });
+
+    expect(workOffsetX.current).toBe(7);
+    expect(manualAbsoluteZ.current).toBe(11);
+    expect(useDROStore.getState().vMem.inputBuffer).toBe(
+      INITIAL_VOLATILE_MEMORY_STATE.inputBuffer
+    );
+    expect(useDROStore.getState().vMem.referenceMarks).toEqual(
+      INITIAL_VOLATILE_MEMORY_STATE.referenceMarks
+    );
+    localStorage.removeItem(storageKey);
+  });
+
   describe('dispatch', () => {
     it('dispatches events to update state', () => {
       // Set to idle state first (skip boot)

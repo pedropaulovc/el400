@@ -347,6 +347,8 @@ The aggregate automated checkpoint `4fe7a9c` passed 1,572 unit/integration tests
 196 E2Es, and 44 Storybook tests. The [headed audit reports](https://github.com/pedropaulovc/el400/pull/308#issuecomment-5761904651)
 record the source and scope of each successive browser recheck.
 
-The Foundation code checkpoint `f6ae2da` independently passed 1,732 unit/integration
-tests, 155 E2Es, and 44 Storybook tests. Later story-group layers report their own
-checks in their PRs; aggregate evidence does not establish an intermediate layer's result.
+The [Foundation PR](https://github.com/pedropaulovc/el400/pull/309) independently
+passed 1,736 unit/integration tests, 155 E2Es, and 44 Storybook tests after its
+coordinate-frame and hydration review repairs. Later story-group layers report
+their own checks in their PRs; aggregate evidence does not establish an
+intermediate layer's result.

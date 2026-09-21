@@ -17,12 +17,11 @@
 - [x] **AC 2.6:** Source decoding precedes sign/datum transforms. CNCjs positions are already engineering millimetres and must not be multiplied by `SC`; a simulated raw-scale source with an installed encoder resolution may apply configured-microns / installed-microns before Direction.
 
 ## Verification
-The headed core run covered positive and negative motion, the dedicated sign cell, all-axis Direction changes, positive presets under `riGht`, diameter composition and the independent Z-depth preference. A targeted raw-source recheck showed an installed 5 µm encoder display 10 mm at `SC 5.0`, 2 mm at `SC 1.0`, then 10 mm after restoring `SC 5.0`. A separate mock-CNCjs run kept engineering values unchanged at `SC 1.0` and `SC 5.0`, including live update and reconnect. SDM and macro sign behavior is covered by those stories' headed runs rather than duplicated here. No physical encoder or CNC controller was exercised.
+The historical headed audit of aggregate checkpoint `4fe7a9c` covered positive and negative motion, the dedicated sign cell, all-axis Direction changes, positive presets under `riGht`, diameter composition, the independent Z-depth preference, raw-source scale decoding and unchanged mock-CNCjs engineering values. This layer's owned US-002 E2E spec exercises tool's-eye X/Y motion, per-axis Direction changes and round trips, inch composition, successive jogs, and the dedicated negative sign cell. Preset, raw-source, CNCjs reconnect, SDM and macro observations remain aggregate audit context rather than Foundation browser proof. The verification index records this layer's independent gate.
 
 ## Evidence
 - [Verification index and headed-session reports](../README.md#verification)
 - [`e2e/01-foundation/US-002-sign-convention.spec.ts`](../../../e2e/01-foundation/US-002-sign-convention.spec.ts)
-- [`e2e/02-core-operations/US-005-zero-axes.spec.ts`](../../../e2e/02-core-operations/US-005-zero-axes.spec.ts)
 
 ## Authority Note
 MagXact explicitly says there is no universal sign preference for routine shop work. The Figure 1 convention is mandatory here only where SDMs or generated macro coordinates depend on it.

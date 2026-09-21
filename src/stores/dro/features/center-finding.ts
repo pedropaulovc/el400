@@ -26,6 +26,7 @@ import { findLineCenter, findCircleCenter } from '../../../utils/centerFinding';
 import {
   computeNormalDisplay,
   computeAxisPositionMm,
+  computeMachinePositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -40,7 +41,7 @@ function isCenterFindingState(state: DROStateName): boolean {
 
 /**
  * Compute current position (in mm) from vMem and context.
- * This is the raw position that gets stored when collecting points.
+ * This is the datum-relative position that gets stored when collecting points.
  */
 function computeStoredPosition(
   vMem: VolatileMemoryState,
@@ -50,9 +51,9 @@ function computeStoredPosition(
     // ABS mode: machine position - work offset (or manual values if disconnected)
     if (context.millState.connected) {
       return {
-        X: context.millState.position.x - vMem.workOffsets.X,
-        Y: context.millState.position.y - vMem.workOffsets.Y,
-        Z: context.millState.position.z - vMem.workOffsets.Z,
+        X: computeMachinePositionMm('X', vMem, context) - vMem.workOffsets.X,
+        Y: computeMachinePositionMm('Y', vMem, context) - vMem.workOffsets.Y,
+        Z: computeMachinePositionMm('Z', vMem, context) - vMem.workOffsets.Z,
       };
     }
     return {
