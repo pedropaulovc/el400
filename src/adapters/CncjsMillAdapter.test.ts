@@ -460,10 +460,10 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       expect(commands[1]?.slice(0, 4)).toEqual(['command', '/dev/ttyB', 'gcode', '$G']);
       expect(commands[0]?.slice(0, 3)).toEqual(['command', '/dev/ttyB', 'gcode']);
       const words = String(commands[0]?.[3]).split(/\s+/);
-      expect(words.slice(0, 3)).toEqual(['G10', 'L20', 'P1']);
-      expect(words).toHaveLength(4);
-      expect(Number(words[3]?.slice(1))).toBeCloseTo(modal === 'G20' ? 2 : 50.8);
-      expect(words[3]?.startsWith('X')).toBe(true);
+      expect(words.slice(0, 4)).toEqual([modal, 'G10', 'L20', 'P1']);
+      expect(words).toHaveLength(5);
+      expect(Number(words[4]?.slice(1))).toBeCloseTo(modal === 'G20' ? 2 : 50.8);
+      expect(words[4]?.startsWith('X')).toBe(true);
       expect(adapter.getState().position).toEqual(before.position);
       expect(adapter.getState().workPosition).toEqual(before.workPosition);
       expect(adapter.getState().workPositionControl).toEqual({
@@ -501,8 +501,8 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       });
       const request = adapter.requestWorkPosition({ z: -2 });
       const command = mockSocket.emit.mock.calls.find(([event]) => event === 'command')?.[3];
-      expect(String(command).split(/\s+/).slice(0, 3)).toEqual(['G10', 'L20', `P${String(Number(wcs.slice(1)) - 53)}`]);
-      expect(String(command).split(/\s+/)).toHaveLength(4);
+      expect(String(command).split(/\s+/).slice(0, 4)).toEqual(['G21', 'G10', 'L20', `P${String(Number(wcs.slice(1)) - 53)}`]);
+      expect(String(command).split(/\s+/)).toHaveLength(5);
       expect(String(command)).toMatch(/ Z-2(?:\.0+)?$/);
       fireSocket('controller:state', 'Grbl', {
         parserstate: { modal: { units: 'G21', wcs } },
@@ -518,7 +518,7 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     it('emits G10 even for a cached matching target and waits for a post-marker raw report', async () => {
       await ready();
       const request = adapter.requestWorkPosition({ x: 25.4 });
-      expect(mockSocket.emit).toHaveBeenCalledWith('command', '/dev/ttyB', 'gcode', 'G10 L20 P1 X25.4');
+      expect(mockSocket.emit).toHaveBeenCalledWith('command', '/dev/ttyB', 'gcode', 'G21 G10 L20 P1 X25.4');
       fireSocket('serialport:write', '$G\n', { el400WorkRequest: 'unrelated-request' });
       fireSocket('serialport:read', '<Idle|MPos:25.4,0,0|WCO:0,0,0>');
       expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 25.4 });
@@ -639,6 +639,35 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       expect(adapter.getState().position.x).toBeCloseTo(25.4);
       expect(adapter.getState().workPosition).toEqual({ x: 10, y: 20, z: 30 });
       expect(mockSocket.emit).not.toHaveBeenCalledWith('command', expect.anything(), 'gcode', expect.stringContaining('G10'));
+      adapter.disconnect();
+    });
+
+    it.each([
+      ['G20', 'G21'], ['G21', 'G20'],
+    ] as const)('executes queued %s work targets as physical mm despite another client switching to %s', async (capturedMode, externalMode) => {
+      await ready(capturedMode);
+      const request = adapter.requestWorkPosition({ x: 2.54 });
+      const command = mockSocket.emit.mock.calls.find((call) =>
+        call[0] === 'command' && typeof call[3] === 'string' && call[3].includes('G10'));
+      expect(command).toBeDefined();
+      // Model firmware consuming the queued line only after another client's
+      // modal command. No assertion below assumes the emitted line has a prefix.
+      fireSocket('controller:state', 'Grbl', nativeState(externalMode));
+      let executionMode: 'G20' | 'G21' = externalMode;
+      let executedX: number | undefined;
+      for (const word of String(command?.[3]).split(/\s+/)) {
+        if (word === 'G20' || word === 'G21') executionMode = word;
+        if (word.startsWith('X')) executedX = Number(word.slice(1));
+      }
+      expect(executedX).toBeDefined();
+      const physicalWorkX = Number(executedX) * (executionMode === 'G20' ? 25.4 : 1);
+      expect(physicalWorkX).toBeCloseTo(2.54, 6);
+      expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 2.54 });
+      advanceWorkRequestMarker();
+      fireSocket('serialport:read', `<Idle|MPos:25.4,0,0|WCO:${String(25.4 - physicalWorkX)},0,0>`);
+      await expect(request).resolves.toBeUndefined();
+      expect(adapter.getState().workPosition?.x).toBeCloseTo(2.54, 6);
+      expect(adapter.getState().position.x).toBeCloseTo(25.4, 6);
       adapter.disconnect();
     });
   });

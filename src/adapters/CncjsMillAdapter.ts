@@ -564,6 +564,7 @@ export class CncjsMillAdapter implements MillAdapter {
         !this.joinedPort || !this.activeWcs || !this.confirmedUnit) {
       return Promise.reject(new Error('Work-coordinate change unavailable: wait for an idle GRBL controller and fresh coordinates'));
     }
+    const unit = this.confirmedUnit;
     const target: Partial<MillPosition> = {};
     const words: string[] = [];
     for (const axis of ['x', 'y', 'z'] as const) {
@@ -571,7 +572,7 @@ export class CncjsMillAdapter implements MillAdapter {
       if (value === undefined) continue;
       if (!Number.isFinite(value)) return Promise.reject(new Error('Work coordinates must be finite'));
       target[axis] = value;
-      const commandValue = this.confirmedUnit === 'inch' ? value / 25.4 : value;
+      const commandValue = unit === 'inch' ? value / 25.4 : value;
       words.push(`${axis.toUpperCase()}${String(Number(commandValue.toFixed(6)))}`);
     }
     if (words.length === 0) return Promise.reject(new Error('Select at least one work-coordinate axis'));
@@ -589,7 +590,9 @@ export class CncjsMillAdapter implements MillAdapter {
         }, 5000),
       };
       this.updateState({});
-      this.socket?.emit('command', this.joinedPort, 'gcode', `G10 L20 P${String(p)} ${words.join(' ')}`);
+      // Another client may change modal units while this waits in the feeder.
+      // Bind the numeric target to its captured units in the same GRBL block.
+      this.socket?.emit('command', this.joinedPort, 'gcode', `${unit === 'inch' ? 'G20' : 'G21'} G10 L20 P${String(p)} ${words.join(' ')}`);
       // The native feeder preserves command order. Its marker write is not
       // success: only a fresh raw coordinate report can satisfy the target.
       this.socket?.emit('command', this.joinedPort, 'gcode', '$G', { el400WorkRequest: id });

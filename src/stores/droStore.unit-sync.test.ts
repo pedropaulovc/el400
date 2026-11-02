@@ -44,7 +44,8 @@ function report(
 
 function unitCommands(): unknown[][] {
   return socket.emit.mock.calls.filter((call) =>
-    call.some((value) => typeof value === 'string' && /(?:^|\s)G2[01](?:\s|$)/.test(value))
+    call[0] === 'command' && call[2] === 'gcode' &&
+    typeof call[3] === 'string' && /^G2[01]$/.test(call[3])
   );
 }
 
@@ -206,6 +207,8 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     const offsets = useDROStore.getState().vMem.incrementalOffsets;
     dispatch({ eventName: 'BTN_ZERO_X' });
     expect(workCommands()).toHaveLength(1);
+    expect(workCommands()[0]?.[3]).toBe('G21 G10 L20 P1 X0');
+    expect(unitCommands()).toEqual([]);
     expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
     expect(useDROStore.getState().display.X).toBe(12.7);
     expect(useDROStore.getState().vMem.incrementalOffsets).toEqual(offsets);
@@ -246,6 +249,10 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     useDROStore.getState().dispatch({ eventName: 'SET_INPUT_BUFFER', value: unit === 'inch' ? '2' : '50.8' });
     dispatch({ eventName: 'KEY_ENTER' });
     expect(workCommands()).toHaveLength(1);
+    expect(workCommands()[0]?.[3]).toBe(unit === 'inch'
+      ? 'G20 G10 L20 P1 X2'
+      : 'G21 G10 L20 P1 X50.8');
+    expect(unitCommands()).toEqual([]);
     expect(useMillStore.getState().millState.workPositionControl?.pending?.x).toBeCloseTo(50.8);
     expect(useDROStore.getState().display.X).toBeCloseTo(unit === 'inch' ? 0.5 : 12.7);
     advanceWorkQueue();
@@ -261,6 +268,7 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     dispatch({ eventName: 'BTN_ABS_INC' });
     dispatch({ eventName: 'BTN_ZERO_X' });
     expect(workCommands()).toHaveLength(1);
+    expect(workCommands()[0]?.[3]).toBe('G21 G10 L20 P1 X0');
     expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
     report('mm', 25.4, 50.8, 76.2, { x: 0, y: 50.8, z: 76.2 });
     expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
@@ -276,6 +284,8 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     const before = useDROStore.getState().display;
     dispatch({ eventName: 'BTN_ZERO_ALL' });
     expect(workCommands()).toHaveLength(1);
+    expect(workCommands()[0]?.[3]).toBe('G21 G10 L20 P1 X0 Y0 Z0');
+    expect(unitCommands()).toEqual([]);
     expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0, y: 0, z: 0 });
     expect(useDROStore.getState().display).toEqual(before);
     advanceWorkQueue();

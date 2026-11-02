@@ -210,7 +210,9 @@ machine movement. Zero, axis-value entry, Half, probe datum operations and
 **Shift+0** request work-coordinate changes rather than maintaining an independent
 EL400 INC datum. Shift+0 is one atomic XYZ request. These operations send
 `G10 L20 P<n>` for the captured active `G54`–`G59` system (`P1`–`P6`), naming only
-the affected axes and expressing the target in confirmed controller units.
+the affected axes and expressing the target in confirmed controller units. The
+captured `G20` or `G21` is included on that same G10 line, so another client's
+unit change while the request waits in the feeder cannot reinterpret its target.
 GRBL itself accounts for G92 and tool-length offsets; EL400 does not subtract
 them again. The command does not move an axis. No optimistic coordinate or local
 datum update occurs: the readout follows actual native WPos, and completion waits
