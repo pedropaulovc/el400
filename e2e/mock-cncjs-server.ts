@@ -453,14 +453,14 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const work = /^(G20|G21) G10 L20 P([1-6])((?: [XYZ][-+]?(?:\d+\.?\d*|\.\d+))+)$/.exec(line);
+    const work = /^(G20|G21) G10 L20 P([1-6])((?: [XYZ][-+]?(?:\d+(?:\.\d*)?|\.\d+))+)$/.exec(line);
     if (!work) {
       rejectCommand(`Unsupported mock G-code: ${line}`);
       return;
     }
     const unit = work[1] as WorkingUnit;
     const wcs = `G${53 + Number(work[2])}` as WorkCoordinateSystem;
-    const words = Array.from((work[3] ?? '').matchAll(/([XYZ])([-+]?(?:\d+\.?\d*|\.\d+))/g));
+    const words = Array.from((work[3] ?? '').matchAll(/([XYZ])([-+]?(?:\d+(?:\.\d*)?|\.\d+))/g));
     const scale = unit === 'G20' ? 25.4 : 1;
     if (words.some((word) => !Number.isFinite(Number(word[2]) * scale))) {
       rejectCommand('Work coordinates must be finite');
