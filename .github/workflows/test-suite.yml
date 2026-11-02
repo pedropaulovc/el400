@@ -25,7 +25,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm ci
 
       - name: Run linter
@@ -47,7 +47,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm ci
 
       - name: Run unit tests with coverage
@@ -96,7 +96,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm ci
 
       - name: Install Playwright browsers
@@ -135,7 +135,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        timeout-minutes: 1
+        timeout-minutes: 3
         run: npm ci
 
       - name: Install Playwright browsers
