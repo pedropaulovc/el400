@@ -39,8 +39,8 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
  * - Zero sets the reference point (offset from machine position)
  *
  * In INC mode:
- * - Displays live machine position relative to the independent INC datum
- * - Zero resets that datum, or the manual counter while disconnected
+ * - GRBL displays controller WPos; datum changes request native work offsets.
+ * - Other sources retain an independent INC datum or disconnected manual counter.
  */
 export function useVolatileMemory(): VolatileMemoryContextValue {
   // Granular store subscriptions - only re-render when specific values change
@@ -68,6 +68,13 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   }, [millState.connected, millState.position, workOffsets, manualAbsoluteValues]);
 
   const liveIncrementalValues = useMemo<AxisValues>(() => {
+    if (millState.workPositionControl !== undefined) {
+      return {
+        X: millState.workPosition?.x ?? Number.NaN,
+        Y: millState.workPosition?.y ?? Number.NaN,
+        Z: millState.workPosition?.z ?? Number.NaN,
+      };
+    }
     if (millState.connected) {
       return {
         X: millState.position.x - incrementalOffsets.X,
@@ -76,7 +83,8 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
       };
     }
     return incrementalValues;
-  }, [millState.connected, millState.position, incrementalOffsets, incrementalValues]);
+  }, [millState.connected, millState.position, millState.workPosition,
+      millState.workPositionControl, incrementalOffsets, incrementalValues]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {

@@ -24,8 +24,27 @@ import {
   type ZeroApproachByAxis,
   type ZeroApproachArmed,
 } from './dro/utils/zeroApproach';
-import { useMillStore, setDRODispatch } from './millStore';
+import { useMillStore, setDRODispatch, setDROUnitSync } from './millStore';
 import { useSettingsStore } from './settingsStore';
+import { fromAnyUnitToMm, fromMmToAnyUnit } from '../utils/unitConversion';
+
+/**
+ * Only length-entry buffers follow controller units. Counts, angles, calculator
+ * operands and setup parameters keep their own meanings on a unit change.
+ */
+const LENGTH_INPUT_STATES: Partial<Record<DROStateName, true>> = {
+  idle: true,
+  'preset-input-x': true, 'preset-input-y': true, 'preset-input-z': true,
+  'bolt-hole-circle-center-x': true, 'bolt-hole-circle-center-y': true, 'bolt-hole-circle-radius': true,
+  'bolt-hole-arc-center-x': true, 'bolt-hole-arc-center-y': true, 'bolt-hole-arc-radius': true,
+  'arc-contour-center-x': true, 'arc-contour-center-y': true, 'arc-contour-radius': true,
+  'arc-contour-tool-diameter': true, 'arc-contour-max-cut': true,
+  'angle-hole-start-x': true, 'angle-hole-start-y': true, 'angle-hole-pitch': true,
+  'linear-bolt-hole-pitch': true,
+  'grid-start-x': true, 'grid-start-y': true, 'grid-pitch-x': true, 'grid-pitch-y': true,
+  'sdm-program-input-x': true, 'sdm-program-input-y': true, 'sdm-program-input-z': true,
+  'probe-diameter': true,
+};
 
 /**
  * Which axes are armed for the Near-Zero Warning (US-024). In distance-to-go /
@@ -146,6 +165,22 @@ export const useDROStore = create<DROStore>()((set, get) => ({
  * Extracted to an explicit function to avoid side effects at module import time.
  */
 export function initializeDROMillConnection(): void {
+  setDROUnitSync((previous, confirmed) => {
+    const current = useDROStore.getState();
+    const buffer = current.vMem.inputBuffer;
+    const value = Number(buffer);
+    const angularIdleEntry = current.stateName === 'idle' && current.vMem.activeAxis !== null &&
+      useSettingsStore.getState().nvMem.countingMode[current.vMem.activeAxis] === 'angular';
+    if (LENGTH_INPUT_STATES[current.stateName] && !angularIdleEntry &&
+        buffer !== '' && Number.isFinite(value)) {
+      // Change the presentation, not the eventual physical value committed by ENT.
+      const converted = fromMmToAnyUnit(fromAnyUnitToMm(value, previous), confirmed);
+      useDROStore.setState({
+        vMem: { ...current.vMem, inputBuffer: String(converted) },
+      });
+    }
+    useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+  });
   setDRODispatch((event) => {
     useDROStore.getState().dispatch(event as DROEventPayload);
   });
@@ -207,10 +242,10 @@ export const useInputBuffer = () => useDROStore((s) => s.vMem.inputBuffer);
 /** Get work offsets */
 export const useWorkOffsets = () => useDROStore((s) => s.vMem.workOffsets);
 
-/** Get connected INC datum offsets */
+/** Get connected non-GRBL INC datum offsets (GRBL INC uses native WPos). */
 export const useIncrementalOffsets = () => useDROStore((s) => s.vMem.incrementalOffsets);
 
-/** Get disconnected manual INC counters */
+/** Get disconnected non-GRBL manual INC counters. */
 export const useIncrementalValues = () => useDROStore((s) => s.vMem.incrementalValues);
 
 /** Get manual absolute values */

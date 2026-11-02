@@ -46,9 +46,9 @@ export interface VolatileMemoryState {
   mode: DatumMode;
   activeAxis: Axis | null;
   workOffsets: AxisValues;
-  /** Independent INC datum in machine millimeters when connected. */
+  /** Independent INC datum for connected non-GRBL sources; GRBL uses native WPos. */
   incrementalOffsets: AxisValues;
-  /** Manual INC counters, used only while disconnected. */
+  /** Manual INC counters for disconnected non-GRBL sources only. */
   incrementalValues: AxisValues;
   manualAbsoluteValues: AxisValues;
   inputBuffer: string;

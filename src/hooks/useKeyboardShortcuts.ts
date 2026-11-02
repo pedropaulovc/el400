@@ -159,9 +159,7 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsResult {
       void playClickSound();
 
       if (shortcut.kind === 'zero-all') {
-        dispatch({ eventName: 'BTN_ZERO_X' });
-        dispatch({ eventName: 'BTN_ZERO_Y' });
-        dispatch({ eventName: 'BTN_ZERO_Z' });
+        dispatch({ eventName: 'BTN_ZERO_ALL' });
         return;
       }
 

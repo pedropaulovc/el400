@@ -9,7 +9,7 @@ const PrimaryFunctionSection = () => {
   const dispatch = useDispatch();
 
   const handleToggleUnit = () => {
-    // inchMmReducer handles nvMem update and display recomputation
+    // The reducer requests controller-owned units or toggles display-only units.
     dispatch({ eventName: 'BTN_INCH_MM' });
   };
 

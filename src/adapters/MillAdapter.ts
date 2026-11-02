@@ -4,7 +4,7 @@
  */
 
 import type { Dispatch } from 'react';
-import type { ControllerType, MillState, MillStateListener } from '../types/millState';
+import type { ControllerType, MillPosition, MillState, MillStateListener, MillUnit } from '../types/millState';
 import type { DROEventPayload } from '../stores/dro/droStateMachine';
 
 /**
@@ -38,6 +38,12 @@ export interface MillAdapter {
    * @returns Current MillState
    */
   getState(): MillState;
+
+  /** Request controller units; resolves only after native modal confirmation. */
+  requestUnits?(unit: MillUnit): Promise<void>;
+
+  /** Set named work coordinates without motion; waits for native WPos confirmation. */
+  requestWorkPosition?(position: Partial<MillPosition>): Promise<void>;
 
   /**
    * The type of controller this adapter connects to.

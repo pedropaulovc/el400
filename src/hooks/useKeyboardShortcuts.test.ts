@@ -153,12 +153,9 @@ describe('useKeyboardShortcuts', () => {
   });
 
   describe('AC 38.13 — Shift+0 zeros all axes', () => {
-    it('dispatches BTN_ZERO_X, BTN_ZERO_Y and BTN_ZERO_Z', () => {
+    it('dispatches one atomic BTN_ZERO_ALL event', () => {
       const { calls } = press({ code: 'Digit0', key: '0', shiftKey: true });
-      const names = calls.map((c) => c.eventName);
-      expect(names).toEqual(
-        expect.arrayContaining(['BTN_ZERO_X', 'BTN_ZERO_Y', 'BTN_ZERO_Z']),
-      );
+      expect(calls.map((c) => c.eventName)).toEqual(['BTN_ZERO_ALL']);
     });
 
     it('does NOT enter a digit when Shift+0 is pressed', () => {

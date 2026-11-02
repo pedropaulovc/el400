@@ -271,6 +271,12 @@ export function computeAxisPositionMm(
     }
     return manualAbsoluteValues[axis];
   }
+  // GRBL owns INC through its active work coordinate system. Never substitute
+  // the separate local INC datum, including while that controller is unavailable.
+  if (millState.workPositionControl !== undefined) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    return millState.workPosition?.[axisKey] ?? Number.NaN;
+  }
   if (millState.connected) {
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
     return millState.position[axisKey] - incrementalOffsets[axis];
@@ -300,6 +306,9 @@ export function computeDisplayPosition(
 
 
   const rawMm = computeAxisPositionMm(axis, vMem, context);
+  if (!Number.isFinite(rawMm) && context.millState.workPositionControl !== undefined) {
+    return 'no Conn';
+  }
   // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
   // transforms applied AFTER datum subtraction; they never mutate stored machine
   // position, offsets, or macro coordinate math.

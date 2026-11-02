@@ -578,6 +578,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_X' }
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
+  | { eventName: 'BTN_ZERO_ALL' }
   | { eventName: 'BTN_DISTANCE_TO_GO' }
   | { eventName: 'BTN_SETUP' }
   // Axis selection buttons (select without zeroing)

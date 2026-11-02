@@ -58,11 +58,35 @@ export const DEFAULT_ENCODER_SIGNAL: EncoderSignalByAxis = {
   Z: 'ok',
 };
 
+export type MillUnit = 'mm' | 'inch';
+
+/** Controller-authoritative units; omitted for standalone/local-unit adapters. */
+export type MillUnitControl =
+  | {
+    control: 'display';
+    confirmed: null;
+    pending: null;
+    availability: 'unavailable';
+  }
+  | {
+    control: 'controller';
+    confirmed: MillUnit | null;
+    pending: MillUnit | null;
+    availability: 'ready' | 'busy' | 'unavailable';
+  };
+
+/** Native work-coordinate writes; targets and reported positions are millimetres. */
+export interface MillWorkPositionControl {
+  availability: 'ready' | 'busy' | 'unavailable';
+  pending: Partial<MillPosition> | null;
+  error: string | null;
+}
+
 /**
  * Mill state from connection
  */
 export interface MillState {
-  /** Absolute machine coordinates */
+  /** Absolute machine coordinates, always millimetres for linear axes */
   position: MillPosition;
   /** Work coordinates (if available from controller) */
   workPosition?: MillPosition;
@@ -74,6 +98,10 @@ export interface MillState {
   controllerType: ControllerType;
   /** Per-axis encoder signal state - drives the `no SIG` warning (US-042) */
   encoderSignal: EncoderSignalByAxis;
+  /** Native controller units, independent of the physical coordinate report scale. */
+  unitControl?: MillUnitControl;
+  /** Present when INC is controller-owned, including while disconnected/unknown. */
+  workPositionControl?: MillWorkPositionControl;
 }
 
 /**

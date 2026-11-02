@@ -2,7 +2,7 @@
  * ABS/INC Mode Feature Reducer
  *
  * Handles ABS/INC mode toggling from idle state and the abs-inc-mode transitional state.
- * Updates only vMem.mode: independent ABS/INC datums keep tracking live motion.
+ * Updates only vMem.mode: GRBL INC follows native WPos; other datums remain local.
  */
 
 import type { FeatureReducer } from '../types';

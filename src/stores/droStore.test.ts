@@ -61,7 +61,7 @@ describe('droStore', () => {
   });
 
   describe('live incremental hook values', () => {
-    it.each(['X', 'Y', 'Z'] as const)('updates %s from machine motion and INC offsets without changing manual counters', (axis) => {
+    it.each(['X', 'Y', 'Z'] as const)('updates %s from native GRBL WPos independently of local INC offsets and manual counters', (axis) => {
       useDROStore.setState({
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
@@ -78,6 +78,9 @@ describe('droStore', () => {
           ...createDefaultMillState('cncjs'),
           connected: true,
           position: { x: 14, y: 24, z: 34 },
+          workPosition: { x: 6, y: 8, z: 10 },
+          unitControl: { control: 'controller', confirmed: 'mm', pending: null, availability: 'ready' },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
         },
       });
       const { result } = renderHook(() => ({
@@ -85,21 +88,25 @@ describe('droStore', () => {
         offsets: useIncrementalOffsets(),
         manualX: useIncrementalX(),
       }));
-      expect(result.current.memory.incremental[axis]).toBe(4);
+      expect(result.current.memory.incremental[axis]).toBe({ X: 6, Y: 8, Z: 10 }[axis]);
       expect(result.current.memory.displayValues).toEqual({ X: 13, Y: 22, Z: 31 });
       expect(result.current.manualX).toBe(71);
 
       act(() => {
         useMillStore.setState((state) => ({
-          millState: { ...state.millState, position: { x: 19, y: 29, z: 39 } },
+          millState: {
+            ...state.millState,
+            position: { x: 19, y: 29, z: 39 },
+            workPosition: { x: 11, y: 13, z: 15 },
+          },
         }));
       });
-      expect(result.current.memory.incremental[axis]).toBe(9);
+      expect(result.current.memory.incremental[axis]).toBe({ X: 11, Y: 13, Z: 15 }[axis]);
       expect(result.current.memory.displayValues).toEqual({ X: 18, Y: 27, Z: 36 });
       act(() => {
         result.current.memory.toggleMode();
       });
-      expect(result.current.memory.displayValues[axis]).toBe(9);
+      expect(result.current.memory.displayValues[axis]).toBe({ X: 11, Y: 13, Z: 15 }[axis]);
       expect(result.current.offsets).toEqual({ X: 10, Y: 20, Z: 30 });
 
       act(() => {
@@ -111,9 +118,7 @@ describe('droStore', () => {
         }));
       });
       expect(result.current.offsets[axis]).toBe(0);
-      expect(result.current.memory.incremental).toEqual({
-        X: 9, Y: 9, Z: 9, [axis]: { X: 19, Y: 29, Z: 39 }[axis],
-      });
+      expect(result.current.memory.incremental).toEqual({ X: 11, Y: 13, Z: 15 });
       expect(result.current.memory.displayValues).toEqual(result.current.memory.incremental);
       expect(result.current.manualX).toBe(71);
     });

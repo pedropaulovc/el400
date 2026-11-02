@@ -39,6 +39,7 @@ import {
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 import { appendDigit, appendDecimal, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
+import { setAxisValueMm } from './axis-operations';
 
 /** 7-segment label shown for each probe sub-function (manual §10.1.2 abbreviations). */
 const PROBE_FUNCTION_LABEL: Record<ProbeFunction, string> = {
@@ -91,8 +92,8 @@ function exitToIdle(vMem: VolatileMemoryState, context: DROReducerContext): DROS
 
 /**
  * Set the selected axis datum so the displayed value reads `targetMm` at the
- * current machine position. Connected ABS and INC use independent offsets;
- * disconnected operation writes the selected manual counter directly.
+ * current machine position. GRBL INC requests native WPos; other sources use
+ * independent offsets or a disconnected manual counter.
  */
 function setAxisDatumMm(
   vMem: VolatileMemoryState,
@@ -111,6 +112,9 @@ function setAxisDatumMm(
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: targetMm },
     };
+  }
+  if (context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, targetMm, context);
   }
   if (context.millState.connected) {
     return {
@@ -152,6 +156,9 @@ function setAxisDatumAtMachinePos(
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: -delta },
     };
+  }
+  if (context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, machinePos(axis, context) - machinePosMm, context);
   }
   if (context.millState.connected) {
     return {
