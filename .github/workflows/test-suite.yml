@@ -82,7 +82,7 @@ jobs:
           retention-days: 10
 
   e2e-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         timeout-minutes: 1
@@ -121,7 +121,7 @@ jobs:
           retention-days: 10
 
   storybook-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         timeout-minutes: 1
