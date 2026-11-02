@@ -200,6 +200,9 @@ observed controller error/alarm. Those error lines are shared across CNCjs
 clients, so they are not proof that this particular command was rejected.
 Late native confirmations still update the readout. Pending commands are never
 replayed after reconnection.
+On disconnect, the selected CNCjs readout retains its last physical coordinates
+with an unavailable indication rather than switching to standalone counters.
+Offline GRBL INC zero/preset attempts do not change a local datum or queue replay.
 
 In **INC**, GRBL's normalized work position (`WPos`) is authoritative. External
 work-offset changes and active-WCS changes therefore update the EL400 without

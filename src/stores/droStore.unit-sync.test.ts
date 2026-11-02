@@ -311,6 +311,51 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(unitCommands()).toHaveLength(1);
   });
 
+  it.each(['mm', 'inch'] as const)('retains native INC in %s offline and never falls back to manual datum writes', async (unit) => {
+    report(unit, 25.4, 50.8, 76.2, { x: 12.7, y: -25.4, z: 38.1 });
+    dispatch('BTN_ABS_INC');
+    const before = useDROStore.getState().display;
+    const memory = useDROStore.getState().vMem;
+    receive('disconnect');
+    await Promise.resolve();
+    expect(useDROStore.getState().display).toEqual(before);
+    expect(useSettingsStore.getState().nvMem.defaultUnit).toBe(unit);
+    expect(useMillStore.getState().millState.unitControl?.confirmed).toBeNull();
+    expect(useMillStore.getState().millState.workPositionControl?.availability).toBe('unavailable');
+    dispatch('BTN_ZERO_ALL');
+    dispatch('BTN_SELECT_X');
+    useDROStore.getState().dispatch({ eventName: 'SET_INPUT_BUFFER', value: '5' });
+    dispatch('KEY_ENTER');
+    await Promise.resolve();
+    expect(workCommands()).toEqual([]);
+    expect(useDROStore.getState().display).toEqual(before);
+    expect(useDROStore.getState().vMem.incrementalOffsets).toEqual(memory.incrementalOffsets);
+    expect(useDROStore.getState().vMem.incrementalValues).toEqual(memory.incrementalValues);
+    expect(useDROStore.getState().vMem.manualAbsoluteValues).toEqual(memory.manualAbsoluteValues);
+    expect(useMillStore.getState().error).toBeInstanceOf(Error);
+    dispatch('BTN_ABS_INC');
+    expect(useDROStore.getState().display.X).toBeCloseTo(unit === 'inch' ? 1 : 25.4);
+    expect(useDROStore.getState().display.Y).toBeCloseTo(unit === 'inch' ? 2 : 50.8);
+    expect(useDROStore.getState().display.Z).toBeCloseTo(unit === 'inch' ? 3 : 76.2);
+  });
+
+  it('keeps physical distance-to-go targets and distances through disconnect', () => {
+    dispatch('BTN_DISTANCE_TO_GO');
+    dispatch('BTN_SELECT_X');
+    dispatch('KEY_7');
+    dispatch('KEY_6_RIGHT');
+    dispatch('KEY_DECIMAL');
+    dispatch('KEY_2_DOWN');
+    dispatch('KEY_ENTER');
+    dispatch('BTN_DISTANCE_TO_GO');
+    const before = useDROStore.getState().display;
+    expect(before.X).toBeCloseTo(50.8);
+    receive('disconnect');
+    expect(useDROStore.getState().stateName).toBe('distance-to-go');
+    expect(useDROStore.getState().display).toEqual(before);
+    expect((useDROStore.getState().stateData as PresetData).presetTargets.X).toBeCloseTo(76.2);
+  });
+
   it.each(['preset-select', 'preset-input-y', 'distance-to-go'] as const)(
     'waits for native confirmation when requesting units in %s',
     (stateName) => {

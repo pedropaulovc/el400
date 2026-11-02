@@ -55,7 +55,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
 
   // Calculate absolute values (machine position - work offset)
   const absoluteValues = useMemo<AxisValues>(() => {
-    if (millState.connected) {
+    if (millState.connected || millState.controllerType === 'cncjs') {
       // Use external machine position with work offsets applied
       return {
         X: millState.position.x - workOffsets.X,
@@ -65,7 +65,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     }
     // Manual mode: use manual values directly
     return manualAbsoluteValues;
-  }, [millState.connected, millState.position, workOffsets, manualAbsoluteValues]);
+  }, [millState.connected, millState.controllerType, millState.position, workOffsets, manualAbsoluteValues]);
 
   const liveIncrementalValues = useMemo<AxisValues>(() => {
     if (millState.workPositionControl !== undefined) {
@@ -75,7 +75,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
         Z: millState.workPosition?.z ?? Number.NaN,
       };
     }
-    if (millState.connected) {
+    if (millState.connected || millState.controllerType === 'cncjs') {
       return {
         X: millState.position.x - incrementalOffsets.X,
         Y: millState.position.y - incrementalOffsets.Y,
@@ -83,7 +83,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
       };
     }
     return incrementalValues;
-  }, [millState.connected, millState.position, millState.workPosition,
+  }, [millState.connected, millState.controllerType, millState.position, millState.workPosition,
       millState.workPositionControl, incrementalOffsets, incrementalValues]);
 
   // Display values based on current mode

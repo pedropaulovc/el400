@@ -265,7 +265,7 @@ export function computeAxisPositionMm(
   const { millState } = context;
 
   if (mode === 'abs') {
-    if (millState.connected) {
+    if (millState.connected || millState.controllerType === 'cncjs') {
       const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
       return millState.position[axisKey] - workOffsets[axis];
     }
@@ -277,7 +277,7 @@ export function computeAxisPositionMm(
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
     return millState.workPosition?.[axisKey] ?? Number.NaN;
   }
-  if (millState.connected) {
+  if (millState.connected || millState.controllerType === 'cncjs') {
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
     return millState.position[axisKey] - incrementalOffsets[axis];
   }

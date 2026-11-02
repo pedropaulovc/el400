@@ -420,7 +420,7 @@ export class CncjsMillAdapter implements MillAdapter {
 
       this.socket.on('serialport:write', (line: string, context?: { el400WorkRequest?: string }) => {
         const request = this.workRequest;
-        if (!request || request.phase !== 'queued' || context?.el400WorkRequest !== request.id || line.trim() !== '$G') return;
+        if (request?.phase !== 'queued' || context?.el400WorkRequest !== request.id || line.trim() !== '$G') return;
         // The feeder sends this marker only after advancing past G10. Querying
         // realtime status at initial emit could overtake the buffered G10.
         request.phase = 'confirming';

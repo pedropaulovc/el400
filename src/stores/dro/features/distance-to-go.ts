@@ -110,7 +110,7 @@ function getAbsolutePositionMm(
   const { workOffsets, manualAbsoluteValues } = vMem;
   const { millState } = context;
 
-  if (millState.connected) {
+  if (millState.connected || millState.controllerType === 'cncjs') {
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
     return millState.position[axisKey] - workOffsets[axis];
   }

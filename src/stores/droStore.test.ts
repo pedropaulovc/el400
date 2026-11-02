@@ -60,6 +60,55 @@ describe('droStore', () => {
     setDRODispatch(null);
   });
 
+  describe('selected CNCjs disconnect projections', () => {
+    it.each(['abs', 'inc'] as const)('retains physical %s coordinates offline but restores actual standalone counters when switching source', (mode) => {
+      useDROStore.setState({
+        stateName: 'idle',
+        stateData: { stateDataType: 'none' },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE, mode,
+          workOffsets: { X: 1, Y: 2, Z: 3 },
+          incrementalOffsets: { X: 100, Y: 200, Z: 300 },
+          incrementalValues: { X: 71, Y: 72, Z: 73 },
+          manualAbsoluteValues: { X: 81, Y: 82, Z: 83 },
+        },
+      });
+      useMillStore.setState({
+        millState: {
+          ...createDefaultMillState('cncjs'), connected: true,
+          position: { x: 25.4, y: 50.8, z: 76.2 },
+          workPosition: { x: 12.7, y: -25.4, z: 38.1 },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
+        },
+      });
+      const { result } = renderHook(() => useVolatileMemory());
+      const expectedAbsolute = { X: 24.4, Y: 48.8, Z: 73.2 };
+      const expectedIncremental = { X: 12.7, Y: -25.4, Z: 38.1 };
+      expect(result.current.absolute).toEqual(expectedAbsolute);
+      expect(result.current.incremental).toEqual(expectedIncremental);
+      act(() => {
+        useMillStore.setState((state) => ({
+          millState: {
+            ...state.millState, connected: false,
+            workPositionControl: { availability: 'unavailable', pending: null, error: null },
+          },
+        }));
+        useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+      });
+      expect(result.current.absolute).toEqual(expectedAbsolute);
+      expect(result.current.incremental).toEqual(expectedIncremental);
+      expect(result.current.displayValues).toEqual(mode === 'abs' ? expectedAbsolute : expectedIncremental);
+      expect(useDROStore.getState().display).toEqual(result.current.displayValues);
+      act(() => {
+        useMillStore.setState({ millState: createDefaultMillState('noop') });
+        useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+      });
+      expect(result.current.absolute).toEqual({ X: 81, Y: 82, Z: 83 });
+      expect(result.current.incremental).toEqual({ X: 71, Y: 72, Z: 73 });
+      expect(useDROStore.getState().display).toEqual(result.current.displayValues);
+    });
+  });
+
   describe('live incremental hook values', () => {
     it.each(['X', 'Y', 'Z'] as const)('updates %s from native GRBL WPos independently of local INC offsets and manual counters', (axis) => {
       useDROStore.setState({
