@@ -173,6 +173,12 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
 
   // Keep the display live as the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
+    if (isParameterEntryState(state)) {
+      return {
+        ...statePayload,
+        display: computeParameterEntryDisplay(state, linearData, vMem),
+      };
+    }
     if (state === 'linear-bolt-hole-navigate') {
       return {
         ...statePayload,

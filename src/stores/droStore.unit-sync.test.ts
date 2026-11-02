@@ -69,6 +69,38 @@ function dispatch(event: DROEventPayload): void {
   useDROStore.getState().dispatch(event);
 }
 
+function typeNumber(value: string): void {
+  const keys: Record<string, DROEventPayload> = {
+    '0': { eventName: 'KEY_0' },
+    '1': { eventName: 'KEY_1' },
+    '2': { eventName: 'KEY_2_DOWN' },
+    '3': { eventName: 'KEY_3' },
+    '4': { eventName: 'KEY_4_LEFT' },
+    '5': { eventName: 'KEY_5' },
+    '6': { eventName: 'KEY_6_RIGHT' },
+    '7': { eventName: 'KEY_7' },
+    '8': { eventName: 'KEY_8_UP' },
+    '9': { eventName: 'KEY_9' },
+    '.': { eventName: 'KEY_DECIMAL' },
+  };
+  for (const digit of value) {
+    const event = keys[digit];
+    if (!event) throw new Error(`Unsupported test keypad character: ${digit}`);
+    dispatch(event);
+  }
+}
+
+function enterLinearPitch(): void {
+  dispatch({ eventName: 'BTN_FUNCTION' });
+  dispatch({ eventName: 'KEY_6_RIGHT' });
+  dispatch({ eventName: 'KEY_6_RIGHT' });
+  dispatch({ eventName: 'KEY_6_RIGHT' });
+  dispatch({ eventName: 'KEY_ENTER' });
+  expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
+  dispatch({ eventName: 'BTN_SELECT_X' });
+  expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-pitch');
+}
+
 describe('CNCjs confirmed units through mill and DRO stores', () => {
   let cleanup: (() => void) | undefined;
 
@@ -434,4 +466,80 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
       expect(unitCommands()).toEqual([]);
     }
   );
+
+  it.each(['mm', 'inch'] as const)('refreshes actual linear pitch entry after external units change from %s and preserves physical pitch on commit', (initial) => {
+    report(initial);
+    enterLinearPitch();
+    typeNumber(initial === 'mm' ? '25.4' : '1');
+    expect(useDROStore.getState().display.X).toBeCloseTo(initial === 'mm' ? 25.4 : 1);
+    const next = initial === 'mm' ? 'inch' : 'mm';
+    report(next);
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-pitch');
+    expect(Number(useDROStore.getState().vMem.inputBuffer)).toBeCloseTo(next === 'inch' ? 1 : 25.4);
+    expect(useDROStore.getState().display.X).toBeCloseTo(next === 'inch' ? 1 : 25.4);
+    expect(useDROStore.getState().display.Y).toBe('PitCh');
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-holes');
+    const pitchData = useDROStore.getState().stateData;
+    expect(pitchData.stateDataType).toBe('linear-bolt-hole');
+    if (pitchData.stateDataType !== 'linear-bolt-hole') throw new Error('Expected linear pattern data');
+    expect(pitchData.pitch).toBeCloseTo(25.4);
+    typeNumber('5');
+    report(initial);
+    expect(useDROStore.getState().vMem.inputBuffer).toBe('5');
+    expect(useDROStore.getState().display).toEqual({ X: 5, Y: 'hoLES', Z: '' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    const completed = useDROStore.getState().stateData;
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-navigate');
+    if (completed.stateDataType !== 'linear-bolt-hole') throw new Error('Expected linear pattern data');
+    expect(completed.pitch).toBeCloseTo(25.4);
+    expect(completed.holeCount).toBe(5);
+    expect(unitCommands()).toEqual([]);
+  });
+
+  it.each(['mm', 'inch'] as const)('keeps empty linear pitch prompts stable when external units change from %s', (initial) => {
+    report(initial);
+    enterLinearPitch();
+    const prompt = useDROStore.getState().display;
+    expect(prompt).toEqual({ X: 0, Y: 'PitCh', Z: '' });
+    report(initial === 'mm' ? 'inch' : 'mm');
+    expect(useDROStore.getState().vMem.inputBuffer).toBe('');
+    expect(useDROStore.getState().display).toEqual(prompt);
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-pitch');
+    expect(unitCommands()).toEqual([]);
+  });
+
+  it.each(['mm', 'inch'] as const)('does not convert entered angle or hole count when external units change from %s', (initial) => {
+    report(initial);
+    dispatch({ eventName: 'BTN_ANGLE_HOLE' });
+    dispatch({ eventName: 'ANGLE_HOLE_INTRO_TIMEOUT' });
+    expect(useDROStore.getState().stateName).toBe('angle-hole-start-x');
+    typeNumber('0');
+    dispatch({ eventName: 'KEY_ENTER' });
+    typeNumber('0');
+    dispatch({ eventName: 'KEY_ENTER' });
+    typeNumber(initial === 'mm' ? '25.4' : '1');
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('angle-hole-angle');
+    typeNumber('30');
+    const angleDisplay = useDROStore.getState().display;
+    report(initial === 'mm' ? 'inch' : 'mm');
+    expect(useDROStore.getState().vMem.inputBuffer).toBe('30');
+    expect(useDROStore.getState().display).toEqual(angleDisplay);
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('angle-hole-holes');
+    typeNumber('6');
+    const holesDisplay = useDROStore.getState().display;
+    report(initial);
+    expect(useDROStore.getState().vMem.inputBuffer).toBe('6');
+    expect(useDROStore.getState().display).toEqual(holesDisplay);
+    dispatch({ eventName: 'KEY_ENTER' });
+    const data = useDROStore.getState().stateData;
+    expect(useDROStore.getState().stateName).toBe('angle-hole-navigate');
+    if (data.stateDataType !== 'angle-hole') throw new Error('Expected angle pattern data');
+    expect(data.pitch).toBeCloseTo(25.4);
+    expect(data.lineAngle).toBe(30);
+    expect(data.holeCount).toBe(6);
+    expect(unitCommands()).toEqual([]);
+  });
 });
