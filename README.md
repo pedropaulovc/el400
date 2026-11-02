@@ -258,6 +258,31 @@ Protocol references:
 - [GRBL G10 coordinate-setting implementation](https://github.com/gnea/grbl/blob/bfb67f0c7963fe3ce4aaf8a97f9009ea5a8db36e/grbl/gcode.c#L510-L555)
   specifies active-WCS selection, omitted axes, G92 and tool-length compensation.
 
+### Browser test fixtures
+
+The E2E CNCjs server models native port discovery/join, settings/state/workflow
+replay, `$$`/`$13` readback, and explicitly requested raw MPos/WCO status. G20/G21
+changes modal working units, not status-report units. G10 L20 changes per-session
+work offsets without moving the machine; the queued `$G` feeder marker precedes
+the fresh status used to confirm the result. Sessions retain units and offsets
+across page reloads and remain isolated from other tests. The manual mock frontend
+and its encoder/probe/signal HTTP controls still receive state without joining a port.
+
+The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
+inch-based scenarios; this is not the mock controller's unseeded default (`G21`).
+Use `test.use({ workingUnit: 'G21' })` for metric-controller scenarios. Seeding
+happens only before first navigation, so a unit change really must survive a
+controller-session reconnect. Use `test.use({ droSource: 'manual' })` for local
+preference/default or independent ABS/INC-memory behavior rather than asserting
+standalone semantics against a connected GRBL controller.
+
+Connected `goto()`/`reload()` await confirmed unit status and fresh work-coordinate
+readiness, not just React boot. Boot-message scenarios retain the boot-only
+barrier; `goto({ waitForConnection: false })` explicitly opts out for offline
+scenarios. `toggleInchMm()` waits for the confirmed unit indicator; intentionally
+rejected or locked actions use `{ expectChange: false }` and assert the unchanged
+display/error themselves.
+
 
 ## How to Edit This Code
 

@@ -18,111 +18,108 @@ test.describe('US-036: Settings Persistence', () => {
   });
 
   /**
-   * Unit preference persists across page reload.
+   * Controller-confirmed units survive reconnecting on page reload.
    */
-  test('should persist unit preference across page reload', async ({ dro }) => {
-    // Install clock to control time-based operations
-    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
-
-    // Verify starting in inch mode (default)
+  test('should retain controller-confirmed units across page reload', async ({ dro }) => {
+    // The connected fixture explicitly seeds the controller in G20.
     await expect(await dro.isInchUnits()).toBe(true);
 
-    // Switch to mm
     await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+    await expect.poll(() => dro.isMmUnits()).toBe(true);
+    await expect.poll(() => dro.page.evaluate(() => {
+      const settings = localStorage.getItem('el400-dro-non-volatile-memory');
+      return settings ? JSON.parse(settings).state.nvMem.defaultUnit : null;
+    })).toBe('mm');
 
-    // Fast forward to allow async operations to complete
-    await dro.page.clock.fastForward(100);
-
-    // Reload the page using dro.reload() to preserve localStorage
+    // Reconnect to the same mock session, whose controller is now in G21.
     await dro.reload();
 
-    // Verify still in mm mode
     await expect(await dro.isMmUnits()).toBe(true);
     await expect(await dro.isInchUnits()).toBe(false);
   });
 
-  /**
-   * Default settings are loaded on first visit.
-   */
-  test('should load default settings on first visit', async ({ dro }) => {
-    // Default unit should be inch
-    await expect(await dro.isInchUnits()).toBe(true);
+  test.describe('standalone local preferences', () => {
+    test.use({ droSource: 'manual' });
 
-    // Default mode should be ABS
-    await expect(await dro.isAbsMode()).toBe(true);
-  });
+    test('should persist unit preference across page reload', async ({ dro }) => {
+      await expect(await dro.isInchUnits()).toBe(true);
+      await dro.toggleInchMm();
+      await expect(await dro.isMmUnits()).toBe(true);
 
-  /**
-   * Settings are stored in localStorage.
-   */
-  test('should store settings in localStorage', async ({ dro }) => {
-    // Install clock to control time-based operations
-    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+      await dro.reload();
 
-    // Toggle unit to mm
-    await dro.toggleInchMm();
-
-    // Fast forward to allow async operations to complete
-    await dro.page.clock.fastForward(100);
-
-    // Check localStorage
-    const settings = await dro.page.evaluate(() => {
-      return localStorage.getItem('el400-dro-non-volatile-memory');
+      await expect(await dro.isMmUnits()).toBe(true);
+      await expect(await dro.isInchUnits()).toBe(false);
     });
 
-    expect(settings).toBeTruthy();
-    const parsed = JSON.parse(settings!);
-    // Zustand persist middleware wraps state in { state: {...}, version: 0 }
-    expect(parsed.state.nvMem.defaultUnit).toBe('mm');
-  });
-
-  /**
-   * Corrupted localStorage falls back to defaults.
-   */
-  test('should handle corrupted localStorage gracefully', async ({ dro }) => {
-    // Set corrupted localStorage
-    await dro.page.evaluate(() => {
-      localStorage.setItem('el400-dro-non-volatile-memory', 'invalid json {{{');
+    test('should load default settings on first visit', async ({ dro }) => {
+      await expect(await dro.isInchUnits()).toBe(true);
+      await expect(await dro.isAbsMode()).toBe(true);
     });
 
-    // Reload page
-    await dro.reload();
+    test('should store settings in localStorage', async ({ dro }) => {
+      await dro.toggleInchMm();
 
-    // Should fall back to defaults
-    await expect(await dro.isInchUnits()).toBe(true);
-    await expect(await dro.isAbsMode()).toBe(true);
+      const settings = await dro.page.evaluate(() => {
+        return localStorage.getItem('el400-dro-non-volatile-memory');
+      });
+
+      expect(settings).toBeTruthy();
+      const parsed = JSON.parse(settings!);
+      // Zustand persist middleware wraps state in { state: {...}, version: 0 }.
+      expect(parsed.state.nvMem.defaultUnit).toBe('mm');
+    });
+
+    test('should handle corrupted localStorage gracefully', async ({ dro }) => {
+      await dro.page.evaluate(() => {
+        localStorage.setItem('el400-dro-non-volatile-memory', 'invalid json {{{');
+      });
+
+      await dro.reload();
+
+      await expect(await dro.isInchUnits()).toBe(true);
+      await expect(await dro.isAbsMode()).toBe(true);
+    });
+
+    test('should persist settings through multiple changes', async ({ dro }) => {
+      await expect(await dro.isInchUnits()).toBe(true);
+      await dro.toggleInchMm();
+      await expect(await dro.isMmUnits()).toBe(true);
+      await dro.toggleInchMm();
+      await expect(await dro.isInchUnits()).toBe(true);
+
+      await dro.reload();
+
+      await expect(await dro.isInchUnits()).toBe(true);
+    });
   });
 
-  /**
-   * Settings persistence across multiple toggles.
-   */
-  test('should persist settings through multiple changes', async ({ dro }) => {
-    // Install clock to control time-based operations
-    await dro.page.clock.install({ time: new Date('2024-01-01T00:00:00Z') });
+  test.describe('controller unit authority', () => {
+    test.use({ droSource: 'cncjs', workingUnit: 'G21' });
 
-    // Start with defaults (inch)
-    await expect(await dro.isInchUnits()).toBe(true);
+    test('should override a conflicting local inch preference with controller G21', async ({ dro }) => {
+      await dro.page.evaluate(() => {
+        localStorage.setItem('el400-dro-non-volatile-memory', JSON.stringify({
+          state: { nvMem: { defaultUnit: 'inch' } },
+          version: 0,
+        }));
+      });
 
-    // Toggle to mm
-    await dro.toggleInchMm();
-    await expect(await dro.isMmUnits()).toBe(true);
+      // Hydrate the conflicting preference, then await controller readiness.
+      await dro.reload();
 
-    // Fast forward to allow async operations to complete
-    await dro.page.clock.fastForward(100);
+      await expect(await dro.isMmUnits()).toBe(true);
+      await expect(await dro.isInchUnits()).toBe(false);
+      const settings = await dro.page.evaluate(() => {
+        return localStorage.getItem('el400-dro-non-volatile-memory');
+      });
+      expect(JSON.parse(settings!).state.nvMem.defaultUnit).toBe('mm');
 
-    // Toggle back to inch
-    await dro.toggleInchMm();
-    await expect(await dro.isInchUnits()).toBe(true);
+      await dro.reload();
 
-    // Fast forward to allow async operations to complete
-    await dro.page.clock.fastForward(100);
-
-    // Reload
-    await dro.reload();
-
-    // Should be inch after reload
-    await expect(await dro.isInchUnits()).toBe(true);
+      await expect(await dro.isMmUnits()).toBe(true);
+      await expect(await dro.isInchUnits()).toBe(false);
+    });
   });
 
   /**

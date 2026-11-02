@@ -10,6 +10,9 @@ import { expectAxisValues } from '../helpers/assertions';
  * @see project/user-stories/02-core-operations/US-003-abs-inc-mode.md
  */
 test.describe('US-003: ABS/INC Mode', () => {
+  // Independent ABS/INC memories are a standalone feature. Connected GRBL INC
+  // instead follows native WPos, covered separately below and in US-035.
+  test.use({ droSource: 'manual' });
   /**
    * AC 3.1: Pressing the ABS/INC key toggles between Absolute and Incremental.
    * AC 3.2: The abs LED indicator glows when in Absolute mode.
@@ -184,32 +187,33 @@ test.describe('US-003: ABS/INC Mode', () => {
     expect(await dro.getAxisDisplayPureNumberValue('X')).toBeCloseTo(50, 0);
   });
 
-  /**
-   * Test from user story: INC mode allows independent zeroing using encoder simulation.
-   * This test uses simulateEncoderAbsoluteMove instead of manual keypad entry.
-   *
-   * Note: simulateEncoderAbsoluteMove sets position in mm (internal storage format).
-   * With default inch display, 10mm displays as ~0.3937 inches.
-   */
-  test('should allow INC zeroing with encoder movement', async ({ dro }) => {
-    // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
-    await dro.simulateEncoderAbsoluteMove('X', 10);
-    // 10mm = 0.3937 inches
-    await dro.waitForAxisValue('X', 0.3937);
+  test.describe('connected GRBL work coordinates', () => {
+    test.use({ droSource: 'cncjs', workingUnit: 'G20' });
 
-    // Switch to INC
-    await dro.toggleAbsInc();
-    expect(await dro.isIncMode()).toBe(true);
+    /**
+     * Native INC zero changes WPos without changing the physical ABS reading.
+     * Encoder positions are mm; this fixture explicitly uses inch working units.
+     */
+    test('should allow INC zeroing with encoder movement', async ({ dro }) => {
+      // In ABS mode, move encoder to position 10mm (displays as ~0.3937 inches)
+      await dro.simulateEncoderAbsoluteMove('X', 10);
+      // 10mm = 0.3937 inches
+      await dro.waitForAxisValue('X', 0.3937);
 
-    // Zero X in INC mode
-    await dro.zeroAxis('X');
-    await dro.waitForAxisValue('X', 0);
+      // Switch to INC
+      await dro.toggleAbsInc();
+      expect(await dro.isIncMode()).toBe(true);
 
-    // Switch back to ABS
-    await dro.toggleAbsInc();
-    expect(await dro.isAbsMode()).toBe(true);
+      // Zero X in INC mode
+      await dro.zeroAxis('X');
+      await dro.waitForAxisValue('X', 0);
 
-    // ABS value should still be 0.3937 inches (10mm preserved)
-    await dro.waitForAxisValue('X', 0.3937);
+      // Switch back to ABS
+      await dro.toggleAbsInc();
+      expect(await dro.isAbsMode()).toBe(true);
+
+      // ABS value should still be 0.3937 inches (10mm preserved)
+      await dro.waitForAxisValue('X', 0.3937);
+    });
   });
 });

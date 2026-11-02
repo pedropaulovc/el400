@@ -7,6 +7,8 @@ import { expectLEDOn, expectAxisValues, expectPureTextValue } from '../helpers/a
  * Priority: Critical (P0)
  */
 test.describe('US-001: First Use and Power-Up Display', () => {
+  // Power-up defaults are standalone EL400 behavior, not GRBL modal defaults.
+  test.use({ droSource: 'manual' });
   // Run tests serially to avoid localStorage race conditions between parallel workers
   // (Zustand persist middleware shares localStorage across parallel test instances)
   test.describe.configure({ mode: 'serial' });
