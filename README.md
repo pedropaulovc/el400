@@ -215,6 +215,14 @@ for the requested coordinates within native report resolution (0.001 mm or
 0.0001 inch). A work request also requires fresh position data and a known WCS;
 unit and work requests exclude one another. A WCS change cancels a pending work
 request, and the same five-second/disconnect/error bounds apply.
+Even a target matching cached WPos sends the explicit datum command: another
+client may have changed the actual offset since the last composite snapshot.
+EL400 queues a native `$G` marker behind G10, observes its correlated feeder write,
+then requests fresh status to confirm the target. It does not await raw `[GC]`
+or treat the marker/write itself as confirmation. This request-scoped status
+acquisition is bounded to ten replies and five seconds, not a continuous poller.
+Frozen probe readings retain their captured physical measurement across unit
+changes; controller-owned probe datum results refresh on native WPos updates.
 
 Physical positions, targets and offsets remain in millimetres internally.
 GRBL **`$13`**, not `G20`/`G21`, determines status-report scaling. On joining or
@@ -222,8 +230,10 @@ changing the report setting, EL400 reads `$$` back from firmware and requests
 a fresh status/WCO boundary before accepting newly scaled coordinates. Raw
 settings replies are observable even if the cached setting did not change.
 Cached composite controller snapshots are never reinterpreted under a new scale.
-If WCO is absent, this boundary operation is limited to ten `?` requests spaced
-250 ms apart and a five-second deadline; it is not a continuous poller. Failure
+Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
+boundary without a literal WCO field. If the required fresh coordinates are
+absent, this boundary operation is limited to ten `?` requests spaced 250 ms
+apart and a five-second deadline; it is not a continuous poller. Failure
 retains the last physical sample, reports work coordinates unavailable, and
 requires reconnection or a new report-setting change to establish a fresh
 boundary. A missing initial work position displays `no Conn`.

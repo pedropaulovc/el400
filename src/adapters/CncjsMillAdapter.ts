@@ -250,12 +250,16 @@ export class CncjsMillAdapter implements MillAdapter {
   } | null = null;
   private activeWcs: string | null = null;
   private workRequest: {
+    id: string;
+    phase: 'queued' | 'confirming';
     target: Partial<MillPosition>;
     wcs: string;
     resolve: () => void;
     reject: (error: Error) => void;
     timer: ReturnType<typeof setTimeout>;
   } | null = null;
+  private workRequestSequence = 0;
+  private readonly requestNamespace = `${String(Date.now())}-${String(Math.random())}`;
   private reportError: string | null = null;
   private reportDeadline: ReturnType<typeof setTimeout> | null = null;
   private reportedSetting: string | null = null;
@@ -376,9 +380,6 @@ export class CncjsMillAdapter implements MillAdapter {
           } else {
             if (normalized.position) normalized.position = this.scalePosition(normalized.position);
             if (normalized.workPosition) normalized.workPosition = this.scalePosition(normalized.workPosition);
-            if (normalized.workPosition && this.workRequest && this.matchesWorkTarget(normalized.workPosition, this.workRequest.target)) {
-              this.finishWorkRequest();
-            }
           }
         } else {
           this.confirmedUnit = null;
@@ -415,6 +416,16 @@ export class CncjsMillAdapter implements MillAdapter {
 
       this.socket.on('serialport:read', (line: string) => {
         this.handleSerialRead(line);
+      });
+
+      this.socket.on('serialport:write', (line: string, context?: { el400WorkRequest?: string }) => {
+        const request = this.workRequest;
+        if (!request || request.phase !== 'queued' || context?.el400WorkRequest !== request.id || line.trim() !== '$G') return;
+        // The feeder sends this marker only after advancing past G10. Querying
+        // realtime status at initial emit could overtake the buffered G10.
+        request.phase = 'confirming';
+        this.statusQueriesRemaining = 10;
+        this.queryFreshStatus();
       });
 
       // Port announcements alone do not establish room membership or readiness.
@@ -564,14 +575,14 @@ export class CncjsMillAdapter implements MillAdapter {
       words.push(`${axis.toUpperCase()}${String(Number(commandValue.toFixed(6)))}`);
     }
     if (words.length === 0) return Promise.reject(new Error('Select at least one work-coordinate axis'));
-    if (this.state.workPosition && this.matchesWorkTarget(this.state.workPosition, target)) return Promise.resolve();
     const wcs = this.activeWcs;
     // GRBL G10 L20 subtracts G92 and tool-length offsets itself. Capturing the
     // actual modal WCS avoids silently writing G54 or execution-time P0.
     const p = Number(wcs.slice(1)) - 53;
+    const id = `${this.requestNamespace}-${String(++this.workRequestSequence)}`;
     return new Promise((resolve, reject) => {
       this.workRequest = {
-        target, wcs, resolve, reject,
+        id, phase: 'queued', target, wcs, resolve, reject,
         timer: setTimeout(() => {
           this.finishWorkRequest(new Error('Controller did not confirm work coordinates within 5 seconds'));
           this.updateState({});
@@ -579,6 +590,9 @@ export class CncjsMillAdapter implements MillAdapter {
       };
       this.updateState({});
       this.socket?.emit('command', this.joinedPort, 'gcode', `G10 L20 P${String(p)} ${words.join(' ')}`);
+      // The native feeder preserves command order. Its marker write is not
+      // success: only a fresh raw coordinate report can satisfy the target.
+      this.socket?.emit('command', this.joinedPort, 'gcode', '$G', { el400WorkRequest: id });
     });
   }
 
@@ -593,6 +607,7 @@ export class CncjsMillAdapter implements MillAdapter {
     const request = this.workRequest;
     this.workRequest = null;
     if (!request) return;
+    if (request.phase === 'confirming' && !this.awaitingFreshStatus) this.cancelStatusQuery();
     clearTimeout(request.timer);
     if (error) request.reject(error);
     else request.resolve();
@@ -673,53 +688,68 @@ export class CncjsMillAdapter implements MillAdapter {
       this.queryFreshStatus();
       return;
     }
-    if (!this.awaitingFreshStatus || this.reportScale === null || !/^<[^>]+>$/.test(line.trim())) return;
-    const match = /(?:\||,)(MPos|WPos):(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/.exec(line);
-    if (!match) return;
-    const raw = { x: Number(match[2]), y: Number(match[3]), z: Number(match[4]) };
-    if (![raw.x, raw.y, raw.z].every(Number.isFinite)) return;
-    const offsetMatch = /(?:\||,)WCO:(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/.exec(line);
-    const offset = offsetMatch
-      ? { x: Number(offsetMatch[1]), y: Number(offsetMatch[2]), z: Number(offsetMatch[3]) }
-      : null;
-    const position = this.scalePosition(raw);
-    if (!offset || ![offset.x, offset.y, offset.z].every(Number.isFinite)) {
-      // Machine coordinates are independently usable. WPos needs a fresh WCO:
-      // CNCjs may still have its pre-$13 offset cached in different report units.
-      if (match[1] === 'MPos') this.updateState({ position });
-      if (this.statusQueriesRemaining > 0) {
-        this.statusQueryTimer = setTimeout(() => { this.queryFreshStatus(); }, 250);
-      } else {
-        this.failReportBoundary('Fresh GRBL work offset was not received after 10 status requests');
-      }
+    const confirmingWork = this.workRequest?.phase === 'confirming';
+    if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(line.trim())) return;
+    const fields: Partial<Record<'MPos' | 'WPos' | 'WCO', MillPosition>> = {};
+    for (const match of line.matchAll(/(?:\||,)(MPos|WPos|WCO):(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/g)) {
+      const value = { x: Number(match[2]), y: Number(match[3]), z: Number(match[4]) };
+      if (![value.x, value.y, value.z].every(Number.isFinite)) return;
+      fields[match[1] as 'MPos' | 'WPos' | 'WCO'] = this.scalePosition(value);
+    }
+    let machine = fields.MPos;
+    let work = fields.WPos;
+    const wco = fields.WCO;
+    // GRBL 0.9 reports paired MPos/WPos rather than WCO. Both forms establish
+    // the same physical boundary without borrowing a cached controller offset.
+    if (!machine && work && wco) {
+      machine = { x: work.x + wco.x, y: work.y + wco.y, z: work.z + wco.z };
+    }
+    if (!work && machine && wco) {
+      work = { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z };
+    }
+    if (!machine || !work) {
+      if (machine) this.updateState({ position: machine });
+      this.scheduleFreshStatus();
       return;
     }
-    const wco = this.scalePosition(offset);
-    const machine = match[1] === 'MPos' ? position
-      : { x: position.x + wco.x, y: position.y + wco.y, z: position.z + wco.z };
-    const work = match[1] === 'WPos' ? position
-      : { x: position.x - wco.x, y: position.y - wco.y, z: position.z - wco.z };
     this.awaitingFreshStatus = false;
-    this.cancelStatusQuery();
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
     this.reportError = null;
     // Native runner updates status before emitting this line. Socket FIFO means
     // subsequent composite snapshots cannot predate this explicit boundary.
     this.positionReady = true;
-    if (this.workRequest && this.matchesWorkTarget(work, this.workRequest.target)) this.finishWorkRequest();
+    if (confirmingWork && this.workRequest) {
+      if (this.matchesWorkTarget(work, this.workRequest.target)) this.finishWorkRequest();
+      else this.scheduleFreshStatus();
+    } else {
+      this.cancelStatusQuery();
+    }
     this.updateState({ position: machine, workPosition: work });
   }
 
   private queryFreshStatus(): void {
     this.statusQueryTimer = null;
-    if (!this.socketConnected || !this.joinedPort || !this.awaitingFreshStatus || this.statusQueriesRemaining === 0) return;
+    if (!this.socketConnected || !this.joinedPort ||
+        (!this.awaitingFreshStatus && this.workRequest?.phase !== 'confirming') || this.statusQueriesRemaining === 0) return;
     this.statusQueriesRemaining--;
     this.socket?.emit('write', this.joinedPort, '?');
   }
 
+  private scheduleFreshStatus(): void {
+    clearTimeout(this.statusQueryTimer ?? undefined);
+    if (this.statusQueriesRemaining > 0) {
+      this.statusQueryTimer = setTimeout(() => { this.queryFreshStatus(); }, 250);
+    } else if (this.awaitingFreshStatus) {
+      this.failReportBoundary('Fresh GRBL work offset was not received after 10 status requests');
+    } else {
+      this.finishWorkRequest(new Error('Controller did not confirm work coordinates after 10 status requests'));
+      this.updateState({});
+    }
+  }
+
   private cancelStatusQuery(): void {
-    if (this.statusQueryTimer !== null) clearTimeout(this.statusQueryTimer);
+    clearTimeout(this.statusQueryTimer ?? undefined);
     this.statusQueryTimer = null;
     this.statusQueriesRemaining = 0;
   }

@@ -39,9 +39,49 @@ function nativeState(units: 'G20' | 'G21', activeState = 'Idle', x = 25.4) {
 function freshReport(reportUnit: '0' | '1', x: number, units: 'G20' | 'G21' = 'G21'): void {
   fireSocket('controller:settings', 'Grbl', { settings: { '$13': reportUnit } });
   fireSocket('serialport:read', `$13=${reportUnit}`);
-  fireSocket('serialport:read', `<Idle|MPos:${x},0,0|WCO:0,0,0>`);
+  fireSocket('serialport:read', `<Idle|MPos:${String(x)},0,0|WCO:0,0,0>`);
   fireSocket('controller:state', 'Grbl', nativeState(units, 'Idle', x));
 }
+
+function advanceWorkRequestMarker(): void {
+  const marker = mockSocket.emit.mock.calls.find((call) => call[0] === 'command' && call[3] === '$G');
+  expect(marker?.slice(0, 4)).toEqual(['command', '/dev/ttyB', 'gcode', '$G']);
+  expect(marker?.[4]).toEqual({ el400WorkRequest: expect.any(String) });
+  fireSocket('serialport:write', '$G\n', marker?.[4]);
+  expect(mockSocket.emit).toHaveBeenCalledWith('write', '/dev/ttyB', '?');
+}
+
+describe('GRBL 0.9 paired native position reports', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSocket.on.mockReset();
+    mockSocket.emit.mockReset();
+  });
+
+  it('establishes fresh machine and work coordinates from comma-delimited MPos/WPos without WCO', async () => {
+    const adapter = new CncjsMillAdapter({ host: 'localhost', port: 8000 });
+    const connected = adapter.connect();
+    fireSocket('connect');
+    await connected;
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    fireSocket('controller:state', 'Grbl', nativeState('G21'));
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
+    fireSocket('serialport:read', '$13=0');
+    fireSocket('serialport:read', '<Idle,MPos:5.529,0.560,7.000,WPos:1.529,-5.440,0.000>');
+    expect(adapter.getState().position).toEqual({ x: 5.529, y: 0.56, z: 7 });
+    expect(adapter.getState().workPosition).toEqual({ x: 1.529, y: -5.44, z: 0 });
+    expect(adapter.getState().workPositionControl?.availability).toBe('ready');
+    mockSocket.emit.mockClear();
+    const request = adapter.requestWorkPosition({ x: 0 });
+    advanceWorkRequestMarker();
+    fireSocket('serialport:read', '<Idle,MPos:5.529,0.560,7.000,WPos:0.000,-5.440,0.000>');
+    await expect(request).resolves.toBeUndefined();
+    expect(adapter.getState().position).toEqual({ x: 5.529, y: 0.56, z: 7 });
+    expect(adapter.getState().workPosition).toEqual({ x: 0, y: -5.44, z: 0 });
+    adapter.disconnect();
+  });
+});
 
 describe('CncjsMillAdapter native unit synchronization', () => {
   let adapter: CncjsMillAdapter;
@@ -290,7 +330,7 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       expect(adapter.getState().position.x).toBeCloseTo(25.4);
       fireSocket('serialport:read', `$13=${changed}`);
       expect(mockSocket.emit).toHaveBeenCalledWith('write', '/dev/ttyB', '?');
-      fireSocket('serialport:read', `<Idle|MPos:${freshX * 2},0,0|WCO:0,0,0>`);
+      fireSocket('serialport:read', `<Idle|MPos:${String(freshX * 2)},0,0|WCO:0,0,0>`);
       expect(adapter.getState().position.x).toBeCloseTo(50.8);
       expect(adapter.getState().workPosition?.x).toBeCloseTo(50.8);
       // Native raw reports precede their controller snapshots. A later jog need
@@ -346,12 +386,40 @@ describe('CncjsMillAdapter native unit synchronization', () => {
   });
 
   it.each(['0', '1'] as const)('normalizes raw WPos and WCO with $13=%s before any snapshot', async (reportUnit) => {
-    await ready('G21', reportUnit);
+    await ready('G21', reportUnit === '0' ? '1' : '0');
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': reportUnit } });
+    expect(mockSocket.emit).toHaveBeenCalledWith('command', '/dev/ttyB', 'gcode', '$$');
+    fireSocket('serialport:read', `$13=${reportUnit}`);
     const scale = reportUnit === '1' ? 1 : 25.4;
-    fireSocket('serialport:read', `<Idle|WPos:${scale},0,0|WCO:${scale},0,0>`);
+    fireSocket('serialport:read', `<Idle|WPos:${String(scale)},0,0|WCO:${String(scale)},0,0>`);
     expect(adapter.getState().position.x).toBeCloseTo(50.8);
     expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
     adapter.disconnect();
+  });
+
+  it('fails the fresh-report boundary after five seconds when no status reply arrives', async () => {
+    vi.useFakeTimers();
+    try {
+      await connectSocket();
+      finishJoin();
+      fireSocket('workflow:state', 'idle');
+      fireSocket('controller:state', 'Grbl', nativeState('G21'));
+      fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
+      mockSocket.emit.mockClear();
+      fireSocket('serialport:read', '$13=0');
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(adapter.getState().workPositionControl?.error).toBeNull();
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
+      expect(adapter.getState().workPositionControl?.error).toBe('Fresh GRBL report units and work offset were not received within 5 seconds');
+      await expect(adapter.requestWorkPosition({ x: 0 })).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
+    } finally {
+      adapter.disconnect();
+      vi.useRealTimers();
+    }
   });
 
   it.each(['0', '1'] as const)('confirms work targets only within $13=%s report precision', async (reportUnit) => {
@@ -359,14 +427,9 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     const scale = reportUnit === '1' ? 1 / 25.4 : 1;
     const precision = reportUnit === '1' ? 0.0001 : 0.001;
     const request = adapter.requestWorkPosition({ x: 50.8 });
+    advanceWorkRequestMarker();
     for (const offset of [precision * 2, precision / 2]) {
-      fireSocket('controller:state', 'Grbl', {
-        ...nativeState('G21', 'Idle', 25.4 * scale),
-        status: {
-          activeState: 'Idle', mpos: [25.4 * scale, 0, 0],
-          wpos: [50.8 * scale + offset, 0, 0],
-        },
-      });
+      fireSocket('serialport:read', `<Idle|MPos:${String(25.4 * scale)},0,0|WCO:${String(-25.4 * scale - offset)},0,0>`);
       if (offset > precision) {
         expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 50.8 });
       }
@@ -393,7 +456,8 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       const before = adapter.getState();
       const request = adapter.requestWorkPosition({ x: 50.8 });
       const commands = mockSocket.emit.mock.calls.filter(([event]) => event === 'command');
-      expect(commands).toHaveLength(1);
+      expect(commands).toHaveLength(2);
+      expect(commands[1]?.slice(0, 4)).toEqual(['command', '/dev/ttyB', 'gcode', '$G']);
       expect(commands[0]?.slice(0, 3)).toEqual(['command', '/dev/ttyB', 'gcode']);
       const words = String(commands[0]?.[3]).split(/\s+/);
       expect(words.slice(0, 3)).toEqual(['G10', 'L20', 'P1']);
@@ -416,8 +480,13 @@ describe('CncjsMillAdapter native unit synchronization', () => {
           wpos: [50.8 * reportScale, 0, 0],
         },
       });
+      expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 50.8 });
+      advanceWorkRequestMarker();
+      fireSocket('serialport:read', `<Idle|MPos:${String(25.4 * reportScale)},0,0|WCO:${String(-25.4 * reportScale)},0,0>`);
       await expect(request).resolves.toBeUndefined();
-      expect(adapter.getState().position).toEqual(before.position);
+      expect(adapter.getState().position.x).toBeCloseTo(before.position.x, 6);
+      expect(adapter.getState().position.y).toBeCloseTo(before.position.y, 6);
+      expect(adapter.getState().position.z).toBeCloseTo(before.position.z, 6);
       expect(adapter.getState().workPosition?.x).toBeCloseTo(50.8);
       expect(adapter.getState().workPosition?.y).toBe(0);
       expect(adapter.getState().workPosition?.z).toBe(0);
@@ -432,23 +501,37 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       });
       const request = adapter.requestWorkPosition({ z: -2 });
       const command = mockSocket.emit.mock.calls.find(([event]) => event === 'command')?.[3];
-      expect(String(command).split(/\s+/).slice(0, 3)).toEqual(['G10', 'L20', `P${Number(wcs.slice(1)) - 53}`]);
+      expect(String(command).split(/\s+/).slice(0, 3)).toEqual(['G10', 'L20', `P${String(Number(wcs.slice(1)) - 53)}`]);
       expect(String(command).split(/\s+/)).toHaveLength(4);
       expect(String(command)).toMatch(/ Z-2(?:\.0+)?$/);
       fireSocket('controller:state', 'Grbl', {
         parserstate: { modal: { units: 'G21', wcs } },
         status: { activeState: 'Idle', mpos: [25.4, 0, 0], wpos: [25.4, 0, -2] },
       });
+      expect(adapter.getState().workPositionControl?.pending).toEqual({ z: -2 });
+      advanceWorkRequestMarker();
+      fireSocket('serialport:read', '<Idle|MPos:25.4,0,0|WCO:0,0,2>');
       await request;
       adapter.disconnect();
     });
 
-    it('does not resolve from an already cached matching work-position sample', async () => {
+    it('emits G10 even for a cached matching target and waits for a post-marker raw report', async () => {
       await ready();
       const request = adapter.requestWorkPosition({ x: 25.4 });
+      expect(mockSocket.emit).toHaveBeenCalledWith('command', '/dev/ttyB', 'gcode', 'G10 L20 P1 X25.4');
+      fireSocket('serialport:write', '$G\n', { el400WorkRequest: 'unrelated-request' });
+      fireSocket('serialport:read', '<Idle|MPos:25.4,0,0|WCO:0,0,0>');
       expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 25.4 });
+      expect(mockSocket.emit).not.toHaveBeenCalledWith('write', '/dev/ttyB', '?');
       fireSocket('controller:state', 'Grbl', nativeState('G21'));
-      await request;
+      fireSocket('serialport:read', '<Idle|MPos:25.4,0,0|WCO:0,0,0>');
+      expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 25.4 });
+      advanceWorkRequestMarker();
+      fireSocket('controller:state', 'Grbl', nativeState('G21'));
+      expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 25.4 });
+      fireSocket('serialport:read', '<Idle|MPos:25.4,0,0|WCO:0,0,0>');
+      await expect(request).resolves.toBeUndefined();
+      expect(adapter.getState().workPositionControl?.pending).toBeNull();
       adapter.disconnect();
     });
 
@@ -502,7 +585,12 @@ describe('CncjsMillAdapter native unit synchronization', () => {
 
     it.each(['error:20', 'ALARM:1', 'wcs-change', 'disconnect'])('clears pending work-position intent on %s without replay', async (reason) => {
       await ready();
-      const rejected = expect(adapter.requestWorkPosition({ x: 0 })).rejects.toThrow();
+      const message = reason === 'wcs-change'
+        ? 'Active work coordinate system changed while awaiting confirmation'
+        : reason === 'disconnect'
+          ? 'CNCjs disconnected before unit confirmation'
+          : `Controller reported ${reason} while awaiting work-coordinate confirmation`;
+      const rejected = expect(adapter.requestWorkPosition({ x: 0 })).rejects.toThrow(message);
       if (reason === 'wcs-change') {
         fireSocket('controller:state', 'Grbl', {
           ...nativeState('G21'), parserstate: { modal: { units: 'G21', wcs: 'G55' } },
@@ -515,7 +603,6 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       await rejected;
       expect(adapter.getState().workPositionControl?.pending).toBeNull();
       expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
-      expect(adapter.getState().workPositionControl?.error).toEqual(expect.any(String));
       mockSocket.emit.mockClear();
       if (reason === 'disconnect') {
         fireSocket('connect');
@@ -566,8 +653,12 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
       mockSocket.emit.mockClear();
       fireSocket('serialport:read', '$13=0');
-      fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
-      await vi.advanceTimersByTimeAsync(3000);
+      for (let reply = 0; reply < 10; reply++) {
+        fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
+        await vi.advanceTimersByTimeAsync(249);
+        expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(reply + 1);
+        await vi.advanceTimersByTimeAsync(1);
+      }
       expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(10);
       expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
       expect(adapter.getState().workPositionControl?.error).toEqual(expect.any(String));

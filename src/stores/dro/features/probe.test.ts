@@ -13,7 +13,7 @@
  * dispatching MILL_STATE_CHANGED - never by forcing internal state directly.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { probeReducer } from './probe';
 import { idleReducer } from './idle';
 import {
@@ -25,6 +25,7 @@ import type { DROReducerContext, DROStatePayload } from '../types';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { createProbeState } from '../../../types/millState';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
+import { useMillStore } from '../../millStore';
 
 /** Build a connected mill context at a given position with a probe pin state. */
 function ctxAt(
@@ -403,5 +404,97 @@ describe('probeReducer - exit (AC 32.10)', () => {
       )!;
       expect(s.stateName).toBe('idle');
     }
+  });
+});
+
+describe('probeReducer - physical readings across controller updates', () => {
+  it('reformats the frozen physical contact on unit changes without following held motion or converting angular axes', () => {
+    const context = (x: number, unit: 'mm' | 'inch', pin = 'P'): DROReducerContext => ({
+      ...ctxAt({ x, y: 12.5, z: 50.8 }, pin),
+      nvMem: {
+        ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: unit, probeDroType: 'freeze',
+        countingMode: { X: 'linear', Y: 'angular', Z: 'linear' },
+      },
+    });
+    let state = probeReducer(
+      probeState('idle', INITIAL_PROBE_DATA),
+      { eventName: 'MILL_STATE_CHANGED' }, context(25.4, 'mm')
+    )!;
+    const angularContact = state.display.Y;
+    expect(state.display.X).toBeCloseTo(25.4);
+    expect(state.display.Z).toBeCloseTo(50.8);
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(101.6, 'inch'))!;
+    expect(state.display.X).toBeCloseTo(1);
+    expect(state.display.Z).toBeCloseTo(2);
+    expect(state.display.Y).toBe(angularContact);
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(127, 'mm'))!;
+    expect(state.display.X).toBeCloseTo(25.4);
+    expect(state.display.Y).toBe(angularContact);
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(127, 'mm', ''))!;
+    expect(state.display.X).toBeCloseTo(127);
+  });
+
+  it.each(['edge', 'midpoint'] as const)('refreshes %s GRBL INC results only from native WPos, without leaving the result screen', (probeFunction) => {
+    const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+    try {
+      const context = (workX: number, pending: boolean, unit: 'mm' | 'inch' = 'mm'): DROReducerContext => ({
+        ...ctxAt({ x: 50 }, 'P'),
+        nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: unit },
+        millState: {
+          ...ctxAt({ x: 50 }, 'P').millState,
+          controllerType: 'cncjs',
+          workPosition: { x: workX, y: 0, z: 0 },
+          workPositionControl: {
+            availability: pending ? 'busy' : 'ready',
+            pending: pending ? { x: probeFunction === 'edge' ? 0 : 20 } : null,
+            error: null,
+          },
+        },
+      });
+      const vMem = { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' as const };
+      let state = probeState('probe-waiting', {
+        ...INITIAL_PROBE_DATA, probeFunction, probeAxis: 'X',
+        captures: probeFunction === 'midpoint' ? [10] : [],
+      }, vMem);
+      state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(42, false))!;
+      const desired = probeFunction === 'edge' ? 0 : 20;
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(request).toHaveBeenCalledWith({ x: desired });
+      expect(state.stateName).toBe('probe-result');
+      expect(state.display.X).toBeCloseTo(42);
+      expect(state.vMem.incrementalOffsets).toEqual(vMem.incrementalOffsets);
+      state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(42, true))!;
+      expect(state.display.X).toBeCloseTo(42);
+      state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(desired, false))!;
+      expect(state.stateName).toBe('probe-result');
+      expect(state.display.X).toBeCloseTo(desired);
+      state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(desired, false, 'inch'))!;
+      expect(state.display.X).toBeCloseTo(desired / 25.4);
+      expect(request).toHaveBeenCalledTimes(1);
+    } finally {
+      request.mockRestore();
+    }
+  });
+
+  it.each(['inside', 'outside'] as const)('keeps the captured %s measurement physical while live positions and units change', (probeFunction) => {
+    const mmContext: DROReducerContext = {
+      ...ctxAt({ x: 25.4 }, 'P'),
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+    };
+    let state = probeState('probe-waiting', {
+      ...INITIAL_PROBE_DATA, probeFunction, probeAxis: 'X', captures: [0],
+    });
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, mmContext)!;
+    expect(state.display.X).toBeCloseTo(25.4);
+    const inchContext: DROReducerContext = {
+      ...ctxAt({ x: 254 }, ''),
+      nvMem: { ...mmContext.nvMem, defaultUnit: 'inch' },
+    };
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, inchContext)!;
+    expect(state.stateName).toBe('probe-result');
+    expect(state.display.X).toBeCloseTo(1);
+    expect(state.stateData).toMatchObject({ resultMm: 25.4, captures: [0, 25.4] });
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, mmContext)!;
+    expect(state.display.X).toBeCloseTo(25.4);
   });
 });

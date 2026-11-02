@@ -296,7 +296,8 @@ export function computeAxisPositionMm(
 export function computeDisplayPosition(
   axis: Axis,
   vMem: VolatileMemoryState,
-  context: DROReducerContext
+  context: DROReducerContext,
+  rawMm = computeAxisPositionMm(axis, vMem, context)
 ): AxisDisplayValue {
   // Encoder-fail warning (US-042) overrides the numeric value: a lost signal on
   // this axis with `EnF` on shows `no SIG` instead of a stale reading.
@@ -305,7 +306,6 @@ export function computeDisplayPosition(
   }
 
 
-  const rawMm = computeAxisPositionMm(axis, vMem, context);
   if (!Number.isFinite(rawMm) && context.millState.workPositionControl !== undefined) {
     return 'no Conn';
   }

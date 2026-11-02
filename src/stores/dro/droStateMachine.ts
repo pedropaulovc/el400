@@ -488,6 +488,8 @@ export interface ProbeData extends BaseDROStateData {
   lastProbeTriggered: boolean;
   /** True for one capture; drives the visual/audible trigger indication (AC 32.8). */
   probeTriggered: boolean;
+  /** Raw physical axis readings latched by idle probe-freeze, before formatting. */
+  frozenPositionMm?: AxisValues;
 }
 
 /** Stored point for center finding operations */

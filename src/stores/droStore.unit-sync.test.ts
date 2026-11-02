@@ -35,7 +35,7 @@ function report(
   work: MillPosition = { x, y, z }
 ): void {
   // Native reports remain millimetres ($13=0), independently of G20/G21.
-  receive('serialport:read', `<Idle|MPos:${x},${y},${z}|WCO:${x - work.x},${y - work.y},${z - work.z}>`);
+  receive('serialport:read', `<Idle|MPos:${String(x)},${String(y)},${String(z)}|WCO:${String(x - work.x)},${String(y - work.y)},${String(z - work.z)}>`);
   receive('controller:state', 'Grbl', {
     parserstate: { modal: { units: unit === 'mm' ? 'G21' : 'G20', wcs: 'G54' } },
     status: { activeState: 'Idle', mpos: { x, y, z }, wpos: work },
@@ -52,6 +52,16 @@ function workCommands(): unknown[][] {
   return socket.emit.mock.calls.filter((call) =>
     call.some((value) => typeof value === 'string' && /\bG10\s+L20\b/.test(value))
   );
+}
+
+function advanceWorkQueue(): void {
+  const marker = [...socket.emit.mock.calls].reverse().find((call) =>
+    call[0] === 'command' && call[3] === '$G'
+  );
+  expect(marker?.[4]).toEqual({ el400WorkRequest: expect.any(String) });
+  const previousQueries = socket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?').length;
+  receive('serialport:write', '$G\n', marker?.[4]);
+  expect(socket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(previousQueries + 1);
 }
 
 function dispatch(eventName: 'BTN_INCH_MM' | 'BTN_ABS_INC' | 'BTN_ZERO_X' | 'BTN_ZERO_ALL' | 'BTN_SELECT_X' | 'KEY_ENTER'): void {
@@ -88,8 +98,16 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     opened?.(null);
     cleanup = await initialized;
     receive('workflow:state', 'idle');
+    // The adapter requests a report boundary only after both workflow and GRBL
+    // status establish Idle. Firmware replies must follow that request.
+    receive('controller:state', 'Grbl', {
+      parserstate: { modal: { units: 'G21', wcs: 'G54' } },
+      status: { activeState: 'Idle' },
+    });
     receive('controller:settings', 'Grbl', { settings: { '$13': '0' } });
+    expect(socket.emit).toHaveBeenCalledWith('command', '/dev/grbl', 'gcode', '$$');
     receive('serialport:read', '$13=0');
+    expect(socket.emit).toHaveBeenCalledWith('write', '/dev/grbl', '?');
     report('mm');
     socket.emit.mockClear();
   });
@@ -193,6 +211,15 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(useDROStore.getState().vMem.incrementalOffsets).toEqual(offsets);
     const zeroed = { ...initialWork, x: 0 };
     report('mm', 25.4, 50.8, 76.2, zeroed);
+    // A matching cached snapshot (or pre-barrier raw report) cannot acknowledge G10.
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    advanceWorkQueue();
+    receive('controller:state', 'Grbl', {
+      parserstate: { modal: { units: 'G21', wcs: 'G54' } },
+      status: { activeState: 'Idle', mpos: { x: 25.4, y: 50.8, z: 76.2 }, wpos: zeroed },
+    });
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    report('mm', 25.4, 50.8, 76.2, zeroed);
     expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
     expect(useDROStore.getState().display).toEqual({ X: 0, Y: -25.4, Z: 38.1 });
     expect(useMillStore.getState().millState.position).toEqual({ x: 25.4, y: 50.8, z: 76.2 });
@@ -221,6 +248,7 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(workCommands()).toHaveLength(1);
     expect(useMillStore.getState().millState.workPositionControl?.pending?.x).toBeCloseTo(50.8);
     expect(useDROStore.getState().display.X).toBeCloseTo(unit === 'inch' ? 0.5 : 12.7);
+    advanceWorkQueue();
     report(unit, 25.4, 50.8, 76.2, { x: 50.8, y: -25.4, z: 38.1 });
     expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
     expect(useDROStore.getState().display.X).toBeCloseTo(unit === 'inch' ? 2 : 50.8);
@@ -228,14 +256,32 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(useMillStore.getState().millState.position).toEqual({ x: 25.4, y: 50.8, z: 76.2 });
   });
 
-  it('requests atomic native zero-all without changing the readout before WPos confirmation', () => {
+  it('still sends an explicit zero when cached WPos already equals the requested value', () => {
+    report('mm', 25.4, 50.8, 76.2, { x: 0, y: 50.8, z: 76.2 });
+    dispatch('BTN_ABS_INC');
+    dispatch('BTN_ZERO_X');
+    expect(workCommands()).toHaveLength(1);
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    report('mm', 25.4, 50.8, 76.2, { x: 0, y: 50.8, z: 76.2 });
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    advanceWorkQueue();
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    report('mm', 25.4, 50.8, 76.2, { x: 0, y: 50.8, z: 76.2 });
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
+    expect(workCommands()).toHaveLength(1);
+  });
+
+  it.each(['WCO', 'paired-MPos-WPos'] as const)('requests atomic native zero-all confirmed by fresh %s status', (format) => {
     dispatch('BTN_ABS_INC');
     const before = useDROStore.getState().display;
     dispatch('BTN_ZERO_ALL');
     expect(workCommands()).toHaveLength(1);
     expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0, y: 0, z: 0 });
     expect(useDROStore.getState().display).toEqual(before);
-    report('mm', 25.4, 50.8, 76.2, { x: 0, y: 0, z: 0 });
+    advanceWorkQueue();
+    receive('serialport:read', format === 'WCO'
+      ? '<Idle|MPos:25.4,50.8,76.2|WCO:25.4,50.8,76.2>'
+      : '<Idle,MPos:25.4,50.8,76.2,WPos:0,0,0>');
     expect(useDROStore.getState().display).toEqual({ X: 0, Y: 0, Z: 0 });
     expect(useMillStore.getState().millState.position).toEqual({ x: 25.4, y: 50.8, z: 76.2 });
     expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
