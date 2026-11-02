@@ -4,7 +4,7 @@ import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
 import { createDefaultMillState, type MillPosition, type MillUnit } from '../types/millState';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../types/volatileMemory';
-import { INITIAL_PRESET_DATA, type PresetData } from './dro/droStateMachine';
+import { INITIAL_PRESET_DATA, type DROEventPayload, type PresetData } from './dro/droStateMachine';
 import { INITIAL_DISPLAY_STATE } from './dro/utils/displayComputation';
 import { initializeDROMillConnection, useDROStore } from './droStore';
 import { initializeMillStore, setDRODispatch, useMillStore } from './millStore';
@@ -64,7 +64,7 @@ function advanceWorkQueue(): void {
   expect(socket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(previousQueries + 1);
 }
 
-function dispatch(eventName: 'BTN_INCH_MM' | 'BTN_ABS_INC' | 'BTN_ZERO_X' | 'BTN_ZERO_ALL' | 'BTN_SELECT_X' | 'KEY_ENTER'): void {
+function dispatch(eventName: Extract<DROEventPayload['eventName'], `BTN_${string}` | `KEY_${string}`>): void {
   useDROStore.getState().dispatch({ eventName });
 }
 
