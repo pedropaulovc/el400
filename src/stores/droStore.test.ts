@@ -62,6 +62,10 @@ describe('droStore', () => {
 
   describe('selected CNCjs disconnect projections', () => {
     it.each(['abs', 'inc'] as const)('retains physical %s coordinates offline but restores actual standalone counters when switching source', (mode) => {
+      // This projection test compares the formatted readout with canonical mm.
+      useSettingsStore.setState({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+      });
       useDROStore.setState({
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
