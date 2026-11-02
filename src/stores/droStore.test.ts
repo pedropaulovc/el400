@@ -96,7 +96,9 @@ describe('droStore', () => {
       });
       expect(result.current.memory.incremental[axis]).toBe(9);
       expect(result.current.memory.displayValues).toEqual({ X: 18, Y: 27, Z: 36 });
-      act(() => result.current.memory.toggleMode());
+      act(() => {
+        result.current.memory.toggleMode();
+      });
       expect(result.current.memory.displayValues[axis]).toBe(9);
       expect(result.current.offsets).toEqual({ X: 10, Y: 20, Z: 30 });
 
