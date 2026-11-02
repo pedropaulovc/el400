@@ -40,6 +40,7 @@ function vMemWithUserData(): VolatileMemoryState {
     ...INITIAL_VOLATILE_MEMORY_STATE,
     sdmPoints: { 1: { X: 10, Y: 20, Z: 30 }, 2: { X: -5, Y: 0, Z: 1 } },
     workOffsets: { X: 12.5, Y: -3, Z: 8 },
+    incrementalOffsets: { X: -4, Y: 15, Z: 23 },
   };
 }
 
@@ -106,6 +107,7 @@ describe('restoreDefaults()', () => {
     const cleaned = restoreDefaults(vMemWithUserData());
     expect(cleaned.sdmPoints).toEqual({});
     expect(cleaned.workOffsets).toEqual(INITIAL_VOLATILE_MEMORY_STATE.workOffsets);
+    expect(cleaned.incrementalOffsets).toEqual({ X: 0, Y: 0, Z: 0 });
   });
 
   it('does not mutate the vMem it is passed', () => {
@@ -113,6 +115,7 @@ describe('restoreDefaults()', () => {
     restoreDefaults(input);
     // Input is untouched; restore returns a fresh cleaned copy.
     expect(input.sdmPoints).toEqual({ 1: { X: 10, Y: 20, Z: 30 }, 2: { X: -5, Y: 0, Z: 1 } });
+    expect(input.incrementalOffsets).toEqual({ X: -4, Y: 15, Z: 23 });
   });
 });
 

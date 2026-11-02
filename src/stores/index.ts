@@ -45,6 +45,7 @@ export {
   useActiveAxis,
   useInputBuffer,
   useWorkOffsets,
+  useIncrementalOffsets,
   useIncrementalValues,
   useManualAbsoluteValues,
   useDispatch,

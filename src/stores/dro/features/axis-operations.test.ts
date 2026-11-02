@@ -6,6 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { axisOperationsReducer } from './axis-operations';
+import { absIncReducer } from './abs-inc';
+import { idleReducer } from './idle';
 import type { DROStatePayload, DROReducerContext } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
@@ -36,6 +38,88 @@ function connectedContext(position: { x: number; y: number; z: number }): DRORed
     nvMem: DEFAULT_NON_VOLATILE_MEMORY,
   };
 }
+
+describe('connected INC datum operations', () => {
+  const axes = ['X', 'Y', 'Z'] as const;
+
+  it.each(axes)('keeps disconnected %s zero and preset operations on manual counters', (axis) => {
+    const state = idleStateWithVMem({
+      mode: 'inc',
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    });
+    const context: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const zeroed = axisOperationsReducer(state, { eventName: `BTN_ZERO_${axis}` }, context)!;
+    expect(zeroed.vMem.incrementalValues).toEqual({ ...state.vMem.incrementalValues, [axis]: 0 });
+    expect(zeroed.vMem.incrementalOffsets).toEqual(state.vMem.incrementalOffsets);
+    expect(zeroed.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+    const preset = axisOperationsReducer({
+      ...zeroed,
+      vMem: { ...zeroed.vMem, activeAxis: axis, inputBuffer: '-12.5' },
+    }, { eventName: 'KEY_ENTER' }, context)!;
+    expect(preset.vMem.incrementalValues).toEqual({ ...state.vMem.incrementalValues, [axis]: -12.5 });
+    expect(preset.display[axis]).toBe(-12.5);
+    expect(preset.vMem.incrementalOffsets).toEqual(state.vMem.incrementalOffsets);
+    expect(preset.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+  });
+
+  it.each(axes)('zeroes %s independently of ABS and continues counting after a jog', (axis) => {
+    const state = idleStateWithVMem({
+      mode: 'inc',
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    });
+    const context: DROReducerContext = {
+      ...connectedContext({ x: 100, y: 100, z: 100 }),
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const zeroed = axisOperationsReducer(state, { eventName: `BTN_ZERO_${axis}` }, context)!;
+    expect(zeroed.display[axis]).toBe(0);
+    expect(zeroed.vMem.incrementalOffsets).toEqual({ ...state.vMem.incrementalOffsets, [axis]: 100 });
+    expect(zeroed.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+    expect(zeroed.vMem.incrementalValues).toEqual(state.vMem.incrementalValues);
+
+    const movedContext = { ...context, millState: { ...context.millState, position: { x: 107, y: 107, z: 107 } } };
+    const moved = idleReducer(zeroed, { eventName: 'MILL_STATE_CHANGED' }, movedContext)!;
+    expect(moved.display[axis]).toBe(7);
+    const absolute = absIncReducer(moved, { eventName: 'BTN_ABS_INC' }, movedContext)!;
+    expect(absolute.display[axis]).toBe(107 - state.vMem.workOffsets[axis]);
+    expect(absolute.vMem.incrementalOffsets).toEqual(zeroed.vMem.incrementalOffsets);
+  });
+
+  it.each(axes)('presets %s independently of ABS and continues counting after a jog', (axis) => {
+    const state = idleStateWithVMem({
+      mode: 'inc',
+      activeAxis: axis,
+      inputBuffer: '-12.5',
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    });
+    const context: DROReducerContext = {
+      ...connectedContext({ x: 100, y: 100, z: 100 }),
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const preset = axisOperationsReducer(state, { eventName: 'KEY_ENTER' }, context)!;
+    expect(preset.display[axis]).toBe(-12.5);
+    expect(preset.vMem.incrementalOffsets).toEqual({ ...state.vMem.incrementalOffsets, [axis]: 112.5 });
+    expect(preset.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+    expect(preset.vMem.incrementalValues).toEqual(state.vMem.incrementalValues);
+    expect(preset.vMem.inputBuffer).toBe('');
+
+    const movedContext = { ...context, millState: { ...context.millState, position: { x: 107, y: 107, z: 107 } } };
+    const moved = idleReducer(preset, { eventName: 'MILL_STATE_CHANGED' }, movedContext)!;
+    expect(moved.display[axis]).toBe(-5.5);
+    const absolute = absIncReducer(moved, { eventName: 'BTN_ABS_INC' }, movedContext)!;
+    expect(absolute.display[axis]).toBe(107 - state.vMem.workOffsets[axis]);
+    expect(absolute.vMem.incrementalOffsets).toEqual(preset.vMem.incrementalOffsets);
+  });
+});
 
 describe('axisOperationsReducer', () => {
   describe('state handling', () => {

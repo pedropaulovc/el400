@@ -91,9 +91,8 @@ function exitToIdle(vMem: VolatileMemoryState, context: DROReducerContext): DROS
 
 /**
  * Set the selected axis datum so the displayed value reads `targetMm` at the
- * current machine position. Mirrors the connected-ABS path of axis-operations:
- * workOffset = machinePos - targetMm. In manual (disconnected) mode it writes
- * the manual absolute value directly.
+ * current machine position. Connected ABS and INC use independent offsets;
+ * disconnected operation writes the selected manual counter directly.
  */
 function setAxisDatumMm(
   vMem: VolatileMemoryState,
@@ -111,6 +110,15 @@ function setAxisDatumMm(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: targetMm },
+    };
+  }
+  if (context.millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: machinePos(axis, context) - targetMm,
+      },
     };
   }
   return {
@@ -143,6 +151,12 @@ function setAxisDatumAtMachinePos(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: -delta },
+    };
+  }
+  if (context.millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: { ...vMem.incrementalOffsets, [axis]: machinePosMm },
     };
   }
   return {

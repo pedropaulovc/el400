@@ -15,6 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { probeReducer } from './probe';
+import { idleReducer } from './idle';
 import {
   INITIAL_PROBE_DATA,
   type ProbeData,
@@ -49,6 +50,66 @@ function probeState(
 ): DROStatePayload {
   return { stateName, stateData: data, vMem, display: { X: 0, Y: 0, Z: 0 } };
 }
+
+describe('probeReducer - connected INC datums', () => {
+  it.each(['X', 'Y', 'Z'] as const)('sets the %s edge datum without changing ABS and counts subsequent motion', (axis) => {
+    const vMem = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'inc' as const,
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    };
+    const context: DROReducerContext = {
+      ...ctxAt({ x: 50, y: 50, z: 50 }, 'P'),
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+    };
+    const start = probeState('probe-waiting', {
+      ...INITIAL_PROBE_DATA, probeFunction: 'edge', probeAxis: axis, lastProbeTriggered: false,
+    }, vMem);
+    const contact = probeReducer(start, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(contact.stateName).toBe('probe-result');
+    expect(contact.vMem.incrementalOffsets).toEqual({ ...vMem.incrementalOffsets, [axis]: 50 });
+    expect(contact.vMem.workOffsets).toEqual(vMem.workOffsets);
+    expect(contact.vMem.incrementalValues).toEqual(vMem.incrementalValues);
+    const idle = probeReducer(contact, { eventName: 'KEY_CLEAR' }, context)!;
+    expect(idle.display[axis]).toBe(0);
+    const moved = idleReducer(idle, { eventName: 'MILL_STATE_CHANGED' }, {
+      ...context,
+      millState: { ...context.millState, position: { x: 57, y: 57, z: 57 } },
+    })!;
+    expect(moved.display[axis]).toBe(7);
+  });
+
+  it.each(['X', 'Y', 'Z'] as const)('sets the %s midpoint in machine coordinates, not at the second contact', (axis) => {
+    const vMem = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'inc' as const,
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 4, Y: 5, Z: 6 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    };
+    const contextAt = (position: number, pin: string): DROReducerContext => ({
+      ...ctxAt({ x: position, y: position, z: position }, pin),
+      nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+    });
+    let state = probeState('probe-waiting', {
+      ...INITIAL_PROBE_DATA, probeFunction: 'midpoint', probeAxis: axis, lastProbeTriggered: false,
+    }, vMem);
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, contextAt(10, 'P'))!;
+    expect(state.stateData).toMatchObject({ captures: [10] });
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, contextAt(30, ''))!;
+    state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, contextAt(50, 'P'))!;
+    expect(state.stateName).toBe('probe-result');
+    expect(state.vMem.incrementalOffsets).toEqual({ ...vMem.incrementalOffsets, [axis]: 30 });
+    expect(state.vMem.workOffsets).toEqual(vMem.workOffsets);
+    expect(state.vMem.incrementalValues).toEqual(vMem.incrementalValues);
+    const idle = probeReducer(state, { eventName: 'KEY_CLEAR' }, contextAt(50, ''))!;
+    expect(idle.display[axis]).toBe(20);
+    const midpoint = idleReducer(idle, { eventName: 'MILL_STATE_CHANGED' }, contextAt(30, ''))!;
+    expect(midpoint.display[axis]).toBe(0);
+  });
+});
 
 describe('probeReducer - non-probe states', () => {
   it('returns null for unrelated states (does not own them)', () => {

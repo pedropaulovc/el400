@@ -12,6 +12,7 @@ import {
   useMode,
   useActiveAxis,
   useWorkOffsets,
+  useIncrementalOffsets,
   useIncrementalValues,
   useManualAbsoluteValues,
   useDispatch,
@@ -38,8 +39,8 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
  * - Zero sets the reference point (offset from machine position)
  *
  * In INC mode:
- * - Displays incremental/work position
- * - Zero resets incremental counter
+ * - Displays live machine position relative to the independent INC datum
+ * - Zero resets that datum, or the manual counter while disconnected
  */
 export function useVolatileMemory(): VolatileMemoryContextValue {
   // Granular store subscriptions - only re-render when specific values change
@@ -47,6 +48,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   const activeAxis = useActiveAxis();
   const workOffsets = useWorkOffsets();
   const incrementalValues = useIncrementalValues();
+  const incrementalOffsets = useIncrementalOffsets();
   const manualAbsoluteValues = useManualAbsoluteValues();
   const dispatch = useDispatch();
   const millState = useMillState();
@@ -65,10 +67,21 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     return manualAbsoluteValues;
   }, [millState.connected, millState.position, workOffsets, manualAbsoluteValues]);
 
+  const liveIncrementalValues = useMemo<AxisValues>(() => {
+    if (millState.connected) {
+      return {
+        X: millState.position.x - incrementalOffsets.X,
+        Y: millState.position.y - incrementalOffsets.Y,
+        Z: millState.position.z - incrementalOffsets.Z,
+      };
+    }
+    return incrementalValues;
+  }, [millState.connected, millState.position, incrementalOffsets, incrementalValues]);
+
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {
-    return mode === 'abs' ? absoluteValues : incrementalValues;
-  }, [mode, absoluteValues, incrementalValues]);
+    return mode === 'abs' ? absoluteValues : liveIncrementalValues;
+  }, [mode, absoluteValues, liveIncrementalValues]);
 
   // Actions - dispatch events to DRO store
   const toggleMode = useCallback(() => {
@@ -121,7 +134,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     // Read state
     displayValues,
     absolute: absoluteValues,
-    incremental: incrementalValues,
+    incremental: liveIncrementalValues,
     mode,
     workOffsets,
     activeAxis,
@@ -135,7 +148,7 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   }), [
     displayValues,
     absoluteValues,
-    incrementalValues,
+    liveIncrementalValues,
     mode,
     workOffsets,
     activeAxis,

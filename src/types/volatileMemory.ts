@@ -46,6 +46,9 @@ export interface VolatileMemoryState {
   mode: DatumMode;
   activeAxis: Axis | null;
   workOffsets: AxisValues;
+  /** Independent INC datum in machine millimeters when connected. */
+  incrementalOffsets: AxisValues;
+  /** Manual INC counters, used only while disconnected. */
   incrementalValues: AxisValues;
   manualAbsoluteValues: AxisValues;
   inputBuffer: string;
@@ -76,6 +79,7 @@ export const INITIAL_VOLATILE_MEMORY_STATE: VolatileMemoryState = {
   mode: 'abs',
   activeAxis: null,
   workOffsets: ZERO_AXIS_VALUES,
+  incrementalOffsets: ZERO_AXIS_VALUES,
   incrementalValues: ZERO_AXIS_VALUES,
   manualAbsoluteValues: ZERO_AXIS_VALUES,
   inputBuffer: '',

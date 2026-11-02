@@ -101,6 +101,7 @@ export function restoreDefaults(vMem: VolatileMemoryState): VolatileMemoryState 
     ...vMem,
     sdmPoints: {},
     workOffsets: INITIAL_VOLATILE_MEMORY_STATE.workOffsets,
+    incrementalOffsets: INITIAL_VOLATILE_MEMORY_STATE.incrementalOffsets,
     incrementalValues: INITIAL_VOLATILE_MEMORY_STATE.incrementalValues,
     manualAbsoluteValues: INITIAL_VOLATILE_MEMORY_STATE.manualAbsoluteValues,
     inputBuffer: '',

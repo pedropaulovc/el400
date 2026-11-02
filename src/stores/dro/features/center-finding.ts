@@ -46,26 +46,10 @@ function computeStoredPosition(
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): StoredPoint {
-  if (vMem.mode === 'abs') {
-    // ABS mode: machine position - work offset (or manual values if disconnected)
-    if (context.millState.connected) {
-      return {
-        X: context.millState.position.x - vMem.workOffsets.X,
-        Y: context.millState.position.y - vMem.workOffsets.Y,
-        Z: context.millState.position.z - vMem.workOffsets.Z,
-      };
-    }
-    return {
-      X: vMem.manualAbsoluteValues.X,
-      Y: vMem.manualAbsoluteValues.Y,
-      Z: vMem.manualAbsoluteValues.Z,
-    };
-  }
-  // INC mode: incremental values
   return {
-    X: vMem.incrementalValues.X,
-    Y: vMem.incrementalValues.Y,
-    Z: vMem.incrementalValues.Z,
+    X: computeAxisPositionMm('X', vMem, context),
+    Y: computeAxisPositionMm('Y', vMem, context),
+    Z: computeAxisPositionMm('Z', vMem, context),
   };
 }
 

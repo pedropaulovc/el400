@@ -6,8 +6,8 @@
 
 import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../types';
 import type { DROEventPayload } from '../droStateMachine';
-import type { Axis, AxisValues } from '../../../types/volatileMemory';
-import { computeNormalDisplay } from '../utils/displayComputation';
+import type { Axis } from '../../../types/volatileMemory';
+import { computeAxisPositionMm, computeNormalDisplay } from '../utils/displayComputation';
 
 /**
  * Get the machine position for an axis.
@@ -25,33 +25,6 @@ function getMachinePosition(axis: Axis, context: DROReducerContext): number {
 }
 
 /**
- * Calculate display values based on current mode.
- * Returns values in mm (internal storage unit).
- */
-function getDisplayValues(
-  vMem: DROStatePayload['vMem'],
-  context: DROReducerContext
-): AxisValues {
-  const { millState } = context;
-
-  if (vMem.mode === 'abs') {
-    if (millState.connected) {
-      // Use external machine position with work offsets applied
-      return {
-        X: millState.position.x - vMem.workOffsets.X,
-        Y: millState.position.y - vMem.workOffsets.Y,
-        Z: millState.position.z - vMem.workOffsets.Z,
-      };
-    }
-    // Manual mode: use manual values directly
-    return vMem.manualAbsoluteValues;
-  }
-
-  // INC mode
-  return vMem.incrementalValues;
-}
-
-/**
  * Halve the value of an axis.
  */
 function halfAxis(
@@ -60,10 +33,9 @@ function halfAxis(
   context: DROReducerContext
 ): DROStatePayload['vMem'] {
   const { millState } = context;
-  const displayValues = getDisplayValues(vMem, context);
 
   // Get current display value and halve it
-  const currentValue = displayValues[axis];
+  const currentValue = computeAxisPositionMm(axis, vMem, context);
   const halfValue = currentValue / 2;
 
   if (vMem.mode === 'abs') {
@@ -79,6 +51,15 @@ function halfAxis(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: halfValue },
+    };
+  }
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: getMachinePosition(axis, context) - halfValue,
+      },
     };
   }
 

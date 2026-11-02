@@ -162,6 +162,41 @@ describe('centerFindingReducer', () => {
     });
   });
 
+  describe('connected INC point collection', () => {
+    it('captures live positions relative to the INC datum after motion', () => {
+      const current: DROStatePayload = {
+        ...createTestState('function-menu-center-line-point-1', INITIAL_CENTER_FINDING_DATA),
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          mode: 'inc',
+          workOffsets: { X: 1, Y: 2, Z: 3 },
+          incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+          incrementalValues: { X: 71, Y: 72, Z: 73 },
+        },
+      };
+      const context = {
+        ...DEFAULT_TEST_CONTEXT,
+        millState: {
+          ...DEFAULT_TEST_CONTEXT.millState,
+          connected: true,
+          position: { x: 14, y: 26, z: 38 },
+        },
+      };
+      const first = centerFindingReducer(current, { eventName: 'KEY_6_RIGHT' }, context)!;
+      expect(first.stateData).toMatchObject({ storedPoints: [{ X: 4, Y: 6, Z: 8 }] });
+      const second = centerFindingReducer(first, { eventName: 'KEY_6_RIGHT' }, {
+        ...context,
+        millState: { ...context.millState, position: { x: 24, y: 46, z: 68 } },
+      })!;
+      expect(second.stateName).toBe('function-menu-center-line-result');
+      expect(second.stateData).toMatchObject({
+        storedPoints: [{ X: 4, Y: 6, Z: 8 }, { X: 14, Y: 26, Z: 38 }],
+        centerResult: { X: 9, Y: 16, Z: 23 },
+      });
+      expect(second.vMem).toEqual(current.vMem);
+    });
+  });
+
   describe('center-line point collection', () => {
     it('should store first point and advance to point-2', () => {
       const current = stateWithPosition(
