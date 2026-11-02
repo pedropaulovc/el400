@@ -58,7 +58,13 @@ function zeroAxis(
     };
   }
 
-  // In INC mode: zero the incremental counter
+  // Connected INC has its own datum; manual INC keeps a standalone counter.
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: { ...vMem.incrementalOffsets, [axis]: getMachinePosition(axis, context) },
+    };
+  }
   return {
     ...vMem,
     incrementalValues: { ...vMem.incrementalValues, [axis]: 0 },
@@ -121,6 +127,16 @@ function setAxisValueMm(
     return {
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: valueMm },
+      inputBuffer: '',
+    };
+  }
+  if (millState.connected) {
+    return {
+      ...vMem,
+      incrementalOffsets: {
+        ...vMem.incrementalOffsets,
+        [axis]: getMachinePosition(axis, context) - valueMm,
+      },
       inputBuffer: '',
     };
   }

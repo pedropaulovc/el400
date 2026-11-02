@@ -15,6 +15,18 @@
 - [ ] **AC 3.4:** Changing to INC mode allows setting a temporary datum (point-to-point use) without affecting the ABS datum.
 - [ ] **AC 3.5:** Switching back to ABS mode restores the display to the position relative to the fixed ABS datum.
 
+### Connected and manual coordinates
+
+With a connected adapter (including the simulator), both ABS and INC track live
+machine motion on X, Y, and Z. ABS uses its work offset; INC uses an independent
+incremental offset. Zeroing, presetting, halving, or probing in INC changes only
+the INC datum, not the ABS datum. Switching modes does not reset either datum:
+motion while ABS is selected is still reflected when returning to INC.
+
+Without a connected adapter, ABS and INC retain their independent manually
+entered counters. Connecting does not convert those manual counters into live
+datums; connected datums start at machine zero and persist until changed or reset.
+
 ## E2E Test Scenarios
 ```typescript
 describe('US-003: ABS/INC Mode', () => {

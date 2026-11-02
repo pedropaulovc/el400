@@ -261,7 +261,7 @@ export function computeAxisPositionMm(
   vMem: VolatileMemoryState,
   context: DROReducerContext
 ): number {
-  const { mode, workOffsets, incrementalValues, manualAbsoluteValues } = vMem;
+  const { mode, workOffsets, incrementalOffsets, incrementalValues, manualAbsoluteValues } = vMem;
   const { millState } = context;
 
   if (mode === 'abs') {
@@ -270,6 +270,10 @@ export function computeAxisPositionMm(
       return millState.position[axisKey] - workOffsets[axis];
     }
     return manualAbsoluteValues[axis];
+  }
+  if (millState.connected) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    return millState.position[axisKey] - incrementalOffsets[axis];
   }
   return incrementalValues[axis];
 }

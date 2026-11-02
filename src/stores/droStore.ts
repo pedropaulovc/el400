@@ -207,7 +207,10 @@ export const useInputBuffer = () => useDROStore((s) => s.vMem.inputBuffer);
 /** Get work offsets */
 export const useWorkOffsets = () => useDROStore((s) => s.vMem.workOffsets);
 
-/** Get incremental values */
+/** Get connected INC datum offsets */
+export const useIncrementalOffsets = () => useDROStore((s) => s.vMem.incrementalOffsets);
+
+/** Get disconnected manual INC counters */
 export const useIncrementalValues = () => useDROStore((s) => s.vMem.incrementalValues);
 
 /** Get manual absolute values */
@@ -224,11 +227,11 @@ export const useWorkOffsetY = () => useDROStore((s) => s.vMem.workOffsets.Y);
 /** Get work offset for Z axis only */
 export const useWorkOffsetZ = () => useDROStore((s) => s.vMem.workOffsets.Z);
 
-/** Get incremental value for X axis only */
+/** Get manual incremental counter for X axis only */
 export const useIncrementalX = () => useDROStore((s) => s.vMem.incrementalValues.X);
-/** Get incremental value for Y axis only */
+/** Get manual incremental counter for Y axis only */
 export const useIncrementalY = () => useDROStore((s) => s.vMem.incrementalValues.Y);
-/** Get incremental value for Z axis only */
+/** Get manual incremental counter for Z axis only */
 export const useIncrementalZ = () => useDROStore((s) => s.vMem.incrementalValues.Z);
 
 /** Get manual absolute value for X axis only */

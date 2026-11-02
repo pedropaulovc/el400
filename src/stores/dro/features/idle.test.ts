@@ -15,6 +15,69 @@ import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 import type { DROReducerContext, DROStatePayload } from '../types';
 
+
+describe('connected INC motion', () => {
+  it.each(['X', 'Y', 'Z'] as const)('tracks live %s motion relative to its INC datum', (axis) => {
+    const state: DROStatePayload = {
+      ...createTestState('idle'),
+      vMem: {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        mode: 'inc',
+        workOffsets: { X: 1, Y: 2, Z: 3 },
+        incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+        incrementalValues: { X: 71, Y: 72, Z: 73 },
+      },
+    };
+    const context: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      millState: {
+        ...DEFAULT_TEST_CONTEXT.millState,
+        connected: true,
+        position: { x: 14, y: 24, z: 34 },
+      },
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const first = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(first.display).toEqual({ X: 4, Y: 4, Z: 4 });
+
+    const machineAxis = { X: 'x', Y: 'y', Z: 'z' } as const;
+    const key = machineAxis[axis];
+    const movedContext: DROReducerContext = {
+      ...context,
+      millState: {
+        ...context.millState,
+        position: { ...context.millState.position, [key]: context.millState.position[key] - 7 },
+      },
+    };
+    const moved = idleReducer(first, { eventName: 'MILL_STATE_CHANGED' }, movedContext)!;
+    expect(moved.display).toEqual({ ...first.display, [axis]: -3 });
+    expect(moved.vMem).toEqual(state.vMem);
+  });
+
+  it.each(['X', 'Y', 'Z'] as const)('keeps the disconnected %s manual counter independent of machine motion', (axis) => {
+    const state: DROStatePayload = {
+      ...createTestState('idle'),
+      vMem: {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        mode: 'inc',
+        incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+        incrementalValues: { X: 7, Y: -8, Z: 9 },
+      },
+    };
+    const context: DROReducerContext = {
+      ...DEFAULT_TEST_CONTEXT,
+      millState: {
+        ...DEFAULT_TEST_CONTEXT.millState,
+        connected: false,
+        position: { x: 100, y: 200, z: 300 },
+      },
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const result = idleReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+    expect(result.display[axis]).toBe(state.vMem.incrementalValues[axis]);
+    expect(result.vMem).toEqual(state.vMem);
+  });
+});
 describe('idleReducer', () => {
   describe('state handling', () => {
     it('should return null for non-idle states', () => {

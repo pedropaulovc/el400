@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { halfReducer } from './half';
+import { idleReducer } from './idle';
 import type { DROStatePayload, DROReducerContext } from '../types';
 import { INITIAL_DRO_STATE_DATA } from '../droStateMachine';
 import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
@@ -36,6 +37,43 @@ function connectedContext(position: { x: number; y: number; z: number }): DRORed
     nvMem: DEFAULT_NON_VOLATILE_MEMORY,
   };
 }
+
+describe('connected INC half', () => {
+  it.each(['X', 'Y', 'Z'] as const)('keeps disconnected %s halving on the manual counter', (axis) => {
+    const state = idleStateWithVMem({
+      mode: 'inc',
+      activeAxis: axis,
+      incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalValues: { X: 80, Y: 80, Z: 80 },
+    });
+    const result = halfReducer(state, { eventName: 'BTN_HALF' }, DEFAULT_TEST_CONTEXT)!;
+    expect(result.vMem.incrementalValues).toEqual({ ...state.vMem.incrementalValues, [axis]: 40 });
+    expect(result.vMem.incrementalOffsets).toEqual(state.vMem.incrementalOffsets);
+  });
+
+  it.each(['X', 'Y', 'Z'] as const)('halves live %s and retains the new datum on subsequent motion', (axis) => {
+    const state = idleStateWithVMem({
+      mode: 'inc',
+      activeAxis: axis,
+      workOffsets: { X: 1, Y: 2, Z: 3 },
+      incrementalOffsets: { X: 20, Y: 20, Z: 20 },
+      incrementalValues: { X: 71, Y: 72, Z: 73 },
+    });
+    const context: DROReducerContext = {
+      ...connectedContext({ x: 100, y: 100, z: 100 }),
+      nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+    };
+    const halved = halfReducer(state, { eventName: 'BTN_HALF' }, context)!;
+    expect(halved.display[axis]).toBe(40);
+    expect(halved.vMem.incrementalOffsets).toEqual({ ...state.vMem.incrementalOffsets, [axis]: 60 });
+    expect(halved.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+    expect(halved.vMem.incrementalValues).toEqual(state.vMem.incrementalValues);
+
+    const movedContext = { ...context, millState: { ...context.millState, position: { x: 107, y: 107, z: 107 } } };
+    const moved = idleReducer(halved, { eventName: 'MILL_STATE_CHANGED' }, movedContext)!;
+    expect(moved.display[axis]).toBe(47);
+  });
+});
 
 describe('halfReducer', () => {
   describe('state handling', () => {

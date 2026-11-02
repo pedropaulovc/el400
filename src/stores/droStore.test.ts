@@ -19,6 +19,7 @@ import {
   useIncrementalX,
   useIncrementalY,
   useIncrementalZ,
+  useIncrementalOffsets,
   useManualAbsoluteX,
   useManualAbsoluteY,
   useManualAbsoluteZ,
@@ -32,6 +33,7 @@ import { createDefaultMillState } from '../types/millState';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../types/nonVolatileMemory';
 import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
 import { INITIAL_DISPLAY_STATE } from './dro/utils/displayComputation';
+import { useVolatileMemory } from '../hooks/useVolatileMemory';
 
 describe('droStore', () => {
   beforeEach(() => {
@@ -56,6 +58,90 @@ describe('droStore', () => {
 
     // Clear DRO dispatch
     setDRODispatch(null);
+  });
+
+  describe('live incremental hook values', () => {
+    it.each(['X', 'Y', 'Z'] as const)('updates %s from machine motion and INC offsets without changing manual counters', (axis) => {
+      useDROStore.setState({
+        stateName: 'idle',
+        stateData: { stateDataType: 'none' },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          mode: 'abs',
+          workOffsets: { X: 1, Y: 2, Z: 3 },
+          incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+          incrementalValues: { X: 71, Y: 72, Z: 73 },
+        },
+      });
+      useMillStore.setState({
+        millState: {
+          ...createDefaultMillState('cncjs'),
+          connected: true,
+          position: { x: 14, y: 24, z: 34 },
+        },
+      });
+      const { result } = renderHook(() => ({
+        memory: useVolatileMemory(),
+        offsets: useIncrementalOffsets(),
+        manualX: useIncrementalX(),
+      }));
+      expect(result.current.memory.incremental[axis]).toBe(4);
+      expect(result.current.memory.displayValues).toEqual({ X: 13, Y: 22, Z: 31 });
+      expect(result.current.manualX).toBe(71);
+
+      act(() => {
+        useMillStore.setState((state) => ({
+          millState: { ...state.millState, position: { x: 19, y: 29, z: 39 } },
+        }));
+      });
+      expect(result.current.memory.incremental[axis]).toBe(9);
+      expect(result.current.memory.displayValues).toEqual({ X: 18, Y: 27, Z: 36 });
+      act(() => {
+        result.current.memory.toggleMode();
+      });
+      expect(result.current.memory.displayValues[axis]).toBe(9);
+      expect(result.current.offsets).toEqual({ X: 10, Y: 20, Z: 30 });
+
+      act(() => {
+        useDROStore.setState((state) => ({
+          vMem: {
+            ...state.vMem,
+            incrementalOffsets: { ...state.vMem.incrementalOffsets, [axis]: 0 },
+          },
+        }));
+      });
+      expect(result.current.offsets[axis]).toBe(0);
+      expect(result.current.memory.incremental).toEqual({
+        X: 9, Y: 9, Z: 9, [axis]: { X: 19, Y: 29, Z: 39 }[axis],
+      });
+      expect(result.current.memory.displayValues).toEqual(result.current.memory.incremental);
+      expect(result.current.manualX).toBe(71);
+    });
+
+    it('uses disconnected manual INC counters even with non-zero machine positions and offsets', () => {
+      useDROStore.setState({
+        stateName: 'idle',
+        stateData: { stateDataType: 'none' },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE,
+          mode: 'inc',
+          incrementalOffsets: { X: 10, Y: 20, Z: 30 },
+          incrementalValues: { X: 7, Y: -8, Z: 9 },
+        },
+      });
+      useMillStore.setState({
+        millState: { ...createDefaultMillState('noop'), position: { x: 100, y: 200, z: 300 } },
+      });
+      const { result } = renderHook(() => useVolatileMemory());
+      expect(result.current.incremental).toEqual({ X: 7, Y: -8, Z: 9 });
+      expect(result.current.displayValues).toEqual({ X: 7, Y: -8, Z: 9 });
+      act(() => {
+        useMillStore.setState((state) => ({
+          millState: { ...state.millState, position: { x: 400, y: 500, z: 600 } },
+        }));
+      });
+      expect(result.current.displayValues).toEqual({ X: 7, Y: -8, Z: 9 });
+    });
   });
 
   describe('initial state', () => {

@@ -2,7 +2,7 @@
  * ABS/INC Mode Feature Reducer
  *
  * Handles ABS/INC mode toggling from idle state and the abs-inc-mode transitional state.
- * Updates vMem.mode between 'abs' and 'inc'.
+ * Updates only vMem.mode: independent ABS/INC datums keep tracking live motion.
  */
 
 import type { FeatureReducer } from '../types';
