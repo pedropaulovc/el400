@@ -175,7 +175,7 @@ const MultiAxisSection = () => {
               role="status"
               aria-live="polite"
               data-testid="controller-unit-status"
-              className={`mt-2 text-xs ${unitError ? 'text-red-400' : 'text-amber-200'}`}
+              className="sr-only"
             >
               {unitStatus}
             </div>
@@ -185,7 +185,7 @@ const MultiAxisSection = () => {
               role="status"
               aria-live="polite"
               data-testid="controller-work-position-status"
-              className={`mt-2 text-xs ${workControl?.error ? 'text-red-400' : 'text-amber-200'}`}
+              className="sr-only"
             >
               {workStatus}
             </div>
