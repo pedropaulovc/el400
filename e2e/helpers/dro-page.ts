@@ -199,7 +199,7 @@ export class DROPage {
 
   /**
    * React boot alone does not establish CNCjs room membership or fresh $13
-   * coordinates. These user-visible statuses require the native open callback,
+   * coordinates. These screen-reader statuses require the native open callback,
    * confirmed modal units, idle workflow, and fresh raw MPos/WCO boundary.
    */
   async waitForConnectedReady(): Promise<void> {

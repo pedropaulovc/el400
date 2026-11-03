@@ -191,9 +191,10 @@ unit. The request is sent only after joining the actual serial port, with known
 native modal units, an idle CNCjs workflow, and GRBL reporting `Idle`. Existing
 keypad-lock, sleep and feature-state input gates still apply.
 
-The status line shows a pending request or an unavailable/error state. While
-pending, the LEDs retain the last confirmed units. When units are unknown both
-unit LEDs are off. Confirmation comes from native
+Screen-reader status announcements report pending requests and unavailable/error
+states without adding visible text or layout space to the native EL400 face.
+While pending, the LEDs retain the last confirmed units. When units are unknown
+both unit LEDs are off. Confirmation comes from native
 `controller:state.parserstate.modal.units`, not a socket write acknowledgement.
 A request stops waiting after five seconds, a disconnect/port close, or an
 observed controller error/alarm. Those error lines are shared across CNCjs
@@ -201,7 +202,7 @@ clients, so they are not proof that this particular command was rejected.
 Late native confirmations still update the readout. Pending commands are never
 replayed after reconnection.
 On disconnect, the selected CNCjs readout retains its last physical coordinates
-with an unavailable indication rather than switching to standalone counters.
+with an accessible unavailable announcement rather than switching to standalone counters.
 Offline GRBL INC zero/preset attempts do not change a local datum or queue replay.
 
 In **INC**, GRBL's normalized work position (`WPos`) is authoritative. External
