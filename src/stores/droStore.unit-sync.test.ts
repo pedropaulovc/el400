@@ -542,4 +542,88 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(data.holeCount).toBe(6);
     expect(unitCommands()).toEqual([]);
   });
+
+  it.each(['edge', 'midpoint'] as const)('commits native %s probe capture once before processing reentrant work-position notifications', async (probeFunction) => {
+    const probeReport = (x: number, pinState: string, workX = x): void => {
+      receive('controller:state', 'Grbl', {
+        parserstate: { modal: { units: 'G21', wcs: 'G54' } },
+        status: {
+          activeState: 'Idle',
+          mpos: { x, y: 0, z: 0 },
+          wpos: { x: workX, y: 0, z: 0 },
+          pinState,
+        },
+      });
+    };
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    dispatch({ eventName: 'BTN_FUNCTION' });
+    for (let index = 0; index < 6; index++) dispatch({ eventName: 'KEY_6_RIGHT' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('probe-menu-function');
+    if (probeFunction === 'midpoint') dispatch({ eventName: 'KEY_6_RIGHT' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    dispatch({ eventName: 'BTN_SELECT_X' });
+    expect(useDROStore.getState().stateName).toBe('probe-waiting');
+
+    if (probeFunction === 'midpoint') {
+      probeReport(10, '');
+      probeReport(10, 'P');
+      const firstContact = useDROStore.getState().stateData;
+      if (firstContact.stateDataType !== 'probe') throw new Error('Expected probe capture data');
+      expect(firstContact.captures).toEqual([10]);
+      expect(useDROStore.getState().stateName).toBe('probe-waiting');
+      expect(workCommands()).toEqual([]);
+      probeReport(10, '');
+    }
+    probeReport(50, '');
+    const captures = probeFunction === 'edge' ? [50] : [10, 50];
+    const targetX = probeFunction === 'edge' ? 0 : 20;
+    const transitions: {
+      stateName: string;
+      captures: number[];
+      pending: Partial<MillPosition> | null;
+    }[] = [];
+    const unsubscribe = useDROStore.subscribe((state) => {
+      transitions.push({
+        stateName: state.stateName,
+        captures: state.stateData.stateDataType === 'probe' ? [...state.stateData.captures] : [],
+        pending: useMillStore.getState().millState.workPositionControl?.pending ?? null,
+      });
+    });
+    try {
+      probeReport(50, 'P');
+      expect(transitions.length).toBeGreaterThanOrEqual(2);
+      expect(transitions[0]).toEqual({ stateName: 'probe-result', captures, pending: { x: targetX } });
+      // The outer result transition must precede every queued pending tick.
+      expect(transitions.every((transition) => transition.stateName === 'probe-result')).toBe(true);
+      for (const transition of transitions) expect(transition.captures).toEqual(captures);
+      expect(workCommands()).toHaveLength(1);
+      expect(workCommands()[0]?.[3]).toBe(`G21 G10 L20 P1 X${String(targetX)}`);
+      expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: targetX });
+      expect(useDROStore.getState().display.X).toBeCloseTo(50);
+      // Exercise held contact while the request is pending: no second capture.
+      probeReport(50, 'P');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(useMillStore.getState().error).toBeNull();
+      expect(workCommands()).toHaveLength(1);
+      advanceWorkQueue();
+      receive('serialport:read', `<Idle|MPos:50,0,0|WCO:${String(50 - targetX)},0,0|Pn:P>`);
+      probeReport(50, 'P', targetX);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(useDROStore.getState().stateName).toBe('probe-result');
+      const result = useDROStore.getState().stateData;
+      if (result.stateDataType !== 'probe') throw new Error('Expected probe result data');
+      expect(result.captures).toEqual(captures);
+      expect(useDROStore.getState().display.X).toBeCloseTo(targetX);
+      expect(useMillStore.getState().millState.position).toEqual({ x: 50, y: 0, z: 0 });
+      expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
+      expect(useMillStore.getState().millState.workPositionControl?.error).toBeNull();
+      expect(useMillStore.getState().error).toBeNull();
+      expect(workCommands()).toHaveLength(1);
+    } finally {
+      unsubscribe();
+    }
+  });
 });

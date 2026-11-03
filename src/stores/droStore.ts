@@ -91,6 +91,12 @@ interface DROStore {
 // STORE IMPLEMENTATION
 // ─────────────────────────────────────────────────────────────────
 
+// Adapter notifications may arrive synchronously from a reducer's controller
+// request. Process them only after that transition commits, never recursively
+// against its old state (which could capture the same probe edge twice).
+const pendingEvents: DROEventPayload[] = [];
+let dispatchPhase: 'idle' | 'reducing' = 'idle';
+
 export const useDROStore = create<DROStore>()((set, get) => ({
   // Initial state from DRO state machine
   stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
@@ -101,40 +107,46 @@ export const useDROStore = create<DROStore>()((set, get) => ({
 
   // Dispatch action - calls reducer with cross-store context
   dispatch: (event) => {
-    const current = get();
-    const currentPayload: DROStatePayload = {
-      stateName: current.stateName,
-      stateData: current.stateData,
-      vMem: current.vMem,
-      display: current.display,
-    };
+    pendingEvents.push(event);
+    if (dispatchPhase === 'reducing') return;
+    dispatchPhase = 'reducing';
+    try {
+      for (let index = 0; index < pendingEvents.length; index++) {
+        const nextEvent = pendingEvents[index];
+        if (!nextEvent) continue;
+        const current = get();
+        const currentPayload: DROStatePayload = {
+          stateName: current.stateName,
+          stateData: current.stateData,
+          vMem: current.vMem,
+          display: current.display,
+        };
 
-    // Get context from other stores
-    const millState = useMillStore.getState().millState;
-    const nvMem = useSettingsStore.getState().nvMem;
-    const context: DROReducerContext = { millState, nvMem };
-
-    // Run through reducer
-    const newState = droReducer(currentPayload, event, context);
-
-    // Recompute the Near-Zero Warning from the fresh readout (US-024). Carrying
-    // the previous per-axis state forward gives the BP TOLR departure hysteresis.
-    const zeroApproach = computeZeroApproach(
-      newState.display,
-      nvMem,
-      current.zeroApproach,
-      newState.stateName,
-      armedAxesFor(newState.stateData)
-    );
-
-    // Update store with new state
-    set({
-      stateName: newState.stateName,
-      stateData: newState.stateData,
-      vMem: newState.vMem,
-      display: newState.display,
-      zeroApproach,
-    });
+        // Each queued notification observes the committed transition and the
+        // latest authoritative mill/settings state, without delaying commands.
+        const millState = useMillStore.getState().millState;
+        const nvMem = useSettingsStore.getState().nvMem;
+        const context: DROReducerContext = { millState, nvMem };
+        const newState = droReducer(currentPayload, nextEvent, context);
+        const zeroApproach = computeZeroApproach(
+          newState.display,
+          nvMem,
+          current.zeroApproach,
+          newState.stateName,
+          armedAxesFor(newState.stateData)
+        );
+        set({
+          stateName: newState.stateName,
+          stateData: newState.stateData,
+          vMem: newState.vMem,
+          display: newState.display,
+          zeroApproach,
+        });
+      }
+    } finally {
+      pendingEvents.length = 0;
+      dispatchPhase = 'idle';
+    }
   },
 
   // For testing - set state directly
