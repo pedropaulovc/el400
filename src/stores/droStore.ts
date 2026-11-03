@@ -111,9 +111,7 @@ export const useDROStore = create<DROStore>()((set, get) => ({
     if (dispatchPhase === 'reducing') return;
     dispatchPhase = 'reducing';
     try {
-      for (let index = 0; index < pendingEvents.length; index++) {
-        const nextEvent = pendingEvents[index];
-        if (!nextEvent) continue;
+      for (const nextEvent of pendingEvents) {
         const current = get();
         const currentPayload: DROStatePayload = {
           stateName: current.stateName,
