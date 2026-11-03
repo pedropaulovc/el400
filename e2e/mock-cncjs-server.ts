@@ -13,15 +13,44 @@ const PORT = process.env['E2E_MOCK_CNCJS_PORT'] ? parseInt(process.env['E2E_MOCK
 type EncoderSignalState = 'ok' | 'lost';
 type EncoderSignalByAxis = { X: EncoderSignalState; Y: EncoderSignalState; Z: EncoderSignalState };
 
-// State per session (sessionId -> { position, probeState, encoderSignal })
-const sessions = new Map<
-  string,
-  {
-    position: { x: number; y: number; z: number };
-    probeState?: { pinState: string };
-    encoderSignal?: EncoderSignalByAxis;
+type Position = { x: number; y: number; z: number };
+type WorkingUnit = 'G20' | 'G21';
+type WorkCoordinateSystem = 'G54' | 'G55' | 'G56' | 'G57' | 'G58' | 'G59';
+type Session = {
+  // Physical position and offsets stay in mm, independent of G20/G21 and $13.
+  position: Position;
+  workingUnit: WorkingUnit;
+  reportInches: boolean;
+  wcs: WorkCoordinateSystem;
+  offsets: Record<WorkCoordinateSystem, Position>;
+  probeState?: { pinState: string };
+  encoderSignal?: EncoderSignalByAxis;
+};
+
+const SERIAL_PORT = '/dev/ttyMOCK';
+const sessions = new Map<string, Session>();
+
+function getSession(sessionId: string): Session {
+  let session = sessions.get(sessionId);
+  if (!session) {
+    session = {
+      position: { x: 0, y: 0, z: 0 },
+      workingUnit: 'G21',
+      reportInches: false,
+      wcs: 'G54',
+      offsets: {
+        G54: { x: 0, y: 0, z: 0 },
+        G55: { x: 0, y: 0, z: 0 },
+        G56: { x: 0, y: 0, z: 0 },
+        G57: { x: 0, y: 0, z: 0 },
+        G58: { x: 0, y: 0, z: 0 },
+        G59: { x: 0, y: 0, z: 0 },
+      },
+    };
+    sessions.set(sessionId, session);
   }
->();
+  return session;
+}
 
 const httpServer = createServer((req, res) => {
   const { pathname, query } = parse(req.url || '', true);
@@ -58,6 +87,37 @@ const httpServer = createServer((req, res) => {
   if (pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', port: PORT, sessions: sessions.size }));
+    return;
+  }
+
+  // Explicit fixture setup, called once before navigation, never on reload.
+  // The unseeded/manual frontend controller retains its native G21 default.
+  if (pathname === '/api/session' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const { workingUnit } = JSON.parse(body);
+        if (workingUnit !== 'G20' && workingUnit !== 'G21') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'workingUnit must be G20 or G21' }));
+          return;
+        }
+        const session = getSession(sessionId);
+        session.workingUnit = workingUnit;
+        emitStateToSession(sessionId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, workingUnit }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
     return;
   }
 
@@ -101,11 +161,7 @@ const httpServer = createServer((req, res) => {
         }
 
         // Get or create session
-        let session = sessions.get(sessionId);
-        if (!session) {
-          session = { position: { x: 0, y: 0, z: 0 } };
-          sessions.set(sessionId, session);
-        }
+        const session = getSession(sessionId);
 
         session.position[axis.toLowerCase() as 'x' | 'y' | 'z'] = value;
         console.log(`[MockCncjs] encoder-move ${sessionId}: ${axis}=${value}, new position=[${session.position.x}, ${session.position.y}, ${session.position.z}]`);
@@ -141,11 +197,7 @@ const httpServer = createServer((req, res) => {
         }
 
         // Get or create session
-        let session = sessions.get(sessionId);
-        if (!session) {
-          session = { position: { x: 0, y: 0, z: 0 } };
-          sessions.set(sessionId, session);
-        }
+        const session = getSession(sessionId);
 
         const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
         session.position[axisKey] += delta;
@@ -170,11 +222,7 @@ const httpServer = createServer((req, res) => {
       return;
     }
 
-    let session = sessions.get(sessionId);
-    if (!session) {
-      session = { position: { x: 0, y: 0, z: 0 } };
-      sessions.set(sessionId, session);
-    }
+    const session = getSession(sessionId);
 
     // Simulate probe trigger (set pinState to 'P')
     session.probeState = {
@@ -196,11 +244,7 @@ const httpServer = createServer((req, res) => {
       return;
     }
 
-    let session = sessions.get(sessionId);
-    if (!session) {
-      session = { position: { x: 0, y: 0, z: 0 } };
-      sessions.set(sessionId, session);
-    }
+    const session = getSession(sessionId);
 
     // Clear probe state (set pinState to empty)
     session.probeState = {
@@ -233,11 +277,7 @@ const httpServer = createServer((req, res) => {
           return;
         }
 
-        let session = sessions.get(sessionId);
-        if (!session) {
-          session = { position: { x: 0, y: 0, z: 0 } };
-          sessions.set(sessionId, session);
-        }
+        const session = getSession(sessionId);
 
         session.encoderSignal = {
           X: 'ok',
@@ -279,34 +319,36 @@ const io = new SocketIOServer(httpServer, {
   allowEIO3: true,
 });
 
+function controllerState(session: Session) {
+  const scale = session.reportInches ? 25.4 : 1;
+  const offset = session.offsets[session.wcs];
+  return {
+    parserstate: { modal: { units: session.workingUnit, wcs: session.wcs } },
+    status: {
+      activeState: 'Idle',
+      mpos: [session.position.x / scale, session.position.y / scale, session.position.z / scale],
+      wpos: [
+        (session.position.x - offset.x) / scale,
+        (session.position.y - offset.y) / scale,
+        (session.position.z - offset.z) / scale,
+      ],
+      pn: session.probeState?.pinState ?? '',
+    },
+    probe: session.probeState || '',
+    encoderSignal: session.encoderSignal,
+  };
+}
+
 function emitStateToSession(sessionId: string) {
   const session = sessions.get(sessionId);
-  if (!session) {
-    console.log(`[MockCncjs] emitStateToSession: session not found for ${sessionId}`);
-    return;
-  }
+  if (session) io.to(sessionId).emit('controller:state', 'Grbl', controllerState(session));
+}
 
-  const { x, y, z } = session.position;
-  console.log(`[MockCncjs] emitting state for ${sessionId}: pos=[${x}, ${y}, ${z}]`);
-
-  try {
-    // Use Socket.io rooms to broadcast to all sockets in this session
-    io.to(sessionId).emit('controller:state', 'grbl', {
-      status: {
-        activeState: 'Idle',
-        mpos: [x, y, z],
-        wpos: [x, y, z],
-        // GRBL exposes pin state in `pn`; the real CncjsMillAdapter parses the
-        // probe trigger from here, so a probe contact must surface in `pn`.
-        pn: session.probeState?.pinState ?? '',
-      },
-      probe: session.probeState || '',
-      encoderSignal: session.encoderSignal,
-    });
-    console.log(`[MockCncjs] emit successful for ${sessionId}`);
-  } catch (error) {
-    console.log(`[MockCncjs] emit error for ${sessionId}: ${error}`);
-  }
+function rawStatus(session: Session): string {
+  const scale = session.reportInches ? 25.4 : 1;
+  const vector = (position: Position) =>
+    [position.x / scale, position.y / scale, position.z / scale].join(',');
+  return `<Idle|MPos:${vector(session.position)}|WCO:${vector(session.offsets[session.wcs])}|Pn:${session.probeState?.pinState ?? ''}>`;
 }
 
 io.on('connection', (socket) => {
@@ -321,31 +363,35 @@ io.on('connection', (socket) => {
 
   console.log(`[MockCncjs] client connected: ${socket.id}, session: ${sessionId}`);
 
-  // Get or create session
-  let session = sessions.get(sessionId);
-  if (!session) {
-    console.log(`[MockCncjs] creating new session for ${sessionId}`);
-    session = { position: { x: 0, y: 0, z: 0 } };
-    sessions.set(sessionId, session);
-  } else {
-    console.log(`[MockCncjs] reusing existing session for ${sessionId}, position=[${session.position.x}, ${session.position.y}, ${session.position.z}]`);
-  }
+  const session = getSession(sessionId);
+  let opened = false;
 
   // Join socket to a room named after the sessionId
   socket.join(sessionId);
   console.log(`[MockCncjs] socket ${socket.id} joined room ${sessionId}`);
 
-  // Send initial controller state
-  const { x, y, z } = session.position;
-  socket.emit('controller:state', 'grbl', {
-    status: {
-      activeState: 'Idle',
-      mpos: [x, y, z],
-      wpos: [x, y, z],
-      pn: session.probeState?.pinState ?? '',
-    },
-    probe: session.probeState || '',
-    encoderSignal: session.encoderSignal,
+  // The manual frontend listens directly, without list/open. Keep its initial
+  // state, then replay the native settings/state/workflow when a DRO joins.
+  socket.emit('controller:state', 'Grbl', controllerState(session));
+
+  socket.on('list', () => {
+    socket.emit('serialport:list', [{ port: SERIAL_PORT, inuse: true }]);
+  });
+
+  socket.on('open', (
+    port: string,
+    _options: { controllerType?: string; baudrate?: number },
+    callback?: (error: string | null) => void,
+  ) => {
+    if (port !== SERIAL_PORT) {
+      callback?.(`Mock serial port not found: ${port}`);
+      return;
+    }
+    opened = true;
+    socket.emit('controller:settings', 'Grbl', { settings: { '$13': session.reportInches ? '1' : '0' } });
+    socket.emit('controller:state', 'Grbl', controllerState(session));
+    socket.emit('workflow:state', 'idle');
+    callback?.(null);
   });
 
   socket.on('disconnect', (reason) => {
@@ -353,24 +399,81 @@ io.on('connection', (socket) => {
     // Session state is preserved, socket will automatically leave the room
   });
 
-  socket.on('command', (_port: string, cmd: string) => {
-    if (cmd === '?') {
-      const s = sessions.get(sessionId);
-      if (s) {
-        const { x, y, z } = s.position;
-        // Broadcast to the room instead of just this socket
-        io.to(sessionId).emit('controller:state', 'grbl', {
-          status: {
-            activeState: 'Idle',
-            mpos: [x, y, z],
-            wpos: [x, y, z],
-            pn: s.probeState?.pinState ?? '',
-          },
-          probe: s.probeState || '',
-          encoderSignal: s.encoderSignal,
-        });
-      }
+  const rejectCommand = (message: string) => {
+    socket.emit('serialport:read', `error:20 (${message})`);
+  };
+
+  socket.on('write', (port: string, data: string) => {
+    if (!opened || port !== SERIAL_PORT) {
+      rejectCommand('Open the mock controller before writing');
+      return;
     }
+    if (data !== '?') {
+      rejectCommand(`Unsupported mock realtime write: ${String(data)}`);
+      return;
+    }
+    // Match the runner ordering: its cached state is current before the raw
+    // report establishes the adapter's fresh $13/work-coordinate boundary.
+    emitStateToSession(sessionId);
+    io.to(sessionId).emit('serialport:read', rawStatus(session));
+  });
+
+  socket.on('command', (
+    port: string,
+    command: string,
+    data: string,
+    context?: { el400WorkRequest?: string },
+  ) => {
+    if (!opened || port !== SERIAL_PORT) {
+      rejectCommand('Open the mock controller before sending G-code');
+      return;
+    }
+    if (command !== 'gcode' || typeof data !== 'string') {
+      rejectCommand('Expected command(port, gcode, line, context?)');
+      return;
+    }
+    const line = data.trim();
+    if (line === '$$') {
+      io.to(sessionId).emit('serialport:read', `$13=${session.reportInches ? '1' : '0'}`);
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+    if (line === '$G') {
+      // Handlers execute synchronously in Socket.IO FIFO order: any preceding
+      // G10 has changed the offset before the feeder marker is emitted.
+      io.to(sessionId).emit('serialport:write', '$G\n', { ...context, source: 'feeder' });
+      emitStateToSession(sessionId);
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+    if (line === 'G20' || line === 'G21') {
+      session.workingUnit = line;
+      emitStateToSession(sessionId);
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+
+    const work = /^(G20|G21) G10 L20 P([1-6])((?: [XYZ][-+]?(?:\d+(?:\.\d*)?|\.\d+))+)$/.exec(line);
+    if (!work) {
+      rejectCommand(`Unsupported mock G-code: ${line}`);
+      return;
+    }
+    const unit = work[1] as WorkingUnit;
+    const wcs = `G${53 + Number(work[2])}` as WorkCoordinateSystem;
+    const words = Array.from((work[3] ?? '').matchAll(/([XYZ])([-+]?(?:\d+(?:\.\d*)?|\.\d+))/g));
+    const scale = unit === 'G20' ? 25.4 : 1;
+    if (words.some((word) => !Number.isFinite(Number(word[2]) * scale))) {
+      rejectCommand('Work coordinates must be finite');
+      return;
+    }
+    session.workingUnit = unit;
+    for (const word of words) {
+      const axis = word[1]?.toLowerCase() as keyof Position;
+      // G10 L20 sets WPos; it never moves MPos or touches unspecified axes.
+      session.offsets[wcs][axis] = session.position[axis] - Number(word[2]) * scale;
+    }
+    emitStateToSession(sessionId);
+    io.to(sessionId).emit('serialport:read', 'ok');
   });
 });
 

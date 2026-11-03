@@ -265,13 +265,19 @@ export function computeAxisPositionMm(
   const { millState } = context;
 
   if (mode === 'abs') {
-    if (millState.connected) {
+    if (millState.connected || millState.controllerType === 'cncjs') {
       const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
       return millState.position[axisKey] - workOffsets[axis];
     }
     return manualAbsoluteValues[axis];
   }
-  if (millState.connected) {
+  // GRBL owns INC through its active work coordinate system. Never substitute
+  // the separate local INC datum, including while that controller is unavailable.
+  if (millState.workPositionControl !== undefined) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    return millState.workPosition?.[axisKey] ?? Number.NaN;
+  }
+  if (millState.connected || millState.controllerType === 'cncjs') {
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
     return millState.position[axisKey] - incrementalOffsets[axis];
   }
@@ -290,7 +296,8 @@ export function computeAxisPositionMm(
 export function computeDisplayPosition(
   axis: Axis,
   vMem: VolatileMemoryState,
-  context: DROReducerContext
+  context: DROReducerContext,
+  rawMm = computeAxisPositionMm(axis, vMem, context)
 ): AxisDisplayValue {
   // Encoder-fail warning (US-042) overrides the numeric value: a lost signal on
   // this axis with `EnF` on shows `no SIG` instead of a stale reading.
@@ -299,7 +306,9 @@ export function computeDisplayPosition(
   }
 
 
-  const rawMm = computeAxisPositionMm(axis, vMem, context);
+  if (!Number.isFinite(rawMm) && context.millState.workPositionControl !== undefined) {
+    return 'no Conn';
+  }
   // Counting direction (US-002) and radius/diameter scale (US-041) are display-only
   // transforms applied AFTER datum subtraction; they never mutate stored machine
   // position, offsets, or macro coordinate math.

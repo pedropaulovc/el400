@@ -60,8 +60,61 @@ describe('droStore', () => {
     setDRODispatch(null);
   });
 
+  describe('selected CNCjs disconnect projections', () => {
+    it.each(['abs', 'inc'] as const)('retains physical %s coordinates offline but restores actual standalone counters when switching source', (mode) => {
+      // This projection test compares the formatted readout with canonical mm.
+      useSettingsStore.setState({
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+      });
+      useDROStore.setState({
+        stateName: 'idle',
+        stateData: { stateDataType: 'none' },
+        vMem: {
+          ...INITIAL_VOLATILE_MEMORY_STATE, mode,
+          workOffsets: { X: 1, Y: 2, Z: 3 },
+          incrementalOffsets: { X: 100, Y: 200, Z: 300 },
+          incrementalValues: { X: 71, Y: 72, Z: 73 },
+          manualAbsoluteValues: { X: 81, Y: 82, Z: 83 },
+        },
+      });
+      useMillStore.setState({
+        millState: {
+          ...createDefaultMillState('cncjs'), connected: true,
+          position: { x: 25.4, y: 50.8, z: 76.2 },
+          workPosition: { x: 12.7, y: -25.4, z: 38.1 },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
+        },
+      });
+      const { result } = renderHook(() => useVolatileMemory());
+      const expectedAbsolute = { X: 24.4, Y: 48.8, Z: 73.2 };
+      const expectedIncremental = { X: 12.7, Y: -25.4, Z: 38.1 };
+      expect(result.current.absolute).toEqual(expectedAbsolute);
+      expect(result.current.incremental).toEqual(expectedIncremental);
+      act(() => {
+        useMillStore.setState((state) => ({
+          millState: {
+            ...state.millState, connected: false,
+            workPositionControl: { availability: 'unavailable', pending: null, error: null },
+          },
+        }));
+        useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+      });
+      expect(result.current.absolute).toEqual(expectedAbsolute);
+      expect(result.current.incremental).toEqual(expectedIncremental);
+      expect(result.current.displayValues).toEqual(mode === 'abs' ? expectedAbsolute : expectedIncremental);
+      expect(useDROStore.getState().display).toEqual(result.current.displayValues);
+      act(() => {
+        useMillStore.setState({ millState: createDefaultMillState('noop') });
+        useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+      });
+      expect(result.current.absolute).toEqual({ X: 81, Y: 82, Z: 83 });
+      expect(result.current.incremental).toEqual({ X: 71, Y: 72, Z: 73 });
+      expect(useDROStore.getState().display).toEqual(result.current.displayValues);
+    });
+  });
+
   describe('live incremental hook values', () => {
-    it.each(['X', 'Y', 'Z'] as const)('updates %s from machine motion and INC offsets without changing manual counters', (axis) => {
+    it.each(['X', 'Y', 'Z'] as const)('updates %s from native GRBL WPos independently of local INC offsets and manual counters', (axis) => {
       useDROStore.setState({
         stateName: 'idle',
         stateData: { stateDataType: 'none' },
@@ -78,6 +131,9 @@ describe('droStore', () => {
           ...createDefaultMillState('cncjs'),
           connected: true,
           position: { x: 14, y: 24, z: 34 },
+          workPosition: { x: 6, y: 8, z: 10 },
+          unitControl: { control: 'controller', confirmed: 'mm', pending: null, availability: 'ready' },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
         },
       });
       const { result } = renderHook(() => ({
@@ -85,21 +141,25 @@ describe('droStore', () => {
         offsets: useIncrementalOffsets(),
         manualX: useIncrementalX(),
       }));
-      expect(result.current.memory.incremental[axis]).toBe(4);
+      expect(result.current.memory.incremental[axis]).toBe({ X: 6, Y: 8, Z: 10 }[axis]);
       expect(result.current.memory.displayValues).toEqual({ X: 13, Y: 22, Z: 31 });
       expect(result.current.manualX).toBe(71);
 
       act(() => {
         useMillStore.setState((state) => ({
-          millState: { ...state.millState, position: { x: 19, y: 29, z: 39 } },
+          millState: {
+            ...state.millState,
+            position: { x: 19, y: 29, z: 39 },
+            workPosition: { x: 11, y: 13, z: 15 },
+          },
         }));
       });
-      expect(result.current.memory.incremental[axis]).toBe(9);
+      expect(result.current.memory.incremental[axis]).toBe({ X: 11, Y: 13, Z: 15 }[axis]);
       expect(result.current.memory.displayValues).toEqual({ X: 18, Y: 27, Z: 36 });
       act(() => {
         result.current.memory.toggleMode();
       });
-      expect(result.current.memory.displayValues[axis]).toBe(9);
+      expect(result.current.memory.displayValues[axis]).toBe({ X: 11, Y: 13, Z: 15 }[axis]);
       expect(result.current.offsets).toEqual({ X: 10, Y: 20, Z: 30 });
 
       act(() => {
@@ -111,9 +171,7 @@ describe('droStore', () => {
         }));
       });
       expect(result.current.offsets[axis]).toBe(0);
-      expect(result.current.memory.incremental).toEqual({
-        X: 9, Y: 9, Z: 9, [axis]: { X: 19, Y: 29, Z: 39 }[axis],
-      });
+      expect(result.current.memory.incremental).toEqual({ X: 11, Y: 13, Z: 15 });
       expect(result.current.memory.displayValues).toEqual(result.current.memory.incremental);
       expect(result.current.manualX).toBe(71);
     });

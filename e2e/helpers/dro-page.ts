@@ -10,6 +10,8 @@ export class DROPage {
   readonly page: Page;
   private readonly mockServerPort: number;
   private readonly sessionId: string;
+  private readonly source: 'cncjs' | 'manual';
+  private waitForConnection = true;
 
   // Simulator root — carries data-dro-state, the deterministic readiness signal
   readonly simulatorRoot: Locator;
@@ -63,10 +65,11 @@ export class DROPage {
   readonly boltHoleButton: Locator;
   readonly angleHoleButton: Locator;
 
-  constructor(page: Page, mockServerPort: number = 8765, sessionId?: string) {
+  constructor(page: Page, mockServerPort: number = 8765, sessionId?: string, source: 'cncjs' | 'manual' = 'cncjs') {
     this.page = page;
     this.mockServerPort = mockServerPort;
     this.sessionId = sessionId || `test-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+    this.source = source;
 
     this.simulatorRoot = page.getByTestId('el400-simulator');
 
@@ -121,17 +124,40 @@ export class DROPage {
   }
 
   /**
-   * Navigate to the DRO simulator connected to the mock CNCjs server.
-   * @param options.skipBootMessage - Skip boot message via URL param (default: true)
+   * Seed controller working units once before the fixture's first navigation.
+   * Reconnects deliberately do not call this: controller changes must persist.
    */
-  async goto(options?: { skipBootMessage?: boolean; taperOn?: 'X' | 'Z' | 'Zprime'; probeDroType?: 'transmit' | 'freeze' }) {
+  async seedController(workingUnit: 'G20' | 'G21'): Promise<void> {
+    const response = await this.page.request.post(
+      `http://localhost:${this.mockServerPort}/api/session?sessionId=${encodeURIComponent(this.sessionId)}`,
+      { data: { workingUnit } },
+    );
+    if (!response.ok()) {
+      throw new Error(`Failed to seed mock controller: ${response.status()} ${await response.text()}`);
+    }
+  }
+
+  /**
+   * Navigate with this fixture's source. Connected skip-boot scenarios also
+   * await native readiness; boot-message tests retain the boot-only barrier.
+   * Set waitForConnection:false for deliberate offline/unsupported scenarios.
+   */
+  async goto(options?: {
+    skipBootMessage?: boolean;
+    waitForConnection?: boolean;
+    taperOn?: 'X' | 'Z' | 'Zprime';
+    probeDroType?: 'transmit' | 'freeze';
+  }) {
     const params = new URLSearchParams();
-    params.set('source', 'cncjs');
-    params.set('host', 'localhost');
-    params.set('port', this.mockServerPort.toString());
-    params.set('sessionId', this.sessionId);
+    if (this.source === 'cncjs') {
+      params.set('source', 'cncjs');
+      params.set('host', 'localhost');
+      params.set('port', this.mockServerPort.toString());
+      params.set('sessionId', this.sessionId);
+    }
 
     const skipBoot = options?.skipBootMessage !== false;
+    this.waitForConnection = options?.waitForConnection ?? skipBoot;
     if (skipBoot) {
       params.set('bootMessageMode', 'skip');
     }
@@ -154,6 +180,7 @@ export class DROPage {
     // domcontentloaded fires before React mounts, so without this barrier a one-shot
     // read of the display races the first render and can sample an empty string.
     await this.waitForReady(skipBoot ? 'idle' : 'boot-show-message');
+    if (this.source === 'cncjs' && this.waitForConnection) await this.waitForConnectedReady();
   }
 
   /**
@@ -171,19 +198,27 @@ export class DROPage {
   }
 
   /**
+   * React boot alone does not establish CNCjs room membership or fresh $13
+   * coordinates. These user-visible statuses require the native open callback,
+   * confirmed modal units, idle workflow, and fresh raw MPos/WCO boundary.
+   */
+  async waitForConnectedReady(): Promise<void> {
+    await expect(this.page.getByTestId('controller-unit-status')).toHaveText(/^Units: (inch|mm)$/);
+    await expect(this.page.getByTestId('controller-work-position-status')).toHaveCount(0);
+  }
+
+  /**
    * Reload the page preserving current URL params.
    *
-   * Mirrors goto()'s readiness barrier: domcontentloaded fires before React
-   * mounts and the Zustand store hydrates, so a one-shot read of LED/unit state
-   * immediately after reload() would race the first render. The reloaded URL
-   * keeps bootMessageMode=skip, so boot settles to an idle readout of 0 at the
-   * mock's origin; waiting for that closes the race for every caller (LED
-   * classes are committed in the same render that shows the numeric value).
+   * Wait for React boot and, for connected fixtures, fresh native readiness.
+   * The mock session is retained, including working units and work offsets;
+   * never reseed it or assume that the machine is still at the origin.
    */
   async reload() {
     await this.page.reload();
     await this.page.waitForLoadState('domcontentloaded');
     await this.waitForReady('idle');
+    if (this.source === 'cncjs' && this.waitForConnection) await this.waitForConnectedReady();
   }
 
   /**
@@ -274,10 +309,20 @@ export class DROPage {
   }
 
   /**
-   * Toggle between INCH and mm units
+   * Toggle units and await the confirmed LED rather than merely the click.
+   * Intentional locked/offline/rejected actions can pass expectChange:false
+   * and assert their unchanged display/error explicitly.
    */
-  async toggleInchMm() {
+  async toggleInchMm(options?: { expectChange?: boolean }) {
+    const wasInch = await this.isInchUnits();
     await this.toggleUnitButton.click();
+    if (options?.expectChange === false) return;
+    const target = wasInch ? this.mmLED : this.inchLED;
+    await expect(target.locator('span').first()).toHaveClass(/text-red-400/);
+    if (this.source === 'cncjs') {
+      await expect(this.page.getByTestId('controller-unit-status'))
+        .toHaveText(`Units: ${wasInch ? 'mm' : 'inch'}`);
+    }
   }
 
   /**

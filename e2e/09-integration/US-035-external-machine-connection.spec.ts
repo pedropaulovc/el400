@@ -55,6 +55,42 @@ test.describe('US-035: External Machine Connection', () => {
     await expect(errorMessages).toHaveCount(0);
   });
 
+  test('native INC zero and preset preserve machine position and survive reload', async ({ dro }) => {
+    await dro.toggleInchMm();
+    await dro.simulateEncoderAbsoluteMove('X', 25);
+    await dro.simulateEncoderAbsoluteMove('Y', 10);
+    await dro.waitForAxisValue('X', 25);
+    await dro.waitForAxisValue('Y', 10);
+
+    await dro.toggleAbsInc();
+    await dro.zeroAxis('X');
+    await dro.waitForAxisValue('X', 0);
+    await dro.waitForConnectedReady();
+    await dro.waitForAxisValue('Y', 10);
+
+    await dro.selectAxis('Y');
+    await dro.enterNumber('7');
+    await dro.enterButton.click();
+    await dro.waitForAxisValue('Y', 7);
+    await dro.waitForConnectedReady();
+    await dro.waitForAxisValue('X', 0);
+
+    // A G10 datum write changes offsets, not the physical machine coordinates.
+    await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 25);
+    await dro.waitForAxisValue('Y', 10);
+    await dro.toggleAbsInc();
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 5);
+    await dro.waitForAxisValue('Y', 7);
+
+    await dro.reload();
+    expect(await dro.isMmUnits()).toBe(true);
+    if (await dro.isAbsMode()) await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 5);
+    await dro.waitForAxisValue('Y', 7);
+  });
+
   /**
    * Verify manual mode allows value entry when no external source.
    * Uses base test (not dro fixture) to navigate without CNCjs params.

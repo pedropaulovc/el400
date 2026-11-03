@@ -6,6 +6,7 @@ import { useDefaultUnit, useNvMem, useAxisDisplayDecimals } from "../stores/sett
 import { useSleepTimer } from "../stores/dro/features/sleep";
 import { useDROState, useDRODispatch, useBootSequence, useMode, useBoltHoleIntro, useAngleHoleIntro, useGridIntro, useArcContourIntro, useSdmIntro, useSetupSavedConfirmation, useAuxFnNoConn, useOemRejectedDismiss, useRestoreProgress, useReferenceMarkTestHook, isFnLedActive, isSdmActive } from "../stores/dro";
 import { useZeroApproachWarning } from "../hooks/useZeroApproachWarning";
+import { useMillState, useConnectionError } from "../stores/millStore";
 
 export interface AxisValues {
   X: AxisDisplayValue;
@@ -90,6 +91,26 @@ const MultiAxisSection = () => {
   // LED indicators
   const mode = useMode();
   const defaultUnit = useDefaultUnit();
+  const millState = useMillState();
+  const unitError = useConnectionError();
+  const isCncjs = millState.controllerType === 'cncjs';
+  const displayOnly = isCncjs && millState.unitControl?.control === 'display';
+  const controllerUnit = millState.connected ? millState.unitControl?.confirmed : null;
+  const displayedUnit = isCncjs && !displayOnly ? controllerUnit : defaultUnit;
+  const pendingUnit = millState.unitControl?.pending;
+  const unitStatus = !isCncjs ? null
+    : displayOnly ? `Units: ${defaultUnit} (display only)`
+    : unitError ? `Controller: ${unitError.message}`
+    : pendingUnit ? `Units: changing to ${pendingUnit}…`
+    : !controllerUnit ? 'Units: unknown — awaiting controller confirmation'
+    : millState.unitControl?.availability !== 'ready' ? `Units: ${controllerUnit} (control unavailable)`
+    : `Units: ${controllerUnit}`;
+  const workControl = millState.workPositionControl;
+  const workStatus = !workControl ? null
+    : workControl.error ? `Work coordinates: ${workControl.error}`
+    : workControl.pending ? 'Work coordinates: awaiting controller confirmation…'
+    : workControl.availability !== 'ready' ? 'Work coordinates: unavailable'
+    : null;
   // Touch-probe trigger indication (US-032, AC 32.8): lights when a probe
   // contact is captured during a probe function.
   const probeTriggered = useProbeTriggered();
@@ -97,7 +118,7 @@ const MultiAxisSection = () => {
   const isAsleep = useIsAsleep();
 
   const isAbs = mode === 'abs';
-  const isInch = defaultUnit === 'inch';
+  const isInch = displayedUnit === 'inch';
 
   return (
     <div className="flex flex-col">
@@ -149,6 +170,26 @@ const MultiAxisSection = () => {
               <span className="sr-only">Near zero warning</span>
             </div>
           )}
+          {unitStatus && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="controller-unit-status"
+              className={`mt-2 text-xs ${unitError ? 'text-red-400' : 'text-amber-200'}`}
+            >
+              {unitStatus}
+            </div>
+          )}
+          {workStatus && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="controller-work-position-status"
+              className={`mt-2 text-xs ${workControl?.error ? 'text-red-400' : 'text-amber-200'}`}
+            >
+              {workStatus}
+            </div>
+          )}
 
           {/* LED Indicators */}
           <div className="flex justify-between mt-1 px-1">
@@ -181,7 +222,7 @@ const MultiAxisSection = () => {
               <LEDIndicator
                 label="mm"
                 name="measurement-units"
-                isOn={!isInch}
+                isOn={displayedUnit === 'mm'}
                 data-testid="led-mm"
               />
             </fieldset>

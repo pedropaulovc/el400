@@ -488,6 +488,8 @@ export interface ProbeData extends BaseDROStateData {
   lastProbeTriggered: boolean;
   /** True for one capture; drives the visual/audible trigger indication (AC 32.8). */
   probeTriggered: boolean;
+  /** Raw physical axis readings latched by idle probe-freeze, before formatting. */
+  frozenPositionMm?: AxisValues;
 }
 
 /** Stored point for center finding operations */
@@ -578,6 +580,7 @@ export type DROEventPayload =
   | { eventName: 'BTN_ZERO_X' }
   | { eventName: 'BTN_ZERO_Y' }
   | { eventName: 'BTN_ZERO_Z' }
+  | { eventName: 'BTN_ZERO_ALL' }
   | { eventName: 'BTN_DISTANCE_TO_GO' }
   | { eventName: 'BTN_SETUP' }
   // Axis selection buttons (select without zeroing)

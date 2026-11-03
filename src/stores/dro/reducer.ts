@@ -43,7 +43,6 @@ import { isEventBlockedByKeypadLock } from './features/keypad-lock';
  * position updates (idle, center-finding). Calculator and menu ignore it.
  */
 const featureReducers: FeatureReducer[] = [
-  sleepReducer, // Display sleep timer (US-026): owns SLEEP_TIMER_ELAPSED and, while asleep, consumes the waking key/jog. First so it gates input during sleep.
   bootReducer,
   diagnosticsReducer, // Handles Self-Diagnostics Mode (US-046); owns diagnostics-* states and the ▲-at-boot entry
   calculatorReducer,
@@ -96,6 +95,11 @@ export function droReducer(
   if (isEventBlockedByKeypadLock(current.stateName, event.eventName, context.nvMem)) {
     return current;
   }
+
+  // Sleep owns consumption, not just result priority: do not execute later
+  // reducers' side effects for the key that only wakes the display.
+  const sleepResult = sleepReducer(current, event, context);
+  if (sleepResult !== null) return sleepResult;
 
   let firstResult: DROStatePayload | null = null;
   const handlers: string[] = [];

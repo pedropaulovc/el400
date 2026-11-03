@@ -172,10 +172,10 @@ function computeArcNavigateDisplay(
   const pointPos = calculateArcPointPosition(arcData, arcData.currentPoint);
 
   const { millState } = context;
-  const currentX = millState.connected
+  const currentX = millState.connected || millState.controllerType === 'cncjs'
     ? millState.position.x - vMem.workOffsets.X
     : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected
+  const currentY = millState.connected || millState.controllerType === 'cncjs'
     ? millState.position.y - vMem.workOffsets.Y
     : vMem.manualAbsoluteValues.Y;
 

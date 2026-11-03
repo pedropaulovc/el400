@@ -1,13 +1,27 @@
 /**
  * Inch/MM Mode Feature Reducer
  *
- * Handles inch/mm unit toggling from idle state.
- * Updates nvMem.defaultUnit and recomputes display.
+ * Requests controller-owned CNCjs units; display-only modes update local settings.
  */
 
-import type { FeatureReducer } from '../types';
+import type { FeatureReducer, DROReducerContext } from '../types';
 import { computeNormalDisplay } from '../utils/displayComputation';
 import { useSettingsStore } from '../../settingsStore';
+import { useMillStore } from '../../millStore';
+
+/** Shared unit-button path. Only detected display-only controllers toggle locally. */
+export function toggleUnit(context: DROReducerContext): DROReducerContext {
+  if (context.millState.controllerType === 'cncjs' &&
+      context.millState.unitControl?.control !== 'display') {
+    const confirmed = context.millState.unitControl?.confirmed;
+    const target = (confirmed ?? context.nvMem.defaultUnit) === 'inch' ? 'mm' : 'inch';
+    void useMillStore.getState().requestUnits(target);
+    return context;
+  }
+  const newUnit = context.nvMem.defaultUnit === 'inch' ? 'mm' : 'inch';
+  useSettingsStore.getState().updateNvMem({ defaultUnit: newUnit });
+  return { ...context, nvMem: { ...context.nvMem, defaultUnit: newUnit } };
+}
 
 export const inchMmReducer: FeatureReducer = (state, event, context) => {
   const { stateName, vMem } = state;
@@ -18,16 +32,7 @@ export const inchMmReducer: FeatureReducer = (state, event, context) => {
     return null;
   }
 
-  // Toggle unit in nvMem (side effect)
-  const currentUnit = context.nvMem.defaultUnit;
-  const newUnit: 'inch' | 'mm' = currentUnit === 'inch' ? 'mm' : 'inch';
-  useSettingsStore.getState().updateNvMem({ defaultUnit: newUnit });
-
-  // Create updated context with new unit for display computation
-  const updatedContext = {
-    ...context,
-    nvMem: { ...context.nvMem, defaultUnit: newUnit },
-  };
+  const updatedContext = toggleUnit(context);
 
   return {
     ...state,

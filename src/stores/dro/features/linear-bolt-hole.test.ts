@@ -284,15 +284,32 @@ describe('linearBoltHoleReducer', () => {
       expect(r?.display.X).toBeCloseTo(15, 4);
     });
 
-    it('returns the state unchanged for non-navigate states', () => {
+    it('preserves the typed pitch and selected axis when encoder positions update', () => {
       const pitch: DROStatePayload = {
         stateName: 'linear-bolt-hole-pitch',
-        stateData: dataWith({ axis: 'X' }),
+        stateData: dataWith({ axis: 'Y' }),
         vMem: INITIAL_VOLATILE_MEMORY_STATE,
         display: INITIAL_DISPLAY_STATE,
       };
-      const r = linearBoltHoleReducer(pitch, { eventName: 'MILL_STATE_CHANGED' }, MM_CONTEXT);
-      expect(r).toBe(pitch);
+      const typed = linearBoltHoleReducer(pitch, { eventName: 'KEY_5' }, MM_CONTEXT);
+      if (!typed) throw new Error('Pitch entry was not handled');
+      const movedContext = {
+        ...MM_CONTEXT,
+        millState: {
+          ...MM_CONTEXT.millState,
+          connected: true,
+          position: { x: 100, y: 200, z: 300 },
+        },
+      };
+      const refreshed = linearBoltHoleReducer(typed, { eventName: 'MILL_STATE_CHANGED' }, movedContext);
+      if (!refreshed) throw new Error('Pitch refresh was not handled');
+      expect(refreshed.stateName).toBe('linear-bolt-hole-pitch');
+      expect(refreshed.stateData).toEqual(typed.stateData);
+      expect(refreshed.vMem.inputBuffer).toBe('5');
+      expect(refreshed.display).toEqual(typed.display);
+      expect(refreshed.display.Y).toBe(5);
+      const committed = linearBoltHoleReducer(refreshed, { eventName: 'KEY_ENTER' }, movedContext);
+      expect(committed?.stateData).toEqual(expect.objectContaining({ axis: 'Y', pitch: 5 }));
     });
   });
 });

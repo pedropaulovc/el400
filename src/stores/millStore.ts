@@ -8,7 +8,8 @@
 import { create } from 'zustand';
 import type { MillAdapter } from '../adapters/MillAdapter';
 import { NoOpMillAdapter } from '../adapters/NoOpMillAdapter';
-import type { MillState } from '../types/millState';
+import type { MillState, MillUnit, MillPosition } from '../types/millState';
+import { useSettingsStore } from './settingsStore';
 import { createDefaultMillState } from '../types/millState';
 
 // ─────────────────────────────────────────────────────────────────
@@ -24,6 +25,8 @@ interface MillStore {
 
   // Actions
   setConnection: (connection: MillAdapter) => void;
+  requestUnits: (unit: MillUnit) => Promise<void>;
+  requestWorkPosition: (position: Partial<MillPosition>) => Promise<void>;
 
   // Internal actions (prefixed with _)
   _setMillState: (state: MillState) => void;
@@ -37,7 +40,7 @@ interface MillStore {
 
 const defaultAdapter = new NoOpMillAdapter();
 
-export const useMillStore = create<MillStore>()((set) => ({
+export const useMillStore = create<MillStore>()((set, get) => ({
   // Initial state
   millState: createDefaultMillState('noop'),
   connection: defaultAdapter,
@@ -51,9 +54,51 @@ export const useMillStore = create<MillStore>()((set) => ({
       error: null,
     });
   },
+  requestUnits: async (unit) => {
+    set({ error: null });
+    const { connection, millState } = get();
+    try {
+      if (millState.controllerType !== 'cncjs' || !millState.connected ||
+          millState.unitControl?.control !== 'controller' ||
+          millState.unitControl.availability !== 'ready' ||
+          millState.unitControl.pending || millState.workPositionControl?.pending ||
+          !connection.requestUnits) {
+        throw new Error('Controller units cannot be changed right now.');
+      }
+      await connection.requestUnits(unit);
+    } catch (err) {
+      set({ error: err instanceof Error ? err : new Error(String(err)) });
+    }
+  },
+  requestWorkPosition: async (position) => {
+    set({ error: null });
+    const { connection, millState } = get();
+    try {
+      if (!millState.connected || millState.workPositionControl?.availability !== 'ready' ||
+          millState.workPositionControl.pending || millState.unitControl?.pending ||
+          !connection.requestWorkPosition) {
+        throw new Error('Controller work coordinates cannot be changed right now.');
+      }
+      await connection.requestWorkPosition(position);
+    } catch (err) {
+      set({ error: err instanceof Error ? err : new Error(String(err)) });
+    }
+  },
 
   // Internal actions
-  _setMillState: (millState) => { set({ millState }); },
+  _setMillState: (millState) => {
+    set({ millState });
+    const confirmed = millState.unitControl?.confirmed;
+    if (millState.controllerType === 'cncjs' && millState.connected &&
+        millState.unitControl?.control === 'controller' &&
+        (confirmed === 'mm' || confirmed === 'inch')) {
+      const previous = useSettingsStore.getState().nvMem.defaultUnit;
+      if (previous !== confirmed) {
+        useSettingsStore.getState().updateNvMem({ defaultUnit: confirmed });
+        droUnitSync?.(previous, confirmed);
+      }
+    }
+  },
   _setConnecting: (isConnecting) => { set({ isConnecting }); },
   _setError: (error) => { set({ error }); },
 }));
@@ -99,6 +144,14 @@ export const useSetConnection = () => useMillStore((s) => s.setConnection);
 
 // Import droStore dynamically to avoid circular dependencies
 let droStoreDispatch: ((event: { eventName: string }) => void) | null = null;
+let droUnitSync: ((previous: MillUnit, confirmed: MillUnit) => void) | null = null;
+
+/** Register display synchronization without importing droStore circularly. */
+export function setDROUnitSync(
+  sync: ((previous: MillUnit, confirmed: MillUnit) => void) | null
+): void {
+  droUnitSync = sync;
+}
 
 /**
  * Set the DRO store dispatch function for MILL_STATE_CHANGED events.

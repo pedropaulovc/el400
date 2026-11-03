@@ -24,8 +24,27 @@ import {
   type ZeroApproachByAxis,
   type ZeroApproachArmed,
 } from './dro/utils/zeroApproach';
-import { useMillStore, setDRODispatch } from './millStore';
+import { useMillStore, setDRODispatch, setDROUnitSync } from './millStore';
 import { useSettingsStore } from './settingsStore';
+import { fromAnyUnitToMm, fromMmToAnyUnit } from '../utils/unitConversion';
+
+/**
+ * Only length-entry buffers follow controller units. Counts, angles, calculator
+ * operands and setup parameters keep their own meanings on a unit change.
+ */
+const LENGTH_INPUT_STATES: Partial<Record<DROStateName, true>> = {
+  idle: true,
+  'preset-input-x': true, 'preset-input-y': true, 'preset-input-z': true,
+  'bolt-hole-circle-center-x': true, 'bolt-hole-circle-center-y': true, 'bolt-hole-circle-radius': true,
+  'bolt-hole-arc-center-x': true, 'bolt-hole-arc-center-y': true, 'bolt-hole-arc-radius': true,
+  'arc-contour-center-x': true, 'arc-contour-center-y': true, 'arc-contour-radius': true,
+  'arc-contour-tool-diameter': true, 'arc-contour-max-cut': true,
+  'angle-hole-start-x': true, 'angle-hole-start-y': true, 'angle-hole-pitch': true,
+  'linear-bolt-hole-pitch': true,
+  'grid-start-x': true, 'grid-start-y': true, 'grid-pitch-x': true, 'grid-pitch-y': true,
+  'sdm-program-input-x': true, 'sdm-program-input-y': true, 'sdm-program-input-z': true,
+  'probe-diameter': true,
+};
 
 /**
  * Which axes are armed for the Near-Zero Warning (US-024). In distance-to-go /
@@ -72,6 +91,12 @@ interface DROStore {
 // STORE IMPLEMENTATION
 // ─────────────────────────────────────────────────────────────────
 
+// Adapter notifications may arrive synchronously from a reducer's controller
+// request. Process them only after that transition commits, never recursively
+// against its old state (which could capture the same probe edge twice).
+const pendingEvents: DROEventPayload[] = [];
+let dispatchPhase: 'idle' | 'reducing' = 'idle';
+
 export const useDROStore = create<DROStore>()((set, get) => ({
   // Initial state from DRO state machine
   stateName: INITIAL_DRO_STATE_PAYLOAD.stateName,
@@ -82,40 +107,44 @@ export const useDROStore = create<DROStore>()((set, get) => ({
 
   // Dispatch action - calls reducer with cross-store context
   dispatch: (event) => {
-    const current = get();
-    const currentPayload: DROStatePayload = {
-      stateName: current.stateName,
-      stateData: current.stateData,
-      vMem: current.vMem,
-      display: current.display,
-    };
+    pendingEvents.push(event);
+    if (dispatchPhase === 'reducing') return;
+    dispatchPhase = 'reducing';
+    try {
+      for (const nextEvent of pendingEvents) {
+        const current = get();
+        const currentPayload: DROStatePayload = {
+          stateName: current.stateName,
+          stateData: current.stateData,
+          vMem: current.vMem,
+          display: current.display,
+        };
 
-    // Get context from other stores
-    const millState = useMillStore.getState().millState;
-    const nvMem = useSettingsStore.getState().nvMem;
-    const context: DROReducerContext = { millState, nvMem };
-
-    // Run through reducer
-    const newState = droReducer(currentPayload, event, context);
-
-    // Recompute the Near-Zero Warning from the fresh readout (US-024). Carrying
-    // the previous per-axis state forward gives the BP TOLR departure hysteresis.
-    const zeroApproach = computeZeroApproach(
-      newState.display,
-      nvMem,
-      current.zeroApproach,
-      newState.stateName,
-      armedAxesFor(newState.stateData)
-    );
-
-    // Update store with new state
-    set({
-      stateName: newState.stateName,
-      stateData: newState.stateData,
-      vMem: newState.vMem,
-      display: newState.display,
-      zeroApproach,
-    });
+        // Each queued notification observes the committed transition and the
+        // latest authoritative mill/settings state, without delaying commands.
+        const millState = useMillStore.getState().millState;
+        const nvMem = useSettingsStore.getState().nvMem;
+        const context: DROReducerContext = { millState, nvMem };
+        const newState = droReducer(currentPayload, nextEvent, context);
+        const zeroApproach = computeZeroApproach(
+          newState.display,
+          nvMem,
+          current.zeroApproach,
+          newState.stateName,
+          armedAxesFor(newState.stateData)
+        );
+        set({
+          stateName: newState.stateName,
+          stateData: newState.stateData,
+          vMem: newState.vMem,
+          display: newState.display,
+          zeroApproach,
+        });
+      }
+    } finally {
+      pendingEvents.length = 0;
+      dispatchPhase = 'idle';
+    }
   },
 
   // For testing - set state directly
@@ -146,6 +175,22 @@ export const useDROStore = create<DROStore>()((set, get) => ({
  * Extracted to an explicit function to avoid side effects at module import time.
  */
 export function initializeDROMillConnection(): void {
+  setDROUnitSync((previous, confirmed) => {
+    const current = useDROStore.getState();
+    const buffer = current.vMem.inputBuffer;
+    const value = Number(buffer);
+    const angularIdleEntry = current.stateName === 'idle' && current.vMem.activeAxis !== null &&
+      useSettingsStore.getState().nvMem.countingMode[current.vMem.activeAxis] === 'angular';
+    if (LENGTH_INPUT_STATES[current.stateName] && !angularIdleEntry &&
+        buffer !== '' && Number.isFinite(value)) {
+      // Change the presentation, not the eventual physical value committed by ENT.
+      const converted = fromMmToAnyUnit(fromAnyUnitToMm(value, previous), confirmed);
+      useDROStore.setState({
+        vMem: { ...current.vMem, inputBuffer: String(converted) },
+      });
+    }
+    useDROStore.getState().dispatch({ eventName: 'MILL_STATE_CHANGED' });
+  });
   setDRODispatch((event) => {
     useDROStore.getState().dispatch(event as DROEventPayload);
   });
@@ -207,10 +252,10 @@ export const useInputBuffer = () => useDROStore((s) => s.vMem.inputBuffer);
 /** Get work offsets */
 export const useWorkOffsets = () => useDROStore((s) => s.vMem.workOffsets);
 
-/** Get connected INC datum offsets */
+/** Get connected non-GRBL INC datum offsets (GRBL INC uses native WPos). */
 export const useIncrementalOffsets = () => useDROStore((s) => s.vMem.incrementalOffsets);
 
-/** Get disconnected manual INC counters */
+/** Get disconnected non-GRBL manual INC counters. */
 export const useIncrementalValues = () => useDROStore((s) => s.vMem.incrementalValues);
 
 /** Get manual absolute values */

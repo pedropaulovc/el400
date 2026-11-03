@@ -8,6 +8,7 @@ import type { FeatureReducer, DROStatePayload, DROReducerContext } from '../type
 import type { DROEventPayload } from '../droStateMachine';
 import type { Axis } from '../../../types/volatileMemory';
 import { computeAxisPositionMm, computeNormalDisplay } from '../utils/displayComputation';
+import { setAxisValueMm } from './axis-operations';
 
 /**
  * Get the machine position for an axis.
@@ -52,6 +53,9 @@ function halfAxis(
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: halfValue },
     };
+  }
+  if (millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, halfValue, context);
   }
   if (millState.connected) {
     return {

@@ -34,11 +34,31 @@ import {
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
 import {
   computeNormalDisplay,
+  computeAxisPositionMm,
+  computeDisplayPosition,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit } from '../../../utils/unitConversion';
 import { appendDigit, appendDecimal, getBufferValue, KEY_TO_DIGIT } from './buffer-utils';
+import { setAxisValueMm } from './axis-operations';
+
+function physicalReadings(vMem: VolatileMemoryState, context: DROReducerContext) {
+  return {
+    X: computeAxisPositionMm('X', vMem, context),
+    Y: computeAxisPositionMm('Y', vMem, context),
+    Z: computeAxisPositionMm('Z', vMem, context),
+  };
+}
+
+function frozenDisplay(data: ProbeData, vMem: VolatileMemoryState, context: DROReducerContext) {
+  const captured = data.frozenPositionMm;
+  return captured ? {
+    X: computeDisplayPosition('X', vMem, context, captured.X),
+    Y: computeDisplayPosition('Y', vMem, context, captured.Y),
+    Z: computeDisplayPosition('Z', vMem, context, captured.Z),
+  } : null;
+}
 
 /** 7-segment label shown for each probe sub-function (manual §10.1.2 abbreviations). */
 const PROBE_FUNCTION_LABEL: Record<ProbeFunction, string> = {
@@ -91,8 +111,8 @@ function exitToIdle(vMem: VolatileMemoryState, context: DROReducerContext): DROS
 
 /**
  * Set the selected axis datum so the displayed value reads `targetMm` at the
- * current machine position. Connected ABS and INC use independent offsets;
- * disconnected operation writes the selected manual counter directly.
+ * current machine position. GRBL INC requests native WPos; other sources use
+ * independent offsets or a disconnected manual counter.
  */
 function setAxisDatumMm(
   vMem: VolatileMemoryState,
@@ -111,6 +131,9 @@ function setAxisDatumMm(
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: targetMm },
     };
+  }
+  if (context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, targetMm, context);
   }
   if (context.millState.connected) {
     return {
@@ -153,6 +176,9 @@ function setAxisDatumAtMachinePos(
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: -delta },
     };
   }
+  if (context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, machinePos(axis, context) - machinePosMm, context);
+  }
   if (context.millState.connected) {
     return {
       ...vMem,
@@ -171,7 +197,9 @@ function resultDisplay(
   resultMm: number,
   context: DROReducerContext
 ): DisplayState {
-  const value = fromMmToAnyUnit(resultMm, context.nvMem.defaultUnit);
+  const value = context.nvMem.countingMode[axis] === 'angular'
+    ? resultMm
+    : fromMmToAnyUnit(resultMm, context.nvMem.defaultUnit);
   return createDisplay(
     axis === 'X' ? value : '',
     axis === 'Y' ? value : '',
@@ -195,7 +223,10 @@ function applyCapture(
     const newVMem = setAxisDatumMm(vMem, axis, 0, context);
     return {
       stateName: 'probe-result',
-      stateData: { ...data, captures, probeTriggered: true, lastProbeTriggered: true },
+      stateData: {
+        ...data, captures, probeTriggered: true, lastProbeTriggered: true,
+        frozenPositionMm: physicalReadings(newVMem, context),
+      },
       vMem: newVMem,
       display: computeNormalDisplay(newVMem, context),
     };
@@ -221,7 +252,10 @@ function applyCapture(
     const newVMem = setAxisDatumAtMachinePos(vMem, axis, mid, context);
     return {
       stateName: 'probe-result',
-      stateData: { ...data, captures, probeTriggered: true, lastProbeTriggered: true },
+      stateData: {
+        ...data, captures, probeTriggered: true, lastProbeTriggered: true,
+        frozenPositionMm: physicalReadings(newVMem, context),
+      },
       vMem: newVMem,
       display: computeNormalDisplay(newVMem, context),
     };
@@ -293,14 +327,18 @@ function handleIdleFreeze(
   if (!data.lastProbeTriggered) {
     return {
       ...state,
-      stateData: { ...INITIAL_PROBE_DATA, lastProbeTriggered: true, probeTriggered: true },
+      stateData: {
+        ...INITIAL_PROBE_DATA, lastProbeTriggered: true, probeTriggered: true,
+        frozenPositionMm: physicalReadings(state.vMem, context),
+      },
       display: computeNormalDisplay(state.vMem, context),
     };
   }
   return {
     ...state,
     stateData: { ...data, lastProbeTriggered: true },
-    // Display intentionally left unchanged (frozen) from the contact tick.
+    display: frozenDisplay(data, state.vMem, context) ?? state.display,
+    // Reformat the captured physical reading; held motion never replaces it.
   };
 }
 
@@ -405,6 +443,16 @@ export const probeReducer: FeatureReducer = (state, event, context) => {
 
   // ── Result shown; only C (handled above) exits ────────────────────────────
   if (stateName === 'probe-result') {
+    if (event.eventName === 'MILL_STATE_CHANGED') {
+      if (data.resultMm !== null && data.probeAxis !== null) {
+        return { ...state, display: resultDisplay(data.probeAxis, data.resultMm, context) };
+      }
+      if (vMem.mode === 'inc' && context.millState.workPositionControl !== undefined) {
+        return { ...state, display: computeNormalDisplay(vMem, context) };
+      }
+      const display = frozenDisplay(data, vMem, context);
+      if (display) return { ...state, display };
+    }
     return state;
   }
 

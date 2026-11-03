@@ -16,6 +16,7 @@ import {
   maxDisplayableMagnitude,
   measurementScale,
 } from '../utils/displayComputation';
+import { useMillStore } from '../../millStore';
 
 /**
  * Get the machine position for an axis.
@@ -56,6 +57,10 @@ function zeroAxis(
       ...vMem,
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: 0 },
     };
+  }
+
+  if (millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, 0, context);
   }
 
   // Connected INC has its own datum; manual INC keeps a standalone counter.
@@ -104,7 +109,7 @@ function setAxisValue(
  * Set an axis to a specific value (value already in mm).
  * Keeps the axis selected for further operations (like half).
  */
-function setAxisValueMm(
+export function setAxisValueMm(
   vMem: DROStatePayload['vMem'],
   axis: Axis,
   valueMm: number,
@@ -129,6 +134,11 @@ function setAxisValueMm(
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: valueMm },
       inputBuffer: '',
     };
+  }
+  if (millState.workPositionControl !== undefined) {
+    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+    void useMillStore.getState().requestWorkPosition({ [axisKey]: valueMm });
+    return { ...vMem, inputBuffer: '' };
   }
   if (millState.connected) {
     return {
@@ -165,6 +175,19 @@ export const axisOperationsReducer: FeatureReducer = (
   const { vMem } = state;
 
   switch (event.eventName) {
+    case 'BTN_ZERO_ALL': {
+      let newVMem = vMem;
+      if (vMem.mode === 'inc' && context.millState.workPositionControl !== undefined) {
+        void useMillStore.getState().requestWorkPosition({ x: 0, y: 0, z: 0 });
+      } else {
+        for (const axis of ['X', 'Y', 'Z'] as const) {
+          newVMem = zeroAxis(newVMem, axis, context);
+        }
+      }
+      newVMem = { ...newVMem, inputBuffer: '', activeAxis: null };
+      return { ...state, vMem: newVMem, display: computeNormalDisplay(newVMem, context) };
+    }
+
     // Axis selection buttons - no display change (selecting doesn't change values)
     case 'BTN_SELECT_X':
       return {
