@@ -96,7 +96,7 @@ Install the prebuilt npm package, then mount its `web/` directory at `/el400/`
 so the DRO shares CNCjs's origin:
 
 ```sh
-npm install --save-exact el400@0.2.0
+npm install --save-exact el400@0.3.0
 cncjs --mount /el400:/absolute/path/to/node_modules/el400/web
 ```
 
@@ -124,6 +124,32 @@ http://localhost:8000/el400/?source=cncjs&token=<CNCjs session token>
 
 To point at a CNCjs instance on a different origin, pass `host`/`port`
 explicitly (`host` may be a bare hostname or a full `https://…` origin).
+
+### Browser fullscreen
+
+Use **Enter fullscreen** below the readout, in place of the former keypad instruction,
+then **Exit fullscreen** or **Esc** to leave. Both buttons work with keyboard focus and Enter/Space. Like CNCjs
+Shopfloor Tablet, fullscreen is requested only by a user action, never on load.
+The physical EL400 face, LEDs and connection stay unchanged.
+
+In a CNCjs custom widget, fullscreen displays the EL400 document, not the CNCjs
+workspace. Modern browsers normally permit fullscreen in same-origin iframes
+through the default `fullscreen` Permissions Policy (`self`), even without an
+`allowfullscreen` attribute. Restrictive ancestor policies, cross-origin
+embedding and browser support can still prevent it; the control reports the
+actual browser capability and request failures. CNCjs's widget-menu **Enter Full
+Screen** only expands the widget within its workspace; it is not browser fullscreen.
+
+An embedded readout also offers **Open EL400 in new tab** in the same footer.
+Fullscreen availability and request errors appear there too. This user-activated
+link retains the exact current URL, including `/el400/`, source, host, serial port
+and CNCjs token. It stays on the same origin, sends no referrer and gives the new
+tab no opener. Treat that URL as a credential: do not share it. In the new tab,
+click **Enter fullscreen**; opening the tab does not automatically enter fullscreen.
+CNCjs's iframe sandbox allows popups but the new tab inherits its sandbox, so it
+is not a general sandbox bypass. If your browser blocks the tab or still denies
+fullscreen, use the link's context menu to copy its address into an independent
+tab, or use your browser's own fullscreen command. No CNCjs changes are required.
 
 ### Query parameters
 

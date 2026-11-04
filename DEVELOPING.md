@@ -23,6 +23,40 @@ npm run build -- --base=/el400/
 cncjs --mount /el400:/absolute/path/to/el400/dist
 ```
 
+### Fullscreen behavior and regression checks
+
+The display control requests `document.documentElement.requestFullscreen()` from
+the user's click and exits with `document.exitFullscreen()`, following
+[Shopfloor Tablet](https://github.com/cncjs/cncjs-shopfloor-tablet/blob/master/src/app.js).
+Only `fullscreenchange` and the real `fullscreenElement` determine active state;
+promise completion alone does not. Rejections are reported, not simulated with CSS.
+The control is outside `EL400Simulator`, so panel keyboard shortcuts and physical
+appearance are unchanged.
+
+CNCjs's [Custom widget](https://github.com/cncjs/cncjs/blob/a3922a1bf24416376d6fb67707559549c184f35a/src/app/widgets/Custom/Custom.jsx)
+does not supply `allowfullscreen`. Its `@trendmicro/react-iframe` wrapper defaults
+to `sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"`.
+The [default fullscreen Permissions Policy is `self`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy/fullscreen),
+which allows the same-origin `/el400/` mount; absence of `allowfullscreen` alone
+does not prove it is blocked. Cross-origin or restrictive ancestor policies may
+deny fullscreen. The link fallback retains the same URL/token and opens only on
+user activation, with `noopener noreferrer`; it never navigates the CNCjs parent.
+Popups inherit the sandbox because CNCjs does not set
+`allow-popups-to-escape-sandbox`; do not describe this as an unsandboxing mechanism.
+
+Focused regression commands (these also start the configured E2E servers):
+
+```sh
+npx vitest run src/components/FullscreenControl.test.tsx src/pages/Index.integration.test.tsx
+npx playwright test e2e/01-foundation/fullscreen.spec.ts --project=chromium
+```
+
+The browser regression uses real Fullscreen API requests, the actual CNCjs-style
+same-origin iframe attributes, an explicitly denied embed, and a popup with the
+same token-bearing URL. It covers accessible entry/exit and external browser exit,
+not physical-machine motion. Run the normal `npm run test:all`, `npm run build`
+and `npm run build:package` release checks as well.
+
 ## Tech Stack
 
 - Vite
