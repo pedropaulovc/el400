@@ -29,7 +29,11 @@ try {
   let end = start;
   while (end < lines.length && !/^##(?:\s|$)/.test(lines[end])) end++;
   const notes = lines.slice(start, end).join('\n').trim();
-  if (!notes.replace(/<!--[^]*?-->/g, '').replace(/^\s*#{1,6}\s*.*$/gm, '').trim()) {
+  const textParts = notes.split(/<!--[\s\S]*?-->/);
+  const hasNotes = textParts.some(part =>
+    part.split('\n').some(line => line.trim() && !/^\s*#{1,6}\s/.test(line)),
+  );
+  if (!hasNotes) {
     throw new Error(`Changelog section for ${version} is empty`);
   }
 
