@@ -11,9 +11,9 @@ export function FullscreenControl() {
   const enabled = supported && document.fullscreenEnabled;
 
   useEffect(() => {
-    const sync = () => setActive(document.fullscreenElement === document.documentElement);
+    const sync = () => { setActive(document.fullscreenElement === document.documentElement); };
     document.addEventListener('fullscreenchange', sync);
-    return () => document.removeEventListener('fullscreenchange', sync);
+    return () => { document.removeEventListener('fullscreenchange', sync); };
   }, []);
 
   const toggle = async () => {
@@ -46,7 +46,7 @@ export function FullscreenControl() {
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
-          onClick={toggle}
+          onClick={() => { void toggle(); }}
           disabled={pending || (!enabled && !active)}
           aria-pressed={active}
           className="rounded border border-[#5a5a50] bg-[#e0e0d0] px-3 py-2 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-60"

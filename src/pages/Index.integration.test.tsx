@@ -28,7 +28,7 @@ it('integrates fullscreen outside the physical panel without remounting it or in
     Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: document.documentElement });
     document.dispatchEvent(new Event('fullscreenchange'));
   });
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeEnabled());
+  await waitFor(() => { expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeEnabled(); });
   expect(screen.getByTestId('el400-simulator')).toBe(simulator);
   expect(screen.getByTestId('key-9')).toBeVisible();
 });

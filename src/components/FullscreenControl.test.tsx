@@ -39,21 +39,21 @@ describe('FullscreenControl', () => {
     expect(request.mock.contexts[0]).toBe(document.documentElement);
     // A resolved promise alone is not proof of fullscreen.
     expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toHaveAttribute('aria-pressed', 'false');
-    act(() => changeFullscreen(document.documentElement));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeEnabled());
+    act(() => { changeFullscreen(document.documentElement); });
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeEnabled(); });
     fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
     expect(exit).toHaveBeenCalledOnce();
     expect(exit.mock.contexts[0]).toBe(document);
-    act(() => changeFullscreen(null));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeEnabled());
+    act(() => { changeFullscreen(null); });
+    await waitFor(() => { expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeEnabled(); });
   });
 
   it('tracks browser-initiated entry/exit and removes its event listener on unmount', () => {
     const remove = vi.spyOn(document, 'removeEventListener');
     const { unmount } = render(<FullscreenControl />);
-    act(() => changeFullscreen(document.documentElement));
+    act(() => { changeFullscreen(document.documentElement); });
     expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveAttribute('aria-pressed', 'true');
-    act(() => changeFullscreen(null));
+    act(() => { changeFullscreen(null); });
     expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toHaveAttribute('aria-pressed', 'false');
     unmount();
     expect(remove).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
@@ -63,7 +63,7 @@ describe('FullscreenControl', () => {
     request.mockRejectedValue(new TypeError('Permission denied'));
     render(<FullscreenControl />);
     fireEvent.click(screen.getByRole('button', { name: 'Enter fullscreen' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('did not allow fullscreen'));
+    await waitFor(() => { expect(screen.getByRole('status')).toHaveTextContent('did not allow fullscreen'); });
     expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeEnabled();
     const link = screen.getByRole('link', { name: 'Open EL400 in new tab' });
     expect(link).toHaveAttribute('href', window.location.href);
@@ -75,7 +75,7 @@ describe('FullscreenControl', () => {
     exit.mockRejectedValue(new Error('Cannot exit'));
     render(<FullscreenControl />);
     fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Use Esc'));
+    await waitFor(() => { expect(screen.getByRole('status')).toHaveTextContent('Use Esc'); });
     expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -104,7 +104,7 @@ describe('FullscreenControl', () => {
     expect(button).toBeDisabled();
     fireEvent.click(button);
     expect(request).toHaveBeenCalledOnce();
-    await act(async () => resolve());
+    await act(async () => { resolve(); });
     expect(button).toBeEnabled();
   });
 });
