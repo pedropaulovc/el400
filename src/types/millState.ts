@@ -100,7 +100,7 @@ export interface MillState {
   encoderSignal: EncoderSignalByAxis;
   /** Native controller units, independent of the physical coordinate report scale. */
   unitControl?: MillUnitControl;
-  /** Present when INC is controller-owned, including while disconnected/unknown. */
+  /** Present when ABS is controller-owned, including while disconnected/unknown. */
   workPositionControl?: MillWorkPositionControl;
 }
 

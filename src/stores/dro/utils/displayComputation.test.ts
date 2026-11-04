@@ -76,6 +76,36 @@ function manualVMem(absoluteMm: Partial<VolatileMemoryState['manualAbsoluteValue
   };
 }
 
+describe('native controller coordinate ownership', () => {
+  it.each([true, false])('uses WPos for ABS and independent MPos offsets for INC when connected=%s', (connected) => {
+    const ctx: DROReducerContext = {
+      millState: {
+        ...createDefaultMillState('cncjs'),
+        connected,
+        position: { x: 100, y: 200, z: 300 },
+        workPosition: { x: 25, y: 35, z: 45 },
+        workPositionControl: { availability: 'ready', pending: null, error: null },
+      },
+      nvMem: makeNvMem(),
+    };
+    const vMem: VolatileMemoryState = {
+      ...INITIAL_VOLATILE_MEMORY_STATE,
+      mode: 'abs',
+      workOffsets: { X: 10, Y: 20, Z: 30 },
+      incrementalOffsets: { X: 60, Y: 70, Z: 80 },
+      manualAbsoluteValues: { X: 1, Y: 2, Z: 3 },
+      incrementalValues: { X: 4, Y: 5, Z: 6 },
+    };
+    expect(computeAxisPositionMm('X', vMem, ctx)).toBe(25);
+    const inc = { ...vMem, mode: 'inc' as const };
+    expect(computeAxisPositionMm('X', inc, ctx)).toBe(40);
+    const externalWPos = { ...ctx, millState: { ...ctx.millState, workPosition: { x: -17, y: 35, z: 45 } } };
+    expect(computeAxisPositionMm('X', vMem, externalWPos)).toBe(-17);
+    expect(computeAxisPositionMm('X', inc, externalWPos)).toBe(40);
+    expect(computeDisplayPosition('X', inc, externalWPos)).toBe(40);
+  });
+});
+
 describe('computeDisplayPosition — Direction transform', () => {
   describe('per-axis Direction sign (mm units)', () => {
     it('normal direction shows the positive value (AC 2.1)', () => {

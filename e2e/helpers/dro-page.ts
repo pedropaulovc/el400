@@ -483,6 +483,21 @@ export class DROPage {
       .toBe(expected);
   }
 
+  /** Simulate another client setting the active WPos, in mm, without motion. */
+  async simulateExternalWorkPosition(axis: 'X' | 'Y' | 'Z', value: number): Promise<void> {
+    const response = await fetch(
+      `http://localhost:${this.mockServerPort}/api/work-position?sessionId=${this.sessionId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ axis, value }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to set external work position: ${response.statusText}`);
+    }
+  }
+
   /**
    * Simulate relative encoder movement for an axis.
    * Calls the mock CNCjs server HTTP API to add delta to current position.

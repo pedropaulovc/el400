@@ -98,6 +98,14 @@ function enterLinearPitch(): void {
   dispatch({ eventName: 'KEY_ENTER' });
   expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
   dispatch({ eventName: 'BTN_SELECT_X' });
+  if (useMillStore.getState().millState.workPositionControl !== undefined) {
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
+    const { position, workPosition, unitControl } = useMillStore.getState().millState;
+    advanceWorkQueue();
+    report(unitControl?.confirmed ?? 'mm', position.x, position.y, position.z, {
+      ...workPosition!, x: 0,
+    });
+  }
   expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-pitch');
 }
 
@@ -149,6 +157,48 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     cleanup?.();
     cleanup = undefined;
     setDRODispatch(null);
+  });
+
+  it('keeps linear origin selection failed when a WCS cancellation reports the same numeric zero as the target', () => {
+    const machine = { x: 25.4, y: 50.8, z: 76.2 };
+    const initialWork = { x: 12.7, y: -25.4, z: 38.1 };
+    report('mm', machine.x, machine.y, machine.z, initialWork);
+    socket.emit.mockClear();
+    dispatch({ eventName: 'BTN_FUNCTION' });
+    dispatch({ eventName: 'KEY_6_RIGHT' });
+    dispatch({ eventName: 'KEY_6_RIGHT' });
+    dispatch({ eventName: 'KEY_6_RIGHT' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
+    const before = useDROStore.getState().vMem;
+    dispatch({ eventName: 'BTN_SELECT_X' });
+    expect(workCommands()).toHaveLength(1);
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toEqual({ x: 0 });
+    expect(useDROStore.getState().stateData).toEqual(expect.objectContaining({
+      stateDataType: 'linear-bolt-hole', originRequestPhase: 'pending',
+    }));
+
+    // Another WCS happens to read exactly zero. It cancels our G54 edit rather
+    // than confirming it, even though a numeric-only confirmation would match.
+    receive('controller:state', 'Grbl', {
+      parserstate: { modal: { units: 'G21', wcs: 'G55' } },
+      status: { activeState: 'Idle', mpos: machine, wpos: { ...initialWork, x: 0 } },
+    });
+    expect(useMillStore.getState().millState.workPosition?.x).toBe(0);
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
+    expect(useMillStore.getState().millState.workPositionControl?.error).toContain('Active work coordinate system changed');
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
+    expect(useDROStore.getState().stateData).toEqual(expect.objectContaining({
+      stateDataType: 'linear-bolt-hole', originRequestPhase: 'failed',
+    }));
+    expect(useDROStore.getState().vMem).toEqual(before);
+
+    report('mm', machine.x, machine.y, machine.z, { ...initialWork, x: 0 });
+    dispatch({ eventName: 'KEY_1' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().stateName).toBe('linear-bolt-hole-axis');
+    expect(useDROStore.getState().vMem).toEqual(before);
+    expect(workCommands()).toHaveLength(1);
   });
 
   it('follows external G20 then G21 without echoing a unit command or scaling physical position', () => {
@@ -231,10 +281,9 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     if (condition === 'asleep') expect(useDROStore.getState().vMem.displayPower).toBe('awake');
   });
 
-  it('zeros native INC only after WPos confirmation and preserves MPos and other axes', () => {
+  it('zeros native ABS only after WPos confirmation and preserves MPos and other axes', () => {
     const initialWork = { x: 12.7, y: -25.4, z: 38.1 };
     report('mm', 25.4, 50.8, 76.2, initialWork);
-    dispatch({ eventName: 'BTN_ABS_INC' });
     expect(useDROStore.getState().display).toEqual({ X: 12.7, Y: -25.4, Z: 38.1 });
     const offsets = useDROStore.getState().vMem.incrementalOffsets;
     dispatch({ eventName: 'BTN_ZERO_X' });
@@ -274,9 +323,8 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(workCommands()).toHaveLength(1);
   });
 
-  it.each(['mm', 'inch'] as const)('presets native INC in %s without optimistic readout or physical motion', (unit) => {
+  it.each(['mm', 'inch'] as const)('presets native ABS in %s without optimistic readout or physical motion', (unit) => {
     report(unit, 25.4, 50.8, 76.2, { x: 12.7, y: -25.4, z: 38.1 });
-    dispatch({ eventName: 'BTN_ABS_INC' });
     dispatch({ eventName: 'BTN_SELECT_X' });
     useDROStore.getState().dispatch({ eventName: 'SET_INPUT_BUFFER', value: unit === 'inch' ? '2' : '50.8' });
     dispatch({ eventName: 'KEY_ENTER' });
@@ -297,7 +345,6 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
 
   it('still sends an explicit zero when cached WPos already equals the requested value', () => {
     report('mm', 25.4, 50.8, 76.2, { x: 0, y: 50.8, z: 76.2 });
-    dispatch({ eventName: 'BTN_ABS_INC' });
     dispatch({ eventName: 'BTN_ZERO_X' });
     expect(workCommands()).toHaveLength(1);
     expect(workCommands()[0]?.[3]).toBe('G21 G10 L20 P1 X0');
@@ -312,7 +359,6 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
   });
 
   it.each(['WCO', 'paired-MPos-WPos'] as const)('requests atomic native zero-all confirmed by fresh %s status', (format) => {
-    dispatch({ eventName: 'BTN_ABS_INC' });
     const before = useDROStore.getState().display;
     dispatch({ eventName: 'BTN_ZERO_ALL' });
     expect(workCommands()).toHaveLength(1);
@@ -327,6 +373,73 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(useDROStore.getState().display).toEqual({ X: 0, Y: 0, Z: 0 });
     expect(useMillStore.getState().millState.position).toEqual({ x: 25.4, y: 50.8, z: 76.2 });
     expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
+  });
+
+  it('keeps native INC independent of external WCS changes while both modes follow motion', () => {
+    report('mm', 25.4, 50.8, 76.2, { x: 12.7, y: -25.4, z: 38.1 });
+    expect(useDROStore.getState().display.X).toBeCloseTo(12.7);
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    dispatch({ eventName: 'BTN_ZERO_X' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(0);
+    expect(workCommands()).toEqual([]);
+    report('mm', 25.4, 50.8, 76.2, { x: 5, y: -25.4, z: 38.1 });
+    expect(useDROStore.getState().display.X).toBeCloseTo(0);
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(5);
+    report('mm', 35.4, 50.8, 76.2, { x: 15, y: -25.4, z: 38.1 });
+    expect(useDROStore.getState().display.X).toBeCloseTo(15);
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(10);
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(15);
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(10);
+    expect(workCommands()).toEqual([]);
+  });
+
+  it.each(['mm', 'inch'] as const)('performs native INC zero, preset, half, and zero-all locally in %s', (unit) => {
+    report(unit, 25.4, 50.8, 76.2, { x: 5, y: 10, z: 15 });
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    dispatch({ eventName: 'BTN_ZERO_X' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(0);
+    dispatch({ eventName: 'BTN_SELECT_Y' });
+    dispatch({ eventName: 'SET_INPUT_BUFFER', value: unit === 'inch' ? '1' : '25.4' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().display.Y).toBeCloseTo(unit === 'inch' ? 1 : 25.4);
+    useDROStore.setState({
+      vMem: { ...useDROStore.getState().vMem, activeAxis: 'Y' },
+    });
+    dispatch({ eventName: 'BTN_HALF' });
+    expect(useDROStore.getState().display.Y).toBeCloseTo(unit === 'inch' ? 0.5 : 12.7);
+    dispatch({ eventName: 'BTN_ZERO_ALL' });
+    expect(useDROStore.getState().display).toEqual({ X: 0, Y: 0, Z: 0 });
+    expect(useDROStore.getState().vMem.incrementalOffsets).toEqual({ X: 25.4, Y: 50.8, Z: 76.2 });
+    expect(workCommands()).toEqual([]);
+    expect(useMillStore.getState().millState.workPositionControl?.pending).toBeNull();
+  });
+
+  it('uses retained machine position for INC datum operations after CNCjs disconnect', async () => {
+    report('mm', 25.4, 50.8, 76.2, { x: 5, y: 10, z: 15 });
+    dispatch({ eventName: 'BTN_ABS_INC' });
+    receive('disconnect');
+    await Promise.resolve();
+    dispatch({ eventName: 'BTN_ZERO_X' });
+    expect(useDROStore.getState().display.X).toBeCloseTo(0);
+    expect(useDROStore.getState().vMem.incrementalOffsets.X).toBeCloseTo(25.4);
+    dispatch({ eventName: 'BTN_SELECT_Y' });
+    dispatch({ eventName: 'SET_INPUT_BUFFER', value: '20' });
+    dispatch({ eventName: 'KEY_ENTER' });
+    expect(useDROStore.getState().display.Y).toBeCloseTo(20);
+    expect(useDROStore.getState().vMem.incrementalOffsets.Y).toBeCloseTo(30.8);
+    useDROStore.setState({
+      vMem: { ...useDROStore.getState().vMem, activeAxis: 'Y' },
+    });
+    dispatch({ eventName: 'BTN_HALF' });
+    expect(useDROStore.getState().display.Y).toBeCloseTo(10);
+    dispatch({ eventName: 'BTN_ZERO_ALL' });
+    expect(useDROStore.getState().vMem.incrementalOffsets).toEqual({ X: 25.4, Y: 50.8, Z: 76.2 });
+    expect(useDROStore.getState().display).toEqual({ X: 0, Y: 0, Z: 0 });
+    expect(workCommands()).toEqual([]);
   });
 
   it('retains a local INC datum for detected non-GRBL controllers', () => {
@@ -353,9 +466,8 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
     expect(unitCommands()).toHaveLength(1);
   });
 
-  it.each(['mm', 'inch'] as const)('retains native INC in %s offline and never falls back to manual datum writes', async (unit) => {
+  it.each(['mm', 'inch'] as const)('retains native ABS in %s offline and never falls back to manual datum writes', async (unit) => {
     report(unit, 25.4, 50.8, 76.2, { x: 12.7, y: -25.4, z: 38.1 });
-    dispatch({ eventName: 'BTN_ABS_INC' });
     const before = useDROStore.getState().display;
     const memory = useDROStore.getState().vMem;
     receive('disconnect');
@@ -555,7 +667,6 @@ describe('CNCjs confirmed units through mill and DRO stores', () => {
         },
       });
     };
-    dispatch({ eventName: 'BTN_ABS_INC' });
     dispatch({ eventName: 'BTN_FUNCTION' });
     for (let index = 0; index < 6; index++) dispatch({ eventName: 'KEY_6_RIGHT' });
     dispatch({ eventName: 'KEY_ENTER' });

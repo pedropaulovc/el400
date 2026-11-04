@@ -37,6 +37,7 @@ import {
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
+import { setAxisValueMm } from './axis-operations';
 
 /** Prompt text shown for the axis-selection and parameter-entry states. */
 const AXIS_PROMPT = 'AXIS';
@@ -113,7 +114,7 @@ function distanceToGoMm(
   const pitch = data.pitch ?? 0;
   const holePositionMm = (data.currentHole - 1) * pitch;
   // Always read the ABS position regardless of the active mode.
-  const currentMm = computeAxisPositionMm(axis, { ...vMem, mode: 'abs' }, context);
+  const currentMm = computeAxisPositionMm(axis, vMem, context, 'abs');
   return holePositionMm - currentMm;
 }
 
@@ -129,37 +130,14 @@ function computeLinearNavigateDisplay(
   context: DROReducerContext
 ): DisplayState {
   // Compute the base display in ABS so non-selected axes track position too.
-  const absVMem = { ...vMem, mode: 'abs' as const };
-  const base = computeNormalDisplay(absVMem, context);
+  const base = computeNormalDisplay(vMem, context, 'abs');
   const { axis, pitch } = data;
   if (axis === null || pitch === null) {
     return base;
   }
   const unit = context.nvMem.defaultUnit;
   const distance = fromMmToAnyUnit(distanceToGoMm(axis, data, vMem, context), unit);
-  return { ...base, [axis]: distance };
-}
-
-/**
- * Reset (zero) the selected axis in the ABS frame so the reset point becomes
- * the pattern origin. Mirrors how zeroing an axis works in idle.
- */
-function resetAxis(
-  vMem: VolatileMemoryState,
-  axis: Axis,
-  context: DROReducerContext
-): VolatileMemoryState {
-  const { millState } = context;
-  if (millState.connected) {
-    const machinePos =
-      axis === 'X'
-        ? millState.position.x
-        : axis === 'Y'
-          ? millState.position.y
-          : millState.position.z;
-    return { ...vMem, workOffsets: { ...vMem.workOffsets, [axis]: machinePos } };
-  }
-  return { ...vMem, manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: 0 } };
+  return { ...base, [axis]: Number.isFinite(distance) ? distance : 'no Conn' };
 }
 
 export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload, context) => {
@@ -173,6 +151,36 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
 
   // Keep the display live as the mill position changes.
   if (eventName === 'MILL_STATE_CHANGED') {
+    if (state === 'linear-bolt-hole-axis' && linearData.axis !== null &&
+        (linearData.originRequestPhase === 'requested' || linearData.originRequestPhase === 'pending')) {
+      const control = context.millState.workPositionControl;
+      if (!context.millState.connected || control?.error !== null ||
+          control.availability === 'unavailable') {
+        return {
+          ...statePayload,
+          stateData: { ...linearData, originRequestPhase: 'failed' },
+        };
+      }
+      const axisKey = linearData.axis.toLowerCase() as 'x' | 'y' | 'z';
+      if (linearData.originRequestPhase === 'requested' && control.pending?.[axisKey] === 0) {
+        return {
+          ...statePayload,
+          stateData: { ...linearData, originRequestPhase: 'pending' },
+        };
+      }
+      if (linearData.originRequestPhase === 'pending' && control.pending === null &&
+          control.availability === 'ready') {
+        const newData: LinearBoltHoleData = { ...linearData, originRequestPhase: 'idle' };
+        const newVMem = { ...vMem, mode: 'inc' as const, inputBuffer: '' };
+        return {
+          stateName: 'linear-bolt-hole-pitch',
+          stateData: newData,
+          vMem: newVMem,
+          display: computeParameterEntryDisplay('linear-bolt-hole-pitch', newData, newVMem),
+        };
+      }
+      return statePayload;
+    }
     if (isParameterEntryState(state)) {
       return {
         ...statePayload,
@@ -241,7 +249,7 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
 
   switch (state) {
     case 'linear-bolt-hole-axis': {
-      // Select the pattern axis. Selecting resets that axis and switches to INC.
+      // Native ABS origin edits must be accepted and confirmed before parameter entry.
       const axisFromEvent: Axis | null =
         eventName === 'BTN_SELECT_X'
           ? 'X'
@@ -251,10 +259,23 @@ export const linearBoltHoleReducer: FeatureReducer = (statePayload, eventPayload
               ? 'Z'
               : null;
       if (axisFromEvent === null) return null;
+      if (context.millState.workPositionControl !== undefined) {
+        const control = context.millState.workPositionControl;
+        if (linearData.originRequestPhase === 'requested' || linearData.originRequestPhase === 'pending' ||
+            !context.millState.connected || control.availability !== 'ready' || control.pending !== null ||
+            context.millState.unitControl?.pending) {
+          return statePayload;
+        }
+        setAxisValueMm({ ...vMem, mode: 'abs' }, axisFromEvent, 0, context);
+        return {
+          ...statePayload,
+          stateData: { ...linearData, axis: axisFromEvent, originRequestPhase: 'requested' },
+        };
+      }
 
       const newData: LinearBoltHoleData = { ...linearData, axis: axisFromEvent };
       const resetVMem = {
-        ...resetAxis(vMem, axisFromEvent, context),
+        ...setAxisValueMm({ ...vMem, mode: 'abs' }, axisFromEvent, 0, context),
         mode: 'inc' as const,
         inputBuffer: '',
       };

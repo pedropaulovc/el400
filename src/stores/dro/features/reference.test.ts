@@ -12,7 +12,7 @@
  * - Explicit latch (debug control / E2E hook): ENCODER_REF_MARK_CROSSED treats
  *   the current machine position as the mark.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { referenceReducer } from './reference';
 import {
   MACHINE_REFERENCE_VALUES_MM,
@@ -25,6 +25,7 @@ import type { ReferenceData } from '../droStateMachine';
 import { INITIAL_REFERENCE_DATA } from '../droStateMachine';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { createDefaultMillState } from '../../../types/millState';
+import { useMillStore } from '../../millStore';
 
 /** Build a context with a connected mill at the given machine position. */
 function connectedContext(x = 0, y = 0, z = 0): DROReducerContext {
@@ -192,6 +193,184 @@ describe('referenceReducer', () => {
       expect(result?.stateName).toBe('idle');
       // offset = mark - storedRef so display reads storedRef when axis is at the mark.
       expect(result?.vMem.workOffsets.X).toBeCloseTo(MARK - MACHINE_REFERENCE_VALUES_MM.X, 4);
+    });
+
+    it.each([
+      ['HOME', 'reference-home-waiting', 0],
+      ['MACHINE_RECALL', 'reference-machine-waiting', MACHINE_REFERENCE_VALUES_MM.X],
+    ] as const)('requests the native ABS %s datum at the current position after crossing the mark', (referenceMode, stateName, referenceValue) => {
+      const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+      try {
+        const state = createTestState(stateName, refData({ referenceMode, selectedAxis: 'X', markArmedFromPos: 8 }));
+        state.vMem = {
+          ...state.vMem,
+          mode: 'abs',
+          workOffsets: { X: 4, Y: 5, Z: 6 },
+          incrementalOffsets: { X: 7, Y: 8, Z: 9 },
+          manualAbsoluteValues: { X: 11, Y: 12, Z: 13 },
+        };
+        const ctx: DROReducerContext = {
+          ...connectedContext(12),
+          millState: {
+            ...connectedContext(12).millState,
+            connected: true,
+            controllerType: 'cncjs',
+            workPosition: { x: 41, y: 0, z: 0 },
+            workPositionControl: { availability: 'ready', pending: null, error: null },
+          },
+        };
+        const result = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ctx)!;
+        expect(result.stateName).toBe(stateName);
+        expect(request).toHaveBeenCalledOnce();
+        expect(request).toHaveBeenCalledWith({ x: 12 - MARK + referenceValue });
+        expect(result.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+        expect(result.vMem.incrementalOffsets).toEqual(state.vMem.incrementalOffsets);
+        expect(result.vMem.manualAbsoluteValues).toEqual(state.vMem.manualAbsoluteValues);
+        const target = 12 - MARK + referenceValue;
+        const pending = referenceReducer(result, { eventName: 'MILL_STATE_CHANGED' }, {
+          ...ctx, millState: { ...ctx.millState, workPositionControl: { availability: 'busy', pending: { x: target }, error: null } },
+        })!;
+        expect(pending.stateName).toBe(stateName);
+        const confirmed = referenceReducer(pending, { eventName: 'MILL_STATE_CHANGED' }, {
+          ...ctx, millState: { ...ctx.millState, workPosition: { x: target, y: 0, z: 0 } },
+        })!;
+        expect(confirmed.stateName).toBe('idle');
+        expect(confirmed.display.X).toBe(target);
+        expect(request).toHaveBeenCalledOnce();
+      } finally {
+        request.mockRestore();
+      }
+    });
+
+    it('retains a physical mark crossed while native ABS is busy until the datum is confirmed', () => {
+      const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+      try {
+        const state = createTestState('reference-home-waiting', refData({
+          referenceMode: 'HOME', selectedAxis: 'X', markArmedFromPos: 8,
+        }));
+        const nativeAt = (x: number, workX: number, availability: 'ready' | 'busy', pending: { x: number } | null): DROReducerContext => ({
+          ...connectedContext(x),
+          millState: {
+            ...connectedContext(x).millState,
+            controllerType: 'cncjs',
+            workPosition: { x: workX, y: 0, z: 0 },
+            workPositionControl: { availability, pending, error: null },
+          },
+        });
+        const crossed = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, nativeAt(12, 41, 'busy', { x: 99 }))!;
+        expect(crossed.stateName).toBe('reference-home-waiting');
+        expect(crossed.display.X).toBe(0);
+        expect(crossed.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+        expect(request).not.toHaveBeenCalled();
+
+        // The axis has moved further; the retained mark, not the latest sample,
+        // determines the requested WPos at the time the controller becomes ready.
+        const requested = referenceReducer(crossed, { eventName: 'MILL_STATE_CHANGED' }, nativeAt(15, 44, 'ready', null))!;
+        expect(request).toHaveBeenCalledOnce();
+        expect(request).toHaveBeenCalledWith({ x: 5 });
+        expect(requested.stateName).toBe('reference-home-waiting');
+        const pending = referenceReducer(requested, { eventName: 'MILL_STATE_CHANGED' }, nativeAt(15, 44, 'busy', { x: 5 }))!;
+        expect(pending.stateName).toBe('reference-home-waiting');
+        const confirmed = referenceReducer(pending, { eventName: 'MILL_STATE_CHANGED' }, nativeAt(15, 5, 'ready', null))!;
+        expect(confirmed.stateName).toBe('idle');
+        expect(confirmed.display.X).toBe(5);
+        expect(confirmed.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+        expect(request).toHaveBeenCalledOnce();
+      } finally {
+        request.mockRestore();
+      }
+    });
+
+    it('keeps a failed native request waiting without retrying until the user cancels', () => {
+      const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+      try {
+        const state = createTestState('reference-machine-waiting', refData({
+          referenceMode: 'MACHINE_RECALL', selectedAxis: 'X', markArmedFromPos: 8,
+        }));
+        const nativeAt = (control: NonNullable<DROReducerContext['millState']['workPositionControl']>): DROReducerContext => ({
+          ...connectedContext(12),
+          millState: {
+            ...connectedContext(12).millState,
+            controllerType: 'cncjs',
+            workPosition: { x: 41, y: 0, z: 0 },
+            workPositionControl: control,
+          },
+        });
+        const ready = nativeAt({ availability: 'ready', pending: null, error: null });
+        const requested = referenceReducer(state, { eventName: 'MILL_STATE_CHANGED' }, ready)!;
+        expect(request).toHaveBeenCalledOnce();
+        const pending = referenceReducer(requested, { eventName: 'MILL_STATE_CHANGED' }, nativeAt({
+          availability: 'busy', pending: { x: 2 + MACHINE_REFERENCE_VALUES_MM.X }, error: null,
+        }))!;
+        const failed = referenceReducer(pending, { eventName: 'MILL_STATE_CHANGED' }, nativeAt({
+          availability: 'ready', pending: null, error: 'Controller rejected datum',
+        }))!;
+        expect(failed.stateName).toBe('reference-machine-waiting');
+        expect(failed.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+        const stillWaiting = referenceReducer(failed, { eventName: 'MILL_STATE_CHANGED' }, ready)!;
+        expect(stillWaiting.stateName).toBe('reference-machine-waiting');
+        expect(request).toHaveBeenCalledOnce();
+        const cancelled = referenceReducer(stillWaiting, { eventName: 'KEY_CLEAR' }, ready)!;
+        expect(cancelled.stateName).toBe('idle');
+        expect(cancelled.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+      } finally {
+        request.mockRestore();
+      }
+    });
+
+    it.each(['offline', 'busy-then-disconnected'] as const)('does not replay a native reference datum after reconnecting from %s', (scenario) => {
+      const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+      try {
+        const state = createTestState('reference-home-waiting', refData({
+          referenceMode: 'HOME', selectedAxis: 'X', markArmedFromPos: 8,
+        }));
+        const offline: DROReducerContext = {
+          ...connectedContext(12),
+          millState: {
+            ...connectedContext(12).millState,
+            connected: false,
+            controllerType: 'cncjs',
+            workPosition: { x: 41, y: 0, z: 0 },
+            workPositionControl: { availability: 'unavailable', pending: null, error: null },
+          },
+        };
+        const captureContext: DROReducerContext = scenario === 'offline' ? offline : {
+          ...offline,
+          millState: {
+            ...offline.millState, connected: true,
+            workPositionControl: { availability: 'busy', pending: { y: 99 }, error: null },
+          },
+        };
+        const captured = referenceReducer(state, { eventName: 'ENCODER_REF_MARK_CROSSED', axis: 'X' }, captureContext)!;
+        const waiting = referenceReducer(captured, { eventName: 'MILL_STATE_CHANGED' }, offline)!;
+        expect(waiting.stateName).toBe('reference-home-waiting');
+        expect(waiting.vMem).toEqual(state.vMem);
+        expect(waiting.stateData).toEqual(expect.objectContaining({
+          capturedMarkMachinePos: 12, datumRequestPhase: 'failed',
+        }));
+        expect(request).not.toHaveBeenCalled();
+
+        const online: DROReducerContext = {
+          ...offline,
+          millState: {
+            ...offline.millState,
+            connected: true,
+            position: { x: 15, y: 0, z: 0 },
+            workPositionControl: { availability: 'ready', pending: null, error: null },
+          },
+        };
+        const reconnected = referenceReducer(waiting, { eventName: 'MILL_STATE_CHANGED' }, online)!;
+        const stillWaiting = referenceReducer(reconnected, { eventName: 'MILL_STATE_CHANGED' }, online)!;
+        expect(stillWaiting.stateName).toBe('reference-home-waiting');
+        expect(stillWaiting.vMem).toEqual(state.vMem);
+        expect(stillWaiting.stateData).toEqual(expect.objectContaining({ datumRequestPhase: 'failed' }));
+        expect(request).not.toHaveBeenCalled();
+        const cancelled = referenceReducer(stillWaiting, { eventName: 'KEY_CLEAR' }, online)!;
+        expect(cancelled.stateName).toBe('idle');
+        expect(cancelled.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+      } finally {
+        request.mockRestore();
+      }
     });
 
     it('stays waiting and advances the sampled position when the jog has not reached the mark', () => {

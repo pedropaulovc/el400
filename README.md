@@ -54,7 +54,7 @@ The `el400` package contains a prebuilt simulator in `web/`, configured for a
 React API or CLI.
 
 ```sh
-npm install --save-exact el400@0.1.0
+npm install --save-exact el400@0.2.0
 ```
 
 Mount `node_modules/el400/web` as static files at `/el400/` in CNCjs, then add
@@ -96,7 +96,7 @@ Install the prebuilt npm package, then mount its `web/` directory at `/el400/`
 so the DRO shares CNCjs's origin:
 
 ```sh
-npm install --save-exact el400@0.1.0
+npm install --save-exact el400@0.2.0
 cncjs --mount /el400:/absolute/path/to/node_modules/el400/web
 ```
 
@@ -137,82 +137,22 @@ explicitly (`host` may be a bare hostname or a full `https://…` origin).
 
 For implementation details, see the CNCjs adapter in [`src/adapters/CncjsMillAdapter.ts`](src/adapters/CncjsMillAdapter.ts).
 
-### GRBL units and INC work coordinates
 
-With a GRBL controller selected, units are controller-owned. External `G20`/`G21`
-changes update the EL400 indicator and readout. The inch/mm button or **U** key
-requests the opposite controller unit; it does not immediately change the display
-unit. The request is sent only after joining the actual serial port, with known
-native modal units, an idle CNCjs workflow, and GRBL reporting `Idle`. Existing
-keypad-lock, sleep and feature-state input gates still apply.
+### GRBL units and work coordinates
 
-Screen-reader status announcements report pending requests and unavailable/error
-states without adding visible text or layout space to the native EL400 face.
-While pending, the LEDs retain the last confirmed units. When units are unknown
-both unit LEDs are off. Confirmation comes from native
-`controller:state.parserstate.modal.units`, not a socket write acknowledgement.
-A request stops waiting after five seconds, a disconnect/port close, or an
-observed controller error/alarm. Those error lines are shared across CNCjs
-clients, so they are not proof that this particular command was rejected.
-Late native confirmations still update the readout. Pending commands are never
-replayed after reconnection.
-On disconnect, the selected CNCjs readout retains its last physical coordinates
-with an accessible unavailable announcement rather than switching to standalone counters.
-Offline GRBL INC zero/preset attempts do not change a local datum or queue replay.
+With a native GRBL controller, the unit indicator follows the controller; the
+inch/mm button requests a controller unit change. **ABS** displays the controller
+work position (`WPos`), and datum edits update its work offsets. External work
+offset or active work-coordinate system changes are reflected in ABS.
 
-In **INC**, GRBL's normalized work position (`WPos`) is authoritative. External
-work-offset changes and active-WCS changes therefore update the EL400 without
-machine movement. Zero, axis-value entry, Half, probe datum operations and
-**Shift+0** request work-coordinate changes rather than maintaining an independent
-EL400 INC datum. Shift+0 is one atomic XYZ request. These operations send
-`G10 L20 P<n>` for the captured active `G54`–`G59` system (`P1`–`P6`), naming only
-the affected axes and expressing the target in confirmed controller units. The
-captured `G20` or `G21` is included on that same G10 line, so another client's
-unit change while the request waits in the feeder cannot reinterpret its target.
-GRBL itself accounts for G92 and tool-length offsets; EL400 does not subtract
-them again. The command does not move an axis. No optimistic coordinate or local
-datum update occurs: the readout follows actual native WPos, and completion waits
-for the requested coordinates within native report resolution (0.001 mm or
-0.0001 inch). A work request also requires fresh position data and a known WCS;
-unit and work requests exclude one another. A WCS change cancels a pending work
-request, and the same five-second/disconnect/error bounds apply.
-Even a target matching cached WPos sends the explicit datum command: another
-client may have changed the actual offset since the last composite snapshot.
-EL400 queues a native `$G` marker behind G10, observes its correlated feeder write,
-then requests fresh status to confirm the target. It does not await raw `[GC]`
-or treat the marker/write itself as confirmation. This request-scoped status
-acquisition is bounded to ten replies and five seconds, not a continuous poller.
-Frozen probe readings retain their captured physical measurement across unit
-changes; controller-owned probe datum results refresh on native WPos updates.
+**INC** uses an independent local datum based on machine position (`MPos`).
+Zeroing or presetting INC does not change controller offsets, and external offset
+changes do not change INC. Physical movement affects both modes. When the native
+controller is disconnected, ABS remains controller-owned and INC uses the last
+machine position rather than switching to manual counters.
 
-Physical positions, targets and offsets remain in millimetres internally.
-GRBL **`$13`**, not `G20`/`G21`, determines status-report scaling. On joining or
-changing the report setting, EL400 reads `$$` back from firmware and requests
-a fresh status/WCO boundary before accepting newly scaled coordinates. Raw
-settings replies are observable even if the cached setting did not change.
-Cached composite controller snapshots are never reinterpreted under a new scale.
-Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
-boundary without a literal WCO field. If the required fresh coordinates are
-absent, this boundary operation is limited to ten `?` requests spaced 250 ms
-apart and a five-second deadline; it is not a continuous poller. Failure
-retains the last physical sample, reports work coordinates unavailable, and
-requires reconnection or a new report-setting change to establish a fresh
-boundary. A missing initial work position displays `no Conn`.
-
-ABS retains the EL400's existing local datum behavior. Manual/mock/debug operation
-also keeps local unit selection and INC counters. Detected non-GRBL CNCjs
-controllers retain **display-only** unit selection and their existing local INC
-datum behavior; they do not receive guessed GRBL commands. Unknown/disconnected
-CNCjs controllers do not silently fall back to local controller-owned controls.
-
-Protocol references:
-- [CNCjs 1.11.5 GRBL runner](https://github.com/cncjs/cncjs/blob/v1.11.5/src/server/controllers/Grbl/GrblRunner.js)
-  defines the composite parser/status snapshot.
-- [CNCjs 1.11.5 GRBL controller](https://github.com/cncjs/cncjs/blob/v1.11.5/src/server/controllers/Grbl/GrblController.js)
-  implements raw settings replies, explicitly requested status replies, cached
-  settings/state emission and native G-code dispatch.
-- [GRBL G10 coordinate-setting implementation](https://github.com/gnea/grbl/blob/bfb67f0c7963fe3ce4aaf8a97f9009ea5a8db36e/grbl/gcode.c#L510-L555)
-  specifies active-WCS selection, omitted axes, G92 and tool-length compensation.
+Manual/mock/debug and non-GRBL adapters retain their existing local coordinate
+behavior. See [DEVELOPING.md](DEVELOPING.md) for controller and test protocol details.
 
 ## Development
 

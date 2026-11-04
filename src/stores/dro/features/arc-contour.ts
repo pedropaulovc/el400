@@ -36,6 +36,7 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
+  computeAxisPositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -171,19 +172,16 @@ function computeArcNavigateDisplay(
 ): DisplayState {
   const pointPos = calculateArcPointPosition(arcData, arcData.currentPoint);
 
-  const { millState } = context;
-  const currentX = millState.connected || millState.controllerType === 'cncjs'
-    ? millState.position.x - vMem.workOffsets.X
-    : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected || millState.controllerType === 'cncjs'
-    ? millState.position.y - vMem.workOffsets.Y
-    : vMem.manualAbsoluteValues.Y;
+  const currentX = computeAxisPositionMm('X', vMem, context, 'abs');
+  const currentY = computeAxisPositionMm('Y', vMem, context, 'abs');
 
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
-    fromMmToAnyUnit(pointPos.x - currentX, unit),
-    fromMmToAnyUnit(pointPos.y - currentY, unit),
+    !Number.isFinite(currentX) && context.millState.workPositionControl !== undefined
+      ? 'no Conn' : fromMmToAnyUnit(pointPos.x - currentX, unit),
+    !Number.isFinite(currentY) && context.millState.workPositionControl !== undefined
+      ? 'no Conn' : fromMmToAnyUnit(pointPos.y - currentY, unit),
     computeNormalDisplay(vMem, context).Z
   );
 }

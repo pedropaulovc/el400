@@ -141,6 +141,37 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  // Simulate another CNCjs client changing the active work offset without motion.
+  if (pathname === '/api/work-position' && req.method === 'POST') {
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const { axis, value } = JSON.parse(body);
+        if (!['X', 'Y', 'Z'].includes(axis) || typeof value !== 'number' || !Number.isFinite(value)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid axis or value' }));
+          return;
+        }
+        const session = getSession(sessionId);
+        const key = axis.toLowerCase() as keyof Position;
+        session.offsets[session.wcs][key] = session.position[key] - value;
+        emitStateToSession(sessionId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
   // Simulate encoder move
   if (pathname === '/api/encoder-move' && req.method === 'POST') {
     if (!sessionId) {

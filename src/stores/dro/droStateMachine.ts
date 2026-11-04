@@ -282,6 +282,8 @@ export interface LinearBoltHoleData extends BaseDROStateData {
   holeCount: number | null;
   /** 1-indexed current hole the user is navigating to */
   currentHole: number;
+  /** Native ABS origin reset must be confirmed before entering pattern parameters. */
+  originRequestPhase: 'idle' | 'requested' | 'pending' | 'failed';
 }
 
 export interface GridData extends BaseDROStateData {
@@ -449,6 +451,10 @@ export interface ReferenceData extends BaseDROStateData {
    * reference mark. null until an axis is selected.
    */
   markArmedFromPos: number | null;
+  /** Physical encoder mark retained while the controller cannot accept a datum edit. */
+  capturedMarkMachinePos: number | null;
+  datumRequestPhase: 'idle' | 'waiting-ready' | 'requested' | 'pending' | 'failed';
+  requestedWorkPositionMm: number | null;
 }
 
 /**
@@ -793,6 +799,7 @@ export const INITIAL_LINEAR_BOLT_HOLE_DATA: LinearBoltHoleData = {
   pitch: null,
   holeCount: null,
   currentHole: 1,
+  originRequestPhase: 'idle',
 };
 
 export const INITIAL_GRID_DATA: GridData = {
@@ -855,6 +862,9 @@ export const INITIAL_REFERENCE_DATA: ReferenceData = {
   referenceMode: 'HOME',
   selectedAxis: null,
   markArmedFromPos: null,
+  capturedMarkMachinePos: null,
+  datumRequestPhase: 'idle',
+  requestedWorkPositionMm: null,
 };
 
 export const INITIAL_PROBE_DATA: ProbeData = {
