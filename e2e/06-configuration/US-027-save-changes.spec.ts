@@ -19,15 +19,15 @@ import type { DROPage } from '../helpers/dro-page';
  * @see project/user-stories/06-configuration/US-027-save-changes.md
  */
 
-/** Open setup, pick X, and scroll up to the SC parameter. */
+/** Open setup, pick X, and move down once to the adjacent SC parameter. */
 async function gotoSC(dro: DROPage) {
   await dro.settingsButton.click();
   await dro.waitForAxisPureTextValue('X', 'SELECt');
   await dro.selectAxis('X');
   await dro.waitForAxisPureTextValue('X', 'LinEAr');
-  while (!(await dro.getAxisRawText('X')).startsWith('SC')) {
-    await dro.key8.click();
-  }
+  // SC follows LinEAr. Going UP wraps through the entire menu, twice per test;
+  // that traversal belongs to US-039, not the save/reload persistence boundary.
+  await dro.key2.click();
 }
 
 /** Scroll up to an exact parameter label. */
