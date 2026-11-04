@@ -5,6 +5,7 @@
 - Add accessible, user-initiated browser fullscreen entry and exit, matching Shopfloor Tablet's Fullscreen API behavior without changing the original EL400 face or CNCjs adapter.
 - Synchronize the control with browser-owned fullscreen changes, and explain unavailable permissions, unsupported browsers and failed requests without falsely claiming success.
 - Provide an embedded/failed-fullscreen same-URL new-tab link that retains CNCjs connection parameters and authentication, with no opener or referrer.
+- Preserve the face's transform-based scaling and forced-colors borders while reserving its visual layout bounds so fullscreen controls stay outside the panel.
 
 ## [0.2.0]
 
