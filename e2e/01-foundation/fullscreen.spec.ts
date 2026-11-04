@@ -4,6 +4,15 @@ import { test, expect } from '@playwright/test';
 // but no allowfullscreen and no allow-popups-to-escape-sandbox.
 const sandbox = 'allow-forms allow-modals allow-popups allow-same-origin allow-scripts';
 
+test('fullscreen control receives pointer clicks at the default desktop viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?source=manual');
+  await page.getByRole('button', { name: 'Enter fullscreen' }).click();
+  await expect(page.getByRole('button', { name: 'Exit fullscreen' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Exit fullscreen' }).click();
+  await expect(page.getByRole('button', { name: 'Enter fullscreen' })).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('keyboard-activated browser fullscreen tracks entry, explicit exit and browser exit', async ({ page }) => {
   await page.goto('/?source=manual');
   const entry = page.getByRole('button', { name: 'Enter fullscreen' });
