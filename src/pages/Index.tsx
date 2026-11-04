@@ -15,7 +15,7 @@ const Index = () => {
       }`}
     >
       <FullscreenControl />
-      <div className="origin-center" style={{ transform: 'scale(1.2)' }}>
+      <div style={{ zoom: 1.2 }}>
         <h1 className="sr-only">Electronica EL400 Digital Readout Simulator</h1>
         <EL400Simulator />
         <p className="mt-6 text-sm text-[#5a5a50] font-medium text-center">
