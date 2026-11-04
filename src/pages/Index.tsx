@@ -30,16 +30,13 @@ const Index = () => {
         showDebug ? ' pr-80' : ''
       }`}
     >
-      <FullscreenControl />
-      {/* Reserve the transformed bounds so the separate controls cannot overlap
-          the face. CSS zoom changes computed border widths in forced colors. */}
+      {/* Reserve the transformed face and footer bounds, including fallback messages.
+          CSS zoom changes computed border widths in forced colors. */}
       <div className="shrink-0" style={panelSize}>
         <div ref={panelRef} className="flow-root w-max origin-top-left" style={{ transform: 'scale(1.2)' }}>
           <h1 className="sr-only">Electronica EL400 Digital Readout Simulator</h1>
           <EL400Simulator />
-          <p className="mt-6 text-sm text-[#5a5a50] font-medium text-center">
-            Click axis buttons to select, then use keypad to enter values
-          </p>
+          <FullscreenControl />
         </div>
       </div>
       {showDebug && <DebugControlPanel />}

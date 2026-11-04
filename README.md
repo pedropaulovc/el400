@@ -127,8 +127,8 @@ explicitly (`host` may be a bare hostname or a full `https://…` origin).
 
 ### Browser fullscreen
 
-Use **Enter fullscreen** above the readout, then **Exit fullscreen** or **Esc**
-to leave. Both buttons work with keyboard focus and Enter/Space. Like CNCjs
+Use **Enter fullscreen** below the readout, in place of the former keypad instruction,
+then **Exit fullscreen** or **Esc** to leave. Both buttons work with keyboard focus and Enter/Space. Like CNCjs
 Shopfloor Tablet, fullscreen is requested only by a user action, never on load.
 The physical EL400 face, LEDs and connection stay unchanged.
 
@@ -140,7 +140,8 @@ embedding and browser support can still prevent it; the control reports the
 actual browser capability and request failures. CNCjs's widget-menu **Enter Full
 Screen** only expands the widget within its workspace; it is not browser fullscreen.
 
-An embedded readout also offers **Open EL400 in new tab**. This user-activated
+An embedded readout also offers **Open EL400 in new tab** in the same footer.
+Fullscreen availability and request errors appear there too. This user-activated
 link retains the exact current URL, including `/el400/`, source, host, serial port
 and CNCjs token. It stays on the same origin, sends no referrer and gives the new
 tab no opener. Treat that URL as a credential: do not share it. In the new tab,

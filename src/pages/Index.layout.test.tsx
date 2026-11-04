@@ -18,7 +18,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('reserves scaled visual bounds without zooming the face or fullscreen controls', () => {
+it('reserves scaled face and footer bounds without CSS zoom, including footer size changes', () => {
   let width = 780;
   let height = 400;
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(() => width);
@@ -40,7 +40,11 @@ it('reserves scaled visual bounds without zooming the face or fullscreen control
   expect(bounds.style.width).toBe('936px');
   expect(bounds.style.height).toBe('480px');
   expect(observe).toHaveBeenCalledWith(panel);
-  expect(bounds).not.toContainElement(screen.getByRole('button', { name: 'Enter fullscreen' }));
+  const entry = screen.getByRole('button', { name: 'Enter fullscreen' });
+  expect(panel).toContainElement(entry);
+  expect(screen.getAllByRole('button', { name: 'Enter fullscreen' })).toHaveLength(1);
+  expect(screen.getByTestId('face').nextElementSibling).toBe(entry);
+  expect(screen.queryByText('Click axis buttons to select, then use keypad to enter values')).not.toBeInTheDocument();
 
   act(() => {
     width = 800;

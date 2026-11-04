@@ -42,7 +42,7 @@ export function FullscreenControl() {
       : '';
 
   return (
-    <section aria-label="Display controls" className="relative z-10 mb-8 flex max-w-xl flex-col items-center gap-2 text-center text-sm text-[#30302a]">
+    <section aria-label="Display controls" className="relative z-10 mx-auto mt-6 flex max-w-xl flex-col items-center gap-2 text-center text-sm text-[#5a5a50]">
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"

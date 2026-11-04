@@ -4,9 +4,20 @@ import { test, expect } from '@playwright/test';
 // but no allowfullscreen and no allow-popups-to-escape-sandbox.
 const sandbox = 'allow-forms allow-modals allow-popups allow-same-origin allow-scripts';
 
-test('fullscreen control receives pointer clicks at the default desktop viewport', async ({ page }) => {
+test('fullscreen control replaces the instruction below the face and receives desktop pointer clicks', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?source=manual');
+  const controls = page.getByRole('region', { name: 'Display controls' });
+  await expect(controls).toHaveCount(1);
+  await expect(page.getByText('Click axis buttons to select, then use keypad to enter values')).toHaveCount(0);
+  const face = page.getByTestId('el400-simulator');
+  await expect(face).toBeVisible();
+  await expect(controls).toBeVisible();
+  const faceBounds = await face.boundingBox();
+  const controlBounds = await controls.boundingBox();
+  expect(faceBounds).not.toBeNull();
+  expect(controlBounds).not.toBeNull();
+  expect(controlBounds!.y).toBeGreaterThanOrEqual(faceBounds!.y + faceBounds!.height);
   await page.getByRole('button', { name: 'Enter fullscreen' }).click();
   await expect(page.getByRole('button', { name: 'Exit fullscreen' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Exit fullscreen' }).click();
