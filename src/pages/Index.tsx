@@ -1,6 +1,7 @@
 import EL400Simulator from "@/components/EL400Simulator";
 import { DebugControlPanel } from "@/components/debug/DebugControlPanel";
 import { useDataSourceConfig } from "@/hooks/useDataSourceConfig";
+import { FullscreenControl } from "@/components/FullscreenControl";
 
 const Index = () => {
   const config = useDataSourceConfig();
@@ -13,6 +14,7 @@ const Index = () => {
         showDebug ? ' pr-80' : ''
       }`}
     >
+      <FullscreenControl />
       <div className="origin-center" style={{ transform: 'scale(1.2)' }}>
         <h1 className="sr-only">Electronica EL400 Digital Readout Simulator</h1>
         <EL400Simulator />
