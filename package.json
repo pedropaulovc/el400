@@ -12,7 +12,8 @@
   "bugs": "https://github.com/pedropaulovc/el400/issues",
   "files": [
     "web/",
-    "changelog.md",
+    "CHANGELOG.md",
+    "DEVELOPING.md",
     "LICENSE"
   ],
   "publishConfig": {

@@ -47,34 +47,6 @@ The simulator focuses on:
 - **Accessibility**: WCAG compliance, keyboard navigation, screen reader support, forced-colors mode ([details](ACCESSIBILITY.md))
 - **Accurate reproduction**: Faithful recreation of the original hardware's behavior
 
-## Project Info
-
-**Live version**: [el400.vza.net](https://el400.vza.net)
-
-**Lovable project URL**: https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a
-
-## Deployment
-
-Cloudflare Workers hosts the production build and isolated pull-request builds:
-
-| Target | Trigger | Worker | Direct URL |
-| --- | --- | --- | --- |
-| Production | Push to `main` or manual workflow dispatch | `el400` | [el400.el400-vza-net-prod.workers.dev](https://el400.el400-vza-net-prod.workers.dev) |
-| Pull request `N` | Open, update, or reopen a same-repository PR | `el400-pr-N` | `https://el400-pr-N.el400-ppe-vza-net.workers.dev` |
-
-Closing or merging a pull request deletes its Worker. Pull requests from forks do
-not receive Cloudflare credentials and therefore do not get a deployment.
-
-The public production URL, [el400.vza.net](https://el400.vza.net), and the shared
-PPE URL, [el400.ppe.vza.net](https://el400.ppe.vza.net), pass through the
-[`vza-net-router`](https://github.com/pedropaulovc/vza-net-router) account bridge
-before reaching the Workers in the isolated EL400 accounts. The shared
-`el400-ppe` Worker backs the PPE URL; PR deployments do not overwrite it.
-
-GitHub environments `cloudflare-production` and `cloudflare-ppe` provide each
-workflow with its target account ID and API token. `wrangler.toml` remains
-account-neutral so the same static-assets configuration works in both accounts.
-
 ## npm distribution
 
 The `el400` package contains a prebuilt simulator in `web/`, configured for a
@@ -90,65 +62,8 @@ Mount `node_modules/el400/web` as static files at `/el400/` in CNCjs, then add
 the widget session token; the simulator connects to the same origin. Without
 `source=cncjs`, the simulator runs in manual mode.
 
-For [cncjs-whb04b6-el400-integration](https://github.com/pedropaulovc/cncjs-whb04b6-el400-integration),
-setup can use the installed package's `web/` directory as `el400.mountPath`
-instead of cloning and building this repository. That consumer change is
-separate; existing integration releases still use their pinned checkout.
-
-### Publishing
-
-1. Update `package.json` and `package-lock.json` to the release version and add
-   a nonempty `## [<version>]` section to [changelog.md](changelog.md).
-2. Run `npm run test:all` and `npm pack`. The pack lifecycle builds `web/`
-   with `/el400/` as its base; `npm run build` still builds the root-hosted site
-   in `dist/`.
-3. Merge the release changes, then push the matching tag, for example
-   `git tag v0.1.0 && git push origin v0.1.0`.
-
-The `Publish npm package` workflow checks the tag against the package version and
-changelog, runs the full test suite, and publishes with provenance. Stable
-versions use npm's `latest` tag; prereleases use `next`. The matching changelog
-section becomes the GitHub release notes.
-
-Configure npm trusted publishing for package `el400`, GitHub owner
-`pedropaulovc`, repository `el400`, workflow `publish-npm.yml`, and enable the
-`npm publish` allowed action (new configurations default to staged publishing).
-See [npm's trusted publisher settings](https://docs.npmjs.com/trusted-publishers/#for-github-actions).
-The workflow uses GitHub OIDC and needs no npm token secret. Before the first automated release,
-an npm maintainer must publish the initial package from an authenticated checkout
-(`npm publish --access public`) and configure that trusted publisher on npm.
-Use automated tag publishing for subsequent versions; npm rejects attempts to
-republish an existing version.
-
-## Tech Stack
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js & npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-### Installation
-
-```sh
-# Clone the repository
-git clone <YOUR_GIT_URL>
-
-# Navigate to the project directory
-cd <YOUR_PROJECT_NAME>
-
-# Install dependencies
-npm i
-
-# Start development server
-npm run dev
-```
+For a combined CNCjs, WHB04B-6 pendant, and EL400 setup, see
+[cncjs-whb04b6-el400-integration](https://github.com/pedropaulovc/cncjs-whb04b6-el400-integration).
 
 ## Using with CNCjs
 
@@ -175,19 +90,14 @@ cncjs
 Open CNCjs, choose your serial port and controller, and click **Open** to
 connect to the machine.
 
-### 2. Build the DRO and serve it from CNCjs
+### 2. Install the DRO and serve it from CNCjs
 
-Build the app with a base path, then mount the build into CNCjs so it is served
-same-origin (this avoids cross-origin and mixed-content issues behind HTTPS
-proxies):
+Install the prebuilt npm package, then mount its `web/` directory at `/el400/`
+so the DRO shares CNCjs's origin:
 
 ```sh
-# Build with the path it will be mounted at
-npm install
-npm run build -- --base=/el400/
-
-# Serve the build at /el400 alongside CNCjs
-cncjs --mount /el400:/absolute/path/to/el400/dist
+npm install --save-exact el400@0.1.0
+cncjs --mount /el400:/absolute/path/to/node_modules/el400/web
 ```
 
 The DRO is now available at `http://localhost:8000/el400/`.
@@ -304,55 +214,10 @@ Protocol references:
 - [GRBL G10 coordinate-setting implementation](https://github.com/gnea/grbl/blob/bfb67f0c7963fe3ce4aaf8a97f9009ea5a8db36e/grbl/gcode.c#L510-L555)
   specifies active-WCS selection, omitted axes, G92 and tool-length compensation.
 
-### Browser test fixtures
+## Development
 
-The E2E CNCjs server models native port discovery/join, settings/state/workflow
-replay, `$$`/`$13` readback, and explicitly requested raw MPos/WCO status. G20/G21
-changes modal working units, not status-report units. G10 L20 changes per-session
-work offsets without moving the machine; the queued `$G` feeder marker precedes
-the fresh status used to confirm the result. Sessions retain units and offsets
-across page reloads and remain isolated from other tests. The manual mock frontend
-and its encoder/probe/signal HTTP controls still receive state without joining a port.
-
-The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
-inch-based scenarios; this is not the mock controller's unseeded default (`G21`).
-Use `test.use({ workingUnit: 'G21' })` for metric-controller scenarios. Seeding
-happens only before first navigation, so a unit change really must survive a
-controller-session reconnect. Use `test.use({ droSource: 'manual' })` for local
-preference/default or independent ABS/INC-memory behavior rather than asserting
-standalone semantics against a connected GRBL controller.
-
-Connected `goto()`/`reload()` await confirmed unit status and fresh work-coordinate
-readiness, not just React boot. Boot-message scenarios retain the boot-only
-barrier; `goto({ waitForConnection: false })` explicitly opts out for offline
-scenarios. `toggleInchMm()` waits for the confirmed unit indicator; intentionally
-rejected or locked actions use `{ expectChange: false }` and assert the unchanged
-display/error themselves.
-
-
-## How to Edit This Code
-
-**Use Lovable**
-
-The [Lovable Project](https://lovable.dev/projects/269190d5-da7b-4375-80fd-1a9891f19e6a) is public. Click the **Remix** button to create your own copy and start prompting.
-
-**Use your preferred IDE**
-
-Clone this repo and push changes.
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+See [DEVELOPING.md](DEVELOPING.md) for local setup, testing, deployment, and npm
+publishing instructions.
 
 ## DRO Specifications
 
