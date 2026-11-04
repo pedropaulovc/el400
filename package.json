@@ -1,6 +1,6 @@
 {
   "name": "el400",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Electronica EL400 digital readout simulator for CNCjs",
   "license": "MIT",
   "author": "Pedro Paulo Vezza Campos",
