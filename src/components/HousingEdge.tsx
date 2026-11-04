@@ -10,7 +10,7 @@ const HousingEdge = ({ position, children }: HousingEdgeProps) => {
         {/* Main raised edge with angled cutout - CSS only */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 w-full"
+          className="absolute inset-0 w-full"
           style={{
             background: 'linear-gradient(180deg, #555555 0%, #3d3d3d 30%, #252525 100%)',
             clipPath: 'polygon(0 0, 100% 0, 100% 100%, 71.8% 100%, 66.7% 50%, 0 50%)',
