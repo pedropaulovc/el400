@@ -258,6 +258,7 @@ export class CncjsMillAdapter implements MillAdapter {
     reject: (error: Error) => void;
     timer: ReturnType<typeof setTimeout>;
   } | null = null;
+  private workRequestError: string | null = null;
   private workRequestSequence = 0;
   private readonly requestNamespace = `${String(Date.now())}-${String(Math.random())}`;
   private reportError: string | null = null;
@@ -582,6 +583,7 @@ export class CncjsMillAdapter implements MillAdapter {
     const p = Number(wcs.slice(1)) - 53;
     const id = `${this.requestNamespace}-${String(++this.workRequestSequence)}`;
     return new Promise((resolve, reject) => {
+      this.workRequestError = null;
       this.workRequest = {
         id, phase: 'queued', target, wcs, resolve, reject,
         timer: setTimeout(() => {
@@ -610,6 +612,7 @@ export class CncjsMillAdapter implements MillAdapter {
     const request = this.workRequest;
     this.workRequest = null;
     if (!request) return;
+    this.workRequestError = error?.message ?? null;
     if (request.phase === 'confirming' && !this.awaitingFreshStatus) this.cancelStatusQuery();
     clearTimeout(request.timer);
     if (error) request.reject(error);
@@ -791,7 +794,7 @@ export class CncjsMillAdapter implements MillAdapter {
         availability: !this.positionReady || !this.activeWcs || !/^G5[4-9]$/.test(this.activeWcs)
           ? 'unavailable' : this.state.unitControl.availability,
         pending: this.workRequest?.target ?? null,
-        error: this.reportError,
+        error: this.reportError ?? this.workRequestError,
       };
     } else {
       delete this.state.workPositionControl;

@@ -25,11 +25,12 @@
  * debug mode (or a connected mill) triggers the recall by moving the axis. The
  * explicit ENCODER_REF_MARK_CROSSED event provides the same latch for the
  * debug-panel "Cross Ref Mark" control and for tests; it treats the current
- * machine position as the mark. Either way the axis work offset (and manual
- * value) is set so the displayed ABS value becomes the desired reference value.
+ * machine position as the mark. Native ABS requests the matching controller
+ * work coordinate; other sources update the local absolute datum.
  */
 
 import type { FeatureReducer, DROReducerContext } from '../types';
+import { setAxisValueMm } from './axis-operations';
 import type { DROStatePayload } from '../types';
 import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
 import type { ReferenceData } from '../droStateMachine';
@@ -132,23 +133,51 @@ function exitToIdle(
 /**
  * Set the datum for the selected axis so the displayed ABS value reads
  * `referenceValue` when the axis is at `markMachinePos` (the reference mark),
- * then return to idle.
+ * then return to idle once the native controller has confirmed the datum.
  *
- * Both representations are updated so the datum is reflected regardless of
- * connection state (mirrors axis-operations setAxisValueMm):
- * - connected: ABS display = machinePos - workOffset. Set the offset relative
- *   to the MARK so counting stays correct as the axis moves past the mark.
- * - disconnected (NoOp/manual, the default source): ABS display reads
- *   manualAbsoluteValues, which has no live machine position, so it shows the
- *   reference value at the moment of crossing.
+ * Native ABS requests the target at the CURRENT machine position, preserving
+ * any travel beyond the mark while waiting for controller confirmation.
+ * Other sources update both their local offset and manual representation.
  */
 function applyDatum(
   axis: Axis,
   referenceValue: number,
   markMachinePos: number,
-  vMem: VolatileMemoryState,
+  current: DROStatePayload,
   context: DROReducerContext
 ): DROStatePayload {
+  const { vMem } = current;
+  if (context.millState.workPositionControl !== undefined) {
+    const data = asReferenceData(current.stateData);
+    const control = context.millState.workPositionControl;
+    if (!context.millState.connected) {
+      return {
+        ...current,
+        stateData: {
+          ...data, capturedMarkMachinePos: markMachinePos, datumRequestPhase: 'failed',
+        },
+      };
+    }
+    if (control.availability !== 'ready' ||
+        control.pending !== null || context.millState.unitControl?.pending) {
+      return {
+        ...current,
+        stateData: {
+          ...data, capturedMarkMachinePos: markMachinePos, datumRequestPhase: 'waiting-ready',
+        },
+      };
+    }
+    const targetMm = machinePosition(axis, context) - markMachinePos + referenceValue;
+    const newVMem = setAxisValueMm(vMem, axis, targetMm, context);
+    return {
+      ...current,
+      stateData: {
+        ...data, capturedMarkMachinePos: markMachinePos,
+        datumRequestPhase: 'requested', requestedWorkPositionMm: targetMm,
+      },
+      vMem: { ...newVMem, activeAxis: null, inputBuffer: '' },
+    };
+  }
   const offset = markMachinePos - referenceValue;
   const newVMem: VolatileMemoryState = {
     ...vMem,
@@ -251,11 +280,37 @@ export const referenceReducer: FeatureReducer = (current, event, context) => {
     // real-user path: a connected mill or debug-panel jog emits MILL_STATE_CHANGED.
     if (eventName === 'MILL_STATE_CHANGED') {
       if (axis === null) return current;
+      if (context.millState.workPositionControl !== undefined &&
+          refData.capturedMarkMachinePos !== null) {
+        const control = context.millState.workPositionControl;
+        // A disconnected operation must be rearmed explicitly, never replayed on reconnect.
+        if (!context.millState.connected) {
+          return { ...current, stateData: { ...refData, datumRequestPhase: 'failed' } };
+        }
+        if (refData.datumRequestPhase === 'waiting-ready') {
+          return applyDatum(axis, referenceValue, refData.capturedMarkMachinePos, current, context);
+        }
+        if (refData.datumRequestPhase === 'failed') return current;
+        if (control.error !== null ||
+            control.availability === 'unavailable') {
+          return { ...current, stateData: { ...refData, datumRequestPhase: 'failed' } };
+        }
+        const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+        if (refData.datumRequestPhase === 'requested' &&
+            control.pending?.[axisKey] === refData.requestedWorkPositionMm) {
+          return { ...current, stateData: { ...refData, datumRequestPhase: 'pending' } };
+        }
+        if (refData.datumRequestPhase === 'pending' && control.pending === null &&
+            control.availability === 'ready') {
+          return exitToIdle(vMem, context);
+        }
+        return current;
+      }
       const fromPos = refData.markArmedFromPos;
       const toPos = machinePosition(axis, context);
       const mark = REFERENCE_MARK_POSITION_MM[axis];
       if (fromPos !== null && segmentCrossesMark(fromPos, toPos, mark)) {
-        return applyDatum(axis, referenceValue, mark, vMem, context);
+        return applyDatum(axis, referenceValue, mark, current, context);
       }
       // No crossing yet: keep the blinking zero and advance the sampled position.
       return {
@@ -268,7 +323,8 @@ export const referenceReducer: FeatureReducer = (current, event, context) => {
     // Explicit latch (debug-panel control / tests): treat current pos as the mark.
     if (eventName === 'ENCODER_REF_MARK_CROSSED') {
       if (axis === null || event.axis !== axis) return current;
-      return applyDatum(axis, referenceValue, machinePosition(axis, context), vMem, context);
+      if (refData.datumRequestPhase !== 'idle') return current;
+      return applyDatum(axis, referenceValue, machinePosition(axis, context), current, context);
     }
     return current;
   }

@@ -4,7 +4,7 @@
  * Tests for the half function that divides the active axis value by 2.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { halfReducer } from './half';
 import { idleReducer } from './idle';
 import type { DROStatePayload, DROReducerContext } from '../types';
@@ -13,6 +13,7 @@ import { createTestState, DEFAULT_TEST_CONTEXT } from '../test-utils';
 import { INITIAL_VOLATILE_MEMORY_STATE } from '../../../types/volatileMemory';
 import { INITIAL_DISPLAY_STATE } from '../utils/displayComputation';
 import { DEFAULT_NON_VOLATILE_MEMORY } from '../../../types/nonVolatileMemory';
+import { useMillStore } from '../../millStore';
 
 /** Helper to create idle state with specific vMem */
 function idleStateWithVMem(vMemOverrides: Partial<typeof INITIAL_VOLATILE_MEMORY_STATE>): DROStatePayload {
@@ -72,6 +73,72 @@ describe('connected INC half', () => {
     const movedContext = { ...context, millState: { ...context.millState, position: { x: 107, y: 107, z: 107 } } };
     const moved = idleReducer(halved, { eventName: 'MILL_STATE_CHANGED' }, movedContext)!;
     expect(moved.display[axis]).toBe(47);
+  });
+
+  it.each([true, false])('keeps native INC half local with connected=%s', (connected) => {
+    const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+    try {
+      const state = idleStateWithVMem({
+        mode: 'inc',
+        activeAxis: 'X',
+        workOffsets: { X: 1, Y: 2, Z: 3 },
+        incrementalOffsets: { X: 20, Y: 21, Z: 22 },
+      });
+      const context: DROReducerContext = {
+        ...connectedContext({ x: 100, y: 0, z: 0 }),
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+        millState: {
+          ...connectedContext({ x: 100, y: 0, z: 0 }).millState,
+          connected,
+          workPosition: { x: 30, y: 0, z: 0 },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
+        },
+      };
+      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context)!;
+      expect(request).not.toHaveBeenCalled();
+      expect(result.vMem.incrementalOffsets).toEqual({ X: 60, Y: 21, Z: 22 });
+      expect(result.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+      expect(result.display.X).toBe(40);
+      const moved = idleReducer(result, { eventName: 'MILL_STATE_CHANGED' }, {
+        ...context, millState: { ...context.millState, position: { x: 107, y: 0, z: 0 }, workPosition: { x: 999, y: 0, z: 0 } },
+      })!;
+      expect(moved.display.X).toBe(47);
+    } finally {
+      request.mockRestore();
+    }
+  });
+});
+
+describe('native ABS half', () => {
+  it.each([true, false])('requests half of WPos without optimistic datum changes when connected=%s', (connected) => {
+    const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+    try {
+      const state = idleStateWithVMem({
+        mode: 'abs', activeAxis: 'X',
+        workOffsets: { X: 10, Y: 20, Z: 30 },
+        incrementalOffsets: { X: 40, Y: 50, Z: 60 },
+        manualAbsoluteValues: { X: 1, Y: 2, Z: 3 },
+      });
+      const context: DROReducerContext = {
+        ...connectedContext({ x: 100, y: 0, z: 0 }),
+        nvMem: { ...DEFAULT_NON_VOLATILE_MEMORY, defaultUnit: 'mm' },
+        millState: {
+          ...connectedContext({ x: 100, y: 0, z: 0 }).millState,
+          connected,
+          workPosition: { x: 30, y: 0, z: 0 },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
+        },
+      };
+      const result = halfReducer(state, { eventName: 'BTN_HALF' }, context)!;
+      expect(request).toHaveBeenCalledOnce();
+      expect(request).toHaveBeenCalledWith({ x: 15 });
+      expect(result.vMem.workOffsets).toEqual(state.vMem.workOffsets);
+      expect(result.vMem.incrementalOffsets).toEqual(state.vMem.incrementalOffsets);
+      expect(result.vMem.manualAbsoluteValues).toEqual(state.vMem.manualAbsoluteValues);
+      expect(result.display.X).toBe(30);
+    } finally {
+      request.mockRestore();
+    }
   });
 });
 

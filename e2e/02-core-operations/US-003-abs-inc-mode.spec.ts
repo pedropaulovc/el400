@@ -10,8 +10,8 @@ import { expectAxisValues } from '../helpers/assertions';
  * @see project/user-stories/02-core-operations/US-003-abs-inc-mode.md
  */
 test.describe('US-003: ABS/INC Mode', () => {
-  // Independent ABS/INC memories are a standalone feature. Connected GRBL INC
-  // instead follows native WPos, covered separately below and in US-035.
+  // Standalone ABS/INC memories are exercised here; native GRBL ownership is
+  // covered separately below and in US-035.
   test.use({ droSource: 'manual' });
   /**
    * AC 3.1: Pressing the ABS/INC key toggles between Absolute and Incremental.
@@ -191,7 +191,7 @@ test.describe('US-003: ABS/INC Mode', () => {
     test.use({ droSource: 'cncjs', workingUnit: 'G20' });
 
     /**
-     * Native INC zero changes WPos without changing the physical ABS reading.
+     * Native INC zero is local and leaves the controller's ABS work position.
      * Encoder positions are mm; this fixture explicitly uses inch working units.
      */
     test('should allow INC zeroing with encoder movement', async ({ dro }) => {

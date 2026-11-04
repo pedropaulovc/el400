@@ -111,7 +111,7 @@ function exitToIdle(vMem: VolatileMemoryState, context: DROReducerContext): DROS
 
 /**
  * Set the selected axis datum so the displayed value reads `targetMm` at the
- * current machine position. GRBL INC requests native WPos; other sources use
+ * current machine position. GRBL ABS requests native WPos; other sources use
  * independent offsets or a disconnected manual counter.
  */
 function setAxisDatumMm(
@@ -120,6 +120,9 @@ function setAxisDatumMm(
   targetMm: number,
   context: DROReducerContext
 ): VolatileMemoryState {
+  if (vMem.mode === 'abs' && context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, targetMm, context);
+  }
   if (vMem.mode === 'abs' && context.millState.connected) {
     return {
       ...vMem,
@@ -132,10 +135,7 @@ function setAxisDatumMm(
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: targetMm },
     };
   }
-  if (context.millState.workPositionControl !== undefined) {
-    return setAxisValueMm(vMem, axis, targetMm, context);
-  }
-  if (context.millState.connected) {
+  if (context.millState.connected || context.millState.controllerType === 'cncjs') {
     return {
       ...vMem,
       incrementalOffsets: {
@@ -161,6 +161,9 @@ function setAxisDatumAtMachinePos(
   machinePosMm: number,
   context: DROReducerContext
 ): VolatileMemoryState {
+  if (vMem.mode === 'abs' && context.millState.workPositionControl !== undefined) {
+    return setAxisValueMm(vMem, axis, machinePos(axis, context) - machinePosMm, context);
+  }
   if (vMem.mode === 'abs' && context.millState.connected) {
     return {
       ...vMem,
@@ -176,10 +179,7 @@ function setAxisDatumAtMachinePos(
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: -delta },
     };
   }
-  if (context.millState.workPositionControl !== undefined) {
-    return setAxisValueMm(vMem, axis, machinePos(axis, context) - machinePosMm, context);
-  }
-  if (context.millState.connected) {
+  if (context.millState.connected || context.millState.controllerType === 'cncjs') {
     return {
       ...vMem,
       incrementalOffsets: { ...vMem.incrementalOffsets, [axis]: machinePosMm },
@@ -447,7 +447,7 @@ export const probeReducer: FeatureReducer = (state, event, context) => {
       if (data.resultMm !== null && data.probeAxis !== null) {
         return { ...state, display: resultDisplay(data.probeAxis, data.resultMm, context) };
       }
-      if (vMem.mode === 'inc' && context.millState.workPositionControl !== undefined) {
+      if (vMem.mode === 'abs' && context.millState.workPositionControl !== undefined) {
         return { ...state, display: computeNormalDisplay(vMem, context) };
       }
       const display = frozenDisplay(data, vMem, context);

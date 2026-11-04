@@ -40,6 +40,9 @@ function halfAxis(
   const halfValue = currentValue / 2;
 
   if (vMem.mode === 'abs') {
+    if (millState.workPositionControl !== undefined) {
+      return setAxisValueMm(vMem, axis, halfValue, context);
+    }
     if (millState.connected) {
       // In connected mode, adjust work offset to show half the current value
       const machinePos = getMachinePosition(axis, context);
@@ -54,10 +57,7 @@ function halfAxis(
       manualAbsoluteValues: { ...vMem.manualAbsoluteValues, [axis]: halfValue },
     };
   }
-  if (millState.workPositionControl !== undefined) {
-    return setAxisValueMm(vMem, axis, halfValue, context);
-  }
-  if (millState.connected) {
+  if (millState.connected || millState.controllerType === 'cncjs') {
     return {
       ...vMem,
       incrementalOffsets: {

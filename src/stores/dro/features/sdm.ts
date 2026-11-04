@@ -157,24 +157,6 @@ function computeRunStepDisplay(data: SdmData, vMem: VolatileMemoryState): Displa
 }
 
 /**
- * Absolute machine position (mm) for an axis, ignoring vMem.mode — distance-to-go
- * is always measured against the absolute datum (mirrors the US-008 preset DTG).
- */
-function absolutePositionMm(
-  axis: ProgramAxis,
-  vMem: VolatileMemoryState,
-  context: DROReducerContext
-): number {
-  const { workOffsets, manualAbsoluteValues } = vMem;
-  const { millState } = context;
-  if (millState.connected || millState.controllerType === 'cncjs') {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    return millState.position[axisKey] - workOffsets[axis];
-  }
-  return manualAbsoluteValues[axis];
-}
-
-/**
  * Run distance-to-go display (manual §8.2.3): each axis shows the stored
  * sub-datum for the current step minus the live machine position, converted to
  * the operator's unit. An unstored step is treated as a zero sub-datum.
@@ -187,9 +169,13 @@ function computeRunDtgDisplay(
   const unit = context.nvMem.defaultUnit;
   const stored = data.points[data.currentStep];
 
-  const dtgFor = (axis: ProgramAxis): number => {
+  const dtgFor = (axis: ProgramAxis): number | string => {
     const targetMm = stored?.[axis] ?? 0;
-    const currentMm = absolutePositionMm(axis, vMem, context);
+    const currentMm = computeAxisPositionMm(axis, vMem, context, 'abs');
+    if (context.millState.workPositionControl !== undefined &&
+        (!Number.isFinite(currentMm) || !Number.isFinite(targetMm))) {
+      return 'no Conn';
+    }
     return fromMmToAnyUnit(targetMm - currentMm, unit);
   };
 
@@ -415,6 +401,10 @@ export const sdmReducer: FeatureReducer = (statePayload, eventPayload, context) 
 
       // Second press: store the live position and advance to the next step.
       const point = captureCurrentPosition(vMem, context);
+      if (vMem.mode === 'abs' && context.millState.workPositionControl !== undefined &&
+          (!Number.isFinite(point.X) || !Number.isFinite(point.Y) || !Number.isFinite(point.Z))) {
+        return { ...statePayload, display: computePositionDisplay(data, vMem, context) };
+      }
       const nextStep = Math.min(data.currentStep + 1, MAX_SDM_STEPS);
       const newPoints = { ...data.points, [data.currentStep]: point };
       const newData: SdmData = {

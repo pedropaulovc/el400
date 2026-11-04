@@ -35,12 +35,12 @@ export interface VolatileMemoryContextValue extends VolatileMemory, VolatileMemo
  * Provides machine state from adapter combined with DRO memory management.
  *
  * In ABS mode:
- * - Displays machine position (from external source or manual entry)
- * - Zero sets the reference point (offset from machine position)
+ * - Native GRBL displays controller WPos; datum edits request native work offsets.
+ * - Other sources use their existing local absolute datum or manual counter.
  *
  * In INC mode:
- * - GRBL displays controller WPos; datum changes request native work offsets.
- * - Other sources retain an independent INC datum or disconnected manual counter.
+ * - Displays machine position minus an independent local incremental datum.
+ * - Disconnected CNCjs retains its last machine position rather than a manual counter.
  */
 export function useVolatileMemory(): VolatileMemoryContextValue {
   // Granular store subscriptions - only re-render when specific values change
@@ -53,8 +53,15 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
   const dispatch = useDispatch();
   const millState = useMillState();
 
-  // Calculate absolute values (machine position - work offset)
+  // Native ABS is controller-owned; other sources retain their local datum.
   const absoluteValues = useMemo<AxisValues>(() => {
+    if (millState.workPositionControl !== undefined) {
+      return {
+        X: millState.workPosition?.x ?? Number.NaN,
+        Y: millState.workPosition?.y ?? Number.NaN,
+        Z: millState.workPosition?.z ?? Number.NaN,
+      };
+    }
     if (millState.connected || millState.controllerType === 'cncjs') {
       // Use external machine position with work offsets applied
       return {
@@ -65,16 +72,10 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
     }
     // Manual mode: use manual values directly
     return manualAbsoluteValues;
-  }, [millState.connected, millState.controllerType, millState.position, workOffsets, manualAbsoluteValues]);
+  }, [millState.connected, millState.controllerType, millState.position, millState.workPosition,
+      millState.workPositionControl, workOffsets, manualAbsoluteValues]);
 
   const liveIncrementalValues = useMemo<AxisValues>(() => {
-    if (millState.workPositionControl !== undefined) {
-      return {
-        X: millState.workPosition?.x ?? Number.NaN,
-        Y: millState.workPosition?.y ?? Number.NaN,
-        Z: millState.workPosition?.z ?? Number.NaN,
-      };
-    }
     if (millState.connected || millState.controllerType === 'cncjs') {
       return {
         X: millState.position.x - incrementalOffsets.X,
@@ -83,8 +84,8 @@ export function useVolatileMemory(): VolatileMemoryContextValue {
       };
     }
     return incrementalValues;
-  }, [millState.connected, millState.controllerType, millState.position, millState.workPosition,
-      millState.workPositionControl, incrementalOffsets, incrementalValues]);
+  }, [millState.connected, millState.controllerType, millState.position,
+      incrementalOffsets, incrementalValues]);
 
   // Display values based on current mode
   const displayValues = useMemo<AxisValues>(() => {

@@ -27,6 +27,7 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
+  computeAxisPositionMm,
   type DisplayState,
 } from '../utils/displayComputation';
 import { fromMmToAnyUnit, fromAnyUnitToMm } from '../../../utils/unitConversion';
@@ -99,30 +100,11 @@ function computePresetInputDisplay(
 }
 
 /**
- * Get the absolute machine position for an axis (ignores mode setting).
- * Distance-to-go always uses absolute positions from the mill state.
- */
-function getAbsolutePositionMm(
-  axis: Axis,
-  vMem: VolatileMemoryState,
-  context: DROReducerContext
-): number {
-  const { workOffsets, manualAbsoluteValues } = vMem;
-  const { millState } = context;
-
-  if (millState.connected || millState.controllerType === 'cncjs') {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    return millState.position[axisKey] - workOffsets[axis];
-  }
-  return manualAbsoluteValues[axis];
-}
-
-/**
  * Compute display for distance-to-go state.
  * Shows (preset - currentPosition) for each axis with a preset.
  * Axes without presets show normal position.
  *
- * Note: Always uses absolute position from mill state, regardless of vMem.mode.
+ * Note: Always uses the ABS position, regardless of vMem.mode.
  */
 function computeDistanceToGoDisplay(
   vMem: VolatileMemoryState,
@@ -132,10 +114,13 @@ function computeDistanceToGoDisplay(
   const { presetTargets } = presetData;
   const { nvMem } = context;
 
-  const computeAxisDisplay = (axis: Axis): number => {
+  const computeAxisDisplay = (axis: Axis): number | string => {
     const target = presetTargets[axis];
     // Always use absolute position for distance-to-go (ignores mode setting)
-    const currentMm = getAbsolutePositionMm(axis, vMem, context);
+    const currentMm = computeAxisPositionMm(axis, vMem, context, 'abs');
+    if (!Number.isFinite(currentMm) && context.millState.workPositionControl !== undefined) {
+      return 'no Conn';
+    }
 
     if (target === null) {
       // No preset for this axis - show normal absolute position

@@ -31,6 +31,87 @@ cncjs --mount /el400:/absolute/path/to/el400/dist
 - shadcn-ui
 - Tailwind CSS
 
+## Native GRBL protocol
+
+### Units and work coordinates
+
+With a GRBL controller selected, units are controller-owned. External `G20`/`G21`
+changes update the EL400 indicator and readout. The inch/mm button or **U** key
+requests the opposite controller unit; it does not immediately change the display
+unit. The request is sent only after joining the actual serial port, with known
+native modal units, an idle CNCjs workflow, and GRBL reporting `Idle`. Existing
+keypad-lock, sleep and feature-state input gates still apply.
+
+Screen-reader status announcements report pending requests and unavailable/error
+states without adding visible text or layout space to the native EL400 face.
+While pending, the LEDs retain the last confirmed units. When units are unknown
+both unit LEDs are off. Confirmation comes from native
+`controller:state.parserstate.modal.units`, not a socket write acknowledgement.
+A request stops waiting after five seconds, a disconnect/port close, or an
+observed controller error/alarm. Those error lines are shared across CNCjs
+clients, so they are not proof that this particular command was rejected.
+Late native confirmations still update the readout. Pending commands are never
+replayed after reconnection.
+On disconnect, the selected CNCjs readout retains its last physical coordinates
+with an accessible unavailable announcement rather than switching to standalone counters.
+Offline GRBL ABS zero/preset attempts do not change a local datum or queue replay.
+INC remains local and uses the last machine position.
+
+In **ABS**, GRBL's normalized work position (`WPos`) is authoritative. External
+work-offset and active-WCS changes update ABS without machine movement. Zero,
+axis-value entry, Half, probe datum operations and **Shift+0** request controller
+work-coordinate changes. Shift+0 is one atomic XYZ request. These operations send
+`G10 L20 P<n>` for the captured active `G54`–`G59` system (`P1`–`P6`), naming only
+the affected axes and expressing the target in confirmed controller units. The
+captured `G20` or `G21` is included on that same G10 line, so another client's
+unit change while the request waits in the feeder cannot reinterpret its target.
+GRBL itself accounts for G92 and tool-length offsets; EL400 does not subtract
+them again. The command does not move an axis. No optimistic coordinate or local
+datum update occurs: the readout follows actual native WPos, and completion waits
+for the requested coordinates within native report resolution (0.001 mm or
+0.0001 inch). A work request also requires fresh position data and a known WCS;
+unit and work requests exclude one another. A WCS change cancels a pending work
+request, and the same five-second/disconnect/error bounds apply.
+Even a target matching cached WPos sends the explicit datum command: another
+client may have changed the actual offset since the last composite snapshot.
+EL400 queues a native `$G` marker behind G10, observes its correlated feeder write,
+then requests fresh status to confirm the target. It does not await raw `[GC]`
+or treat the marker/write itself as confirmation. This request-scoped status
+acquisition is bounded to ten replies and five seconds, not a continuous poller.
+Frozen probe readings retain their captured physical measurement across unit
+changes; controller-owned probe datum results refresh on native WPos updates.
+
+Physical positions, targets and offsets remain in millimetres internally.
+GRBL **`$13`**, not `G20`/`G21`, determines status-report scaling. On joining or
+changing the report setting, EL400 reads `$$` back from firmware and requests
+a fresh status/WCO boundary before accepting newly scaled coordinates. Raw
+settings replies are observable even if the cached setting did not change.
+Cached composite controller snapshots are never reinterpreted under a new scale.
+Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
+boundary without a literal WCO field. If the required fresh coordinates are
+absent, this boundary operation is limited to ten `?` requests spaced 250 ms
+apart and a five-second deadline; it is not a continuous poller. Failure
+retains the last physical sample, reports work coordinates unavailable, and
+requires reconnection or a new report-setting change to establish a fresh
+boundary. A missing initial work position displays `no Conn`.
+
+INC instead reads machine position relative to an independent local incremental
+datum. INC edits never write controller work coordinates; external WPos changes
+do not affect INC, while machine movement affects both modes. Manual/mock/debug
+operation keeps local unit selection and local datums. Detected non-GRBL CNCjs
+controllers retain display-only unit selection and their existing local datums;
+they do not receive guessed GRBL commands. Unknown/disconnected native controllers
+do not fall back to local ABS controls.
+
+Protocol references:
+- [CNCjs 1.11.5 GRBL runner](https://github.com/cncjs/cncjs/blob/v1.11.5/src/server/controllers/Grbl/GrblRunner.js)
+  defines the composite parser/status snapshot.
+- [CNCjs 1.11.5 GRBL controller](https://github.com/cncjs/cncjs/blob/v1.11.5/src/server/controllers/Grbl/GrblController.js)
+  implements raw settings replies, explicitly requested status replies, cached
+  settings/state emission and native G-code dispatch.
+- [GRBL G10 coordinate-setting implementation](https://github.com/gnea/grbl/blob/bfb67f0c7963fe3ce4aaf8a97f9009ea5a8db36e/grbl/gcode.c#L510-L555)
+  specifies active-WCS selection, omitted axes, G92 and tool-length compensation.
+
 ## Browser test fixtures
 
 The E2E CNCjs server models native port discovery/join, settings/state/workflow
@@ -38,15 +119,17 @@ replay, `$$`/`$13` readback, and explicitly requested raw MPos/WCO status. G20/G
 changes modal working units, not status-report units. G10 L20 changes per-session
 work offsets without moving the machine; the queued `$G` feeder marker precedes
 the fresh status used to confirm the result. Sessions retain units and offsets
-across page reloads and remain isolated from other tests. The manual mock frontend
-and its encoder/probe/signal HTTP controls still receive state without joining a port.
+across page reloads and remain isolated from other tests. The session-scoped
+external-work-position control models another client's offset change without motion.
+The manual mock frontend and encoder/probe/signal HTTP controls still receive
+state without joining a port.
 
 The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
 inch-based scenarios; this is not the mock controller's unseeded default (`G21`).
 Use `test.use({ workingUnit: 'G21' })` for metric-controller scenarios. Seeding
 happens only before first navigation, so a unit change really must survive a
 controller-session reconnect. Use `test.use({ droSource: 'manual' })` for local
-preference/default or independent ABS/INC-memory behavior rather than asserting
+preference/default or standalone ABS-datum behavior rather than asserting
 standalone semantics against a connected GRBL controller.
 
 Connected `goto()`/`reload()` await confirmed unit status and fresh work-coordinate

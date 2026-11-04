@@ -602,6 +602,10 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       }
       await rejected;
       expect(adapter.getState().workPositionControl?.pending).toBeNull();
+      if (reason !== 'disconnect') {
+        expect(adapter.getState().workPositionControl?.availability).toBe('ready');
+        expect(adapter.getState().workPositionControl?.error).toBe(message);
+      }
       expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
       mockSocket.emit.mockClear();
       if (reason === 'disconnect') {
@@ -609,6 +613,9 @@ describe('CncjsMillAdapter native unit synchronization', () => {
         finishJoin();
       }
       fireSocket('controller:state', 'Grbl', nativeState('G21'));
+      if (reason !== 'disconnect') {
+        expect(adapter.getState().workPositionControl?.error).toBe(message);
+      }
       expect(mockSocket.emit).not.toHaveBeenCalledWith('command', expect.anything(), 'gcode', expect.stringContaining('G10'));
       adapter.disconnect();
     });
@@ -624,6 +631,26 @@ describe('CncjsMillAdapter native unit synchronization', () => {
         await rejected;
         expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
         expect(adapter.getState().workPositionControl?.pending).toBeNull();
+        expect(adapter.getState().workPositionControl?.availability).toBe('ready');
+        expect(adapter.getState().workPositionControl?.error).toBe('Controller did not confirm work coordinates within 5 seconds');
+        fireSocket('controller:state', 'Grbl', nativeState('G21'));
+        expect(adapter.getState().workPositionControl?.error).toBe('Controller did not confirm work coordinates within 5 seconds');
+        fireSocket('controller:settings', 'Grbl', { settings: { '$13': '1' } });
+        expect(adapter.getState().workPositionControl?.error).toBe('Controller did not confirm work coordinates within 5 seconds');
+        fireSocket('serialport:read', '$13=1');
+        fireSocket('serialport:read', '<Idle|MPos:1,0,0|WCO:0,0,0>');
+        expect(adapter.getState().workPositionControl?.availability).toBe('ready');
+        expect(adapter.getState().workPositionControl?.error).toBe('Controller did not confirm work coordinates within 5 seconds');
+        await expect(adapter.requestWorkPosition({})).rejects.toThrow();
+        expect(adapter.getState().workPositionControl?.error).toBe('Controller did not confirm work coordinates within 5 seconds');
+        mockSocket.emit.mockClear();
+        const retry = adapter.requestWorkPosition({ x: 0 });
+        expect(adapter.getState().workPositionControl?.pending).toEqual({ x: 0 });
+        expect(adapter.getState().workPositionControl?.error).toBeNull();
+        advanceWorkRequestMarker();
+        fireSocket('serialport:read', '<Idle|MPos:1,0,0|WCO:1,0,0>');
+        await expect(retry).resolves.toBeUndefined();
+        expect(adapter.getState().workPositionControl?.error).toBeNull();
       } finally {
         adapter.disconnect();
         vi.useRealTimers();

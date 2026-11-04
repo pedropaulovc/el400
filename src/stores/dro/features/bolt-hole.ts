@@ -28,6 +28,7 @@ import {
 } from './buffer-utils';
 import {
   computeNormalDisplay,
+  computeAxisPositionMm,
   createDisplay,
   type DisplayState,
 } from '../utils/displayComputation';
@@ -166,19 +167,16 @@ function computeBoltHoleNavigateDisplay(
   const holePos = calculateHolePosition(boltData, boltData.currentHole);
 
   // Always use absolute position for distance-to-go calculation (not mode-dependent)
-  const { millState } = context;
-  const currentX = millState.connected || millState.controllerType === 'cncjs'
-    ? millState.position.x - vMem.workOffsets.X
-    : vMem.manualAbsoluteValues.X;
-  const currentY = millState.connected || millState.controllerType === 'cncjs'
-    ? millState.position.y - vMem.workOffsets.Y
-    : vMem.manualAbsoluteValues.Y;
+  const currentX = computeAxisPositionMm('X', vMem, context, 'abs');
+  const currentY = computeAxisPositionMm('Y', vMem, context, 'abs');
 
   const unit = context.nvMem.defaultUnit;
 
   return createDisplay(
-    fromMmToAnyUnit(holePos.x - currentX, unit),
-    fromMmToAnyUnit(holePos.y - currentY, unit),
+    !Number.isFinite(currentX) && context.millState.workPositionControl !== undefined
+      ? 'no Conn' : fromMmToAnyUnit(holePos.x - currentX, unit),
+    !Number.isFinite(currentY) && context.millState.workPositionControl !== undefined
+      ? 'no Conn' : fromMmToAnyUnit(holePos.y - currentY, unit),
     computeNormalDisplay(vMem, context).Z
   );
 }

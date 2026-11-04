@@ -252,10 +252,10 @@ export const useInputBuffer = () => useDROStore((s) => s.vMem.inputBuffer);
 /** Get work offsets */
 export const useWorkOffsets = () => useDROStore((s) => s.vMem.workOffsets);
 
-/** Get connected non-GRBL INC datum offsets (GRBL INC uses native WPos). */
+/** Get independent local INC datum offsets for external sources. */
 export const useIncrementalOffsets = () => useDROStore((s) => s.vMem.incrementalOffsets);
 
-/** Get disconnected non-GRBL manual INC counters. */
+/** Get disconnected manual INC counters (selected CNCjs retains cached MPos). */
 export const useIncrementalValues = () => useDROStore((s) => s.vMem.incrementalValues);
 
 /** Get manual absolute values */

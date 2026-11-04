@@ -5,7 +5,7 @@
  * Handles abs/inc mode, connected vs manual positioning, and unit conversion.
  */
 
-import type { Axis, VolatileMemoryState } from '../../../types/volatileMemory';
+import type { Axis, DatumMode, VolatileMemoryState } from '../../../types/volatileMemory';
 import type {
   NonVolatileMemory,
   DisplayResolutionValue,
@@ -254,28 +254,30 @@ export const INITIAL_DISPLAY_STATE: DisplayState = {
  * @param axis - The axis to compute position for
  * @param vMem - Volatile memory state
  * @param context - Reducer context (millState, nvMem)
+ * @param mode - Datum frame to read, defaulting to the active mode
  * @returns Position in millimeters
  */
 export function computeAxisPositionMm(
   axis: Axis,
   vMem: VolatileMemoryState,
-  context: DROReducerContext
+  context: DROReducerContext,
+  mode: DatumMode = vMem.mode
 ): number {
-  const { mode, workOffsets, incrementalOffsets, incrementalValues, manualAbsoluteValues } = vMem;
+  const { workOffsets, incrementalOffsets, incrementalValues, manualAbsoluteValues } = vMem;
   const { millState } = context;
 
   if (mode === 'abs') {
+    // Native ABS belongs to the controller's active WCS, even while unavailable.
+    // Never fall back to a local datum when its WPos is unknown.
+    if (millState.workPositionControl !== undefined) {
+      const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+      return millState.workPosition?.[axisKey] ?? Number.NaN;
+    }
     if (millState.connected || millState.controllerType === 'cncjs') {
       const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
       return millState.position[axisKey] - workOffsets[axis];
     }
     return manualAbsoluteValues[axis];
-  }
-  // GRBL owns INC through its active work coordinate system. Never substitute
-  // the separate local INC datum, including while that controller is unavailable.
-  if (millState.workPositionControl !== undefined) {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    return millState.workPosition?.[axisKey] ?? Number.NaN;
   }
   if (millState.connected || millState.controllerType === 'cncjs') {
     const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
@@ -344,16 +346,18 @@ export function computeDisplayPosition(
  *
  * @param vMem - Volatile memory state
  * @param context - Reducer context (millState, nvMem)
+ * @param mode - Datum frame to read, defaulting to the active mode
  * @returns Display state with unit-converted position values
  */
 export function computeNormalDisplay(
   vMem: VolatileMemoryState,
-  context: DROReducerContext
+  context: DROReducerContext,
+  mode: DatumMode = vMem.mode
 ): DisplayState {
   return {
-    X: computeDisplayPosition('X', vMem, context),
-    Y: computeDisplayPosition('Y', vMem, context),
-    Z: computeDisplayPosition('Z', vMem, context),
+    X: computeDisplayPosition('X', vMem, context, computeAxisPositionMm('X', vMem, context, mode)),
+    Y: computeDisplayPosition('Y', vMem, context, computeAxisPositionMm('Y', vMem, context, mode)),
+    Z: computeDisplayPosition('Z', vMem, context, computeAxisPositionMm('Z', vMem, context, mode)),
   };
 }
 

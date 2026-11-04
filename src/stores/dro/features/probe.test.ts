@@ -434,7 +434,7 @@ describe('probeReducer - physical readings across controller updates', () => {
     expect(state.display.X).toBeCloseTo(127);
   });
 
-  it.each(['edge', 'midpoint'] as const)('refreshes %s GRBL INC results only from native WPos, without leaving the result screen', (probeFunction) => {
+  it.each(['edge', 'midpoint'] as const)('refreshes %s GRBL ABS results only from native WPos, without leaving the result screen', (probeFunction) => {
     const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
     try {
       const context = (workX: number, pending: boolean, unit: 'mm' | 'inch' = 'mm'): DROReducerContext => ({
@@ -451,7 +451,7 @@ describe('probeReducer - physical readings across controller updates', () => {
           },
         },
       });
-      const vMem = { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'inc' as const };
+      const vMem = { ...INITIAL_VOLATILE_MEMORY_STATE, mode: 'abs' as const };
       let state = probeState('probe-waiting', {
         ...INITIAL_PROBE_DATA, probeFunction, probeAxis: 'X',
         captures: probeFunction === 'midpoint' ? [10] : [],
@@ -471,6 +471,44 @@ describe('probeReducer - physical readings across controller updates', () => {
       state = probeReducer(state, { eventName: 'MILL_STATE_CHANGED' }, context(desired, false, 'inch'))!;
       expect(state.display.X).toBeCloseTo(desired / 25.4);
       expect(request).toHaveBeenCalledTimes(1);
+    } finally {
+      request.mockRestore();
+    }
+  });
+
+  it.each(['edge', 'midpoint'] as const)('keeps native %s INC datum local even while disconnected', (probeFunction) => {
+    const request = vi.spyOn(useMillStore.getState(), 'requestWorkPosition').mockResolvedValue();
+    try {
+      const context: DROReducerContext = {
+        ...ctxAt({ x: 50 }, 'P'),
+        nvMem: { ...DEFAULT_TEST_CONTEXT.nvMem, defaultUnit: 'mm' },
+        millState: {
+          ...ctxAt({ x: 50 }, 'P').millState,
+          connected: false,
+          controllerType: 'cncjs',
+          workPosition: { x: 42, y: 0, z: 0 },
+          workPositionControl: { availability: 'ready', pending: null, error: null },
+        },
+      };
+      const vMem = {
+        ...INITIAL_VOLATILE_MEMORY_STATE,
+        mode: 'inc' as const,
+        workOffsets: { X: 3, Y: 4, Z: 5 },
+        incrementalOffsets: { X: 7, Y: 8, Z: 9 },
+      };
+      const start = probeState('probe-waiting', {
+        ...INITIAL_PROBE_DATA, probeFunction, probeAxis: 'X',
+        captures: probeFunction === 'midpoint' ? [10] : [],
+      }, vMem);
+      const result = probeReducer(start, { eventName: 'MILL_STATE_CHANGED' }, context)!;
+      expect(request).not.toHaveBeenCalled();
+      expect(result.stateName).toBe('probe-result');
+      expect(result.vMem.incrementalOffsets).toEqual({
+        ...vMem.incrementalOffsets, X: probeFunction === 'edge' ? 50 : 30,
+      });
+      expect(result.vMem.workOffsets).toEqual(vMem.workOffsets);
+      const idle = probeReducer(result, { eventName: 'KEY_CLEAR' }, context)!;
+      expect(idle.display.X).toBe(probeFunction === 'edge' ? 0 : 20);
     } finally {
       request.mockRestore();
     }

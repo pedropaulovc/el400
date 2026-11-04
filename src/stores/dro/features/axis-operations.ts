@@ -44,6 +44,9 @@ function zeroAxis(
   const { millState } = context;
 
   if (vMem.mode === 'abs') {
+    if (millState.workPositionControl !== undefined) {
+      return setAxisValueMm(vMem, axis, 0, context);
+    }
     // In ABS mode: set work offset to current machine position
     if (millState.connected) {
       const machinePos = getMachinePosition(axis, context);
@@ -59,12 +62,8 @@ function zeroAxis(
     };
   }
 
-  if (millState.workPositionControl !== undefined) {
-    return setAxisValueMm(vMem, axis, 0, context);
-  }
-
   // Connected INC has its own datum; manual INC keeps a standalone counter.
-  if (millState.connected) {
+  if (millState.connected || millState.controllerType === 'cncjs') {
     return {
       ...vMem,
       incrementalOffsets: { ...vMem.incrementalOffsets, [axis]: getMachinePosition(axis, context) },
@@ -118,6 +117,11 @@ export function setAxisValueMm(
   const { millState } = context;
 
   if (vMem.mode === 'abs') {
+    if (millState.workPositionControl !== undefined) {
+      const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
+      void useMillStore.getState().requestWorkPosition({ [axisKey]: valueMm });
+      return { ...vMem, inputBuffer: '' };
+    }
     if (millState.connected) {
       // In connected mode, setting a value adjusts the work offset
       const machinePos = getMachinePosition(axis, context);
@@ -135,12 +139,7 @@ export function setAxisValueMm(
       inputBuffer: '',
     };
   }
-  if (millState.workPositionControl !== undefined) {
-    const axisKey = axis.toLowerCase() as 'x' | 'y' | 'z';
-    void useMillStore.getState().requestWorkPosition({ [axisKey]: valueMm });
-    return { ...vMem, inputBuffer: '' };
-  }
-  if (millState.connected) {
+  if (millState.connected || millState.controllerType === 'cncjs') {
     return {
       ...vMem,
       incrementalOffsets: {
@@ -177,7 +176,7 @@ export const axisOperationsReducer: FeatureReducer = (
   switch (event.eventName) {
     case 'BTN_ZERO_ALL': {
       let newVMem = vMem;
-      if (vMem.mode === 'inc' && context.millState.workPositionControl !== undefined) {
+      if (vMem.mode === 'abs' && context.millState.workPositionControl !== undefined) {
         void useMillStore.getState().requestWorkPosition({ x: 0, y: 0, z: 0 });
       } else {
         for (const axis of ['X', 'Y', 'Z'] as const) {

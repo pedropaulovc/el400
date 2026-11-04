@@ -7,10 +7,10 @@
  * exits with a double-C.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
-import { act, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, fireEvent, screen } from '@testing-library/react';
 import {
+  emitMillTick,
   getAxisDisplayPureTextValue,
   renderSimulator,
 } from '../../../tests/helpers/integration-test-utils';
@@ -35,13 +35,22 @@ function jogTo(x: number, y: number, z: number): void {
  * under a production-like MILL_STATE_CHANGED tick — the exact traffic that hid
  * the US-046 auto-skip bug.
  */
-async function enterDiagnostics(): Promise<ReturnType<typeof userEvent.setup>> {
-  const { user } = await renderSimulator({ bootMessageMode: 'show' });
-  // The boot message must be on screen before ▲ enters diagnostics.
-  expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
-  await user.click(screen.getByTestId('key-8'));
-  expect(useDROStore.getState().stateName).toBe('diagnostics-memory');
-  return user;
+async function enterDiagnostics() {
+  // Freeze the boot deadline until the front-panel press has been dispatched.
+  // Use a synchronous DOM click here so user-event's timer-driven interaction
+  // does not need to run on the frozen clock; retain the live-mill tick.
+  vi.useFakeTimers();
+  try {
+    const { user } = await renderSimulator({ bootMessageMode: 'show' });
+    expect(getAxisDisplayPureTextValue('X')).toBe('EL400');
+    fireEvent.click(screen.getByTestId('key-8'));
+    emitMillTick();
+    expect(useDROStore.getState().stateName).toBe('diagnostics-memory');
+    return user;
+  } finally {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  }
 }
 
 describe('Self-diagnostics integration tests', () => {

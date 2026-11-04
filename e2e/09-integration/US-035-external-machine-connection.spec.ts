@@ -55,40 +55,53 @@ test.describe('US-035: External Machine Connection', () => {
     await expect(errorMessages).toHaveCount(0);
   });
 
-  test('native INC zero and preset preserve machine position and survive reload', async ({ dro }) => {
+  test('native ABS writes work coordinates while INC stays local across offset changes and motion', async ({ dro }) => {
     await dro.toggleInchMm();
     await dro.simulateEncoderAbsoluteMove('X', 25);
     await dro.simulateEncoderAbsoluteMove('Y', 10);
     await dro.waitForAxisValue('X', 25);
     await dro.waitForAxisValue('Y', 10);
 
+    // ABS preset is a controller work-coordinate edit, not physical motion.
+    await dro.selectAxis('X');
+    await dro.enterNumber('12');
+    await dro.enterButton.click();
+    await dro.waitForAxisValue('X', 12);
+    await dro.waitForConnectedReady();
+
     await dro.toggleAbsInc();
     await dro.zeroAxis('X');
     await dro.waitForAxisValue('X', 0);
-    await dro.waitForConnectedReady();
-    await dro.waitForAxisValue('Y', 10);
-
     await dro.selectAxis('Y');
     await dro.enterNumber('7');
     await dro.enterButton.click();
     await dro.waitForAxisValue('Y', 7);
-    await dro.waitForConnectedReady();
-    await dro.waitForAxisValue('X', 0);
 
-    // A G10 datum write changes offsets, not the physical machine coordinates.
+    // Neither INC edit changed the controller offsets.
     await dro.toggleAbsInc();
-    await dro.waitForAxisValue('X', 25);
+    await dro.waitForAxisValue('X', 12);
     await dro.waitForAxisValue('Y', 10);
     await dro.toggleAbsInc();
-    await dro.simulateEncoderAbsoluteMove('X', 30);
-    await dro.waitForAxisValue('X', 5);
+
+    // An independent client changes WPos without moving the machine.
+    await dro.simulateExternalWorkPosition('X', 40);
+    await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 40);
+    await dro.waitForAxisValue('Y', 10);
+    await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 0);
     await dro.waitForAxisValue('Y', 7);
 
+    // Physical movement advances both coordinate frames.
+    await dro.simulateEncoderAbsoluteMove('X', 30);
+    await dro.waitForAxisValue('X', 5);
+    await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 45);
     await dro.reload();
     expect(await dro.isMmUnits()).toBe(true);
-    if (await dro.isAbsMode()) await dro.toggleAbsInc();
-    await dro.waitForAxisValue('X', 5);
-    await dro.waitForAxisValue('Y', 7);
+    if (await dro.isIncMode()) await dro.toggleAbsInc();
+    await dro.waitForAxisValue('X', 45);
+    await dro.waitForAxisValue('Y', 10);
   });
 
   /**
