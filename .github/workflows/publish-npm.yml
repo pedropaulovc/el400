@@ -1,0 +1,58 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Validate release
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/validate-npm-release.mjs "$RELEASE_TAG"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium-headless-shell
+
+      - name: Run full test suite
+        run: npm run test:all
+
+      - name: Publish to npm
+        env:
+          DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+        run: npm publish --provenance --tag "$DIST_TAG"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          NOTES_FILE: ${{ steps.release.outputs.notes_file }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+        run: |
+          args=()
+          if [ "$PRERELEASE" = true ]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" --verify-tag --notes-file "$NOTES_FILE" "${args[@]}"

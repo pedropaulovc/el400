@@ -1,12 +1,31 @@
 {
   "name": "el400",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Electronica EL400 digital readout simulator for CNCjs",
+  "license": "MIT",
+  "author": "Pedro Paulo Vezza Campos",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedropaulovc/el400.git"
+  },
+  "homepage": "https://github.com/pedropaulovc/el400#readme",
+  "bugs": "https://github.com/pedropaulovc/el400/issues",
+  "files": [
+    "web/",
+    "CHANGELOG.md",
+    "DEVELOPING.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:package": "vite build --base=/el400/ --outDir=web",
+    "prepack": "npm run build:package",
     "lint": "eslint .",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
@@ -24,7 +43,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:all": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:e2e && npm run test:storybook"
   },
-  "dependencies": {
+  "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.20",
     "@radix-ui/react-alert-dialog": "^1.1.23",
@@ -75,9 +94,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
     "zod": "^4.2.1",
-    "zustand": "^5.0.9"
-  },
-  "devDependencies": {
+    "zustand": "^5.0.9",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.1",
     "@storybook/addon-vitest": "^10.5.8",
