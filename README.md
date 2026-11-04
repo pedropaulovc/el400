@@ -75,6 +75,51 @@ GitHub environments `cloudflare-production` and `cloudflare-ppe` provide each
 workflow with its target account ID and API token. `wrangler.toml` remains
 account-neutral so the same static-assets configuration works in both accounts.
 
+## npm distribution
+
+The `el400` package contains a prebuilt simulator in `web/`, configured for a
+`/el400/` URL prefix. It has no runtime npm dependencies and does not expose a
+React API or CLI.
+
+```sh
+npm install --save-exact el400@0.1.0
+```
+
+Mount `node_modules/el400/web` as static files at `/el400/` in CNCjs, then add
+`/el400/?source=cncjs` as a custom widget. Keep the trailing slash. CNCjs supplies
+the widget session token; the simulator connects to the same origin. Without
+`source=cncjs`, the simulator runs in manual mode.
+
+For [cncjs-whb04b6-el400-integration](https://github.com/pedropaulovc/cncjs-whb04b6-el400-integration),
+setup can use the installed package's `web/` directory as `el400.mountPath`
+instead of cloning and building this repository. That consumer change is
+separate; existing integration releases still use their pinned checkout.
+
+### Publishing
+
+1. Update `package.json` and `package-lock.json` to the release version and add
+   a nonempty `## [<version>]` section to [changelog.md](changelog.md).
+2. Run `npm run test:all` and `npm pack`. The pack lifecycle builds `web/`
+   with `/el400/` as its base; `npm run build` still builds the root-hosted site
+   in `dist/`.
+3. Merge the release changes, then push the matching tag, for example
+   `git tag v0.1.0 && git push origin v0.1.0`.
+
+The `Publish npm package` workflow checks the tag against the package version and
+changelog, runs the full test suite, and publishes with provenance. Stable
+versions use npm's `latest` tag; prereleases use `next`. The matching changelog
+section becomes the GitHub release notes.
+
+Configure npm trusted publishing for package `el400`, GitHub owner
+`pedropaulovc`, repository `el400`, workflow `publish-npm.yml`, and enable the
+`npm publish` allowed action (new configurations default to staged publishing).
+See [npm's trusted publisher settings](https://docs.npmjs.com/trusted-publishers/#for-github-actions).
+The workflow uses GitHub OIDC and needs no npm token secret. Before the first automated release,
+an npm maintainer must publish the initial package from an authenticated checkout
+(`npm publish --access public`) and configure that trusted publisher on npm.
+Use automated tag publishing for subsequent versions; npm rejects attempts to
+republish an existing version.
+
 ## Tech Stack
 
 - Vite
