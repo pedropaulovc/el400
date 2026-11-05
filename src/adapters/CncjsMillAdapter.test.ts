@@ -798,6 +798,32 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     adapter.disconnect();
   });
 
+  it('applies the $# offset to snapshots until CNCjs refreshes its cached WCO', async () => {
+    const snapshot = (mpos: number, wpos: number, wco: number) => ({
+      parserstate: { modal: { units: 'G21', wcs: 'G54' } },
+      status: { activeState: 'Idle', mpos: [mpos, 0, 0], wpos: [wpos, 0, 0], wco: [wco, 0, 0] },
+    });
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    // CNCjs cached WCO 25.4 while $13=0 (mm); firmware now reports inches.
+    fireSocket('controller:state', 'Grbl', snapshot(2, -23.4, 25.4));
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': '1' } });
+    fireSocket('serialport:read', '$13=1');
+    fireSocket('serialport:read', '<Idle|MPos:2,0,0|FS:0,0>');
+    for (const line of ['[G54:1,0,0]', '[G92:0,0,0]', '[TLO:0]', 'ok']) fireSocket('serialport:read', line);
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
+    // Same stale cache: CNCjs's WPos would read -594.36 mm.
+    fireSocket('controller:state', 'Grbl', snapshot(2, -23.4, 25.4));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
+    // A refreshed cache (here: another client's offset change) is trusted again.
+    fireSocket('controller:state', 'Grbl', snapshot(2, 1.5, 0.5));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(38.1);
+    fireSocket('controller:state', 'Grbl', snapshot(3, 2.5, 0.5));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(63.5);
+    adapter.disconnect();
+  });
+
   it('leaves position writes unavailable when $# omits the active offsets', async () => {
     vi.useFakeTimers();
     try {

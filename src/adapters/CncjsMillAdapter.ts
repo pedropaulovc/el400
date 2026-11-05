@@ -42,6 +42,8 @@ interface CncjsControllerState {
     mpos?: (number | string)[] | Record<string, number | string>;
     /** [x, y, z] array, or {x, y, z} object with string values (CNCjs 1.x) */
     wpos?: (number | string)[] | Record<string, number | string>;
+    /** CNCjs's cached WCO, refreshed only when a status report carries WCO */
+    wco?: (number | string)[] | Record<string, number | string>;
     pn?: string;
     /** Triggered input pins, e.g. 'P' - field name used by CNCjs 1.x Grbl */
     pinState?: string;
@@ -297,6 +299,10 @@ export class CncjsMillAdapter implements MillAdapter {
     g92?: MillPosition;
     tlo?: number;
   } | null = null;
+  // WCO (mm) from `$#`. CNCjs derives snapshot WPos from its cached WCO, which
+  // `$#` does not refresh; apply this until that cache changes.
+  private offsetOverride: MillPosition | null = null;
+  private snapshotWco = '';
   private positionReady = false;
   private statusQueriesRemaining = 0;
   private statusQueryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -392,6 +398,10 @@ export class CncjsMillAdapter implements MillAdapter {
         this.currentControllerType = type as CncjsControllerType;
         const normalized = normalizeControllerState(type, controllerState);
         if (type.toLowerCase() === 'grbl') {
+          // A changed raw WCO means CNCjs parsed a fresh WCO report: trust it again.
+          const snapshotWco = JSON.stringify(controllerState.status?.wco ?? null);
+          if (snapshotWco !== this.snapshotWco) this.offsetOverride = null;
+          this.snapshotWco = snapshotWco;
           this.activeState = controllerState.status?.activeState ?? null;
           const units = controllerState.parserstate?.modal?.units;
           this.confirmedUnit = units === 'G20' ? 'inch' : units === 'G21' ? 'mm' : null;
@@ -410,6 +420,9 @@ export class CncjsMillAdapter implements MillAdapter {
           } else {
             if (normalized.position) normalized.position = this.scalePosition(normalized.position);
             if (normalized.workPosition) normalized.workPosition = this.scalePosition(normalized.workPosition);
+            const machine = normalized.position;
+            const wco = this.offsetOverride;
+            if (machine && wco) normalized.workPosition = { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z };
           }
         } else {
           this.confirmedUnit = null;
@@ -678,6 +691,8 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
     this.offsetRead = null;
+    this.offsetOverride = null;
+    this.snapshotWco = '';
     this.positionReady = false;
     this.cancelStatusQuery();
     this.updateState({ connected: false });
@@ -757,6 +772,7 @@ export class CncjsMillAdapter implements MillAdapter {
           return;
         }
         this.establishPosition(machine, { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z }, false);
+        this.offsetOverride = wco;
         return;
       }
     }
@@ -802,6 +818,7 @@ export class CncjsMillAdapter implements MillAdapter {
   private establishPosition(machine: MillPosition, work: MillPosition, confirmingWork: boolean): void {
     this.awaitingFreshStatus = false;
     this.offsetRead = null;
+    this.offsetOverride = null;
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
     this.reportError = null;
@@ -850,6 +867,7 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
     this.offsetRead = null;
+    this.offsetOverride = null;
     this.positionReady = false;
     this.reportError = message;
     this.finishWorkRequest(new Error(message));
