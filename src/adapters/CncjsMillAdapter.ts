@@ -736,7 +736,7 @@ export class CncjsMillAdapter implements MillAdapter {
     }
     if (this.offsetRead && this.reportScale !== null) {
       // `$#` reports offsets in $13 units; GRBL's WCO is G5x + G92, plus TLO on Z.
-      const param = /^\[(G5[4-9]|G92|TLO):(-?[\d.]+)(?:,(-?[\d.]+),(-?[\d.]+))?\]$/.exec(trimmed);
+      const param = /^\[(G5[4-9]|G92|TLO):(-?[\d.]+)(?:,(-?[\d.]+),(-?[\d.]+)(?:,-?[\d.]+)*)?\]$/.exec(trimmed);
       if (param) {
         this.offsetRead.phase = 'receiving';
         if (param[1] === 'TLO') this.offsetRead.tlo = Number(param[2]) * this.reportScale;

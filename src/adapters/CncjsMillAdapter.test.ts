@@ -765,9 +765,10 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('serialport:read', '<Idle|MPos:11,20,30|FS:0,0>');
       expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call): unknown => call[3])).toEqual(['$#']);
       expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
-      fireSocket('serialport:read', '[G54:100,100,100]');
-      fireSocket('serialport:read', '[G55:1,2,3]');
-      fireSocket('serialport:read', '[G92:0.5,0,0]');
+      // Four-axis controllers append A; only XYZ feed the readout.
+      fireSocket('serialport:read', '[G54:100,100,100,100]');
+      fireSocket('serialport:read', '[G55:1,2,3,9]');
+      fireSocket('serialport:read', '[G92:0.5,0,0,0]');
       fireSocket('serialport:read', '[TLO:4]');
       fireSocket('serialport:read', 'ok');
       // Active G55 + G92 + TLO on Z, subtracted from the latest fresh MPos.
