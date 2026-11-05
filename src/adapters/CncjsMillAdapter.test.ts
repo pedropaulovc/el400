@@ -780,6 +780,23 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     },
   );
 
+  it('ignores a preceding command ok that arrives after the WCO-less report triggered $#', async () => {
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    fireSocket('controller:state', 'Grbl', nativeState('G21'));
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
+    fireSocket('serialport:read', '$13=0');
+    // Realtime `?` overtakes the setting command's trailing ok (seen live on FluidNC).
+    fireSocket('serialport:read', '<Idle|MPos:10,0,0|FS:0,0>');
+    fireSocket('serialport:read', 'ok');
+    expect(adapter.getState().workPositionControl?.error).toBeNull();
+    for (const line of ['[G54:4,0,0]', '[G92:0,0,0]', '[TLO:0]', 'ok']) fireSocket('serialport:read', line);
+    expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(6);
+    adapter.disconnect();
+  });
+
   it('leaves position writes unavailable when $# omits the active offsets', async () => {
     vi.useFakeTimers();
     try {
