@@ -420,8 +420,9 @@ export class CncjsMillAdapter implements MillAdapter {
           } else {
             if (normalized.position) normalized.position = this.scalePosition(normalized.position);
             if (normalized.workPosition) normalized.workPosition = this.scalePosition(normalized.workPosition);
+            // Without a cached wco, CNCjs passes reported WPos through; nothing can be stale.
             const machine = normalized.position;
-            const wco = this.offsetOverride;
+            const wco = controllerState.status?.wco ? this.offsetOverride : null;
             if (machine && wco) normalized.workPosition = { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z };
           }
         } else {

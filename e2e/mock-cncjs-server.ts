@@ -378,6 +378,8 @@ function controllerState(session: Session) {
         (session.position.y - offset.y) / scale,
         (session.position.z - offset.z) / scale,
       ],
+      // CNCjs 1.11.5 caches the last reported WCO and derives WPos from it.
+      wco: [offset.x / scale, offset.y / scale, offset.z / scale],
       pn: session.probeState?.pinState ?? '',
     },
     probe: session.probeState || '',
