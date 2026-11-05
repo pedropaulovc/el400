@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1]
+
+- Fix ABS showing `no Conn` on FluidNC. FluidNC's `$$` omits `$13`, so the report-unit readback timed out and work coordinates never became ready. When `$$` lacks `$13`, EL400 now sends `$I` and, on FluidNC, reads `$/report_inches` instead.
+
 ## [0.3.0]
 
 - Add accessible, user-initiated browser fullscreen entry and exit, matching Shopfloor Tablet's Fullscreen API behavior without changing the original EL400 face or CNCjs adapter.

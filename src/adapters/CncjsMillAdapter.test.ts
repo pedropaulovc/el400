@@ -397,6 +397,53 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     adapter.disconnect();
   });
 
+  it.each([['false', 'G21', 1], ['true', 'G20', 25.4]] as const)(
+    'reads FluidNC report_inches=%s when the settings dump omits report units and establishes ABS from WCO',
+    async (reportInches, units, scale) => {
+      await connectSocket();
+      finishJoin();
+      fireSocket('workflow:state', 'idle');
+      fireSocket('controller:state', 'Grbl', nativeState(units));
+      fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1' } });
+      const commands = () => mockSocket.emit.mock.calls
+        .filter((call) => call[0] === 'command' && call[2] === 'gcode').map((call) => call[3]);
+      expect(commands()).toEqual(['$$']);
+      // FluidNC 3.7.8 transcript captured through CNCjs.
+      fireSocket('serialport:read', '$10=1 (Status report options, mask)');
+      fireSocket('serialport:read', 'ok');
+      expect(commands()).toEqual(['$$', '$I']);
+      fireSocket('serialport:read', '[VER:3.7 FluidNC v3.7.8:]');
+      expect(commands()).toEqual(['$$', '$I', '$/report_inches']);
+      fireSocket('serialport:read', '[OPT:PHS]');
+      fireSocket('serialport:read', 'ok');
+      // CNCjs records the `$path=value` reply as a setting and rebroadcasts.
+      fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1', '$/report_inches': reportInches } });
+      fireSocket('serialport:read', `$/report_inches=${reportInches}`);
+      expect(mockSocket.emit).toHaveBeenCalledWith('write', '/dev/ttyB', '?');
+      fireSocket('serialport:read', '<Idle|MPos:-206.850,-78.900,-148.000|FS:0,0>');
+      fireSocket('serialport:read', '<Idle|MPos:-206.850,-78.900,-148.000|FS:0,0|WCO:-265.500,-82.500,-305.000>');
+      expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+      expect(adapter.getState().workPosition?.x).toBeCloseTo(58.65 * scale);
+      expect(adapter.getState().position.z).toBeCloseTo(-148 * scale);
+      expect(commands()).toEqual(['$$', '$I', '$/report_inches']);
+      adapter.disconnect();
+    },
+  );
+
+  it('does not query FluidNC config from other firmware that omits $13', async () => {
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    fireSocket('controller:state', 'Grbl', nativeState('G21'));
+    fireSocket('serialport:read', 'ok');
+    fireSocket('serialport:read', '[VER:1.1h.20190825:]');
+    fireSocket('serialport:read', 'ok');
+    expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call) => call[3]))
+      .toEqual(['$$', '$I']);
+    expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
+    adapter.disconnect();
+  });
+
   it('fails the fresh-report boundary after five seconds when no status reply arrives', async () => {
     vi.useFakeTimers();
     try {

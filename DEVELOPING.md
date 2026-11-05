@@ -120,6 +120,10 @@ GRBL **`$13`**, not `G20`/`G21`, determines status-report scaling. On joining or
 changing the report setting, EL400 reads `$$` back from firmware and requests
 a fresh status/WCO boundary before accepting newly scaled coordinates. Raw
 settings replies are observable even if the cached setting did not change.
+FluidNC keeps report units in `config.yaml` and its `$$` omits `$13`: when `$$`
+ends without `$13`, EL400 sends `$I`, and if the reply identifies FluidNC it reads
+`$/report_inches` as the `$13` equivalent. These read-only queries appear in the
+CNCjs console.
 Cached composite controller snapshots are never reinterpreted under a new scale.
 Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
 boundary without a literal WCO field. If the required fresh coordinates are

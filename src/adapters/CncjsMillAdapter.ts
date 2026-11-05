@@ -104,6 +104,24 @@ function toMillPosition(
   };
 }
 
+// FluidNC keeps report units in config.yaml: its `$$` omits GRBL's `$13`, and
+// `$/report_inches` reads the same setting. Both map to GRBL's '0' (mm) / '1' (inch).
+const FLUIDNC_REPORT_INCHES = '$/report_inches';
+
+function parseReportUnitSetting(line: string): '0' | '1' | null {
+  const grbl = /^\$13=([01])(?:\s|$)/.exec(line);
+  if (grbl) return grbl[1] === '1' ? '1' : '0';
+  const fluidnc = /^\$\/report_inches=(true|false)$/i.exec(line);
+  if (!fluidnc) return null;
+  return fluidnc[1]?.toLowerCase() === 'true' ? '1' : '0';
+}
+
+function reportUnitFromSettings(settings: Record<string, unknown> | undefined): '0' | '1' | null {
+  const grbl = String(settings?.['$13']);
+  if (grbl === '0' || grbl === '1') return grbl;
+  return parseReportUnitSetting(`${FLUIDNC_REPORT_INCHES}=${String(settings?.[FLUIDNC_REPORT_INCHES])}`);
+}
+
 /**
  * Normalizes GRBL controller state to MillState.
  * Position arrives as [x, y, z] arrays or {x, y, z} objects depending on the
@@ -266,7 +284,8 @@ export class CncjsMillAdapter implements MillAdapter {
   private reportedSetting: string | null = null;
   private reportScale: number | null = null;
   private reportQueryNeeded = true;
-  private reportQueryPending = false;
+  // `$$` → (no `$13` before its `ok`) `$I` → (FluidNC) `$/report_inches`.
+  private reportQuery: 'none' | 'settings' | 'identifying' | 'fluidnc' = 'none';
   private awaitingFreshStatus = false;
   private positionReady = false;
   private statusQueriesRemaining = 0;
@@ -394,8 +413,7 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket.on('controller:settings', (type: string, settings: { settings?: Record<string, unknown> }) => {
         if (!this.socketConnected || (!this.joinedPort && !this.joiningPort) || type.toLowerCase() !== 'grbl') return;
         this.currentControllerType = type as CncjsControllerType;
-        const setting = String(settings.settings?.['$13']);
-        const known = setting === '0' || setting === '1' ? setting : null;
+        const known = reportUnitFromSettings(settings.settings);
         if (known !== this.reportedSetting) {
           this.reportedSetting = known;
           this.positionReady = false;
@@ -647,7 +665,7 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportedSetting = null;
     this.reportScale = null;
     this.reportQueryNeeded = true;
-    this.reportQueryPending = false;
+    this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
     this.positionReady = false;
     this.cancelStatusQuery();
@@ -660,11 +678,11 @@ export class CncjsMillAdapter implements MillAdapter {
   }
 
   private requestReportBoundary(): void {
-    if (!this.reportQueryNeeded || this.reportQueryPending || !this.joinedPort ||
+    if (!this.reportQueryNeeded || this.reportQuery !== 'none' || !this.joinedPort ||
         this.currentControllerType.toLowerCase() !== 'grbl' ||
         this.workflow !== 'idle' || this.activeState !== 'Idle') return;
     this.reportQueryNeeded = false;
-    this.reportQueryPending = true;
+    this.reportQuery = 'settings';
     this.reportError = null;
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = setTimeout(() => {
@@ -683,19 +701,30 @@ export class CncjsMillAdapter implements MillAdapter {
       this.updateState({});
       return;
     }
-    const setting = /^\$13=([01])(?:\s|$)/.exec(line.trim());
-    if (setting && this.reportQueryPending) {
-      this.reportQueryPending = false;
+    const trimmed = line.trim();
+    const setting = parseReportUnitSetting(trimmed);
+    if (setting && this.reportQuery !== 'none') {
+      this.reportQuery = 'none';
       this.reportQueryNeeded = false;
-      this.reportedSetting = setting[1] ?? null;
-      this.reportScale = setting[1] === '1' ? 25.4 : 1;
+      this.reportedSetting = setting;
+      this.reportScale = setting === '1' ? 25.4 : 1;
       this.awaitingFreshStatus = true;
       this.statusQueriesRemaining = 10;
       this.queryFreshStatus();
       return;
     }
+    if (this.reportQuery === 'settings' && trimmed === 'ok') {
+      this.reportQuery = 'identifying';
+      this.socket?.emit('command', this.joinedPort, 'gcode', '$I');
+      return;
+    }
+    if (this.reportQuery === 'identifying' && /^\[VER:.*\bFluidNC\b/i.test(trimmed)) {
+      this.reportQuery = 'fluidnc';
+      this.socket?.emit('command', this.joinedPort, 'gcode', FLUIDNC_REPORT_INCHES);
+      return;
+    }
     const confirmingWork = this.workRequest?.phase === 'confirming';
-    if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(line.trim())) return;
+    if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(trimmed)) return;
     const fields: Partial<Record<'MPos' | 'WPos' | 'WCO', MillPosition>> = {};
     for (const match of line.matchAll(/(?:\||,)(MPos|WPos|WCO):(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/g)) {
       const value = { x: Number(match[2]), y: Number(match[3]), z: Number(match[4]) };
@@ -764,7 +793,7 @@ export class CncjsMillAdapter implements MillAdapter {
     this.cancelStatusQuery();
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
-    this.reportQueryPending = false;
+    this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
     this.positionReady = false;
     this.reportError = message;

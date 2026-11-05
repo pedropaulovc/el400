@@ -169,7 +169,9 @@ For implementation details, see the CNCjs adapter in [`src/adapters/CncjsMillAda
 With a native GRBL controller, the unit indicator follows the controller; the
 inch/mm button requests a controller unit change. **ABS** displays the controller
 work position (`WPos`), and datum edits update its work offsets. External work
-offset or active work-coordinate system changes are reflected in ABS.
+offset or active work-coordinate system changes are reflected in ABS. FluidNC
+running in CNCjs's Grbl mode is supported; EL400 reads its report units from
+`$/report_inches`.
 
 **INC** uses an independent local datum based on machine position (`MPos`).
 Zeroing or presetting INC does not change controller offsets, and external offset
