@@ -25,6 +25,7 @@ type DROFixtures = {
 type DROOptions = {
   droSource: 'cncjs' | 'manual';
   workingUnit: 'G20' | 'G21';
+  controllerFirmware: 'grbl' | 'fluidnc';
 };
 
 /**
@@ -48,6 +49,7 @@ type DROOptions = {
 export const test = base.extend<DROFixtures & DROOptions>({
   droSource: ['cncjs', { option: true }],
   workingUnit: ['G20', { option: true }],
+  controllerFirmware: ['grbl', { option: true }],
   /**
    * DROPage using the selected source and initial controller working units.
    * Session seeding happens once; goto/reload must preserve controller changes.
@@ -56,13 +58,13 @@ export const test = base.extend<DROFixtures & DROOptions>({
    * Tests that need different boot behavior should first arrange any desired
    * localStorage or other boot state, then call dro.goto() again.
    */
-  dro: async ({ page, droSource, workingUnit }, use) => {
+  dro: async ({ page, droSource, workingUnit, controllerFirmware }, use) => {
     // Clear localStorage before each test to ensure isolation
     await page.goto('/');
     await page.evaluate(() => { localStorage.clear(); });
 
     const dro = new DROPage(page, E2E_MOCK_CNCJS_PORT, undefined, droSource);
-    if (droSource === 'cncjs') await dro.seedController(workingUnit);
+    if (droSource === 'cncjs') await dro.seedController(workingUnit, controllerFirmware);
     // Connected scenarios await native join, confirmed units, and fresh WPos.
     await dro.goto();
     // eslint-disable-next-line react-hooks/rules-of-hooks

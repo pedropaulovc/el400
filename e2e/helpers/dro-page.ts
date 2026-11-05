@@ -124,13 +124,13 @@ export class DROPage {
   }
 
   /**
-   * Seed controller working units once before the fixture's first navigation.
-   * Reconnects deliberately do not call this: controller changes must persist.
+   * Seed controller working units and firmware once before the fixture's first
+   * navigation. Reconnects deliberately do not call this: controller changes must persist.
    */
-  async seedController(workingUnit: 'G20' | 'G21'): Promise<void> {
+  async seedController(workingUnit: 'G20' | 'G21', firmware: 'grbl' | 'fluidnc' = 'grbl'): Promise<void> {
     const response = await this.page.request.post(
       `http://localhost:${this.mockServerPort}/api/session?sessionId=${encodeURIComponent(this.sessionId)}`,
-      { data: { workingUnit } },
+      { data: { workingUnit, firmware } },
     );
     if (!response.ok()) {
       throw new Error(`Failed to seed mock controller: ${response.status()} ${await response.text()}`);

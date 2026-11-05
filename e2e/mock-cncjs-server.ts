@@ -16,11 +16,18 @@ type EncoderSignalByAxis = { X: EncoderSignalState; Y: EncoderSignalState; Z: En
 type Position = { x: number; y: number; z: number };
 type WorkingUnit = 'G20' | 'G21';
 type WorkCoordinateSystem = 'G54' | 'G55' | 'G56' | 'G57' | 'G58' | 'G59';
+// FluidNC runs under CNCjs's Grbl controller but keeps report units in
+// config.yaml: `$$` omits `$13`, `$/report_inches` reads it, and status reports
+// carry MPos with WCO only every few reports.
+type Firmware = 'grbl' | 'fluidnc';
+const FLUIDNC_WCO_EVERY = 3;
 type Session = {
   // Physical position and offsets stay in mm, independent of G20/G21 and $13.
   position: Position;
   workingUnit: WorkingUnit;
   reportInches: boolean;
+  firmware: Firmware;
+  statusReports: number;
   wcs: WorkCoordinateSystem;
   offsets: Record<WorkCoordinateSystem, Position>;
   probeState?: { pinState: string };
@@ -37,6 +44,8 @@ function getSession(sessionId: string): Session {
       position: { x: 0, y: 0, z: 0 },
       workingUnit: 'G21',
       reportInches: false,
+      firmware: 'grbl',
+      statusReports: 0,
       wcs: 'G54',
       offsets: {
         G54: { x: 0, y: 0, z: 0 },
@@ -102,14 +111,20 @@ const httpServer = createServer((req, res) => {
     req.on('data', (chunk) => (body += chunk));
     req.on('end', () => {
       try {
-        const { workingUnit } = JSON.parse(body);
+        const { workingUnit, firmware = 'grbl' } = JSON.parse(body);
         if (workingUnit !== 'G20' && workingUnit !== 'G21') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'workingUnit must be G20 or G21' }));
           return;
         }
+        if (firmware !== 'grbl' && firmware !== 'fluidnc') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'firmware must be grbl or fluidnc' }));
+          return;
+        }
         const session = getSession(sessionId);
         session.workingUnit = workingUnit;
+        session.firmware = firmware;
         emitStateToSession(sessionId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, workingUnit }));
@@ -363,6 +378,8 @@ function controllerState(session: Session) {
         (session.position.y - offset.y) / scale,
         (session.position.z - offset.z) / scale,
       ],
+      // CNCjs 1.11.5 caches the last reported WCO and derives WPos from it.
+      wco: [offset.x / scale, offset.y / scale, offset.z / scale],
       pn: session.probeState?.pinState ?? '',
     },
     probe: session.probeState || '',
@@ -379,7 +396,15 @@ function rawStatus(session: Session): string {
   const scale = session.reportInches ? 25.4 : 1;
   const vector = (position: Position) =>
     [position.x / scale, position.y / scale, position.z / scale].join(',');
-  return `<Idle|MPos:${vector(session.position)}|WCO:${vector(session.offsets[session.wcs])}|Pn:${session.probeState?.pinState ?? ''}>`;
+  session.statusReports++;
+  const wco = session.firmware === 'grbl' || session.statusReports % FLUIDNC_WCO_EVERY === 0
+    ? `|WCO:${vector(session.offsets[session.wcs])}` : '';
+  return `<Idle|MPos:${vector(session.position)}${wco}|Pn:${session.probeState?.pinState ?? ''}>`;
+}
+
+function reportUnitSettings(session: Session): Record<string, string> {
+  if (session.firmware === 'fluidnc') return { '$10': '1' };
+  return { '$13': session.reportInches ? '1' : '0' };
 }
 
 io.on('connection', (socket) => {
@@ -419,7 +444,7 @@ io.on('connection', (socket) => {
       return;
     }
     opened = true;
-    socket.emit('controller:settings', 'Grbl', { settings: { '$13': session.reportInches ? '1' : '0' } });
+    socket.emit('controller:settings', 'Grbl', { settings: reportUnitSettings(session) });
     socket.emit('controller:state', 'Grbl', controllerState(session));
     socket.emit('workflow:state', 'idle');
     callback?.(null);
@@ -465,7 +490,39 @@ io.on('connection', (socket) => {
     }
     const line = data.trim();
     if (line === '$$') {
-      io.to(sessionId).emit('serialport:read', `$13=${session.reportInches ? '1' : '0'}`);
+      const setting = session.firmware === 'fluidnc'
+        ? '$10=1 (Status report options, mask)'
+        : `$13=${session.reportInches ? '1' : '0'}`;
+      io.to(sessionId).emit('serialport:read', setting);
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+    if (line === '$I') {
+      const version = session.firmware === 'fluidnc' ? '[VER:3.7 FluidNC v3.7.8:]' : '[VER:1.1h.20190825:]';
+      io.to(sessionId).emit('serialport:read', version);
+      io.to(sessionId).emit('serialport:read', '[OPT:PHS]');
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+    if (line === '$/report_inches' && session.firmware === 'fluidnc') {
+      // CNCjs records `$path=value` replies as settings and rebroadcasts them.
+      const value = session.reportInches ? 'true' : 'false';
+      io.to(sessionId).emit('controller:settings', 'Grbl', {
+        settings: { ...reportUnitSettings(session), '$/report_inches': value },
+      });
+      io.to(sessionId).emit('serialport:read', `$/report_inches=${value}`);
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
+    if (line === '$#') {
+      const scale = session.reportInches ? 25.4 : 1;
+      const vector = (position: Position) =>
+        [position.x / scale, position.y / scale, position.z / scale].map((value) => value.toFixed(3)).join(',');
+      for (const [wcs, offset] of Object.entries(session.offsets)) {
+        io.to(sessionId).emit('serialport:read', `[${wcs}:${vector(offset)}]`);
+      }
+      io.to(sessionId).emit('serialport:read', '[G92:0.000,0.000,0.000]');
+      io.to(sessionId).emit('serialport:read', '[TLO:0.000]');
       io.to(sessionId).emit('serialport:read', 'ok');
       return;
     }

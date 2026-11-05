@@ -397,6 +397,58 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     adapter.disconnect();
   });
 
+  it.each([['false', 'G21', 1], ['true', 'G20', 25.4]] as const)(
+    'reads FluidNC report_inches=%s when the settings dump omits report units and establishes ABS from WCO',
+    async (reportInches, units, scale) => {
+      await connectSocket();
+      finishJoin();
+      fireSocket('workflow:state', 'idle');
+      fireSocket('controller:state', 'Grbl', nativeState(units));
+      fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1' } });
+      const commands = (): unknown[] => mockSocket.emit.mock.calls
+        .filter((call) => call[0] === 'command' && call[2] === 'gcode').map((call): unknown => call[3]);
+      expect(commands()).toEqual(['$$']);
+      // FluidNC 3.7.8 transcript captured through CNCjs.
+      fireSocket('serialport:read', '$10=1 (Status report options, mask)');
+      fireSocket('serialport:read', 'ok');
+      expect(commands()).toEqual(['$$', '$I']);
+      fireSocket('serialport:read', '[VER:3.7 FluidNC v3.7.8:]');
+      expect(commands()).toEqual(['$$', '$I', '$/report_inches']);
+      fireSocket('serialport:read', '[OPT:PHS]');
+      fireSocket('serialport:read', 'ok');
+      // CNCjs records the `$path=value` reply as a setting and rebroadcasts.
+      fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1', '$/report_inches': reportInches } });
+      fireSocket('serialport:read', `$/report_inches=${reportInches}`);
+      expect(mockSocket.emit).toHaveBeenCalledWith('write', '/dev/ttyB', '?');
+      // WCO rides ~1 in 10 FluidNC reports, so the WCO-less reply reads `$#`.
+      fireSocket('serialport:read', '<Idle|MPos:-206.850,-78.900,-148.000|FS:0,0>');
+      expect(commands()).toEqual(['$$', '$I', '$/report_inches', '$#']);
+      for (const line of ['[G54:-265.500,-82.500,-305.000]', '[G55:-472.460,-116.179,-263.040]',
+        '[G56:0.000,0.000,0.000]', '[G28:0.000,0.000,0.000]', '[G92:0.000,0.000,0.000]', '[TLO:0.000]', 'ok']) {
+        fireSocket('serialport:read', line);
+      }
+      expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+      expect(adapter.getState().workPosition?.x).toBeCloseTo(58.65 * scale);
+      expect(adapter.getState().workPosition?.z).toBeCloseTo(157 * scale);
+      expect(adapter.getState().position.z).toBeCloseTo(-148 * scale);
+      adapter.disconnect();
+    },
+  );
+
+  it('does not query FluidNC config from other firmware that omits $13', async () => {
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    fireSocket('controller:state', 'Grbl', nativeState('G21'));
+    fireSocket('serialport:read', 'ok');
+    fireSocket('serialport:read', '[VER:1.1h.20190825:]');
+    fireSocket('serialport:read', 'ok');
+    expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call): unknown => call[3]))
+      .toEqual(['$$', '$I']);
+    expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
+    adapter.disconnect();
+  });
+
   it('fails the fresh-report boundary after five seconds when no status reply arrives', async () => {
     vi.useFakeTimers();
     try {
@@ -699,7 +751,80 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     });
   });
 
-  it('bounds missing-WCO resync to ten status queries and leaves position writes unavailable', async () => {
+  it.each([['0', 1], ['1', 25.4]] as const)(
+    'completes a missing-WCO boundary from explicit offsets reported with setting %s',
+    async (reportUnit, scale) => {
+      await connectSocket();
+      finishJoin();
+      fireSocket('workflow:state', 'idle');
+      fireSocket('controller:state', 'Grbl', { ...nativeState('G21'), parserstate: { modal: { units: 'G21', wcs: 'G55' } } });
+      fireSocket('controller:settings', 'Grbl', { settings: { '$13': reportUnit } });
+      mockSocket.emit.mockClear();
+      fireSocket('serialport:read', `$13=${reportUnit}`);
+      fireSocket('serialport:read', '<Idle|MPos:10,20,30|FS:0,0>');
+      fireSocket('serialport:read', '<Idle|MPos:11,20,30|FS:0,0>');
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call): unknown => call[3])).toEqual(['$#']);
+      expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
+      // Four-axis controllers append A; only XYZ feed the readout.
+      fireSocket('serialport:read', '[G54:100,100,100,100]');
+      fireSocket('serialport:read', '[G55:1,2,3,9]');
+      fireSocket('serialport:read', '[G92:0.5,0,0,0]');
+      fireSocket('serialport:read', '[TLO:4]');
+      fireSocket('serialport:read', 'ok');
+      // Active G55 + G92 + TLO on Z, subtracted from the latest fresh MPos.
+      expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+      expect(adapter.getState().workPosition?.x).toBeCloseTo((11 - 1.5) * scale);
+      expect(adapter.getState().workPosition?.y).toBeCloseTo((20 - 2) * scale);
+      expect(adapter.getState().workPosition?.z).toBeCloseTo((30 - 7) * scale);
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
+      adapter.disconnect();
+    },
+  );
+
+  it('ignores a preceding command ok that arrives after the WCO-less report triggered $#', async () => {
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    fireSocket('controller:state', 'Grbl', nativeState('G21'));
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
+    fireSocket('serialport:read', '$13=0');
+    // Realtime `?` overtakes the setting command's trailing ok (seen live on FluidNC).
+    fireSocket('serialport:read', '<Idle|MPos:10,0,0|FS:0,0>');
+    fireSocket('serialport:read', 'ok');
+    expect(adapter.getState().workPositionControl?.error).toBeNull();
+    for (const line of ['[G54:4,0,0]', '[G92:0,0,0]', '[TLO:0]', 'ok']) fireSocket('serialport:read', line);
+    expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(6);
+    adapter.disconnect();
+  });
+
+  it('applies the $# offset to snapshots until CNCjs refreshes its cached WCO', async () => {
+    const snapshot = (mpos: number, wpos: number, wco: number) => ({
+      parserstate: { modal: { units: 'G21', wcs: 'G54' } },
+      status: { activeState: 'Idle', mpos: [mpos, 0, 0], wpos: [wpos, 0, 0], wco: [wco, 0, 0] },
+    });
+    await connectSocket();
+    finishJoin();
+    fireSocket('workflow:state', 'idle');
+    // CNCjs cached WCO 25.4 while $13=0 (mm); firmware now reports inches.
+    fireSocket('controller:state', 'Grbl', snapshot(2, -23.4, 25.4));
+    fireSocket('controller:settings', 'Grbl', { settings: { '$13': '1' } });
+    fireSocket('serialport:read', '$13=1');
+    fireSocket('serialport:read', '<Idle|MPos:2,0,0|FS:0,0>');
+    for (const line of ['[G54:1,0,0]', '[G92:0,0,0]', '[TLO:0]', 'ok']) fireSocket('serialport:read', line);
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
+    // Same stale cache: CNCjs's WPos would read -594.36 mm.
+    fireSocket('controller:state', 'Grbl', snapshot(2, -23.4, 25.4));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(25.4);
+    // A refreshed cache (here: another client's offset change) is trusted again.
+    fireSocket('controller:state', 'Grbl', snapshot(2, 1.5, 0.5));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(38.1);
+    fireSocket('controller:state', 'Grbl', snapshot(3, 2.5, 0.5));
+    expect(adapter.getState().workPosition?.x).toBeCloseTo(63.5);
+    adapter.disconnect();
+  });
+
+  it('leaves position writes unavailable when $# omits the active offsets', async () => {
     vi.useFakeTimers();
     try {
       await connectSocket();
@@ -709,20 +834,14 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
       mockSocket.emit.mockClear();
       fireSocket('serialport:read', '$13=0');
-      for (let reply = 0; reply < 10; reply++) {
-        fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
-        await vi.advanceTimersByTimeAsync(249);
-        expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(reply + 1);
-        await vi.advanceTimersByTimeAsync(1);
-      }
-      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(10);
+      fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
+      fireSocket('serialport:read', '[G92:0,0,0]');
+      fireSocket('serialport:read', 'ok');
       expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
-      expect(adapter.getState().workPositionControl?.error).toEqual(expect.any(String));
-      const lastPosition = adapter.getState().position;
-      fireSocket('controller:state', 'Grbl', nativeState('G21', 'Idle', 200));
-      expect(adapter.getState().position).toEqual(lastPosition);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(10);
+      expect(adapter.getState().workPositionControl?.error).toBe('Controller work offsets ($#) were incomplete');
+      await expect(adapter.requestWorkPosition({ x: 0 })).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
     } finally {
       adapter.disconnect();
       vi.useRealTimers();

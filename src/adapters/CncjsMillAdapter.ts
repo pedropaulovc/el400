@@ -42,6 +42,8 @@ interface CncjsControllerState {
     mpos?: (number | string)[] | Record<string, number | string>;
     /** [x, y, z] array, or {x, y, z} object with string values (CNCjs 1.x) */
     wpos?: (number | string)[] | Record<string, number | string>;
+    /** CNCjs's cached WCO, refreshed only when a status report carries WCO */
+    wco?: (number | string)[] | Record<string, number | string>;
     pn?: string;
     /** Triggered input pins, e.g. 'P' - field name used by CNCjs 1.x Grbl */
     pinState?: string;
@@ -102,6 +104,24 @@ function toMillPosition(
     y: Number(value['y'] ?? 0),
     z: Number(value['z'] ?? 0),
   };
+}
+
+// FluidNC keeps report units in config.yaml: its `$$` omits GRBL's `$13`, and
+// `$/report_inches` reads the same setting. Both map to GRBL's '0' (mm) / '1' (inch).
+const FLUIDNC_REPORT_INCHES = '$/report_inches';
+
+function parseReportUnitSetting(line: string): '0' | '1' | null {
+  const grbl = /^\$13=([01])(?:\s|$)/.exec(line);
+  if (grbl) return grbl[1] === '1' ? '1' : '0';
+  const fluidnc = /^\$\/report_inches=(true|false)$/i.exec(line);
+  if (!fluidnc) return null;
+  return fluidnc[1]?.toLowerCase() === 'true' ? '1' : '0';
+}
+
+function reportUnitFromSettings(settings: Record<string, unknown> | undefined): '0' | '1' | null {
+  const grbl = String(settings?.['$13']);
+  if (grbl === '0' || grbl === '1') return grbl;
+  return parseReportUnitSetting(`${FLUIDNC_REPORT_INCHES}=${String(settings?.[FLUIDNC_REPORT_INCHES])}`);
 }
 
 /**
@@ -266,8 +286,23 @@ export class CncjsMillAdapter implements MillAdapter {
   private reportedSetting: string | null = null;
   private reportScale: number | null = null;
   private reportQueryNeeded = true;
-  private reportQueryPending = false;
+  // `$$` → (no `$13` before its `ok`) `$I` → (FluidNC) `$/report_inches`.
+  private reportQuery: 'none' | 'settings' | 'identifying' | 'fluidnc' = 'none';
   private awaitingFreshStatus = false;
+  // A fresh MPos that lacked WCO, completed from an explicit `$#` offset read.
+  // `phase` turns 'receiving' on the first `$#` parameter line, so an earlier
+  // command's trailing `ok` cannot complete the read.
+  private offsetRead: {
+    phase: 'sent' | 'receiving';
+    machine: MillPosition;
+    wcs?: MillPosition;
+    g92?: MillPosition;
+    tlo?: number;
+  } | null = null;
+  // WCO (mm) from `$#`. CNCjs derives snapshot WPos from its cached WCO, which
+  // `$#` does not refresh; apply this until that cache changes.
+  private offsetOverride: MillPosition | null = null;
+  private snapshotWco = '';
   private positionReady = false;
   private statusQueriesRemaining = 0;
   private statusQueryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -363,6 +398,10 @@ export class CncjsMillAdapter implements MillAdapter {
         this.currentControllerType = type as CncjsControllerType;
         const normalized = normalizeControllerState(type, controllerState);
         if (type.toLowerCase() === 'grbl') {
+          // A changed raw WCO means CNCjs parsed a fresh WCO report: trust it again.
+          const snapshotWco = JSON.stringify(controllerState.status?.wco ?? null);
+          if (snapshotWco !== this.snapshotWco) this.offsetOverride = null;
+          this.snapshotWco = snapshotWco;
           this.activeState = controllerState.status?.activeState ?? null;
           const units = controllerState.parserstate?.modal?.units;
           this.confirmedUnit = units === 'G20' ? 'inch' : units === 'G21' ? 'mm' : null;
@@ -381,6 +420,10 @@ export class CncjsMillAdapter implements MillAdapter {
           } else {
             if (normalized.position) normalized.position = this.scalePosition(normalized.position);
             if (normalized.workPosition) normalized.workPosition = this.scalePosition(normalized.workPosition);
+            // Without a cached wco, CNCjs passes reported WPos through; nothing can be stale.
+            const machine = normalized.position;
+            const wco = controllerState.status?.wco ? this.offsetOverride : null;
+            if (machine && wco) normalized.workPosition = { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z };
           }
         } else {
           this.confirmedUnit = null;
@@ -394,8 +437,7 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket.on('controller:settings', (type: string, settings: { settings?: Record<string, unknown> }) => {
         if (!this.socketConnected || (!this.joinedPort && !this.joiningPort) || type.toLowerCase() !== 'grbl') return;
         this.currentControllerType = type as CncjsControllerType;
-        const setting = String(settings.settings?.['$13']);
-        const known = setting === '0' || setting === '1' ? setting : null;
+        const known = reportUnitFromSettings(settings.settings);
         if (known !== this.reportedSetting) {
           this.reportedSetting = known;
           this.positionReady = false;
@@ -647,8 +689,11 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportedSetting = null;
     this.reportScale = null;
     this.reportQueryNeeded = true;
-    this.reportQueryPending = false;
+    this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
+    this.offsetOverride = null;
+    this.snapshotWco = '';
     this.positionReady = false;
     this.cancelStatusQuery();
     this.updateState({ connected: false });
@@ -660,11 +705,11 @@ export class CncjsMillAdapter implements MillAdapter {
   }
 
   private requestReportBoundary(): void {
-    if (!this.reportQueryNeeded || this.reportQueryPending || !this.joinedPort ||
+    if (!this.reportQueryNeeded || this.reportQuery !== 'none' || !this.joinedPort ||
         this.currentControllerType.toLowerCase() !== 'grbl' ||
         this.workflow !== 'idle' || this.activeState !== 'Idle') return;
     this.reportQueryNeeded = false;
-    this.reportQueryPending = true;
+    this.reportQuery = 'settings';
     this.reportError = null;
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = setTimeout(() => {
@@ -683,19 +728,57 @@ export class CncjsMillAdapter implements MillAdapter {
       this.updateState({});
       return;
     }
-    const setting = /^\$13=([01])(?:\s|$)/.exec(line.trim());
-    if (setting && this.reportQueryPending) {
-      this.reportQueryPending = false;
+    const trimmed = line.trim();
+    const setting = parseReportUnitSetting(trimmed);
+    if (setting && this.reportQuery !== 'none') {
+      this.reportQuery = 'none';
       this.reportQueryNeeded = false;
-      this.reportedSetting = setting[1] ?? null;
-      this.reportScale = setting[1] === '1' ? 25.4 : 1;
+      this.reportedSetting = setting;
+      this.reportScale = setting === '1' ? 25.4 : 1;
       this.awaitingFreshStatus = true;
       this.statusQueriesRemaining = 10;
       this.queryFreshStatus();
       return;
     }
+    if (this.reportQuery === 'settings' && trimmed === 'ok') {
+      this.reportQuery = 'identifying';
+      this.socket?.emit('command', this.joinedPort, 'gcode', '$I');
+      return;
+    }
+    if (this.reportQuery === 'identifying' && /^\[VER:.*\bFluidNC\b/i.test(trimmed)) {
+      this.reportQuery = 'fluidnc';
+      this.socket?.emit('command', this.joinedPort, 'gcode', FLUIDNC_REPORT_INCHES);
+      return;
+    }
+    if (this.offsetRead && this.reportScale !== null) {
+      // `$#` reports offsets in $13 units; GRBL's WCO is G5x + G92, plus TLO on Z.
+      const param = /^\[(G5[4-9]|G92|TLO):(-?[\d.]+)(?:,(-?[\d.]+),(-?[\d.]+)(?:,-?[\d.]+)*)?\]$/.exec(trimmed);
+      if (param) {
+        this.offsetRead.phase = 'receiving';
+        if (param[1] === 'TLO') this.offsetRead.tlo = Number(param[2]) * this.reportScale;
+        if (param[1] === 'G92' || param[1] === this.activeWcs) {
+          const offset = this.scalePosition({ x: Number(param[2]), y: Number(param[3]), z: Number(param[4]) });
+          if (param[1] === 'G92') this.offsetRead.g92 = offset;
+          else this.offsetRead.wcs = offset;
+        }
+        return;
+      }
+      if (trimmed === 'ok' && this.offsetRead.phase === 'receiving') {
+        const { machine, wcs, g92, tlo } = this.offsetRead;
+        this.offsetRead = null;
+        const wco = wcs && g92 && tlo !== undefined
+          ? { x: wcs.x + g92.x, y: wcs.y + g92.y, z: wcs.z + g92.z + tlo } : null;
+        if (!wco || ![wco.x, wco.y, wco.z].every(Number.isFinite)) {
+          this.failReportBoundary('Controller work offsets ($#) were incomplete');
+          return;
+        }
+        this.establishPosition(machine, { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z }, false);
+        this.offsetOverride = wco;
+        return;
+      }
+    }
     const confirmingWork = this.workRequest?.phase === 'confirming';
-    if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(line.trim())) return;
+    if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(trimmed)) return;
     const fields: Partial<Record<'MPos' | 'WPos' | 'WCO', MillPosition>> = {};
     for (const match of line.matchAll(/(?:\||,)(MPos|WPos|WCO):(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/g)) {
       const value = { x: Number(match[2]), y: Number(match[3]), z: Number(match[4]) };
@@ -715,10 +798,28 @@ export class CncjsMillAdapter implements MillAdapter {
     }
     if (!machine || !work) {
       if (machine) this.updateState({ position: machine });
+      if (machine && this.awaitingFreshStatus && !confirmingWork) {
+        // WCO rides only every Nth report, and CNCjs's own hidden polls consume
+        // some of them (FluidNC: ~1 in 10). Read the offsets explicitly instead.
+        if (this.offsetRead) {
+          this.offsetRead.machine = machine;
+          return;
+        }
+        this.cancelStatusQuery();
+        this.offsetRead = { phase: 'sent', machine };
+        this.socket?.emit('command', this.joinedPort, 'gcode', '$#');
+        return;
+      }
       this.scheduleFreshStatus();
       return;
     }
+    this.establishPosition(machine, work, confirmingWork);
+  }
+
+  private establishPosition(machine: MillPosition, work: MillPosition, confirmingWork: boolean): void {
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
+    this.offsetOverride = null;
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
     this.reportError = null;
@@ -764,8 +865,10 @@ export class CncjsMillAdapter implements MillAdapter {
     this.cancelStatusQuery();
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
-    this.reportQueryPending = false;
+    this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
+    this.offsetOverride = null;
     this.positionReady = false;
     this.reportError = message;
     this.finishWorkRequest(new Error(message));

@@ -120,9 +120,18 @@ GRBL **`$13`**, not `G20`/`G21`, determines status-report scaling. On joining or
 changing the report setting, EL400 reads `$$` back from firmware and requests
 a fresh status/WCO boundary before accepting newly scaled coordinates. Raw
 settings replies are observable even if the cached setting did not change.
+FluidNC keeps report units in `config.yaml` and its `$$` omits `$13`: when `$$`
+ends without `$13`, EL400 sends `$I`, and if the reply identifies FluidNC it reads
+`$/report_inches` as the `$13` equivalent. These read-only queries appear in the
+CNCjs console.
 Cached composite controller snapshots are never reinterpreted under a new scale.
 Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
-boundary without a literal WCO field. If the required fresh coordinates are
+boundary without a literal WCO field. GRBL sends WCO only every Nth report, and
+CNCjs's own hidden status polls consume some of them, so a fresh MPos-only report
+triggers one `$#` read instead: WCO is the active G54–G59 offset plus G92, plus
+TLO on Z, in `$13` units. CNCjs derives snapshot WPos from its cached WCO, which
+`$#` does not refresh, so EL400 applies the `$#` offset to snapshot MPos until
+CNCjs's raw cached WCO changes. If the required fresh coordinates are
 absent, this boundary operation is limited to ten `?` requests spaced 250 ms
 apart and a five-second deadline; it is not a continuous poller. Failure
 retains the last physical sample, reports work coordinates unavailable, and
@@ -156,7 +165,10 @@ the fresh status used to confirm the result. Sessions retain units and offsets
 across page reloads and remain isolated from other tests. The session-scoped
 external-work-position control models another client's offset change without motion.
 The manual mock frontend and encoder/probe/signal HTTP controls still receive
-state without joining a port.
+state without joining a port. Seeding `controllerFirmware: 'fluidnc'` makes the
+session answer like FluidNC 3.7.8: `$$` without `$13`, `$I` naming FluidNC,
+`$/report_inches` readback, and WCO only on every third status report. Any
+session answers `$#` with its work offsets.
 
 The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
 inch-based scenarios; this is not the mock controller's unseeded default (`G21`).
