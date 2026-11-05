@@ -405,8 +405,8 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('workflow:state', 'idle');
       fireSocket('controller:state', 'Grbl', nativeState(units));
       fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1' } });
-      const commands = () => mockSocket.emit.mock.calls
-        .filter((call) => call[0] === 'command' && call[2] === 'gcode').map((call) => call[3]);
+      const commands = (): unknown[] => mockSocket.emit.mock.calls
+        .filter((call) => call[0] === 'command' && call[2] === 'gcode').map((call): unknown => call[3]);
       expect(commands()).toEqual(['$$']);
       // FluidNC 3.7.8 transcript captured through CNCjs.
       fireSocket('serialport:read', '$10=1 (Status report options, mask)');
@@ -438,7 +438,7 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     fireSocket('serialport:read', 'ok');
     fireSocket('serialport:read', '[VER:1.1h.20190825:]');
     fireSocket('serialport:read', 'ok');
-    expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call) => call[3]))
+    expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call): unknown => call[3]))
       .toEqual(['$$', '$I']);
     expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
     adapter.disconnect();
