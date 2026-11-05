@@ -126,7 +126,10 @@ ends without `$13`, EL400 sends `$I`, and if the reply identifies FluidNC it rea
 CNCjs console.
 Cached composite controller snapshots are never reinterpreted under a new scale.
 Fresh paired MPos/WPos reports (the native GRBL 0.9 format) also establish this
-boundary without a literal WCO field. If the required fresh coordinates are
+boundary without a literal WCO field. GRBL sends WCO only every Nth report, and
+CNCjs's own hidden status polls consume some of them, so a fresh MPos-only report
+triggers one `$#` read instead: WCO is the active G54–G59 offset plus G92, plus
+TLO on Z, in `$13` units. If the required fresh coordinates are
 absent, this boundary operation is limited to ten `?` requests spaced 250 ms
 apart and a five-second deadline; it is not a continuous poller. Failure
 retains the last physical sample, reports work coordinates unavailable, and
@@ -162,7 +165,8 @@ external-work-position control models another client's offset change without mot
 The manual mock frontend and encoder/probe/signal HTTP controls still receive
 state without joining a port. Seeding `controllerFirmware: 'fluidnc'` makes the
 session answer like FluidNC 3.7.8: `$$` without `$13`, `$I` naming FluidNC,
-`$/report_inches` readback, and WCO only on every third status report.
+`$/report_inches` readback, and WCO only on every third status report. Any
+session answers `$#` with its work offsets.
 
 The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
 inch-based scenarios; this is not the mock controller's unseeded default (`G21`).

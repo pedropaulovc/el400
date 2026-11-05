@@ -420,12 +420,17 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('controller:settings', 'Grbl', { settings: { '$10': '1', '$/report_inches': reportInches } });
       fireSocket('serialport:read', `$/report_inches=${reportInches}`);
       expect(mockSocket.emit).toHaveBeenCalledWith('write', '/dev/ttyB', '?');
+      // WCO rides ~1 in 10 FluidNC reports, so the WCO-less reply reads `$#`.
       fireSocket('serialport:read', '<Idle|MPos:-206.850,-78.900,-148.000|FS:0,0>');
-      fireSocket('serialport:read', '<Idle|MPos:-206.850,-78.900,-148.000|FS:0,0|WCO:-265.500,-82.500,-305.000>');
+      expect(commands()).toEqual(['$$', '$I', '$/report_inches', '$#']);
+      for (const line of ['[G54:-265.500,-82.500,-305.000]', '[G55:-472.460,-116.179,-263.040]',
+        '[G56:0.000,0.000,0.000]', '[G28:0.000,0.000,0.000]', '[G92:0.000,0.000,0.000]', '[TLO:0.000]', 'ok']) {
+        fireSocket('serialport:read', line);
+      }
       expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
       expect(adapter.getState().workPosition?.x).toBeCloseTo(58.65 * scale);
+      expect(adapter.getState().workPosition?.z).toBeCloseTo(157 * scale);
       expect(adapter.getState().position.z).toBeCloseTo(-148 * scale);
-      expect(commands()).toEqual(['$$', '$I', '$/report_inches']);
       adapter.disconnect();
     },
   );
@@ -746,7 +751,36 @@ describe('CncjsMillAdapter native unit synchronization', () => {
     });
   });
 
-  it('bounds missing-WCO resync to ten status queries and leaves position writes unavailable', async () => {
+  it.each([['0', 1], ['1', 25.4]] as const)(
+    'completes a missing-WCO boundary from explicit offsets reported with setting %s',
+    async (reportUnit, scale) => {
+      await connectSocket();
+      finishJoin();
+      fireSocket('workflow:state', 'idle');
+      fireSocket('controller:state', 'Grbl', { ...nativeState('G21'), parserstate: { modal: { units: 'G21', wcs: 'G55' } } });
+      fireSocket('controller:settings', 'Grbl', { settings: { '$13': reportUnit } });
+      mockSocket.emit.mockClear();
+      fireSocket('serialport:read', `$13=${reportUnit}`);
+      fireSocket('serialport:read', '<Idle|MPos:10,20,30|FS:0,0>');
+      fireSocket('serialport:read', '<Idle|MPos:11,20,30|FS:0,0>');
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'command').map((call): unknown => call[3])).toEqual(['$#']);
+      expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
+      fireSocket('serialport:read', '[G54:100,100,100]');
+      fireSocket('serialport:read', '[G55:1,2,3]');
+      fireSocket('serialport:read', '[G92:0.5,0,0]');
+      fireSocket('serialport:read', '[TLO:4]');
+      fireSocket('serialport:read', 'ok');
+      // Active G55 + G92 + TLO on Z, subtracted from the latest fresh MPos.
+      expect(adapter.getState().workPositionControl).toEqual({ availability: 'ready', pending: null, error: null });
+      expect(adapter.getState().workPosition?.x).toBeCloseTo((11 - 1.5) * scale);
+      expect(adapter.getState().workPosition?.y).toBeCloseTo((20 - 2) * scale);
+      expect(adapter.getState().workPosition?.z).toBeCloseTo((30 - 7) * scale);
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
+      adapter.disconnect();
+    },
+  );
+
+  it('leaves position writes unavailable when $# omits the active offsets', async () => {
     vi.useFakeTimers();
     try {
       await connectSocket();
@@ -756,20 +790,14 @@ describe('CncjsMillAdapter native unit synchronization', () => {
       fireSocket('controller:settings', 'Grbl', { settings: { '$13': '0' } });
       mockSocket.emit.mockClear();
       fireSocket('serialport:read', '$13=0');
-      for (let reply = 0; reply < 10; reply++) {
-        fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
-        await vi.advanceTimersByTimeAsync(249);
-        expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(reply + 1);
-        await vi.advanceTimersByTimeAsync(1);
-      }
-      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(10);
+      fireSocket('serialport:read', '<Idle|MPos:25.400,0,0>');
+      fireSocket('serialport:read', '[G92:0,0,0]');
+      fireSocket('serialport:read', 'ok');
       expect(adapter.getState().workPositionControl?.availability).toBe('unavailable');
-      expect(adapter.getState().workPositionControl?.error).toEqual(expect.any(String));
-      const lastPosition = adapter.getState().position;
-      fireSocket('controller:state', 'Grbl', nativeState('G21', 'Idle', 200));
-      expect(adapter.getState().position).toEqual(lastPosition);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(10);
+      expect(adapter.getState().workPositionControl?.error).toBe('Controller work offsets ($#) were incomplete');
+      await expect(adapter.requestWorkPosition({ x: 0 })).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'write' && call[2] === '?')).toHaveLength(1);
     } finally {
       adapter.disconnect();
       vi.useRealTimers();

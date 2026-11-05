@@ -287,6 +287,8 @@ export class CncjsMillAdapter implements MillAdapter {
   // `$$` → (no `$13` before its `ok`) `$I` → (FluidNC) `$/report_inches`.
   private reportQuery: 'none' | 'settings' | 'identifying' | 'fluidnc' = 'none';
   private awaitingFreshStatus = false;
+  // A fresh MPos that lacked WCO, completed from an explicit `$#` offset read.
+  private offsetRead: { machine: MillPosition; wcs?: MillPosition; g92?: MillPosition; tlo?: number } | null = null;
   private positionReady = false;
   private statusQueriesRemaining = 0;
   private statusQueryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -667,6 +669,7 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportQueryNeeded = true;
     this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
     this.positionReady = false;
     this.cancelStatusQuery();
     this.updateState({ connected: false });
@@ -723,6 +726,32 @@ export class CncjsMillAdapter implements MillAdapter {
       this.socket?.emit('command', this.joinedPort, 'gcode', FLUIDNC_REPORT_INCHES);
       return;
     }
+    if (this.offsetRead && this.reportScale !== null) {
+      // `$#` reports offsets in $13 units; GRBL's WCO is G5x + G92, plus TLO on Z.
+      const param = /^\[(G5[4-9]|G92|TLO):(-?[\d.]+)(?:,(-?[\d.]+),(-?[\d.]+))?\]$/.exec(trimmed);
+      if (param?.[1] === 'TLO') {
+        this.offsetRead.tlo = Number(param[2]) * this.reportScale;
+        return;
+      }
+      if (param && (param[1] === 'G92' || param[1] === this.activeWcs)) {
+        const offset = this.scalePosition({ x: Number(param[2]), y: Number(param[3]), z: Number(param[4]) });
+        if (param[1] === 'G92') this.offsetRead.g92 = offset;
+        else this.offsetRead.wcs = offset;
+        return;
+      }
+      if (trimmed === 'ok') {
+        const { machine, wcs, g92, tlo } = this.offsetRead;
+        this.offsetRead = null;
+        const wco = wcs && g92 && tlo !== undefined
+          ? { x: wcs.x + g92.x, y: wcs.y + g92.y, z: wcs.z + g92.z + tlo } : null;
+        if (!wco || ![wco.x, wco.y, wco.z].every(Number.isFinite)) {
+          this.failReportBoundary('Controller work offsets ($#) were incomplete');
+          return;
+        }
+        this.establishPosition(machine, { x: machine.x - wco.x, y: machine.y - wco.y, z: machine.z - wco.z }, false);
+        return;
+      }
+    }
     const confirmingWork = this.workRequest?.phase === 'confirming';
     if ((!this.awaitingFreshStatus && !confirmingWork) || this.reportScale === null || !/^<[^>]+>$/.test(trimmed)) return;
     const fields: Partial<Record<'MPos' | 'WPos' | 'WCO', MillPosition>> = {};
@@ -744,10 +773,27 @@ export class CncjsMillAdapter implements MillAdapter {
     }
     if (!machine || !work) {
       if (machine) this.updateState({ position: machine });
+      if (machine && this.awaitingFreshStatus && !confirmingWork) {
+        // WCO rides only every Nth report, and CNCjs's own hidden polls consume
+        // some of them (FluidNC: ~1 in 10). Read the offsets explicitly instead.
+        if (this.offsetRead) {
+          this.offsetRead.machine = machine;
+          return;
+        }
+        this.cancelStatusQuery();
+        this.offsetRead = { machine };
+        this.socket?.emit('command', this.joinedPort, 'gcode', '$#');
+        return;
+      }
       this.scheduleFreshStatus();
       return;
     }
+    this.establishPosition(machine, work, confirmingWork);
+  }
+
+  private establishPosition(machine: MillPosition, work: MillPosition, confirmingWork: boolean): void {
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
     clearTimeout(this.reportDeadline ?? undefined);
     this.reportDeadline = null;
     this.reportError = null;
@@ -795,6 +841,7 @@ export class CncjsMillAdapter implements MillAdapter {
     this.reportDeadline = null;
     this.reportQuery = 'none';
     this.awaitingFreshStatus = false;
+    this.offsetRead = null;
     this.positionReady = false;
     this.reportError = message;
     this.finishWorkRequest(new Error(message));

@@ -512,6 +512,18 @@ io.on('connection', (socket) => {
       io.to(sessionId).emit('serialport:read', 'ok');
       return;
     }
+    if (line === '$#') {
+      const scale = session.reportInches ? 25.4 : 1;
+      const vector = (position: Position) =>
+        [position.x / scale, position.y / scale, position.z / scale].map((value) => value.toFixed(3)).join(',');
+      for (const [wcs, offset] of Object.entries(session.offsets)) {
+        io.to(sessionId).emit('serialport:read', `[${wcs}:${vector(offset)}]`);
+      }
+      io.to(sessionId).emit('serialport:read', '[G92:0.000,0.000,0.000]');
+      io.to(sessionId).emit('serialport:read', '[TLO:0.000]');
+      io.to(sessionId).emit('serialport:read', 'ok');
+      return;
+    }
     if (line === '$G') {
       // Handlers execute synchronously in Socket.IO FIFO order: any preceding
       // G10 has changed the offset before the feeder marker is emitted.
