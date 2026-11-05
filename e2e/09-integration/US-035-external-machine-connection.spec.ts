@@ -104,6 +104,29 @@ test.describe('US-035: External Machine Connection', () => {
     await dro.waitForAxisValue('Y', 10);
   });
 
+  test.describe('FluidNC under the CNCjs Grbl controller', () => {
+    // FluidNC's `$$` omits `$13`; the fixture's connected-ready barrier only
+    // passes once `$/report_inches` and a fresh WCO establish native ABS.
+    test.use({ controllerFirmware: 'fluidnc', workingUnit: 'G21' });
+
+    test('ABS shows controller work coordinates instead of no Conn', async ({ dro }) => {
+      await dro.simulateEncoderAbsoluteMove('X', 25);
+      await dro.waitForAxisValue('X', 25);
+      await dro.simulateExternalWorkPosition('X', 40);
+      await dro.waitForAxisValue('X', 40);
+
+      // ABS preset writes G10 and confirms against FluidNC's intermittent WCO.
+      await dro.selectAxis('X');
+      await dro.enterNumber('12');
+      await dro.enterButton.click();
+      await dro.waitForAxisValue('X', 12);
+      await dro.waitForConnectedReady();
+
+      await dro.reload();
+      await dro.waitForAxisValue('X', 12);
+    });
+  });
+
   /**
    * Verify manual mode allows value entry when no external source.
    * Uses base test (not dro fixture) to navigate without CNCjs params.

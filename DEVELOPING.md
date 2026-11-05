@@ -160,7 +160,9 @@ the fresh status used to confirm the result. Sessions retain units and offsets
 across page reloads and remain isolated from other tests. The session-scoped
 external-work-position control models another client's offset change without motion.
 The manual mock frontend and encoder/probe/signal HTTP controls still receive
-state without joining a port.
+state without joining a port. Seeding `controllerFirmware: 'fluidnc'` makes the
+session answer like FluidNC 3.7.8: `$$` without `$13`, `$I` naming FluidNC,
+`$/report_inches` readback, and WCO only on every third status report.
 
 The shared `dro` fixture explicitly seeds `workingUnit: 'G20'` for the existing
 inch-based scenarios; this is not the mock controller's unseeded default (`G21`).
