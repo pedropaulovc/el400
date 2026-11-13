@@ -1,0 +1,20 @@
+name: Codjiflo review
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  review:
+    if: github.event.issue.pull_request
+    uses: vezzadev/codjiflo-reviewer/.github/workflows/review.yml@0d2b0c6b479f827643f970abc4d8ded7966c8d46
+    with:
+      approved-users: ${{ vars.CODJIFLO_APPROVED_USERS }}
+      bot-ref: 0d2b0c6b479f827643f970abc4d8ded7966c8d46
+      runner-label: codjiflo-reviewer
+      app-id: ${{ vars.CODJIFLO_APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.CODJIFLO_APP_PRIVATE_KEY }}
